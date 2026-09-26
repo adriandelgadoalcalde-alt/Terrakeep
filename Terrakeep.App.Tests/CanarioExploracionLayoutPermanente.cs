@@ -206,49 +206,73 @@ internal static partial class Program
                 catch (Exception exChest) { Console.WriteLine($"EXPLORATION_LAYOUT-CHESTINSPECTOR-EXCEPTION ({etiqueta}): " + exChest); }
 
                 // ================= Modo WorldTools =================
+                // ExploracionRediseno (rediseño de Exploracion>Mundo, 26-sep-2026, ver bitacora.md):
+                // ya no hay 3 Expander simultaneos con IsExpanded forzado - las 3 subvistas
+                // (WorldToolsSection, ExplorationViewModel) son EXCLUSIVAS, una visible cada vez, y
+                // NINGUNA lleva scroll propio (contrato real: solo el ExplorationSidebarScroll
+                // exterior). Se recorren las 3 explicitamente en vez de forzar un IsExpanded que ya
+                // no existe, y el canario de "scroll interno" pasa de medir el ScrollViewer
+                // MaxHeight de cada Expander a confirmar que YA NO QUEDA ningun ScrollViewer propio
+                // dentro de ExplorationSidebarWorldToolsContent.
                 try
                 {
                     vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
                     DoEvents(); DoEvents(); window.UpdateLayout();
 
                     var worldTools = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
-                    var expanderEsteMundo = worldTools == null ? null : Descendientes<Expander>(worldTools).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_this_world]");
-                    var expanderEditarMundo = worldTools == null ? null : Descendientes<Expander>(worldTools).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_edit_world]");
-                    var expanderBestiario = worldTools == null ? null : Descendientes<Expander>(worldTools).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_bestiary]");
+                    var subviewOverview = window.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
+                    var subviewEdit = window.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
+                    var subviewBestiary = window.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
 
-                    // Fuerza IsExpanded=True en los 3 (por defecto en XAML lo estan, pero es una
-                    // propiedad local mutable - otro bloque cualquiera del arnes (miles de lineas
-                    // antes en la misma pasada, comparten el mismo arbol visual) puede haberla
-                    // dejado colapsada; sin esto el ScrollViewer interno no esta realizado y este
-                    // canario mediria "omitido" en vez de comprobar de verdad, mismo criterio real
-                    // que AuditoriaViewportScroll.cs ya usa con MissingNpcsExpander).
-                    if (expanderEsteMundo != null) expanderEsteMundo.IsExpanded = true;
-                    if (expanderEditarMundo != null) expanderEditarMundo.IsExpanded = true;
-                    if (expanderBestiario != null) expanderBestiario.IsExpanded = true;
-                    DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                    foreach (var seccion in new[] { WorldToolsSection.Overview, WorldToolsSection.Edit, WorldToolsSection.Bestiary })
+                    {
+                        if (seccion == WorldToolsSection.Bestiary && !vm.Exploration.HasBestiary)
+                        {
+                            Console.WriteLine($"EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Bestiary a {etiqueta} - HasBestiary=false, omitido (mundo sin bestiario)");
+                            continue;
+                        }
 
-                    bool worldToolsConContenido = worldTools != null && worldTools.IsVisible
-                        && expanderEsteMundo != null && expanderEsteMundo.IsVisible && expanderEsteMundo.IsExpanded
-                        && expanderEditarMundo != null && expanderEditarMundo.IsVisible && expanderEditarMundo.IsExpanded;
-                    Console.WriteLine($"EXPLORATION_LAYOUT-CONTENIDO: WorldTools a {etiqueta} -> encontrado={worldTools != null}, IsVisible={worldTools?.IsVisible}, 'Este mundo' visible/desplegado={expanderEsteMundo?.IsVisible}/{expanderEsteMundo?.IsExpanded}, 'Editar mundo' visible/desplegado={expanderEditarMundo?.IsVisible}/{expanderEditarMundo?.IsExpanded}, 'Bestiario' encontrado={expanderBestiario != null} (Bestiario puede faltar si el mundo no lo soporta, HasBestiary={vm.Exploration.HasBestiary})");
-                    if (!worldToolsConContenido)
-                        Console.WriteLine($"FALLO: EXPLORATION_LAYOUT-CONTENIDO - WorldTools a {etiqueta} no muestra contenido real (sidebar vacio)");
+                        vm.Exploration.WorldToolsSection = seccion;
+                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
 
-                    ComprobarScrollHorizontal($"ExplorationSidebarScroll_WorldTools_{etiqueta}", scrollLateral);
+                        var subviewActiva = seccion switch
+                        {
+                            WorldToolsSection.Overview => subviewOverview,
+                            WorldToolsSection.Edit => subviewEdit,
+                            _ => subviewBestiary,
+                        };
+                        // Contenido real visible: Overview/Edit siempre llevan al menos un boton
+                        // "Guardar" propio; Bestiario es de solo lectura (sin botones), su contenido
+                        // real es el resumen de texto (BestiarySummaryText).
+                        bool contenidoReal = subviewActiva != null && (seccion == WorldToolsSection.Bestiary
+                            ? Descendientes<TextBlock>(subviewActiva).Any(t => t.IsVisible &&
+                                (BindingOperations.GetBindingExpression(t, TextBlock.TextProperty)?.ParentBinding?.Path?.Path) == "Exploration.BestiarySummaryText")
+                            : Descendientes<Button>(subviewActiva).Any(b => b.IsVisible));
+                        bool worldToolsConContenido = worldTools != null && worldTools.IsVisible
+                            && subviewActiva != null && subviewActiva.IsVisible && contenidoReal;
+                        Console.WriteLine($"EXPLORATION_LAYOUT-CONTENIDO: WorldTools/{seccion} a {etiqueta} -> encontrado={worldTools != null}, IsVisible={worldTools?.IsVisible}, subvista encontrada={subviewActiva != null}, visible={subviewActiva?.IsVisible}, con contenido real={contenidoReal}");
+                        if (!worldToolsConContenido)
+                            Console.WriteLine($"FALLO: EXPLORATION_LAYOUT-CONTENIDO - WorldTools/{seccion} a {etiqueta} no muestra contenido real (sidebar vacio)");
 
-                    var scrollEsteMundo = expanderEsteMundo == null ? null : Descendientes<ScrollViewer>(expanderEsteMundo).FirstOrDefault();
-                    ComprobarScrollHorizontal($"WorldTools_EsteMundo_{etiqueta}", scrollEsteMundo);
-                    var scrollEditarMundo = expanderEditarMundo == null ? null : Descendientes<ScrollViewer>(expanderEditarMundo).FirstOrDefault();
-                    ComprobarScrollHorizontal($"WorldTools_EditarMundo_{etiqueta}", scrollEditarMundo);
-                    var scrollBestiario = expanderBestiario == null ? null : Descendientes<ScrollViewer>(expanderBestiario).FirstOrDefault();
-                    ComprobarScrollHorizontal($"WorldTools_Bestiario_{etiqueta}", scrollBestiario);
+                        ComprobarScrollHorizontal($"ExplorationSidebarScroll_WorldTools_{seccion}_{etiqueta}", scrollLateral);
 
-                    scrollLateral.ScrollToTop();
-                    DoEvents(); DoEvents();
-                    CapturaVentanaKeepQa(window, $"explorationlayout-worldtools-{etiqueta}");
+                        // Contrato real del rediseno: ninguna subvista lleva scroll propio - las 3
+                        // comparten el UNICO ExplorationSidebarScroll exterior. Canario equivalente
+                        // al que antes media el ScrollViewer MaxHeight interno de cada Expander:
+                        // cero ScrollViewer descendientes de ExplorationSidebarWorldToolsContent,
+                        // salvo el PART_ContentHost interno de los TextBox de Spawn X/Y (mismo
+                        // gotcha real ya documentado en AuditoriaTransicion.cs/Keep.Wpf.
+                        // GeometriaWpf.ViewportDe - no es un contenedor de scroll de diseño).
+                        int scrollsInternos = worldTools == null ? -1 : Descendientes<ScrollViewer>(worldTools)
+                            .Count(sv => sv.TemplatedParent is not (System.Windows.Controls.Primitives.TextBoxBase or PasswordBox));
+                        Console.WriteLine($"EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/{seccion} a {etiqueta} -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent={scrollsInternos} (esperado 0 - maximo un scroll vertical real, el exterior)");
+                        if (scrollsInternos != 0)
+                            Console.WriteLine($"FALLO: EXPLORATION_LAYOUT-SCROLLINTERNO - WorldTools/{seccion} a {etiqueta} tiene {scrollsInternos} ScrollViewer propios (se esperaba 0 - contrato de un unico scroll vertical, el exterior)");
+
+                        scrollLateral.ScrollToTop();
+                        DoEvents(); DoEvents();
+                        CapturaVentanaKeepQa(window, $"explorationlayout-worldtools-{seccion.ToString().ToLowerInvariant()}-{etiqueta}");
+                    }
 
                     vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
                     DoEvents(); DoEvents();

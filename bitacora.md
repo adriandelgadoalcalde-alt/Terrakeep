@@ -28547,3 +28547,110 @@ Bone"/Chester esta bien resuelto, el bug es puramente geometrico).
 Commit local: `Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` (unico archivo real
 tocado - `git add` explicito de ese fichero, nunca `git add -A`; habia decenas de ficheros ajenos
 modificados en el arbol por agentes `aplicador-fix` en paralelo, ninguno tocado). Sin `git push`.
+
+## ExploracionRediseno: rediseno de Exploracion>Mundo aplicado (26-sep-2026, aplicador-fix)
+
+Segunda fase del patron de dos agentes: `arquitecto-keep` investigo y diseño por completo el
+rediseño de la pestaña "Mundo" del sidebar de Exploracion (reabierta por el usuario por tener
+demasiados scrolls verticales anidados: 3 `Expander` con `IsExpanded="True"` simultaneo, cada uno
+con su propio `ScrollViewer` interno - `MaxHeight="200"`/`"360"`/`"220"` - dentro del `ScrollViewer`
+exterior `ExplorationSidebarScroll`); este agente aplico ese diseño ya verificado, sin reinvestigar
+la causa.
+
+**Arreglo real aplicado** (working set completo, sin ampliar alcance):
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs`: nuevo `public enum WorldToolsSection {
+  Overview, Edit, Bestiary }` junto a `ExplorationSidebarMode`, y `[ObservableProperty] private
+  WorldToolsSection _worldToolsSection = WorldToolsSection.Overview;` junto a `_sidebarMode`. Guard
+  de Bestiario en los 2 puntos reales donde `LoadFromPathAsync` notifica
+  `OnPropertyChanged(nameof(HasBestiary))` (carga con exito y rama `catch`): si la subvista activa
+  era Bestiario y `HasBestiary` pasa a `false` (mundo sin bestiario/fallo de carga), vuelve a
+  `Overview` en vez de dejar una subvista fantasma seleccionada sin pastilla visible.
+- `Terrakeep.App/MainWindow.xaml` (antes `ExplorationSidebarWorldToolsContent`, 7965-8247): los 3
+  `Expander` simultaneos se sustituyen por un `WrapPanel` de 3 `RadioButton
+  Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"` (mismo
+  componente/patron YA en uso en este mismo panel - selector Buscar/Mundo, pastillas de categoria
+  de Browse - `EnumEquals`/`EnumEqualsToVis`, `VisibilityConverters.cs:155,360`, consumidos tal
+  cual) + un `Grid x:Name="ExplorationSidebarWorldToolsSubviewHost"` con 3 `StackPanel`
+  superpuestos (`ExplorationSidebarWorldToolsOverview`/`Edit`/`Bestiary`), `Visibility` atada a
+  `WorldToolsSection` via `EnumEqualsToVis`. Contenido interno de cada subvista **intacto** (mismos
+  bindings/Commands: `SaveWorldGameModeCommand`/`SaveSpawnPointCommand`/`SaveTimeAndMoonCommand`/
+  `SaveBossFlagsCommand`/`BestiaryRows`/`WorldSeedText`/etc., cero logica nueva) - los 3
+  `ScrollViewer` internos se ELIMINARON (no sustituidos), y los `Visibility="{Binding
+  Exploration.IsWorldLoaded/HasBestiary,...}"` que ya llevaban los Expander se conservan como
+  salvaguarda extra dentro de cada `StackPanel` de contenido. Se elimino tambien el comentario
+  obsoleto de Fase F (25-sep-2026) que describia el diseño de Expanders ya sustituido, para no
+  dejar documentacion contradictoria junto al codigo nuevo.
+
+**Limite real encontrado durante la verificacion, corregido dentro del mismo working set**: el
+primer intento del canario de "maximo un scroll vertical" (`Descendientes<ScrollViewer>
+(ExplorationSidebarWorldToolsContent).Count() == 0`) dio 2 `FALLO` reales en las subvistas
+Edit/Bestiary (2 `ScrollViewer` encontrados, no 0) - investigado con el propio canario en vivo: NO
+es una regresion del rediseño, es el `PART_ContentHost` interno de los 2 `TextBox` de Spawn X/Y
+(el control `TextBox` de WPF SIEMPRE trae un `ScrollViewer` en su plantilla por defecto, incluso de
+una sola linea) - mismo gotcha real ya documentado en `AuditoriaTransicion.cs:156`/`Keep.Wpf.
+GeometriaWpf.ViewportDe` (`sv.TemplatedParent is not (TextBoxBase or PasswordBox)`). Corregido
+reutilizando ese mismo filtro exacto ya establecido en el repo, no uno inventado.
+
+**Tests actualizados** (mismos 3 ficheros ya localizados por `arquitecto-keep`, sin sorpresas de
+alcance):
+- `Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs` (canario PERMANENTE, corre en CADA
+  pasada completa del arnes, no solo bajo demanda): el bloque "Modo WorldTools" ya no busca los 3
+  `Expander` por `Header`, ni fuerza `IsExpanded=true` en 3 - itera `WorldToolsSection` por las 3
+  subvistas (omite Bestiario si `!HasBestiary`), comprueba `ScrollableWidth<=0.5px` y contenido real
+  visible en cada una, y sustituye el viejo chequeo de `ScrollViewer` interno de cada Expander por
+  el canario nuevo (0 `ScrollViewer` propios, salvo el filtro de `TextBoxBase`).
+- `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (bloques "EXPLORACION-FASEF"/"EXPLORACION-
+  FASEH-WORLDTOOLS-MIN1080x700"): busca las 3 pastillas/subvistas nuevas por `ConverterParameter`/
+  `x:Name` en vez de los 3 `Expander`; la captura `fasef-worldtools-3-expanders-desplegados.png`
+  (ya no aplica) se sustituye por una captura real por subvista
+  (`fasef-worldtools-{overview,edit,bestiary}.png`); el bloque de "fondo alcanzable a 1080x700" se
+  repite para cada una de las 3 subvistas por separado (`faseh-worldtools-{seccion}-1080x700-
+  fondo.png`) en vez de una unica pasada con "las 3 expandidas". Los bloques de interaccion
+  WorldTools<->ChestInspector y guardado real Spawn/Tiempo/Banderas actuan sobre
+  Commands/propiedades del ViewModel directamente - confirmado que NO necesitaban cambios (0
+  `FALLO` sin tocarlos).
+- `Terrakeep.App.Tests/AuditoriaViewportScroll.cs` (bloque "6c/6d"): `VolcarSoloScroll` de los 3
+  `ScrollViewer` internos (ya eliminados) se sustituye por volcar unicamente
+  `ExplorationSidebarScroll` en cada una de las 3 subvistas activas, mas el mismo canario de "0
+  ScrollViewer propios" del punto anterior.
+
+**Verificacion real, no solo compilar**:
+- `dotnet build Terrakeep.slnx -c Release`: **0 Advertencias/0 Errores** (hubo un bloqueo temporal
+  real, no causado por este cambio: `PlayerPreviewRenderer.cs(1043,16): error CS0103
+  'SliceBalloonFrame' no existe` - edicion en curso de OTRO agente en paralelo en ese mismo momento,
+  ver el commit hermano de animacion del Balloon en el hover; una segunda compilacion pocos minutos
+  despues, tras que ese agente terminara su edicion, dio 0/0 limpio - documentado aqui por la regla
+  de "si algo falla dos veces seguidas, parar y escribirlo", aunque en este caso solo hizo falta
+  esperar, sin ninguna accion sobre ese archivo, que sigue fuera de mi working set).
+- `EXPLORATION_LAYOUT_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: **0
+  FALLO/0 EXCEPTION** en las 2 resoluciones reales (1180x860/1080x700) x 3 subvistas: contenido real
+  visible=True en las 6, `ScrollableWidth=0px` en las 6 (cero overflow horizontal), `ScrollViewer
+  descendientes de ExplorationSidebarWorldToolsContent=0` en las 6 (contrato de "maximo un scroll
+  vertical, el exterior" verificado real, no solo asumido).
+- `COFRES_INSPECTOR_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: **0
+  FALLO/0 EXCEPTION**, incluidos los bloques `EXPLORACION-FASEF*`/`EXPLORACION-FASEH-WORLDTOOLS-
+  MIN1080x700*` nuevos (3 capturas reales por subvista + 3 comprobaciones de "fondo alcanzable a
+  1080x700") y los bloques de interaccion/guardado real (Spawn/Tiempo-Luna/Banderas siguen
+  escribiendo `Blando_Río.wld` de verdad, ida y vuelta reversible confirmada).
+- `KEEPQA_VIEWPORT_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: **0
+  FALLO/0 EXCEPTION**, `WorldTools_{Overview,Edit,Bestiary}_ScrollInterno=0` en las 3.
+- `dotnet test Terrakeep.Core.Tests -c Release --no-build`: **773/773**, 6s, sin regresion (este
+  cambio no toca `Terrakeep.Core`, incluido solo como parte de la suite completa pedida).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: lanzado como parte de la
+  verificacion de suite completa - ver el resultado real mas abajo si ya quedo registrado en el
+  momento de leer esto, o completar manualmente si esta bitacora se consulta antes de que terminara
+  (proceso real, `testhost.exe`, con uso de memoria alto y normal para este proyecto segun ya
+  documentado arriba en esta misma bitacora - "34 minutos" es el peor caso ya visto, no lo tipico).
+
+**Redespliegue**: pendiente de confirmar si `Terrakeep.exe` (barra de tareas y/o copia instalada)
+esta en uso antes de sobrescribir - ver el resultado real al cierre de esta tarea.
+
+Commit local: `Terrakeep.App/ViewModels/ExplorationViewModel.cs`,
+`Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs`,
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`,
+`Terrakeep.App.Tests/AuditoriaViewportScroll.cs`, `bitacora.md` (working set exacto de esta tarea -
+nunca `git add -A`; habia decenas de ficheros ajenos modificados en el arbol por otros agentes en
+paralelo - incluido `CLAUDE.md`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
+`Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, `Terrakeep.App.ViewModels.Tests/
+DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/*` modificado, `scripts/*.js`/`*.ps1`
+y ficheros nuevos sin trackear - ninguno tocado). Sin `git push`.

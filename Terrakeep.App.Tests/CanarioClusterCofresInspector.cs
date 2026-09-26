@@ -849,17 +849,23 @@ internal static partial class Program
                     if (vm.Exploration.SidebarMode != ExplorationSidebarMode.WorldTools || selectorBuscar.IsChecked == true || selectorMundo.IsChecked != true || browseFaseF.Visibility != Visibility.Collapsed || worldToolsFaseF.Visibility != Visibility.Visible)
                         Console.WriteLine("FALLO: EXPLORACION-FASEF - ShowSidebarWorldToolsCommand no deja el selector/los 2 contenedores en el estado esperado (WorldTools)");
 
-                    var expanderEsteMundo = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_this_world]");
-                    var expanderEditarMundo = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_edit_world]");
-                    var expanderBestiario = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
-                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_bestiary]");
-                    Console.WriteLine($"EXPLORACION-FASEF: los 3 Expanders dentro de WorldTools -> 'Este mundo' encontrado={expanderEsteMundo != null}, IsExpanded={expanderEsteMundo?.IsExpanded}; 'Editar mundo' encontrado={expanderEditarMundo != null}, IsExpanded={expanderEditarMundo?.IsExpanded}; 'Bestiario' encontrado={expanderBestiario != null}, IsExpanded={expanderBestiario?.IsExpanded} (los 3 esperados True/True/IsExpanded=True)");
-                    if (expanderEsteMundo == null || expanderEsteMundo.IsExpanded != true
-                        || expanderEditarMundo == null || expanderEditarMundo.IsExpanded != true
-                        || expanderBestiario == null || expanderBestiario.IsExpanded != true)
-                        Console.WriteLine("FALLO: EXPLORACION-FASEF - alguno de los 3 Expanders de Mundo no esta dentro de WorldTools ya desplegado por defecto (IsExpanded=True)");
+                    // ExploracionRediseno (rediseño de Exploracion>Mundo, 26-sep-2026): ya no hay 3
+                    // Expander simultaneos dentro de WorldTools - 3 pastillas (CategorySelector,
+                    // GroupName="ExploracionMundoSubvista") navegan 3 subvistas EXCLUSIVAS
+                    // (WorldToolsSection, ExplorationViewModel), una visible cada vez.
+                    var pillOverviewFaseF = Descendientes<RadioButton>(worldToolsFaseF).FirstOrDefault(r =>
+                        (BindingOperations.GetBindingExpression(r, RadioButton.IsCheckedProperty)?.ParentBinding?.ConverterParameter as string) == "Overview");
+                    var pillEditFaseF = Descendientes<RadioButton>(worldToolsFaseF).FirstOrDefault(r =>
+                        (BindingOperations.GetBindingExpression(r, RadioButton.IsCheckedProperty)?.ParentBinding?.ConverterParameter as string) == "Edit");
+                    var pillBestiaryFaseF = Descendientes<RadioButton>(worldToolsFaseF).FirstOrDefault(r =>
+                        (BindingOperations.GetBindingExpression(r, RadioButton.IsCheckedProperty)?.ParentBinding?.ConverterParameter as string) == "Bestiary");
+                    var subviewOverviewFaseF = window.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
+                    var subviewEditFaseF = window.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
+                    var subviewBestiaryFaseF = window.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
+                    Console.WriteLine($"EXPLORACION-FASEF: pastillas/subvistas de Mundo -> 'Este mundo' pastilla={pillOverviewFaseF != null}/subvista={subviewOverviewFaseF != null}; 'Editar mundo' pastilla={pillEditFaseF != null}/subvista={subviewEditFaseF != null}; 'Bestiario' pastilla={pillBestiaryFaseF != null}/subvista={subviewBestiaryFaseF != null} (HasBestiary={vm.Exploration.HasBestiary}); WorldToolsSection inicial={vm.Exploration.WorldToolsSection} (esperado Overview)");
+                    if (pillOverviewFaseF == null || pillEditFaseF == null || subviewOverviewFaseF == null || subviewEditFaseF == null
+                        || vm.Exploration.WorldToolsSection != WorldToolsSection.Overview || subviewOverviewFaseF.IsVisible != true)
+                        Console.WriteLine("FALLO: EXPLORACION-FASEF - falta alguna pastilla/subvista real de Mundo (Overview/Edit), o WorldTools no arranca en Overview visible por defecto");
 
                     // Ningun elemento real de Browse (WrapPanel de categorias, buscador, resultados) debe
                     // seguir ocupando espacio del viewport mientras WorldTools esta activo - confirma que
@@ -869,53 +875,76 @@ internal static partial class Program
                     if (browseFaseF.IsVisible)
                         Console.WriteLine("FALLO: EXPLORACION-FASEF - BrowseContent sigue IsVisible=True con WorldTools activo, seguiria compartiendo viewport con Cofres/Minerales/Objetos");
 
-                    // Igual que arriba: vuelve a la cabecera real antes de esta segunda captura.
-                    if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseFWorldTools)
-                    { scrollFaseFWorldTools.ScrollToTop(); DoEvents(); DoEvents(); window.UpdateLayout(); }
+                    // Una captura real por subvista (ya no una unica captura "las 3 expandidas a la
+                    // vez" - las 3 subvistas son EXCLUSIVAS, nunca coexisten en pantalla).
+                    foreach (var seccionFaseF in new[] { WorldToolsSection.Overview, WorldToolsSection.Edit, WorldToolsSection.Bestiary })
+                    {
+                        if (seccionFaseF == WorldToolsSection.Bestiary && !vm.Exploration.HasBestiary) continue;
+                        vm.Exploration.WorldToolsSection = seccionFaseF;
+                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
 
-                    var rtbWorldToolsFaseF = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                    rtbWorldToolsFaseF.Render(window);
-                    var encWorldToolsFaseF = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                    encWorldToolsFaseF.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseF));
-                    string rutaWorldToolsFaseF = Path.Combine(outDirFaseF, "fasef-worldtools-3-expanders-desplegados.png");
-                    using (var fsWorldToolsFaseF = File.Create(rutaWorldToolsFaseF)) encWorldToolsFaseF.Save(fsWorldToolsFaseF);
-                    Console.WriteLine($"EXPLORACION-FASEF: captura real de WorldTools (3 Expanders desplegados, Browse oculto) -> {rutaWorldToolsFaseF}");
+                        if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseFWorldTools)
+                        { scrollFaseFWorldTools.ScrollToTop(); DoEvents(); DoEvents(); window.UpdateLayout(); }
 
-                    // ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): el punto 6 del encargo
-                    // pide confirmar VISUALMENTE que WorldTools (sus 3 Expander ya desplegados, mismo
-                    // estado de arriba) no pierde contenido inalcanzable a la ventana MINIMA real
-                    // (1080x700) - WorldToolsContent vive en Auto/natural (sin Height/MinHeight propios,
-                    // mismo motivo real que ExplorationSidebarChestInspectorPlaceholder mas arriba) dentro
-                    // del MISMO ScrollViewer exterior, asi que el fondo real del DockPanel (tras "Bestiario",
-                    // el ultimo de los 3 Expander) debe seguir cayendo DENTRO de la ventana tras bajar el
-                    // scroll del todo.
+                        var rtbWorldToolsFaseF = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbWorldToolsFaseF.Render(window);
+                        var encWorldToolsFaseF = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encWorldToolsFaseF.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseF));
+                        string rutaWorldToolsFaseF = Path.Combine(outDirFaseF, $"fasef-worldtools-{seccionFaseF.ToString().ToLowerInvariant()}.png");
+                        using (var fsWorldToolsFaseF = File.Create(rutaWorldToolsFaseF)) encWorldToolsFaseF.Save(fsWorldToolsFaseF);
+                        Console.WriteLine($"EXPLORACION-FASEF: captura real de WorldTools/{seccionFaseF} (subvista exclusiva, Browse oculto) -> {rutaWorldToolsFaseF}");
+                    }
+                    vm.Exploration.WorldToolsSection = WorldToolsSection.Overview;
+                    DoEvents(); DoEvents();
+
+                    // ExploracionRediseno Fase H (26-sep-2026, aplicador-fix; adaptado 26-sep-2026 al
+                    // rediseno de subvistas exclusivas): el punto 6 del encargo pide confirmar
+                    // VISUALMENTE que WorldTools no pierde contenido inalcanzable a la ventana MINIMA
+                    // real (1080x700) - WorldToolsContent vive en Auto/natural (sin Height/MinHeight
+                    // propios, mismo motivo real que ExplorationSidebarChestInspectorPlaceholder mas
+                    // arriba) dentro del MISMO ScrollViewer exterior, asi que el fondo real debe seguir
+                    // cayendo DENTRO de la ventana tras bajar el scroll del todo - repetido para las 3
+                    // subvistas EXCLUSIVAS por separado (ya no "las 3 expandidas a la vez", que ya no
+                    // existe con este diseno).
                     if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseHWorldToolsMin)
                     {
                         FijarTamaño(window, 1080, 700);
                         DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
-                        scrollFaseHWorldToolsMin.ScrollToBottom();
-                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
-                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: tras ScrollToBottom -> VerticalOffset={scrollFaseHWorldToolsMin.VerticalOffset:0.#}px, ScrollableHeight={scrollFaseHWorldToolsMin.ScrollableHeight:0.#}px, ExtentHeight={scrollFaseHWorldToolsMin.ExtentHeight:0.#}px, ViewportHeight={scrollFaseHWorldToolsMin.ViewportHeight:0.#}px (esperado VerticalOffset≈ScrollableHeight)");
-                        if (Math.Abs(scrollFaseHWorldToolsMin.VerticalOffset - scrollFaseHWorldToolsMin.ScrollableHeight) > 1)
-                            Console.WriteLine("FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - ScrollToBottom no deja VerticalOffset≈ScrollableHeight en ExplorationSidebarScroll a 1080x700");
 
-                        var rectWorldToolsFaseHMin = worldToolsFaseF.TransformToAncestor(window)
-                            .TransformBounds(new Rect(0, 0, worldToolsFaseF.ActualWidth, worldToolsFaseF.ActualHeight));
-                        bool worldToolsAlcanzable = rectWorldToolsFaseHMin.Bottom <= window.ActualHeight + 1;
-                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: WorldToolsContent rect real tras ScrollToBottom={rectWorldToolsFaseHMin}, ventana={window.ActualWidth:0}x{window.ActualHeight:0} -> alcanzableEnPantalla={worldToolsAlcanzable} (esperado True)");
-                        if (!worldToolsAlcanzable)
-                            Console.WriteLine($"FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - el fondo real de WorldToolsContent (Bottom={rectWorldToolsFaseHMin.Bottom:0.#}px) queda fuera de la ventana (alto={window.ActualHeight:0}px) tras ScrollToBottom a 1080x700 - contenido inalcanzable");
+                        foreach (var seccionFaseH in new[] { WorldToolsSection.Overview, WorldToolsSection.Edit, WorldToolsSection.Bestiary })
+                        {
+                            if (seccionFaseH == WorldToolsSection.Bestiary && !vm.Exploration.HasBestiary) continue;
+                            vm.Exploration.WorldToolsSection = seccionFaseH;
+                            DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
 
-                        var rtbWorldToolsFaseHMin = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                        rtbWorldToolsFaseHMin.Render(window);
-                        var encWorldToolsFaseHMin = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                        encWorldToolsFaseHMin.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseHMin));
-                        string rutaWorldToolsFaseHMin = Path.Combine(outDirFaseF, "faseh-worldtools-1080x700-fondo.png");
-                        using (var fsWorldToolsFaseHMin = File.Create(rutaWorldToolsFaseHMin)) encWorldToolsFaseHMin.Save(fsWorldToolsFaseHMin);
-                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 (fondo del scroll) -> {rutaWorldToolsFaseHMin}");
+                            scrollFaseHWorldToolsMin.ScrollToBottom();
+                            DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                            Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: {seccionFaseH} tras ScrollToBottom -> VerticalOffset={scrollFaseHWorldToolsMin.VerticalOffset:0.#}px, ScrollableHeight={scrollFaseHWorldToolsMin.ScrollableHeight:0.#}px, ExtentHeight={scrollFaseHWorldToolsMin.ExtentHeight:0.#}px, ViewportHeight={scrollFaseHWorldToolsMin.ViewportHeight:0.#}px (esperado VerticalOffset≈ScrollableHeight)");
+                            if (Math.Abs(scrollFaseHWorldToolsMin.VerticalOffset - scrollFaseHWorldToolsMin.ScrollableHeight) > 1)
+                                Console.WriteLine($"FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - ScrollToBottom no deja VerticalOffset≈ScrollableHeight en ExplorationSidebarScroll a 1080x700 ({seccionFaseH})");
+
+                            var rectWorldToolsFaseHMin = worldToolsFaseF.TransformToAncestor(window)
+                                .TransformBounds(new Rect(0, 0, worldToolsFaseF.ActualWidth, worldToolsFaseF.ActualHeight));
+                            bool worldToolsAlcanzable = rectWorldToolsFaseHMin.Bottom <= window.ActualHeight + 1;
+                            Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: {seccionFaseH} WorldToolsContent rect real tras ScrollToBottom={rectWorldToolsFaseHMin}, ventana={window.ActualWidth:0}x{window.ActualHeight:0} -> alcanzableEnPantalla={worldToolsAlcanzable} (esperado True)");
+                            if (!worldToolsAlcanzable)
+                                Console.WriteLine($"FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - el fondo real de WorldToolsContent (Bottom={rectWorldToolsFaseHMin.Bottom:0.#}px) queda fuera de la ventana (alto={window.ActualHeight:0}px) tras ScrollToBottom a 1080x700 - contenido inalcanzable ({seccionFaseH})");
+
+                            var rtbWorldToolsFaseHMin = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                            rtbWorldToolsFaseHMin.Render(window);
+                            var encWorldToolsFaseHMin = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encWorldToolsFaseHMin.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseHMin));
+                            string rutaWorldToolsFaseHMin = Path.Combine(outDirFaseF, $"faseh-worldtools-{seccionFaseH.ToString().ToLowerInvariant()}-1080x700-fondo.png");
+                            using (var fsWorldToolsFaseHMin = File.Create(rutaWorldToolsFaseHMin)) encWorldToolsFaseHMin.Save(fsWorldToolsFaseHMin);
+                            Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 ({seccionFaseH}, fondo del scroll) -> {rutaWorldToolsFaseHMin}");
+
+                            scrollFaseHWorldToolsMin.ScrollToTop();
+                            DoEvents(); DoEvents();
+                        }
 
                         FijarTamaño(window, 1180, 860);
                         DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                        vm.Exploration.WorldToolsSection = WorldToolsSection.Overview;
                         scrollFaseHWorldToolsMin.ScrollToTop();
                         DoEvents(); DoEvents(); window.UpdateLayout();
                     }

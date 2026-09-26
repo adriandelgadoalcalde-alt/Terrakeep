@@ -7974,40 +7974,49 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- ExploracionRediseno Fase F (25-sep-2026, aplicador-fix): tercer hijo
-                             superpuesto de este Grid (ver el comentario real de Fase C mas arriba) -
-                             los 3 Expanders de "Mundo" (Este mundo/Editar mundo/Bestiario) movidos TAL
-                             CUAL desde su Dock="Top" permanente de la cabecera fija (contenido interno
-                             intacto: SaveSpawnPointCommand/SaveTimeAndMoonCommand/
-                             SaveBossFlagsCommand/BestiaryRows, cero logica nueva - solo cambia donde
-                             viven). Mismo DockPanel real que antes (conserva su propio
-                             DockPanel.Dock="Top" en cada Expander, ahora dentro de este DockPanel en
-                             vez del ExplorationSidebarPanel exterior) para no tener que tocar ni una
-                             linea de su contenido. Ya no comparten espacio con Cofres/Minerales/
-                             Objetos de Browse - en su propio contexto arrancan desplegados
-                             (IsExpanded="True", decision real de UX: ya no compiten por sitio, y
-                             "Editar mundo" es precisamente la razon de ser de este modo). Cada
-                             Expander conserva su propio ScrollViewer MaxHeight interno tal cual
-                             (decision real: ya viven dentro del mismo ScrollViewer exterior que
-                             envuelve todo ExplorationSidebarPanel - unificarlos en un solo scroll no
-                             aportaba nada y arriesgaba tocar comportamiento ya medido de cada uno). -->
+                        <!-- ExploracionRediseno (rediseño de Exploracion>Mundo, 26-sep-2026, ver
+                             bitacora.md): los 3 Expander simultaneos de "Mundo" (Este mundo/
+                             Editar mundo/Bestiario), cada uno con su propio ScrollViewer interno
+                             (demasiados propietarios de scroll a la vez, dentro del
+                             ExplorationSidebarScroll exterior), se sustituyen por 3 subvistas
+                             EXCLUSIVAS (WorldToolsSection, ExplorationViewModel) navegadas con el
+                             mismo CategorySelector/EnumEquals/EnumEqualsToVis YA en uso en este
+                             mismo panel (selector Buscar/Mundo de mas arriba, pastillas de
+                             categoria de Browse) - una sola subvista visible cada vez, ninguna con
+                             scroll propio: las 3 comparten el UNICO ExplorationSidebarScroll
+                             exterior (BestiaryRows mide como maximo 361 filas en el mundo de
+                             prueba mas grande de este repo, sin virtualizacion necesaria).
+                             Contenido interno de cada subvista INTACTO respecto a los Expander
+                             anteriores (mismos Commands/bindings, cero logica nueva) - solo cambia
+                             el contenedor; los Visibility=IsWorldLoaded/HasBestiary que ya
+                             llevaban los Expander se conservan como salvaguarda extra dentro de
+                             cada StackPanel de contenido. -->
                         <DockPanel x:Name="ExplorationSidebarWorldToolsContent"
                                    Visibility="{Binding Exploration.SidebarMode, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=WorldTools}">
-                        <!-- F-14 (auditoria de Opus vs TEdit, E-16/E-17): "Este mundo" - Expander
-                             bajo la cabecera (no una 6ª pildora, para no tocar el WrapPanel de 5
-                             que R-02 ya dejo bien medido). Empieza colapsado, mismo criterio que
-                             "NPCs que faltan" (X-f). Todo el contenido ya estaba calculado
-                             (WldHeader/WorldPresenceIndex) - esto es solo un sitio real donde
-                             verlo de un vistazo, cero recorridos nuevos. -->
-                        <Expander DockPanel.Dock="Top" Header="{Binding Loc[explore_this_world], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,0,8" IsExpanded="True"
-                                  Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                            <!-- AR-11a: desplegado, este bloque pedia ~225px de golpe y se los
-                                 quitaba al contenido de la categoria (que en un DockPanel cobra el
-                                 ultimo). Con tope + scroll propio deja de poder vaciar la columna, y
-                                 lo que no cabe sigue siendo alcanzable dentro del propio Expander. -->
-                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Margin="0,6,0,0">
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                                         IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Overview}">
+                                <TextBlock Text="{Binding Loc[explore_this_world], Mode=OneWay}" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                                         IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Edit}">
+                                <TextBlock Text="{Binding Loc[explore_edit_world], Mode=OneWay}" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                                         Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource BoolToVis}}"
+                                         IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Bestiary}">
+                                <TextBlock Text="{Binding Loc[explore_bestiary], Mode=OneWay}" />
+                            </RadioButton>
+                        </WrapPanel>
+
+                        <Grid x:Name="ExplorationSidebarWorldToolsSubviewHost" DockPanel.Dock="Top">
+                        <!-- F-14 (auditoria de Opus vs TEdit, E-16/E-17): "Este mundo" - todo el
+                             contenido ya estaba calculado (WldHeader/WorldPresenceIndex) - esto es
+                             solo un sitio real donde verlo de un vistazo, cero recorridos nuevos. -->
+                        <StackPanel x:Name="ExplorationSidebarWorldToolsOverview"
+                                    Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Overview}">
+                            <StackPanel Margin="0,6,0,0"
+                                        Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Style="{StaticResource CaptionText}">
                                     <Run Text="{Binding Loc[explore_seed_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldSeedText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </TextBlock>
@@ -8072,20 +8081,16 @@
                                 <Button Content="{Binding Loc[explore_save_report], Mode=OneWay}" Tag="Ghost" Margin="0,8,0,0" HorizontalAlignment="Left" Padding="8,3"
                                         Click="OnSaveWorldReportClick" />
                             </StackPanel>
-                            </ScrollViewer>
-                        </Expander>
+                        </StackPanel>
 
                         <!-- Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026):
                              tres grupos de edicion nuevos, cada uno con su propio boton "Guardar"
                              (nunca un unico "guardar todo" - tres escrituras atomicas
-                             independientes, mismo criterio real que la dificultad de arriba).
-                             Expander propio (no dentro de "Este mundo") para separar claramente
-                             informacion de solo lectura de lo que SI se puede tocar. -->
-                        <Expander DockPanel.Dock="Top" Header="{Binding Loc[explore_edit_world], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,0,8" IsExpanded="True"
-                                  Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Margin="0,6,0,0">
+                             independientes, mismo criterio real que la dificultad de arriba). -->
+                        <StackPanel x:Name="ExplorationSidebarWorldToolsEdit"
+                                    Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Edit}">
+                            <StackPanel Margin="0,6,0,0"
+                                        Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                                 <!-- Punto de aparicion -->
                                 <TextBlock Text="{Binding Loc[explore_spawn_point], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -8202,18 +8207,17 @@
                                            TextWrapping="Wrap" Margin="0,4,0,0"
                                            Visibility="{Binding Exploration.FlagsSaveStatus, Converter={StaticResource NullToCollapsed}}" />
                             </StackPanel>
-                            </ScrollViewer>
-                        </Expander>
+                        </StackPanel>
 
                         <!-- Bestiario (punto 6 de bitacora.md, 13-sep-2026: paneles de progreso) -
                              SOLO LECTURA (el bestiario del propio juego tampoco se edita desde
                              fuera - ver el comentario real de WldBestiary) - oculto por completo
                              en un mundo anterior a Journey's End (HasBestiary=false), nunca una
                              tabla vacia fingiendo datos que el archivo no tiene. -->
-                        <Expander DockPanel.Dock="Top" Header="{Binding Loc[explore_bestiary], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,0,8" IsExpanded="True"
-                                  Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource BoolToVis}}">
-                            <StackPanel Margin="0,6,0,0">
+                        <StackPanel x:Name="ExplorationSidebarWorldToolsBestiary"
+                                    Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Bestiary}">
+                            <StackPanel Margin="0,6,0,0"
+                                        Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource BoolToVis}}">
                                 <!-- Bug real reportado en vivo ("panel del Bestiario cortado") - segundo
                                      intento real (21-sep-2026), tras el limite documentado de la ronda
                                      anterior (que solo midio los ENCABEZADOS de la columna, nunca este
@@ -8227,7 +8231,6 @@
                                      maquina (Blando_Río.wld, 361 especies, captura real). -->
                                 <TextBlock Text="{Binding Exploration.BestiarySummaryText, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                            Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4" />
-                                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                     <!-- Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del
                                          mundo con sprites reales"): icono real cuando existe
                                          (NpcIconResolver, solo los 27 NPCs de pueblo reales -
@@ -8270,9 +8273,9 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                </ScrollViewer>
                             </StackPanel>
-                        </Expander>
+                        </StackPanel>
+                        </Grid>
                         </DockPanel>
                         </Grid>
                     </DockPanel>

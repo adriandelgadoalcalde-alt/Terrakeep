@@ -528,37 +528,43 @@ internal static partial class Program
                         DoEvents(); DoEvents();
                     }
 
-                    // ---- 6c. ExplorationSidebarScroll en WorldTools, 3 Expanders desplegados ----
+                    // ---- 6c/6d. ExplorationSidebarScroll en WorldTools, para cada una de las 3
+                    // subvistas EXCLUSIVAS (ExploracionRediseno, 26-sep-2026, ver bitacora.md): ya
+                    // no hay 3 Expander simultaneos con ScrollViewer interno propio - las 3
+                    // (Overview/Edit/Bestiary, WorldToolsSection) comparten el UNICO
+                    // ExplorationSidebarScroll exterior, nunca un scroll propio (contrato real del
+                    // rediseno). Se vuelca ese unico ScrollViewer una vez por subvista activa, en vez
+                    // de los 3 ScrollViewer internos ya eliminados.
                     vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
                     DoEvents(); DoEvents();
-                    VolcarSoloScroll("ExplorationSidebarScroll_WorldTools", "scrollviewer_sidebar", scrollLateralFaseH);
-
-                    // ---- 6d. Los 3 ScrollViewer internos de WorldTools (Este mundo/Editar mundo/Bestiario) ----
                     var worldToolsFaseH = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
                     if (worldToolsFaseH == null)
                     {
-                        Console.WriteLine("VIEWPORT-faseH: ExplorationSidebarWorldToolsContent no encontrado - se omiten los 3 ScrollViewer internos");
+                        Console.WriteLine("VIEWPORT-faseH: ExplorationSidebarWorldToolsContent no encontrado - se omiten las 3 subvistas");
                     }
                     else
                     {
-                        var expanderEsteMundoFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
-                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_this_world]");
-                        var scrollEsteMundoFaseH = expanderEsteMundoFaseH == null ? null : Descendientes<ScrollViewer>(expanderEsteMundoFaseH).FirstOrDefault();
-                        VolcarSoloScroll("WorldTools_EsteMundo", "scrollviewer_expander", scrollEsteMundoFaseH);
+                        foreach (var seccionFaseH in new[] { WorldToolsSection.Overview, WorldToolsSection.Edit, WorldToolsSection.Bestiary })
+                        {
+                            if (seccionFaseH == WorldToolsSection.Bestiary && !vm.Exploration.HasBestiary)
+                            {
+                                Console.WriteLine("VIEWPORT-ExplorationSidebarScroll_WorldTools_Bestiary: HasBestiary=false, omitido (mundo sin bestiario)");
+                                continue;
+                            }
+                            vm.Exploration.WorldToolsSection = seccionFaseH;
+                            DoEvents(); DoEvents(); window.UpdateLayout();
+                            VolcarSoloScroll($"ExplorationSidebarScroll_WorldTools_{seccionFaseH}", "scrollviewer_sidebar", scrollLateralFaseH);
 
-                        var expanderEditarMundoFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
-                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_edit_world]");
-                        var scrollEditarMundoFaseH = expanderEditarMundoFaseH == null ? null : Descendientes<ScrollViewer>(expanderEditarMundoFaseH).FirstOrDefault();
-                        VolcarSoloScroll("WorldTools_EditarMundo", "scrollviewer_expander", scrollEditarMundoFaseH);
-
-                        var expanderBestiarioFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
-                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_bestiary]");
-                        // Localizado por REFERENCIA real (Exploration.BestiaryRows) - dentro del Expander
-                        // de Bestiario solo hay un ScrollViewer real, pero mismo criterio que el resto de
-                        // este fichero (ReferenceEquals, nunca texto/posicion fragil).
-                        var icBestiarioFaseH = expanderBestiarioFaseH == null ? null : Descendientes<ItemsControl>(expanderBestiarioFaseH).FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Exploration.BestiaryRows));
-                        var scrollBestiarioFaseH = BuscarScrollViewerAncestro(icBestiarioFaseH);
-                        VolcarViewport("WorldTools_Bestiario", "scrollviewer_expander", scrollBestiarioFaseH, icBestiarioFaseH, "contenido");
+                            // Contrato real del rediseno: ninguna subvista lleva scroll propio - cero
+                            // ScrollViewer descendientes de ExplorationSidebarWorldToolsContent, salvo
+                            // el PART_ContentHost interno de los TextBox de Spawn X/Y (mismo gotcha
+                            // real ya documentado arriba, linea 156).
+                            int scrollsInternosFaseH = Descendientes<ScrollViewer>(worldToolsFaseH)
+                                .Count(sv => sv.TemplatedParent is not (System.Windows.Controls.Primitives.TextBoxBase or PasswordBox));
+                            Console.WriteLine($"VIEWPORT-WorldTools_{seccionFaseH}_ScrollInterno: ScrollViewer descendientes de ExplorationSidebarWorldToolsContent={scrollsInternosFaseH} (esperado 0)");
+                        }
+                        vm.Exploration.WorldToolsSection = WorldToolsSection.Overview;
+                        DoEvents(); DoEvents();
                     }
 
                     // ---- 6e. MissingNpcsScroll (Expander "NPCs que faltan") y NpcResultsList - ambos ya con x:Name real ----

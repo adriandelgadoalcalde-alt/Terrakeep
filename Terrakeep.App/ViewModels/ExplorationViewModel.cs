@@ -110,6 +110,13 @@ public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects, Compare }
 // nada en XAML consume esta propiedad todavia.
 public enum ExplorationSidebarMode { Browse, ChestInspector, WorldTools }
 
+// ExploracionRediseno Fase (rediseño de Exploracion>Mundo, ver bitacora.md): subvista exclusiva
+// dentro de WorldTools ("Mundo") - sustituye a los 3 Expander simultaneos (Este mundo/Editar
+// mundo/Bestiario) por una navegacion de pastillas tipo CategorySelector, una sola subvista
+// visible cada vez, sin scroll propio (las 3 comparten el unico ExplorationSidebarScroll
+// exterior).
+public enum WorldToolsSection { Overview, Edit, Bestiary }
+
 // Fila de inventario generica - reutilizada por Cofres (las dos vistas), Minerales y Objetos
 // (las tres vistas). NPCs sigue con su propio WorldNpcRowViewModel (ya existente, con icono real
 // y estado de mapa) - un inventario generico no le aporta nada que no tenga ya.
@@ -1477,6 +1484,12 @@ public partial class ExplorationViewModel : ObservableObject
     // OnEditingChestChanged (unico sitio que lo toca en esta fase, ver mas abajo). Arranca en
     // Browse porque la pestaña siempre entra en navegacion normal, nunca con un cofre ya abierto.
     [ObservableProperty] private ExplorationSidebarMode _sidebarMode = ExplorationSidebarMode.Browse;
+
+    // ExploracionRediseno (rediseño de Exploracion>Mundo): subvista exclusiva activa dentro de
+    // WorldTools - ver WorldToolsSection arriba. Arranca en Overview (Este mundo), la primera
+    // pastilla. El guard de "Bestiario ya no disponible" vive en OnWorldLoaded/OnWorldLoadFailed
+    // (los dos sitios que ya notifican HasBestiary), no aqui.
+    [ObservableProperty] private WorldToolsSection _worldToolsSection = WorldToolsSection.Overview;
 
     public ObservableCollection<ItemSlotViewModel> EditingChestSlots { get; } = [];
     // Mensaje real de "Guardado"/error tras pulsar Guardar - mismo patron EXACTO ya establecido
@@ -2856,6 +2869,8 @@ public partial class ExplorationViewModel : ObservableObject
 
             RebuildBestiaryRows();
             OnPropertyChanged(nameof(HasBestiary));
+            if (WorldToolsSection == WorldToolsSection.Bestiary && !HasBestiary)
+                WorldToolsSection = WorldToolsSection.Overview;
 
             IsWorldLoaded = true;
             SetStatusMessage("status_world_loaded_summary",
@@ -2894,6 +2909,8 @@ public partial class ExplorationViewModel : ObservableObject
             BestiaryRows.Clear();
             BestiarySummaryText = "—";
             OnPropertyChanged(nameof(HasBestiary));
+            if (WorldToolsSection == WorldToolsSection.Bestiary && !HasBestiary)
+                WorldToolsSection = WorldToolsSection.Overview;
             OnPropertyChanged(nameof(HasSlimeKingField));
             SetStatusMessage("error_reading_world", ex.Message);
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
