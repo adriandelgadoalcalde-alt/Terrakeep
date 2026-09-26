@@ -28361,3 +28361,110 @@ en el arbol, decenas de ficheros ajenos modificados sin relacion con este encarg
 respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
 `KEEPQA-INTEGRACION.md` no tocados. Balloon (Fase3) NO tocado, tal como pedia el encargo. Sin
 `git push`.
+
+## 26-sep-2026 - Investigacion pura (investigador-bug): "forma dorada/redondeada bajo los pies"
+en la tarjeta hero "Continuar con Terrariano" de Inicio
+
+Reporte real del usuario, captura marcada a mano en rojo: en la tarjeta hero "Continuar con
+Terrariano" aparece una forma dorada/amarilla redondeada bajo los pies del doll, que el usuario
+confirma que "eso no lo tiene terraria ni de coña". Fase de investigacion pura - **no se ha
+tocado ningun archivo de produccion**.
+
+**Datos reales del propio personaje del usuario** (leidos con `PlrFile.Read` de
+`Terrakeep.Core.PlrFormat`, el mismo lector real del proyecto, desde un arnes aislado en el
+scratchpad de sesion - nunca se ha escrito nada en el `.plr` real):
+`Documents\My Games\Terraria\Players\Terrariano.plr` (version 326) tiene `EquipmentItems[0]`
+(slot de mascota real, `miscEquips[0]`) = id **5098**. Segun el propio catalogo del proyecto
+(`Assets/vanilla_item_names_en.json`) ese id se llama **"Eye Bone"** - confirmado ademas contra
+el decompilado real (`TerrariaVanilla/Terraria/ID/ItemID.cs:11742`, `ChesterPetItem = 5098`, y
+`Terraria.Localization.Content.en-US.Items.json:5334`, `"ChesterPetItem": "Eye Bone"` /
+`:8384`, `"Summons a living chest"`) - el nombre visible del objeto es "Eye Bone" pero invoca la
+mascota real **"Chester"**, un cofre viviente animado, de color dorado/marron y forma redondeada
+(sprite real confirmado visualmente: `Assets/pets/960.png`, proyectil 960, tira de 20 filas de
+46x48).
+
+**Causa raiz CONFIRMADA** (archivo:linea exacto): `Terrakeep.App/Converters/
+PetPositionConverters.cs:63`, dentro de `PetBottomAlignMarginConverter.Convert`:
+```csharp
+double left = 10.0 * canvasScale;
+```
+Este valor deberia ser **20.0**, no 10.0. Re-derivacion campo a campo del decompilado real
+(`TerrariaVanilla/Terraria/GameContent/UI/Elements/UICharacter.cs:122-149`,
+`GetPlayerPosition`/`DrawPets`): `GetPlayerPosition` centra el HITBOX real del jugador (20px de
+ancho) dentro del cuadro de la UI y lo retranquea -10px cuando hay mascota
+(`hitboxLeft_retranqueado = centroUI - 20`); el sprite VISUAL (40px de ancho, el mismo lienzo
+nativo `PlayerPreviewRenderer.Width`) se dibuja SIEMPRE centrado sobre el centro de ESE hitbox ya
+retranqueado (`spriteLeft_final = centroUI - 30`); `DrawPets` ancla la mascota en
+`playerPosition.X + 20 = centroUI`. Neto: la mascota queda a `centroUI - (centroUI - 30) = 30`
+nativos del borde del sprite YA retranqueado, que equivale a **20 nativos desde el borde
+izquierdo del propio Grid/lienzo** (el `Margin.Left` del pet es relativo al Grid, no al sprite ya
+desplazado por `PetDollShiftXConverter`). El comentario de cabecera del propio fichero (lineas
+9-41) ya admite la simplificacion que causa el hueco ("Terrakeep no modela un hitbox aparte del
+sprite... el jugador es directamente el propio lienzo del doll") pero esa simplificacion pierde
+los 10px reales de diferencia entre el hitbox (20 de ancho) y el sprite visual (40 de ancho,
+centrado sobre el hitbox) - de ahi el error exacto de 10 nativos (10 en vez de 20).
+
+**Corroboracion independiente, ya existente en el repo, de que 20 es el valor correcto**:
+`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs` (`HOMEBANNER_SOLO=1`, bloque C/D,
+`VerificarFormulaRealMascota` linea 211) YA calcula `offsetXEsperado = 20.0 * canvasScale +
+petOffsetX` citando el MISMO decompilado - y el propio mensaje del commit que introdujo el bug
+(`7058c42b`, "Inicio: sustituye el Margin empirico de la mascota por la formula real de
+Terraria") dice explicitamente "la mascota se ancla al borde inferior del doll desplazada 20px a
+la derecha". El commit escribio el canario con 20 pero el converter con 10 - contradiccion
+interna del mismo commit, nunca ejercida contra un personaje real con mascota antes de comitear
+(o ejercida y pasada por alto).
+
+**Evidencia visual real** (arnes aislado propio en el scratchpad de sesion,
+`DiagPetDorado.csproj`, referenciando directamente los DLL YA COMPILADOS de
+`Terrakeep.App`/`Terrakeep.Core` en Release - nunca se ha lanzado `Terrakeep.exe` ni se ha tocado
+ningun `.plr` real): reconstruida la geometria EXACTA de la tarjeta hero (formulas transcritas
+1:1 de `MainWindow.xaml`/`PetPositionConverters.cs`) con los assets reales de produccion y el
+`.plr` real de Terrariano. Con `left=10*canvasScale` (codigo actual) "Chester" queda oculto casi
+entero detras del doll, dejando solo un borde curvo dorado/marron asomando bajo los pies -
+**exactamente el reporte del usuario**. Con `left=20*canvasScale` (la formula re-derivada)
+"Chester" se ve reconocible al lado de los pies del personaje, coherente con
+`UICharacter.cs`/vanilla real. Capturas del arnes de diagnostico (no forman parte del repo,
+scratchpad de sesion): `composite-hero-banner-3x.png` (bug real) vs
+`composite-hero-banner-HIPOTESIS-left20-3x.png` (formula corregida) / `gdi-original-left10-3x.png`
+vs `gdi-hipotesis-left20-3x.png` (segunda composicion independiente con GDI+, mismo resultado).
+
+**LIMITE REAL**: no se ha podido re-ejecutar `HOMEBANNER_SOLO=1` contra `Terrakeep.App.Tests.exe`
+para capturar un log en vivo de ESTE hallazgo concreto porque en el momento de la investigacion
+habia OTRO proceso `Terrakeep.App.Tests` real corriendo (PID 474156, de un `aplicador-fix` en
+paralelo trabajando en este mismo repo) - lanzar una segunda instancia se descarto a proposito
+para no interferir con esa sesion. La evidencia visual/matematica de arriba (arnes aislado propio
++ re-derivacion del decompilado + el canario ya existente en el repo) se considera suficiente
+para confirmar la causa sin ese re-run.
+
+**Canario nuevo que cierra el hueco de cobertura real**:
+`Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` - test headless puro (xunit, sin
+ventana WPF, sin depender de que este equipo tenga un personaje real con mascota) que llama
+directamente a `PetBottomAlignMarginConverter.Convert` y compara el `Margin.Left` resultante
+contra `20.0 * canvasScale` (1.3 tarjeta / 2.6 banner). El canario visual `HOMEBANNER_SOLO` YA
+existia y YA comprobaba lo mismo, pero solo se invoca a mano via variable de entorno (nunca
+corre en `dotnet test`, el gate real que S{I} usa este proyecto) - este test corre en cada
+`dotnet test Terrakeep.App.ViewModels.Tests` normal. Confirmado en rojo ahora mismo (3 tests
+fallan con el codigo actual, midiendo 13/26 en vez de 26/52 segun canvasScale - exactamente el
+`10` vs `20` de la causa raiz); 3 tests hermanos (margen superior, parametro invalido) pasan en
+verde, aislando el hallazgo al `left` exclusivamente. Se espera que pasen a verde sin tocar este
+fichero en cuanto `aplicador-fix` cambie la linea 63 real.
+
+**Recomendacion de arreglo exacta para `aplicador-fix`** (working set completo, sin necesidad de
+reinvestigar nada): en `Terrakeep.App/Converters/PetPositionConverters.cs:63`, cambiar
+`double left = 10.0 * canvasScale;` por `double left = 20.0 * canvasScale;` (y actualizar el
+comentario de las lineas 61-62, que documenta la aritmetica vieja "-10+20=+10" - la aritmetica
+neta real en coordenadas de hitbox sigue siendo correcta, pero falta sumar los 10px reales de
+diferencia entre el hitbox de 20 y el sprite de 40 antes de aplicarla como Margin relativo al
+Grid). Tras el cambio: `dotnet test Terrakeep.App.ViewModels.Tests --filter
+"FullyQualifiedName~PetPositionConvertersTests"` debe dar 6/6 en verde, y (cuando no haya otro
+`Terrakeep.App.Tests` corriendo en paralelo) `HOMEBANNER_SOLO=1 dotnet run --project
+Terrakeep.App.Tests -c Release` no debe imprimir ningun `FALLO` en el bloque C/D
+(`VerificarFormulaRealMascota`) para ningun personaje real con mascota de este equipo, incluido
+Terrariano. Working set de la causa: SOLO `PetPositionConverters.cs` (el `top`/`PetDollShiftXConverter`
+ya son correctos, confirmado por los tests hermanos en verde) - no hace falta tocar
+`CharacterListEntryViewModel.cs`, `MainWindow.xaml` ni ningun catalogo de datos (el id 5098 "Eye
+Bone"/Chester esta bien resuelto, el bug es puramente geometrico).
+
+Commit local: `Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` (unico archivo real
+tocado - `git add` explicito de ese fichero, nunca `git add -A`; habia decenas de ficheros ajenos
+modificados en el arbol por agentes `aplicador-fix` en paralelo, ninguno tocado). Sin `git push`.
