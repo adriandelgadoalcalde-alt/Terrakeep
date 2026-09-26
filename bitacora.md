@@ -29523,3 +29523,116 @@ lineas, usa `CharacterCardTemplate` window-scoped - PRIMER caso real desde esta 
 necesitaria aplicar la regla nueva de `UserControl.Resources` local si el `StaticResource` vive en
 el propio markup movido; confirmar con grep exhaustivo antes de asumirlo, sin repetir el error de
 intentar promover a `App.xaml` sin verificar contra este hallazgo real).
+
+## Cuarta extraccion real de una seccion de MainWindow.xaml a UserControl - ACERCA DE (26-sep-2026)
+
+Ejecucion real del siguiente paso del plan (`ADR-TERRAKEEP-016`, punto 4.3, recomendado por el
+propio `ADR-TERRAKEEP-019` tras NOVEDADES/BUILDS/SERVIDOR), requirement
+`b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Antes de tocar nada se confirmo con `git status`/`git log`
+que el arbol de Terrakeep seguia estable (decenas de ficheros modificados por otros agentes en
+paralelo, ninguno tocaba `MainWindow.xaml` ni la carpeta `Views/`). Detalle tecnico completo en
+`ADR-TERRAKEEP-020` (Decision Registry, mismo requirement) - resumen real aqui.
+
+**Resumen del arreglo real**: contenido del `TabItem` ACERCA DE (142 lineas, `MainWindow.xaml`
+7810-7956 antes de tocarla: cabecera con logo/version, autoria/creditos, ajustes de carpetas
+adicionales/cupo de copias/ventana fijada/idioma/modo compacto, y el registro de cambios del
+propio editor) movido byte a byte a `Terrakeep.App/Views/AboutView.xaml` + `AboutView.xaml.cs`
+(mismo patron ya fijado por `ADR-017`/`018`/`019`: carpeta `Views/`, sufijo `View.xaml`, sin
+`DataContext` propio, `d:DesignInstance` para IntelliSense). `MainWindow.xaml` queda con
+`<views:AboutView />` dentro del `TabItem` ACERCA DE.
+
+**Hallazgo real que CORRIGE la advertencia del propio plan** (mismo patron ya visto con
+`BuildClassTemplate` en `ADR-018`, esta vez con una advertencia explicita heredada de `ADR-016`/
+`019`): el plan señalaba `CharacterCardTemplate` (recurso window-scoped) como el caso mas delicado
+hasta la fecha para esta seccion. Grep exhaustivo confirmo que la nota era simplemente incorrecta:
+`CharacterCardTemplate` NO aparece en ningun sitio del bloque ACERCA DE - solo lo usa la lista de
+personajes de Inicio (`Home.Characters`, linea 2608). Los recursos que SI usa este bloque con
+`StaticResource` directo (`CaptionText`/`TitleText`/`BodyText`/`SectionText`/`NavRailLabel`/
+`BgElevatedBrush`/`TextPrimaryBrush`/`AccentBrush`/`CardShadow`/`CircleCloseButton`/`EnumEquals`/
+`ViewSelector`) ya viven todos en `Styles/Theme.xaml` o `App.xaml` - ninguno window-scoped. El
+`ItemsControl` de `Changelog.Entries` tampoco fija `ItemTemplate`: depende de la plantilla
+implicita de `ChangelogEntryViewModel` en `Window.Resources`, que cruza la frontera del
+`UserControl` sin problema (mismo mecanismo ya confirmado dos veces por `ADR-017`/`018`). No hizo
+falta `UserControl.Resources` local ni promocion a `App.xaml`.
+
+**Hallazgo real nuevo (primer caso de este tipo en las 4 extracciones)**: a diferencia de
+NOVEDADES/BUILDS/SERVIDOR (ninguna con logica propia en `MainWindow.xaml.cs`), ACERCA DE SI tenia
+3 manejadores de `Click` reales (`OnAddCharacterFolderClick`/`OnAddWorldFolderClick`/
+`OnPinWindowSizeClick`) que usaban `this` como `Window` real (dueño de `OpenFolderDialog`,
+`WindowPlacementService.Pin`) y el campo privado `_viewModel` de `MainWindow` - exactamente el
+riesgo que el punto 2c del plan `ADR-016` anticipaba para code-behind con referencias directas.
+Movidos a `AboutView.xaml.cs` con dos sustituciones mecanicas: `this` -> `Window.GetWindow(this)`
+(sube el arbol visual hasta el `Window` real que hospeda el control, funciona igual a cualquier
+profundidad de anidamiento - mismo razonamiento que `RelativeSource AncestorType=Window` del punto
+2e) y `_viewModel` -> `(MainViewModel)DataContext` (el control hereda el `MainViewModel` real sin
+fijar su propio `DataContext`, regla 2d). Confirmado con `dotnet build` 0/0 que no quedo ningun
+code-behind huerfano en `MainWindow.xaml.cs`.
+
+**Canarios existentes usados (no hizo falta ninguno nuevo, a diferencia de NOVEDADES)**:
+`Terrakeep.App.Tests/PruebasInicioAjustes.cs` ya tenia cobertura real y sustancial de esta
+seccion, corriendo SIEMPRE como parte del recorrido completo (`PruebasInicioAjustesNovedadesAcercaDe`,
+sin ningun `_SOLO`) - `ACE-01` (autoria literal "IncrediBad", version real, 0 claves de idioma sin
+resolver, en los 2 idiomas), `ACE-02` (registro de cambios del propio editor completo y
+traducido), `AJU-01` (el mas relevante para esta ronda: clic REAL simulado sobre el `CheckBox` de
+fijar tamaño de ventana via `RaiseEvent(ClickEvent)`, ejercitando exactamente
+`OnPinWindowSizeClick` ya movido a `AboutView.xaml.cs` - confirma que `Window.GetWindow(this)`
+resuelve correctamente en runtime), `AJU-02` (`TextBox` de cupo de backups), `AJU-04` (clic real
+en los 2 `RadioButton` de idioma). Los 5 bloques usan `Descendientes<T>(window)` (recorrido de
+arbol VISUAL desde la raiz del `Window`, no `window.FindName`), mismo mecanismo ya confirmado por
+`ADR-018` como robusto frente a extracciones a `UserControl`.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 (antes y despues, incluido
+tras `dotnet clean` completo). `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al
+baseline). `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al
+baseline). Recorrido COMPLETO de `Terrakeep.App.Tests` (`dotnet run -c Release`, SIN ningun
+`_SOLO`): 16 `FALLO:` en el log completo, mismas 9 categorias ya documentadas como preexistentes
+(`AR-14`×4, `AR-MRK-CLIC`, `AR-MRK-OTROS`×5, `A10-IDIOMA-BARRIDO`, `AR-11f`, `AR-LAY`, `A8-01`,
+`A8-06`, `H5-05`×1 - un `FALLO` menos que el baseline de 17 de `ADR-019` porque `H5-05` aparecio 1
+vez en vez de 2, variacion ya documentada en esta bitacora como intermitente de la familia
+RATON/`SetForegroundWindow`, no una regresion), CERO mencion de AcercaDe/About/Changelog/Settings/
+AboutView en ningun `FALLO`. `ACE-01`/`ACE-02`/`AJU-01`/`AJU-02`/`AJU-04`: 0 `FALLO`, incluido el
+clic real sobre el `CheckBox` de ventana fijada que ejercita el code-behind movido.
+
+**Verificacion visual**: captura real (`RenderTargetBitmap`, `README_SHOTS=1`,
+`PruebasCapturasReadme.cs`, `04-about-settings-en.png`) DESPUES de la extraccion: pestaña completa
+correctamente rellena (logo, autoria, creditos, ajustes de carpetas/idioma/ventana/modo compacto,
+registro de cambios), 181907 bytes. Comparacion ANTES (`git stash` temporal de
+`MainWindow.xaml`/`Views/AboutView.*`, mismo criterio que `ADR-018`/`019`) INCONCLUSIVE: las 2
+capturas ANTES salieron reproduciblemente en blanco (38513 bytes identicos en 2 intentos
+independientes, uno de ellos con build completo no incremental) - maquina bajo contencion real de
+otros agentes en paralelo (3 procesos `dotnet` de otras sesiones activos durante la medicion,
+confirmado con `Get-Process`), no se pudo aislar si el blanco era timing puro del arnes bajo carga
+o alguna diferencia real de la version pre-extraccion. Evidencia mas fuerte y decisiva para
+"behaviour-preserving" en esta ronda: los 5 canarios funcionales reales (`ACE-01`/`02`,
+`AJU-01`/`02`/`04`) que SI verifican contenido/texto/interaccion real en cada pasada, incluida la
+que ya se cito arriba en el recorrido completo sin `FALLO`. Anotado con honestidad en vez de
+forzar una conclusion visual que el propio dato no respaldaba.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado con `dotnet build Terrakeep.App -c Debug`. Copia instalada real
+(`%LocalAppData%\Programs\Terrakeep\`, self-contained win-x64) NO estaba en ejecucion
+(`Get-Process -Name Terrakeep` sin resultados) antes del despliegue. `DEPLOY_LOCK`
+(`KeepQA\src\bloqueos\deployLock.js`) adquirido antes de tocar `Assets/`/publish, liberado
+despues. `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde (13056 ficheros en `Assets/` publicados, identico al snapshot
+previo). `robocopy .../publish "%LocalAppData%\Programs\Terrakeep" /MIR /XF unins000.exe
+unins000.dat` (via `MSYS_NO_PATHCONV=1`, Git Bash reescribia `/MIR` como ruta de archivo): 1
+archivo copiado (`Terrakeep.exe`, el unico con cambio real), `Assets/` identico antes/despues
+(13056 ficheros, mismo hash, confirmado por `deployLock.despuesDeMir`). Hash SHA256 identico entre
+el `.exe` publicado y el instalado (`b9651a5c...f52ce5` en ambos). Sanity check real:
+`Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio con
+`Stop-Process -Force`, sin proceso residual verificado despues.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (los 3 manejadores de Click movidos, sustituidos por un
+comentario que remite a `AboutView.xaml.cs`), `Terrakeep.App/Views/AboutView.xaml` + `.xaml.cs`
+(nuevos) y esta entrada de `bitacora.md` - nunca `git add -A`, seguia habiendo decenas de ficheros
+ajenos modificados en el arbol por otros agentes en paralelo (las capturas `docs/screenshots/*.png`
+regeneradas como efecto secundario de la verificacion visual se revirtieron con `git checkout --`
+antes de commitear, no forman parte de este cambio). Registrado contra `requirement
+b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): 4.4 GUIA (241 lineas,
+`Guide.*` autocontenido, sin `FindName` conocidos en los 9 archivos de test revisados por
+`ADR-016`) - unica seccion de nivel superior que falta antes de pasar a los sub-tabs de PERSONAJE
+(4.5) o Exploracion (4.6, la mas grande y arriesgada, dejar para el final).

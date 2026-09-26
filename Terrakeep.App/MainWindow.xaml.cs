@@ -391,47 +391,11 @@ public partial class MainWindow : Window
         if (sender is TextBox textBox) textBox.SelectAll();
     }
 
-    // H5-07 (quinta auditoria de Opus): dialogo real de "elegir carpeta" - vive aqui (View),
-    // no en SettingsViewModel (mismo criterio real ya establecido en H5-03 con SaveItemSet/
-    // LoadItemSet - MainViewModel/sus sub-ViewModels se quedan headless de verdad).
-    private void OnAddCharacterFolderClick(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog { Title = Loc["dlg_pick_players_folder"] };
-        if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddCharacterFolder(dialog.FolderName);
-    }
-
-    private void OnAddWorldFolderClick(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog { Title = Loc["dlg_pick_worlds_folder"] };
-        if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddWorldFolder(dialog.FolderName);
-    }
-
-    // Pedido explicito del usuario (5-sep-2026): "guardar el tamaño de ventana actual... con un
-    // tick que lo activa/desactiva". Solo la View conoce el Window real (Left/Top/Width/Height/
-    // RestoreBounds) - SettingsViewModel.IsWindowSizePinned es solo el espejo que el CheckBox
-    // muestra, actualizado aqui explicitamente tras Pin()/Unpin() en vez de via el binding
-    // normal (evita que una futura OnIsWindowSizePinnedChanged en la ViewModel intente
-    // persistir algo que no puede calcular sin el Window).
-    //
-    // Oleada del 6-sep-2026 (bloque AJU-01 del arnes) - BUG REAL: esto colgaba de Checked/
-    // Unchecked, y esos dos eventos NO significan "el usuario lo ha pulsado" - saltan tambien
-    // cuando el valor cambia por el binding. Y eso pasa en CADA arranque real de la app:
-    // SettingsViewModel.LoadFromDisk() pone IsWindowSizePinned a true al leer el fichero (ver el
-    // constructor de esta misma clase, unas lineas mas arriba), el binding OneWay marca el
-    // CheckBox, y Checked llamaba a Pin(this) - o sea, la app RE-FIJABA el tamaño ella sola con
-    // el que tuviera la ventana en ese instante, tirando el que el usuario habia fijado a
-    // proposito. Ademas ocurria ANTES de WindowPlacementService.Apply(), con la ventana todavia
-    // en el tamaño de plantilla del XAML (1180x860) y sin mostrar.
-    //
-    // `Click` de ToggleButton solo se dispara por interaccion real (raton o teclado), nunca por
-    // un cambio de propiedad - y cuando llega, IsChecked ya trae el valor nuevo.
-    private void OnPinWindowSizeClick(object sender, RoutedEventArgs e)
-    {
-        bool marcado = ((CheckBox)sender).IsChecked == true;
-        if (marcado) Services.WindowPlacementService.Pin(this);
-        else Services.WindowPlacementService.Unpin();
-        _viewModel.Settings.IsWindowSizePinned = marcado;
-    }
+    // ADR-TERRAKEEP-016/020 (26-sep-2026): los 3 manejadores de Click de la pestaña ACERCA DE
+    // (elegir carpeta de personajes/mundos, fijar tamaño de ventana) se movieron a
+    // Views/AboutView.xaml.cs junto con el XAML que los usa - ver el comentario real de ese
+    // archivo para el razonamiento completo (this->Window.GetWindow(this),
+    // _viewModel->(MainViewModel)DataContext) y el historico de bugs reales de AJU-01.
 
     // F-13 (auditoria de Opus vs TEdit, E-14): "AllowDrop aparece exactamente dos veces... las
     // dos son slots de objeto y de buff. La ventana no acepta ficheros." Filtrar por

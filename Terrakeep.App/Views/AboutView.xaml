@@ -1,0 +1,166 @@
+<!-- ADR-TERRAKEEP-016/020 (26-sep-2026): CUARTA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl (4.3 del plan, tras NOVEDADES/BUILDS/SERVIDOR - ver el
+     comentario real de ADR-TERRAKEEP-020). Seccion ACERCA DE, contenido byte a byte igual al
+     que tenia el TabItem "ACERCA DE" en MainWindow.xaml, solo movido de sitio. El DataContext NO
+     se fija aqui a proposito (regla 2d del ADR): este control hereda el MainViewModel real desde
+     el Window que lo hospeda.
+
+     Confirmado con grep exhaustivo (ADR-020, corrige la advertencia demasiado pesimista que el
+     propio ADR-TERRAKEEP-016/019 dejaba anotada sobre "CharacterCardTemplate"): esta seccion NO
+     referencia CharacterCardTemplate ni ningun otro recurso window-scoped con StaticResource
+     directo en su propio markup - ese template solo lo usa la lista de personajes de Inicio
+     (Home.Characters). Los recursos que SI usa aqui (CaptionText/TitleText/BodyText/SectionText/
+     NavRailLabel/BgElevatedBrush/TextPrimaryBrush/AccentBrush/CardShadow/CircleCloseButton/
+     EnumEquals/ViewSelector) ya viven todos en Styles/Theme.xaml o App.xaml - ninguno es
+     window-scoped. El ItemsControl de Changelog.Entries no fija ItemTemplate: depende de la
+     plantilla implicita (sin x:Key, DataType=ChangelogEntryViewModel) de Window.Resources, que
+     se resuelve en tiempo de ejecucion via arbol logico y cruza sin problema la frontera de este
+     UserControl (mismo mecanismo ya confirmado dos veces por ADR-017/ADR-018). No hizo falta
+     ningun UserControl.Resources local ni promocion a App.xaml para esta extraccion. -->
+<UserControl x:Class="Terrakeep.App.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <!-- H5-09 (quinta auditoria de Opus): MaxWidth compartido (DetailContentMaxWidth) para
+         que el Changelog reparta en columnas reales con sitio (DetailCardColumns) - pero el
+         texto corrido (creditos, intro) NO crece con el contenedor, MaxWidth propio de 680
+         para mantener el tope de linea real por legibilidad (pedido explicito del informe). -->
+    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,20">
+                <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="72" Height="72" />
+                <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                    <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="28" />
+                    <TextBlock Text="{Binding Loc[about_tagline], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" />
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
+                        <Run Text="{Binding Loc[about_version_label], Mode=OneWay}" /><Run Text="{Binding About.Version, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+            <!-- C-18 (informe de pulido final, cierra N2): bloque propio de autoria, no
+                 una frase enterrada en CreditsText - justo debajo del nombre/version, y
+                 antes de las atribuciones a terceros (que dicen cosas distintas y no
+                 deben mezclarse). -->
+            <TextBlock Text="{Binding Loc[about_authorship], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="18" Margin="0,0,0,4" />
+            <TextBlock Text="{Binding Loc[about_author_text], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,20"
+                       MaxWidth="680" HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding Loc[about_credits_text], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
+                       MaxWidth="680" HorizontalAlignment="Left" />
+
+            <!-- H5-07 (quinta auditoria de Opus): "no existe ninguna pantalla de
+                 Ajustes... quien tenga Terraria en otro disco/Documentos redirigidos/
+                 instalacion portable ve el lanzador vacio sin forma de arreglarlo desde
+                 la app". Sitio real: dentro de "Acerca de" (la pestaña con menos
+                 densidad, pedido explicito del informe). -->
+            <TextBlock Text="{Binding Loc[about_settings_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
+            <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,14">
+                <Run Text="{Binding Loc[settings_extra_folders_1], Mode=OneWay}" />
+                <Run Text="{Binding Loc[settings_extra_folders_path], Mode=OneWay}" FontStyle="Italic" />
+                <Run Text="{Binding Loc[settings_extra_folders_2], Mode=OneWay}" />
+            </TextBlock>
+
+            <TextBlock Text="{Binding Loc[settings_extra_character_folders], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <ItemsControl ItemsSource="{Binding Settings.ExtraCharacterFolders}" MaxWidth="680" HorizontalAlignment="Left">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                                        ToolTip="{Binding Loc[settings_remove_folder], Mode=OneWay}"
+                                        Command="{Binding DataContext.Settings.RemoveCharacterFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                                <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="{Binding Loc[settings_add_character_folder], Mode=OneWay}" Tag="Ghost" Padding="8,4" Margin="0,0,0,18" HorizontalAlignment="Left"
+                    Click="OnAddCharacterFolderClick" />
+
+            <TextBlock Text="{Binding Loc[settings_extra_world_folders], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <ItemsControl ItemsSource="{Binding Settings.ExtraWorldFolders}" MaxWidth="680" HorizontalAlignment="Left">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                                        ToolTip="{Binding Loc[settings_remove_folder], Mode=OneWay}"
+                                        Command="{Binding DataContext.Settings.RemoveWorldFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                                <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="{Binding Loc[settings_add_world_folder], Mode=OneWay}" Tag="Ghost" Padding="8,4" Margin="0,0,0,18" HorizontalAlignment="Left"
+                    Click="OnAddWorldFolderClick" />
+
+            <TextBlock Text="{Binding Loc[settings_backup_cap_label], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <TextBox Text="{Binding Settings.BackupHistoryCap, UpdateSourceTrigger=PropertyChanged}" Width="80" Padding="6,4"
+                     HorizontalAlignment="Left" Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                     BorderThickness="0" Margin="0,0,0,24"
+                     ToolTip="{Binding Loc[settings_backup_cap_tooltip], Mode=OneWay}" />
+
+            <!-- Pedido explicito del usuario (5-sep-2026): fijar el tamaño/posicion
+                 ACTUALES de la ventana como los de arranque, con un tick que se puede
+                 activar/desactivar - independiente de que la ventana YA recuerde
+                 siempre el ultimo tamaño usado (WindowPlacementService, sin tick,
+                 comportamiento de fabrica desde T-3). Checked/Unchecked en vez de un
+                 binding TwoWay normal - solo la View conoce el Window real para
+                 capturar sus bounds actuales en el instante de marcar el tick. -->
+            <TextBlock Text="{Binding Loc[settings_window_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <CheckBox Content="{Binding Loc[settings_pin_window_label], Mode=OneWay}"
+                      IsChecked="{Binding Settings.IsWindowSizePinned, Mode=OneWay}"
+                      Click="OnPinWindowSizeClick"
+                      Margin="0,0,0,24"
+                      ToolTip="{Binding Loc[settings_pin_window_tooltip], Mode=OneWay}" />
+
+            <!-- Pedido explicito del usuario (5-sep-2026): "de momento solo daremos
+                 soporte ingles y español de forma nativa" - primer bloque real de la
+                 infraestructura de idioma (LocalizationService), en vivo sin reiniciar.
+                 EnumEquals ya sirve para string (ver su propio comentario real,
+                 value?.ToString()==parameter) - mismo patron de chips ya usado arriba
+                 para ChestViewMode/ObjectsViewMode/dificultad del mundo. -->
+            <TextBlock Text="{Binding Loc[settings_language_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <UniformGrid Columns="2" MaxWidth="300" HorizontalAlignment="Left" Margin="0,0,0,24">
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="Idioma" Content="{Binding Loc[settings_language_spanish], Mode=OneWay}" Margin="0,0,3,0"
+                             IsChecked="{Binding Settings.Language, Converter={StaticResource EnumEquals}, ConverterParameter=es}" />
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="Idioma" Content="{Binding Loc[settings_language_english], Mode=OneWay}" Margin="3,0,0,0"
+                             IsChecked="{Binding Settings.Language, Converter={StaticResource EnumEquals}, ConverterParameter=en}" />
+            </UniformGrid>
+
+            <!-- Encargo de pulido visual (17-sep-2026): "Modo compacto" opcional, NUNCA
+                 activado por defecto - reduce el hueco/tamaño de celda de las listas
+                 densas reales (Libreria, Inventario, Almacenes, Equipamiento y Builds,
+                 ver los 4 usos de SlotGridPanel mas arriba en este fichero + los
+                 DataTrigger de Padding de CategoryNodeTemplate/BuildItemRowViewModel).
+                 TwoWay normal (a diferencia del tick de "fijar tamaño de ventana" de
+                 arriba, esto no necesita capturar nada del Window real en el instante del
+                 clic, solo un bool que se persiste solo via OnIsCompactModeChanged). -->
+            <TextBlock Text="{Binding Loc[settings_compact_mode_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+            <CheckBox Content="{Binding Loc[settings_compact_mode_label], Mode=OneWay}"
+                      IsChecked="{Binding Settings.IsCompactMode, Mode=TwoWay}"
+                      Margin="0,0,0,24"
+                      ToolTip="{Binding Loc[settings_compact_mode_tooltip], Mode=OneWay}" />
+
+            <TextBlock Text="{Binding Loc[about_this_version_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
+            <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" MaxWidth="680" HorizontalAlignment="Left">
+                <Run Text="{Binding Loc[about_changelog_1], Mode=OneWay}" />
+                <Run Text="{Binding Loc[about_changelog_editor], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                <Run Text="{Binding Loc[about_changelog_2], Mode=OneWay}" />
+            </TextBlock>
+            <ItemsControl ItemsSource="{Binding Changelog.Entries}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
