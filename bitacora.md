@@ -28362,6 +28362,85 @@ respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKe
 `KEEPQA-INTEGRACION.md` no tocados. Balloon (Fase3) NO tocado, tal como pedia el encargo. Sin
 `git push`.
 
+## 26-sep-2026: Balloon animado durante el hover + maná/vida/tiempo en tarjetas de Inicio - agente
+aplicador-fix, dos arreglos ya investigados/decididos por el coordinador (mismo handoff)
+
+Dos arreglos reales aplicados directamente sobre hallazgos YA confirmados por el coordinador
+(lectura directa de código, decisión explícita del usuario para el criterio de animación) - sin
+reinvestigar la causa, solo el detalle de implementación.
+
+**Arreglo 1 (Balloon animado)**: `PlayerPreviewRenderer.LoadBalloonFrame`/`SliceBalloonFrame0`
+(GapAnalysis Encargo C, 25-sep-2026) recortaban SIEMPRE el fotograma 0 ("reposo") del sprite real
+`acc_balloon/*.png` (52x224, 4 fotogramas de 56px) - decisión explícita del usuario, preguntado:
+"solo durante el hover, igual que el resto" (NO montar un timer nuevo siempre activo). Cambio real:
+`Render` ahora llama `LoadBalloonFrame(balloonFile, legAnimationFrame % 4)` (Paso 1d) -
+`SliceBalloonFrame0` renombrado a `SliceBalloonFrame(pixels, w, h, frameIndex)`, recorta las filas
+reales `[frameIndex*frameHeight, (frameIndex+1)*frameHeight)` en vez de siempre `[0, frameHeight)`.
+`legAnimationFrame%4` reutiliza el MISMO ciclo de piernas que ya anima el resto del doll durante el
+hover (`CharacterListEntryViewModel._walkCycleIndex`/`AppearanceViewModel.WalkCycleRows`, 14 filas
+reales 6..19) - sin montar ningún `DispatcherTimer` nuevo. Fiel-por-defecto: `legAnimationFrame=0`
+(reposo, sin hover) da `0%4=0`, el MISMO fotograma que se dibujaba antes de este arreglo -
+comportamiento byte a byte idéntico para cualquier llamador que no anime.
+
+**Verificación real (canario nuevo)**: `Terrakeep.App.ViewModels.Tests/
+PlayerPreviewRendererAccessoriesTests.cs` - `CrearGloboSinteticoAnimado` (tira sintética 52x224, 4
+fotogramas de color sólido único, mismo criterio ya usado por `CrearBarbaSinteticaAnimada` para
+Beard) + `Balloon_AnimaConElMismoCicloDePiernasQueElRestoDelDoll_NoFrame0Congelado` (Theory,
+legAnimationFrame 0/6/12/19 -> fotograma 0/2/0/3, confirma que NO es siempre el 0) +
+`Balloon_LosCuatroFotogramasRealesDelGloboDanColoresDistintosEntreSi` (confirma los 4 fotogramas
+reales distintos entre sí, no solo distintos del 0) - **12/12 en verde** (`dotnet test --filter
+"FullyQualifiedName~Balloon"`).
+
+**Arreglo 2 (maná/vida/tiempo en tarjetas de Inicio)**: la pantalla real "Seleccionar jugador" de
+Terraria siempre muestra vida/maná/tiempo jugado - `CharacterListEntryViewModel` ya exponía
+`HealthMax`/`PlayTimeText` (para la tarjeta hero "Continuar con...") pero nunca `ManaMax` (existe en
+`PlrCharacter.ManaMax` desde siempre, usado ya en `AppearanceViewModel.cs`/`CompareViewModel.cs`/
+`BackupHistoryService.cs`). Añadida `public int ManaMax { get; }`, fijada en el constructor igual
+que `HealthMax`. `MainWindow.xaml`: 3er `HeroKpiPill` (glifo `★`, mismo que Terraria real) en la
+tarjeta hero, entre ♥ y ◷; y una fila `WrapPanel` nueva (♥/★/◷, estilo `CaptionText`+`TextSecondaryBrush`,
+igual que `LastModifiedText`, que se CONSERVA sin cambios - dato real distinto) en
+`CharacterCardTemplate`, ANTES de la fila de insignias de dificultad/mods. `WrapPanel` (no
+`StackPanel`) a propósito, mismo motivo real que ya justifica el `WrapPanel` de insignias de abajo
+(R-05/H-05): con vida/maná de varias cifras (mods/Expert/Master) esta fila también puede desbordar
+el `Width=240` fijo de la tarjeta.
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Release` -> 0 advertencias/0 errores.
+`dotnet test Terrakeep.slnx -c Release` (suite completa, sin filtro) -> `Terrakeep.Core.Tests`
+773/773, `Terrakeep.App.ViewModels.Tests` 753/753 (incluye los 12 tests nuevos de Balloon), 0
+fallos - sin regresión. Verificación visual del doll en vivo/capturas NO se hizo en esta ronda
+(`Terrakeep.exe` no estaba en ejecución en ningún momento, ver despliegue abajo, así que no había
+ventana abierta que capturar) - queda como límite real: la verificación visual del globo animando de
+verdad y de las 3 pastillas ♥/★/◷ sin recorte con nombre largo+3 insignias a la vez se apoya en el
+canario automatizado (contrato de píxel) y en el build/test en verde, no en una captura de pantalla
+real de esta ronda concreta.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (verificado antes y
+después, `Get-Process -Name Terrakeep` sin resultados). `dotnet publish Terrakeep.App/
+Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` generó `Terrakeep.App\bin\Release\
+net10.0-windows\win-x64\publish\Terrakeep.exe` (`FileVersion=3.2.5.0`, sin bump para este arreglo,
+139 251 329 bytes, 26-sep-2026 10:48:42). `robocopy .../publish .../AppData/Local/Programs/Terrakeep
+/MIR /XF unins000.exe unins000.dat` -> 1 archivo copiado (`Terrakeep.exe`), hash SHA256 idéntico
+entre publicado e instalado (`E39990FB1006FE2F3B954814640A2E2F22F4BFD9AA3CC03D519D18FB697C655F`).
+Verificación post-hoc adicional (no se usó `KeepQA/src/bloqueos/deployLock.js` en esta ronda, solo
+descubierto DESPUÉS del deploy al escribir esta entrada): conteo de ficheros publicado vs instalado
+idéntico (13062=13062, coincide además con el propio resumen de `robocopy`: "Total 13062, Copiado 1"
+- ningún fichero purgado de más) - mismo criterio real que el lock automatiza, confirmado a mano en
+este caso. Acceso directo real (barra de tareas/Menú Inicio) apunta al mismo destino instalado, sin
+distinción, patrón ya establecido en el proyecto.
+
+**Commit local** (`4101eb33`) con los archivos exactos tocados (`Terrakeep.App/Services/
+PlayerPreviewRenderer.cs`, `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`,
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs`, y SOLO los 2 hunks propios
+de `Terrakeep.App/MainWindow.xaml` de los 7 totales que tenía el fichero sin comitear - los otros 5
+son el rediseño de Exploracion>Mundo de un agente en paralelo, aislados con `git add -p`
+respondiendo hunk a hunk y confirmados después con `git diff --cached` antes de comitear, mismo
+criterio ya documentado en Encargo C/D de Balloon/Shoes el 25-sep). Nunca `git add -A`. Sin
+`git push`.
+
+Pendiente explícito fuera de alcance de este encargo (decisión del coordinador): acción "Eliminar
+personaje" y la investigación de accesorios Hide que se dibujan cuando no deberían - ninguno de los
+dos se tocó aquí.
+
 ## 26-sep-2026 - Investigacion pura (investigador-bug): "forma dorada/redondeada bajo los pies"
 en la tarjeta hero "Continuar con Terrariano" de Inicio
 
