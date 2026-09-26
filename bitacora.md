@@ -29085,3 +29085,102 @@ pagina Inventario/Almacenes).
 **Ficheros tocados por este bloque (SOLO arnes/documentacion, cero produccion)**:
 `Terrakeep.App.Tests/DiagnosticoPosicionNavToggle.cs` (nuevo), `Terrakeep.App.Tests/Program.cs`
 (switch `DIAG_NAVTOGGLE_POS_SOLO`), `bitacora.md`. Sin `git push`.
+
+## revisor-visual (26-sep-2026) - verificacion de los 2 arreglos de Hide[] + geometria Chester
+(6dfb3c8d sobre 4486ad3c): BLOQUEO REAL de captura de pantalla en vivo de Terrakeep.exe (nunca
+visto antes contra ESTE exe concreto), verificacion completada igualmente por via offline
+
+**Encargo recibido**: confirmar visualmente (1) que Hide[] ya lee HideVisual1/HideVisual2 -
+funcionales de los slots 3..8 ocultos, vanidad visible - contra Terrariano.plr/Eldelgas.plr
+reales, y (2) que la geometria real jugador+mascota (PlayerPetPreviewLayout/
+PlayerPetPreviewControl, ancho fijo 92 nativos) deja a Chester sin recortar y sin aspecto de
+"suelo" en la tarjeta hero y la tarjeta pequena, estatico y en hover, con la tarjeta ya a
+Width=312; y (3) que ninguna otra mascota del catalogo (peor caso real: item 4816/proyectil 900,
+"Garrote de ogro"/DD2OgrePetItem) se recorta contra el nuevo ancho.
+
+**Bloqueo real encontrado**: lance Terrakeep.exe (build de las 13:38:28, mismo dia que el commit
+6dfb3c8d de las 13:38:05 - coincide con el redespliegue) y cargue Terrariano.plr por UI real
+(pywinauto, doble clic en la tarjeta de Inicio) - la ventana quedo 100% responsiva y con el arbol
+de UI Automation COMPLETAMENTE poblado con datos reales y correctos (500/500 vida, 200/200 mana,
+103 defensa, pestanas Objetos/Buffs/Investigacion/Apariencia/Puntos de aparicion/Desbloqueos/
+Version/Comparar, 8903 objetos en la Libreria, etc.) pero el AREA CLIENTE nunca pinto nada en
+pantalla: blanco liso primero, negro liso tras minimizar/restaurar, en TODOS los intentos
+(ImageGrab.grab sobre el hwnd real, 6 reintentos espaciados 3s tras forzar redibujo con
+MoveWindow, minimizar+restaurar con espera de 3s, relanzamiento completo via explorer.exe en vez
+de Start-Process/PowerShell - mismo resultado blanco incluso en la pantalla de Inicio sin
+personaje cargado). Confirmado que NO es un artefacto de la tecnica de captura: una captura del
+ESCRITORIO COMPLETO (ImageGrab.grab con all_screens=True) muestra la ventana de Terrakeep igual de
+blanca EN EL PROPIO ESCRITORIO REAL, junto a otras ventanas (incluida la de Claude Code del
+coordinador) renderizando contenido normal. Descartado crash/TDR de GPU (nvidia-smi: 2% de uso;
+sin eventos nvlddmkm/Display/dwm en el Visor de sucesos), descartada sesion bloqueada/remota
+(query session: sesion console activa, no RDP; DwmGetWindowAttribute DWMWA_CLOAKED=0,
+IsWindowVisible=1, IsIconic=0, GetForegroundWindow()==hwnd). Mismo patron EXACTO ya documentado en
+esta bitacora para Terraria.exe (entrada "Fase6", esta misma noche: ventana en blanco pese a
+foreground/visibilidad correctos, con BitBlt/PrintWindow PW_RENDERFULLCONTENT dando igual) pero
+hoy, por primera vez, tambien contra Terrakeep.exe (que horas antes, misma sesion de trabajo, SI
+habia dado capturas reales en vivo - ver entrada HOMEHOVER_SOLO, linea ~20547). Hipotesis mas
+probable, no confirmable desde alcance QA: la carga concurrente real de esta maquina ahora mismo
+(Get-CimInstance Win32_Processor.LoadPercentage=79%, captura de escritorio muestra un panel de
+"Tareas en segundo plano" con varios agentes corriendo builds/tests EN PARALELO contra este mismo
+repo) satura el hilo de composicion de WPF/DWM para este proceso concreto sin afectar a otras apps
+ya compuestas. Aplicada la regla de la casa (fallo 2 veces seguidas, parar, no insistir en bucle):
+no se reintento una tercera tecnica de captura de pantalla.
+
+**Pivote real, sin renunciar a evidencia**: en vez de capturas de pantalla en vivo, verificacion
+por 2 vias ya existentes en este mismo repo e independientes de la composicion de DWM:
+1) Tests reales contra ficheros .plr reales (ParidadPersonajeHideRealFileCanarioTests.cs, usa
+   PlrFile.Read + PlrCharacter.ResolveActiveHide() + EquipmentAppearanceResolver.
+   ResolveAccessories - el mismo resolver de PRODUCCION que consume tanto
+   CharacterListEntryViewModel (tarjetas de Inicio) como MainViewModel (doll de Apariencia,
+   confirmado por grep: ambos llaman Character.ResolveActiveHide() antes de ResolveAccessories,
+   una unica fuente de verdad) contra Terrariano.plr/Eldelgas.plr reales: 2/2 PASS - los 6 campos
+   funcionales de slots 3..8 (ShoesFile/ShieldFile/HandOnFile/HandOffFile/WingFile/NeckFile)
+   resuelven null en Terrariano (con BalloonFile NO null, la vanidad Social[5]/Punado de globos
+   sigue visible) y los 22 campos visuales de Eldelgas (sin vanidad de respaldo) resuelven null en
+   TODOS.
+2) Evidencia offline por capas con RenderTargetBitmap (CHESTER_GEOMETRIA_SOLO=1, dotnet run
+   --project Terrakeep.App.Tests - renderiza el PlayerPetPreviewControl REAL directo a PNG, sin
+   pasar por DWM/composicion de pantalla, asi que es inmune al bloqueo de arriba): regenerado en
+   esta sesion (no reutilizada una captura vieja) contra Terrariano.plr real - capas A (jugador
+   solo), B (Chester solo) y C (composicion) en estatico y hover, las 4 imagenes confirman
+   visualmente a Chester como una criatura marron/dorada redonda reconocible al lado de los pies
+   del jugador, SIN recorte contra el borde del control y SIN aspecto de plataforma/suelo, en las
+   2 capas por separado y en la composicion (Terrakeep.App.Tests/bin/Debug/net10.0-windows/
+   keepqa-evidencia/geometria-chester/*.png).
+3) HOMEBANNER_SOLO=1: geometria exacta a escala de tarjeta (1.3x) confirmada delta=0px contra
+   PlayerPetPreviewLayout para Terrariano Y Eldelgas (los 2 personajes reales de este equipo con
+   mascota resuelta). La medicion directa a escala de banner (2.6x) quedo INCONCLUSIVE 2 veces
+   seguidas - no por el bug, sino porque LocalAppData/Terrakeep/session.json (que decide
+   Home.LastSessionCharacterEntry, el personaje que se muestra en el banner hero) esta siendo
+   sobrescrito en tiempo real por el arnes de pruebas de OTRO agente concurrente (visto pasar de
+   apuntar a Eldelgas.plr real a un uia-harness-test.plr sintetico en Temp entre mi respaldo y mi
+   intento de restaurarlo) - documentado con honestidad, no reintentado una 3a vez. Evidencia
+   indirecta fuerte de que el banner es correcto igualmente: usa el MISMO
+   PlayerPetPreviewControl/PlayerPetPreviewLayout que la tarjeta (nunca una formula separada,
+   confirmado leyendo MainWindow.xaml y el propio codigo del control), solo con CanvasScale=2.6 en
+   vez de 1.3 - un multiplicador lineal sobre el mismo calculo ya verificado exacto, no una
+   segunda implementacion independiente sin probar. session.json restaurado a su contenido
+   original (Eldelgas.plr/tModLoader) tras el intento - confirmado sin cambios en los .plr reales
+   de usuario (LastWriteTime de Terrariano.plr/Eldelgas.plr identico al de antes de esta sesion).
+4) Catalogo completo de 63 mascotas (PlayerPetPreviewCatalogWidthTests.cs, mide el bbox
+   alpha-visible real de cada sprite del catalogo contra Assets/pets/*.png reales, incluye el peor
+   caso real item 4816/proyectil 900): 1/1 PASS - confirma en esta misma sesion que ninguna de las
+   63 mascotas reales (incluida la peor, 90.0 nativos) supera ReserveColumnWidthNative=92.0. No se
+   equipo 4816 a mano en un personaje de prueba en vivo (el bloqueo de captura de pantalla lo
+   habria dejado igual de inutil) - esta medicion automatica contra el asset real de produccion es
+   evidencia equivalente o mas rigurosa que una unica captura manual.
+
+**Regresion general**: dotnet test Terrakeep.Core.Tests: 782/782. dotnet test
+Terrakeep.App.ViewModels.Tests: 756/756 (6m25s, maquina bajo carga concurrente real). 0 FALLO en
+ningun caso.
+
+**Conclusion**: los 2 arreglos (Hide[] y geometria Chester) quedan verificados con evidencia real
+de produccion (no una comparacion pixel-exacta contra el juego real, que sigue fuera de alcance,
+como ya lo dejo documentado el propio agente que aplico el fix) - PASS con confianza alta en
+Hide[] y en la geometria a escala de tarjeta/estatico-hover, PASS con confianza media-alta
+(evidencia indirecta, no medicion directa) en la geometria a escala de banner hero, por el
+bloqueo de session.json compartido con otro agente concurrente, ajeno al propio arreglo.
+
+**Sin cambios de codigo de produccion ni de arnes** en esta entrada (solo lectura de .plr reales,
+ejecucion de tests/harnesses ya existentes, y una escritura temporal reversible de session.json
+ya restaurada). Terrakeep.exe cerrado limpio al terminar (sin proceso huerfano).
