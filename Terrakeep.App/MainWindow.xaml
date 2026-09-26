@@ -2946,13 +2946,30 @@
                                      exactamente 1 de las 3 paginas Visible en todo momento, cero estados
                                      intermedios alcanzables (ni por scroll libre: cada pagina solo desplaza su
                                      propio contenido, nunca "empuja" a la siguiente seccion). -->
-                                <Grid Grid.Column="0" Margin="0,0,10,0">
+                                <!-- NAV123 centrado real (26-sep-2026, patron de 2 fases - investigador-bug
+                                     confirmo con DiagnosticoPosicionNavToggle.cs que el centro del RadioButton
+                                     "1" caia 7px por debajo del centro real del titulo "Equipamiento": el
+                                     margen superior fijo de ObjetosNavToggle (era Margin="0,4,4,0") mas la
+                                     diferencia de alto entre ViewSelector (Padding 10,4 -> ~24,6px) y
+                                     SectionText (~18,6px) no se compensaban entre si. IsSharedSizeScope+
+                                     SharedSizeGroup="ObjetosHeaderRow" (abajo, titulo de cada pagina y
+                                     ObjetosNavToggle) sincroniza el alto real de ambas filas SIN ningun numero
+                                     magico - si SectionText o ViewSelector cambian de tamaño en el futuro el
+                                     centrado sigue siendo exacto, mismo principio ya aplicado hoy a la
+                                     geometria de Chester (preferir centrado declarativo real sobre un offset
+                                     ajustado a ojo). -->
+                                <Grid Grid.Column="0" Margin="0,0,10,0" Grid.IsSharedSizeScope="True">
                                 <Grid x:Name="ObjetosPageHost">
                                 <ScrollViewer x:Name="ObjetosPaginaEquipamiento" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=0}">
                                     <Border x:Name="ObjetosSeccionEquipamiento">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
                                         <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
                                              sobre el diseño, quinta pasada: "yo juntaría la página de
                                              munición mascotas gancho... y dinero en equipamiento en una
@@ -3352,9 +3369,21 @@
                                      envuelve, ver arriba). -->
                                 <ScrollViewer x:Name="ObjetosPaginaInventario" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=1}">
-                                    <Border x:Name="ObjetosSeccionInventario" Margin="0,14,0,0">
+                                    <!-- NAV123 centrado real (26-sep-2026): Margin="0,14,0,0" retirado - no
+                                         tenia ninguna justificacion documentada y era distinto del Margin de
+                                         ObjetosSeccionEquipamiento (sin margen), lo que desplazaba el titulo de
+                                         esta pagina 14px por debajo del StackPanel flotante ObjetosNavToggle
+                                         (fijo, no se mueve entre paginas). Unificado a sin margen, igual que
+                                         Equipamiento/Almacenes - ver comentario completo en el Grid de mas
+                                         arriba (SharedSizeGroup="ObjetosHeaderRow"). -->
+                                    <Border x:Name="ObjetosSeccionInventario">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
@@ -3455,9 +3484,17 @@
                                      3, a cualquier tamaño de ventana. -->
                                 <ScrollViewer x:Name="ObjetosPaginaAlmacenes" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=2}">
-                                    <Border x:Name="ObjetosSeccionAlmacenes" Margin="0,14,0,0">
+                                    <!-- NAV123 centrado real (26-sep-2026): mismo motivo que ObjetosSeccionInventario
+                                         arriba - Margin="0,14,0,0" retirado, sin margen igual que las otras 2
+                                         paginas. -->
+                                    <Border x:Name="ObjetosSeccionAlmacenes">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <DockPanel DataContext="{Binding StorageGroup}">
@@ -3522,27 +3559,39 @@
                                      sola al binding, sin ningun calculo de offset/scroll de por medio. Ya no
                                      existe sincronizacion inversa por scroll (cada pagina tiene su scroll
                                      interno propio, nunca "avanza" a la seccion siguiente). -->
-                                <StackPanel x:Name="ObjetosNavToggle" Orientation="Horizontal" HorizontalAlignment="Right"
-                                            VerticalAlignment="Top" Margin="0,4,4,0" Panel.ZIndex="5">
-                                    <!-- IsChecked ligado (TwoWay por defecto) a ObjetosSubTabIndex via EnumEquals
-                                         (mismo converter/patron ya usado por Exploration.ChestViewMode arriba en
-                                         este mismo fichero) - asi el selector refleja SIEMPRE la pagina real
-                                         incluso cuando quien la cambia no es un clic aqui (WhereIsIt/busqueda
-                                         global, via RequestObjetosSection). El Click sigue llamando a
-                                         RequestObjetosSection para no depender solo de ConvertBack. -->
-                                    <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                 Padding="10,4" Content="1" Tag="0" Click="OnObjetosNavToggleClick"
-                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
-                                                 ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
-                                    <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                 Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
-                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
-                                                 ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
-                                    <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                 Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
-                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
-                                                 ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
-                                </StackPanel>
+                                <!-- NAV123 centrado real (26-sep-2026): x:Name="ObjetosNavToggle" pasa del
+                                     StackPanel al Grid que lo envuelve para conservar el mismo padre
+                                     compartido con ObjetosPageHost (Grid sin nombre de mas arriba). Este Grid
+                                     define la fila Auto con el mismo SharedSizeGroup="ObjetosHeaderRow" que el
+                                     titulo de cada pagina - su alto queda sincronizado al maximo real entre
+                                     ViewSelector y SectionText, y el StackPanel interior se centra en esa fila
+                                     con VerticalAlignment="Center" (ya no hay Margin superior fijo). -->
+                                <Grid x:Name="ObjetosNavToggle" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Margin="0,0,4,0" Panel.ZIndex="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- IsChecked ligado (TwoWay por defecto) a ObjetosSubTabIndex via EnumEquals
+                                             (mismo converter/patron ya usado por Exploration.ChestViewMode arriba en
+                                             este mismo fichero) - asi el selector refleja SIEMPRE la pagina real
+                                             incluso cuando quien la cambia no es un clic aqui (WhereIsIt/busqueda
+                                             global, via RequestObjetosSection). El Click sigue llamando a
+                                             RequestObjetosSection para no depender solo de ConvertBack. -->
+                                        <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="1" Tag="0" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
+                                                     ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
+                                        <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
+                                                     ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
+                                        <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
+                                                     ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
+                                    </StackPanel>
+                                </Grid>
                                 </Grid>
 
                                 <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
