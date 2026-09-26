@@ -7847,34 +7847,47 @@
                                 <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <!-- Columns=6, NO 10: medido con el canario real (TransformToAncestor de
-                                                 cada slot contra placeholderSlotsVacios.ActualWidth,
-                                                 CanarioClusterCofresInspector.cs "SLOTSVACIOS") - a Columns=10 el
-                                                 suelo MinCell=40 (Math.Clamp nunca baja de el) fuerza un ancho de
-                                                 contenido de 436px (10*40+9*4) que NUNCA cabe en el ancho real de
-                                                 este sidebar mas estrecho (296px por defecto, 279px al minimo real
-                                                 de ventana 1080x700) - SlotGridPanel.ArrangeOverride sigue
-                                                 colocando esas columnas de mas (offsetX se queda en 0 porque
-                                                 contentW>finalSize.Width), pero ExplorationSidebarScroll tiene
-                                                 HorizontalScrollBarVisibility="Disabled" (linea ~6766) - el
-                                                 ScrollContentPresenter las recorta en silencio, sin barra ni
-                                                 ScrollableWidth>0 que lo delate (mismo riesgo real ya documentado
-                                                 por AR-EX-HSCROLL en ExploracionRediseno FaseI): 12 de los 40
-                                                 slots (columnas 7-10 de cada fila logica de 10) quedaban
-                                                 invisibles e inalcanzables. Columns=6 es el maximo real que sigue
-                                                 cabiendo con MinCell=40 incluso en el ancho minimo real (279px:
-                                                 6*40+5*4=260px<=279px) - ReferenceColumns=10 se mantiene (mismo
-                                                 techo de escala que el resto de rejillas reales de la app,
-                                                 Inventario/Equipamiento/Libreria) para que el icono del slot se
-                                                 vea del mismo tamaño en todas partes; con Columns=6 domina de
-                                                 todos modos el mismo MinCell=40 real (cellFromReference tambien
-                                                 cae por debajo del suelo), asi que el tamaño de icono no cambia,
-                                                 solo cuantas columnas caben de verdad por fila. -->
-                                            <controls:SlotGridPanel Columns="6"
-                                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
-                                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
-                                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
-                                                                     ReferenceColumns="10" />
+                                            <!-- Columns=6 literal (pasada anterior) REABIERTO (26-sep-2026,
+                                                 investigador af9680e6, "Columns dinamico ChestInspector
+                                                 ExplorationSidebarWidth"): asumia el ancho de sidebar POR
+                                                 DEFECTO, pero Settings.ExplorationSidebarWidth
+                                                 (MainWindow.xaml:5709) es un eje INDEPENDIENTE, ajustable en
+                                                 caliente por el usuario (rango real 260-520px,
+                                                 SettingsViewModel.cs:138-139) - con un sidebar mas estrecho ya
+                                                 guardado (260/280px reales, cuantificado con el canario
+                                                 FLUJOCOFRES-SIDEBARWIDTH en Terrakeep.App.Tests: 260/280px->6
+                                                 slots de 40 fuera del area visible, 320px->0 fuera) 6 columnas a
+                                                 MinCell=40 (260px de contenido) ya no cabian en el ancho real
+                                                 disponible - SlotGridPanel.ArrangeOverride las seguia colocando
+                                                 de todos modos (offsetX=0 porque contentW>finalSize.Width), y
+                                                 ExplorationSidebarScroll (HorizontalScrollBarVisibility=
+                                                 "Disabled", linea ~6844) las recortaba en silencio, mismo
+                                                 mecanismo de recorte ya documentado antes contra el eje de
+                                                 tamaño de VENTANA (nunca probado hasta ahora contra este otro
+                                                 eje). Columns ahora se recalcula en vivo contra el ANCHO REAL
+                                                 disponible (ActualWidth del propio Grid
+                                                 "ExplorationSidebarChestInspectorPlaceholder", primer ancestro
+                                                 Grid real desde este panel - deliberadamente NO el valor crudo
+                                                 de Settings.ExplorationSidebarWidth, para no depender de
+                                                 adivinar el overhead real de padding/margen/scrollbar, ~41px
+                                                 medidos) via ChestInspectorColumnsConverter
+                                                 (DensityConverters.cs) cada vez que el usuario arrastra el
+                                                 GridSplitter o cambia el modo compacto. ReferenceColumns=10 se
+                                                 mantiene (mismo techo de escala que el resto de rejillas reales
+                                                 de la app, Inventario/Equipamiento/Libreria) para que el icono
+                                                 del slot se vea del mismo tamaño en todas partes. -->
+                                            <controls:SlotGridPanel
+                                                MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                                ReferenceColumns="10">
+                                                <controls:SlotGridPanel.Columns>
+                                                    <MultiBinding Converter="{x:Static conv:ChestInspectorColumnsConverter.Instance}">
+                                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}" />
+                                                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                    </MultiBinding>
+                                                </controls:SlotGridPanel.Columns>
+                                            </controls:SlotGridPanel>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>

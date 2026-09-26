@@ -68,3 +68,47 @@ public sealed class CompactGapConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+// ChestInspector: Columns dinamico segun el ancho REAL disponible (26-sep-2026, investigador
+// af9680e6 - "Columns dinamico ChestInspector ExplorationSidebarWidth"). Settings.
+// ExplorationSidebarWidth (MainWindow.xaml:5709, clamp real 260-520px en SettingsViewModel.cs:
+// 138-139) es un eje INDEPENDIENTE del tamaño de ventana, ajustable en caliente por el usuario
+// con el GridSplitter - el Columns="6" literal de la pasada anterior (commit 83b466fc) asumia el
+// ancho de sidebar POR DEFECTO y dejaba slots del ChestInspector fuera del area visible sin
+// aviso ni scrollbar con un sidebar mas estrecho ya guardado (260/280px reales, cuantificado con
+// el canario FLUJOCOFRES-SIDEBARWIDTH en Terrakeep.App.Tests: 260/280px->6 slots fuera,
+// 320px->0 fuera). En vez de adivinar el overhead real de padding/margen/scrollbar entre
+// Settings.ExplorationSidebarWidth (ancho de COLUMNA) y el ancho de contenido real disponible
+// (~41px medidos), este converter recibe el ActualWidth YA MEDIDO del propio contenedor
+// (RelativeSource AncestorType=Grid desde el SlotGridPanel, ver MainWindow.xaml) - se recalcula
+// solo con cada redimension en caliente. Formula: inversa de la que ya usa
+// SlotGridPanel.MeasureOverride para cellFromWidth (cellFromWidth=(availW-Gap*(cols-1))/cols) -
+// la celda nunca puede bajar de MinCell, asi que el maximo de columnas que caben de verdad sin
+// que SlotGridPanel.ArrangeOverride las recorte en silencio es
+// floor((anchoDisponible+Gap)/(MinCell+Gap)). Clamp 1-10 (mismo techo que ReferenceColumns="10"
+// del propio SlotGridPanel, para que el icono no cambie de tamaño solo porque cambio el numero
+// de columnas). MinCell/Gap reales dependen tambien de Settings.IsCompactMode (mismo factor 0.8/
+// mismo Gap=2 que CompactCellSizeConverter/CompactGapConverter ya aplican al propio
+// SlotGridPanel) - de ahi el IMultiValueConverter en vez de un IValueConverter simple.
+public sealed class ChestInspectorColumnsConverter : IMultiValueConverter
+{
+    public static readonly ChestInspectorColumnsConverter Instance = new();
+    private const double BaseMinCell = 40.0;
+    private const double BaseGap = 4.0;
+    private const int DefaultColumnsAntesDelPrimerLayout = 6; // mismo valor que tenia el literal anterior, solo hasta que ActualWidth deje de ser 0
+
+    public object Convert(object?[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        double availableWidth = values.Length > 0 && values[0] is double d ? d : 0.0;
+        bool isCompact = values.Length > 1 && values[1] is true;
+        double minCell = isCompact ? Math.Round(BaseMinCell * CompactCellSizeConverter.Factor) : BaseMinCell;
+        double gap = isCompact ? 2.0 : BaseGap;
+
+        if (availableWidth <= 0) return DefaultColumnsAntesDelPrimerLayout;
+        int columnas = (int)Math.Floor((availableWidth + gap) / (minCell + gap));
+        return Math.Clamp(columnas, 1, 10);
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

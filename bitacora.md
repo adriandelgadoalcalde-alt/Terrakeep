@@ -27942,3 +27942,80 @@ usuario. El punto 1 original (hover) puede darse por CERRADO de verdad esta vez 
 investigaciones independientes sin reproducirlo: la de antes del rediseño, la de despues, y este
 flujo end-to-end completo) - no hace falta una 4a revalidacion salvo que reaparezca con evidencia
 real nueva (video/captura del usuario).
+
+---
+
+## ChestInspector Columns dinamico segun ExplorationSidebarWidth (26-sep-2026, aplicador-fix,
+## TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Arreglo real del hallazgo de arriba (investigador af9680e6, "ancho del sidebar" en
+`FLUJOCOFRES-SIDEBARWIDTH`): `Columns="6"` literal en `MainWindow.xaml:7873` (fix anterior,
+commit `83b466fc`) asumia el ancho de sidebar POR DEFECTO - con `Settings.
+ExplorationSidebarWidth` (eje INDEPENDIENTE del tamaño de ventana, clamp real 260-520px,
+`SettingsViewModel.cs:138-139`) ya guardado por el usuario en 280px (valor REAL de
+`settings.json`, confirmado por el investigador), 6 columnas a `MinCell=40` (260px de contenido
+minimo) ya no cabian en el ancho real disponible tras padding/margen/scrollbar del sidebar
+(~41px de diferencia con el valor crudo de `Settings.ExplorationSidebarWidth`, medido abajo) -
+`SlotGridPanel.ArrangeOverride` seguia colocando esas columnas de mas (`offsetX=0` porque
+`contentW>finalSize.Width`) y `ExplorationSidebarScroll` (`HorizontalScrollBarVisibility=
+"Disabled"`) las recortaba en silencio - 6 de los 40 slots del ChestInspector inalcanzables a
+260/280px, 0 a 320px (cuantificado por el investigador).
+
+**Arreglo real**: `Columns` de ese `SlotGridPanel` deja de ser un literal fijo y pasa a un
+`MultiBinding` con el nuevo `ChestInspectorColumnsConverter`
+(`Terrakeep.App/Converters/DensityConverters.cs`) - recibe el `ActualWidth` REAL del primer
+ancestro `Grid` visual desde el panel (`ExplorationSidebarChestInspectorPlaceholder`, confirmado
+por `RelativeSource AncestorType=Grid` cruzando el limite del `ItemsPanelTemplate` sin problema -
+mismo patron ya usado por `AvailableHeight` con `AncestorType=ScrollViewer` en las otras 4
+rejillas de la app) y `Settings.IsCompactMode`, y calcula `columnas =
+clamp(floor((anchoDisponible+Gap)/(MinCell+Gap)), 1, 10)` - formula inversa exacta a la que ya
+usa `SlotGridPanel.MeasureOverride` para `cellFromWidth`, asi la celda nunca baja de `MinCell`
+sin que el panel intente colocar mas columnas de las que caben. Deliberadamente NO se ata contra
+el valor crudo de `Settings.ExplorationSidebarWidth` (evita tener que fijar a mano el overhead
+real de padding/margen/scrollbar, que ya podria cambiar con cualquier retoque visual futuro del
+sidebar) - se recalcula solo con cada redimension en caliente del `GridSplitter` (confirmado, ver
+verificacion abajo) o cambio de modo compacto.
+
+**Verificacion real**:
+- `dotnet build Terrakeep.slnx -c Release`: verde, 0 avisos/0 errores.
+- `dotnet test Terrakeep.Core.Tests -c Release`: **773/773** (0 regresion, mismo numero exacto
+  que el baseline - este cambio no toca `Terrakeep.Core`).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: **744/744** (0 regresion, mismo numero
+  exacto que el baseline).
+- `COFRES_INSPECTOR_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: **0
+  lineas `FALLO`** - incluye `COFRES-INSPECTOR-SLOTSVACIOS-1180x860`/`-1080x700`
+  (`CanarioClusterCofresInspector.cs`), ambos con `algun slot fuera del ancho real del
+  placeholder=False`.
+- `FLUJOCOFRES_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: canario
+  real `FLUJOCOFRES-SIDEBARWIDTH` (`CanarioFlujoCompletoCofres.cs`, ya preparado por el
+  investigador) contra los 3 anchos exactos ya cuantificados, **0 slots fuera en los 3** (antes
+  6/6/0):
+  - `Settings.ExplorationSidebarWidth=260px` -> `placeholder.ActualWidth=219px` (overhead real
+    confirmado: 41px), `slots fuera=0`.
+  - `=280px` (valor REAL persistido en el `settings.json` de esta maquina, confirmado por el
+    canario) -> `placeholder.ActualWidth=239px`, `slots fuera=0`.
+  - `=320px` (valor de fabrica) -> `placeholder.ActualWidth=279px`, `slots fuera=0`.
+  - `Settings.ExplorationSidebarWidth` restaurado a 280px al terminar (el canario nunca deja el
+    ajuste real del usuario modificado). **0 lineas `FALLO`** en todo el canario (flujo de 8 pasos
+    + este diagnostico).
+- Bloqueo cooperativo `terrakeep-mainwindow-xaml` comprobado/reservado antes de tocar el fichero,
+  liberado tras el commit.
+
+**Recompilacion y redespliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(`Get-CimInstance Win32_Process`, sin resultados). `DEPLOY_LOCK` adquirido sin contencion.
+Sanidad de `Assets/` ANTES: 13056 ficheros, hash `068603cc...` (identico al `despues` de la
+entrada anterior - este cambio no toca ningun asset). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde, `Assets/` del
+publish con 13056 ficheros (identico). `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe
+unins000.dat`: 1 archivo copiado (`Terrakeep.exe`, unico cambio real - solo XAML/C#), 13061
+omitidos, 0 errores, 0 extras (exit code robocopy=1, "copiado con exito"). `deployLock.js
+despues Terrakeep ...Assets`: **sin alarma** ("Assets/ de Terrakeep identico antes y despues del
+/MIR, 13056 ficheros"). `Terrakeep.exe` instalado: 139.247.233 bytes, mismo `LastWriteTime` que
+el publish. Sanity check real: `Start-Process` del exe instalado, `PID=228216 Responding=True` a
+los 5s, cerrado limpio con `Stop-Process -Force`. `DEPLOY_LOCK` liberado tras confirmar.
+
+**Commit real**: `Terrakeep.App/Converters/DensityConverters.cs` (nuevo
+`ChestInspectorColumnsConverter`) + `Terrakeep.App/MainWindow.xaml` (Columns del ChestInspector
+via `MultiBinding`) + esta entrada de `bitacora.md` - unicos ficheros tocados, `git add` con
+rutas explicitas, nunca `-A`. `doNotTouch` respetado (`CLAUDE.md`, `Terrasavr-Native.zip`,
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`). Sin `git push`.
