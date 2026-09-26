@@ -1,0 +1,162 @@
+<!-- ADR-TERRAKEEP-016/019 (26-sep-2026): TERCERA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, siguiendo el orden de menor a mayor riesgo del plan
+     (punto 4.3, tras NOVEDADES en ADR-017 y BUILDS en ADR-018). Seccion SERVIDOR elegida por ser
+     el siguiente paso recomendado: sin x:Name (ningun test window.FindName la toca - grep
+     exhaustivo de los 9 archivos citados por ADR-016), sin code-behind propio en
+     MainWindow.xaml.cs.
+     A diferencia de NOVEDADES/BUILDS (ninguna de las dos necesito promover nada), esta seccion SI
+     referencia un recurso window-scoped DIRECTAMENTE en su propio markup: {StaticResource
+     BoolToVis} en la fila "Visibility" del bloque de mods de tModLoader (linea real, ver mas
+     abajo) - BoolToVis (BooleanToVisibilityConverter) esta definido SOLO en Window.Resources de
+     MainWindow.xaml (x:Key="BoolToVis", usado ademas otras 120 veces en el resto del archivo, por
+     eso esa definicion NO se toca ni se borra) y un UserControl resuelve StaticResource durante
+     su propio InitializeComponent(), antes de estar enganchado a ningun Window - exactamente el
+     caso de riesgo real que ADR-TERRAKEEP-016 (punto 2a) y ADR-TERRAKEEP-018 (regla general del
+     mecanismo) predijeron.
+     HALLAZGO REAL nuevo (corrige el mecanismo de "promocion" que ADR-016/018 daban por sentado):
+     promover el converter a Application.Resources (App.xaml), aunque sea con una clave x:Key
+     DISTINTA a "BoolToVis" para no chocar con la de MainWindow.xaml, revienta en runtime la
+     construccion de MainWindow ENTERA con "No se puede encontrar el recurso" - reproducido de
+     forma determinista con dotnet clean + build limpio, y confirmado que ni siquiera hace falta
+     tocar esta pestaña para verlo (un _SOLO que no toca SERVIDOR, NOVEDADES_SOLO, revienta igual
+     en cuanto App.xaml gana una entrada nueva). Sintoma real: MainWindow.InitializeComponent()
+     lanza buscando la clave NUEVA (la que solo HostingView.xaml usa), no una de las 121 que
+     MainWindow.xaml si escribe en su propio markup - evidencia de que el compilador de marcado de
+     WPF (PresentationBuildTasks) optimiza StaticResource a una tabla de claves compartida POR
+     ENSAMBLADO entre TODAS las paginas XAML compiladas (BAML "OptimizedStaticResource"), y anadir
+     una clave nueva en cualquier pagina desplaza esa tabla para el resto - un mecanismo fragil que
+     este repo no tenia motivo para haber ejercitado antes (NOVEDADES/BUILDS nunca necesitaron
+     anadir NADA a App.xaml). Evitado del todo NO tocando Application.Resources: la unica
+     instancia de BooleanToVisibilityConverter que esta vista necesita vive en su PROPIO
+     <UserControl.Resources> (ambito local a este archivo, resuelto antes que nada durante su
+     propio InitializeComponent(), sin depender ni de Window.Resources ni de Application.Resources)
+     - patron WPF estandar, mas simple que "promover" nada, y el que de verdad corresponde cuando
+     el consumidor es un solo UserControl aislado. El resto de recursos que usa esta seccion
+     (InverseBoolToVis/EnumEquals/ResourceKeyToBrush/etc.) sigue sin necesitar ningun cambio,
+     siempre vivieron a nivel de aplicacion.
+     Contenido copiado BYTE A BYTE del TabItem "SERVIDOR" en MainWindow.xaml, solo movido de sitio -
+     el UserControl no fija su propio DataContext, hereda el MainViewModel real del Window. -->
+<UserControl x:Class="Terrakeep.App.Views.HostingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="HostingBoolToVis" />
+    </UserControl.Resources>
+    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+            <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
+            <TextBlock Text="{Binding Loc[hosting_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+            <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1" CornerRadius="8"
+                    Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                    Visibility="{Binding Hosting.TerrariaDetectado, Converter={StaticResource InverseBoolToVis}}">
+                <TextBlock Text="{Binding Loc[hosting_not_detected], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+            </Border>
+
+            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                    Effect="{StaticResource CardShadow}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding Loc[hosting_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <TextBox Text="{Binding Hosting.NombreInstancia, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                            <TextBlock Text="{Binding Loc[hosting_world_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <TextBox Text="{Binding Hosting.NombreMundo, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                            <TextBlock Text="{Binding Loc[hosting_world_size], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <!-- Mismo patron real ya usado para el idioma en Ajustes -
+                                 RadioButton.IsChecked de doble via a un enum via
+                                 EnumEquals (Enum.Parse contra ConverterParameter). -->
+                            <UniformGrid Columns="3" Margin="0,2,0,8">
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Pequeño" Margin="0,0,2,0"
+                                             IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Pequeno}" />
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Mediano" Margin="2,0,2,0"
+                                             IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Mediano}" />
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Grande" Margin="2,0,0,0"
+                                             IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Grande}" />
+                            </UniformGrid>
+                            <TextBlock Text="{Binding Loc[hosting_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <UniformGrid Columns="2" Margin="0,2,0,8">
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Normal" Margin="0,0,2,2"
+                                             IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Normal}" />
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Experto" Margin="2,0,0,2"
+                                             IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Experto}" />
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Maestro" Margin="0,2,2,0"
+                                             IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Maestro}" />
+                                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Creativo" Margin="2,2,0,0"
+                                             IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Creativo}" />
+                            </UniformGrid>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                            <TextBlock Text="{Binding Loc[hosting_max_players], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <TextBox Text="{Binding Hosting.MaxJugadores, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                            <TextBlock Text="{Binding Loc[hosting_port], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <TextBox Text="{Binding Hosting.Puerto, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                            <TextBlock Text="{Binding Loc[hosting_password], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <TextBox Text="{Binding Hosting.Password, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                            <CheckBox Content="{Binding Loc[hosting_use_tmodloader], Mode=OneWay}" IsChecked="{Binding Hosting.UsarTModLoader}" Margin="0,10,0,0" Foreground="{StaticResource TextPrimaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Visibility="{Binding Hosting.UsarTModLoader, Converter={StaticResource HostingBoolToVis}}" Margin="0,4,0,8">
+                        <TextBlock Text="{Binding Loc[hosting_mods_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,0,0,4" />
+                        <TextBlock Text="{Binding Loc[hosting_mods_none], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                   Visibility="{Binding Hosting.ModsDisponibles.Count, Converter={StaticResource CountToCollapsed}}" />
+                        <ItemsControl ItemsSource="{Binding Hosting.ModsDisponibles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Nombre}" IsChecked="{Binding Seleccionado}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,1,0,1">
+                                        <CheckBox.ToolTip>
+                                            <TextBlock Text="{Binding TamanoTexto}" />
+                                        </CheckBox.ToolTip>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Hosting.ErrorMessage}" Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,4,0,8"
+                               Visibility="{Binding Hosting.ErrorMessage, Converter={StaticResource EmptyToCollapsed}}" />
+
+                    <Button Content="{Binding Loc[hosting_start], Mode=OneWay}" Tag="Accent" Command="{Binding Hosting.IniciarCommand}"
+                            HorizontalAlignment="Left" Padding="16,7" IsEnabled="{Binding Hosting.TerrariaDetectado}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding Loc[hosting_active_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+            <TextBlock Text="{Binding Loc[hosting_no_instances], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                       Visibility="{Binding Hosting.Instancias.Count, Converter={StaticResource CountToCollapsed}}" />
+            <ItemsControl ItemsSource="{Binding Hosting.Instancias}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                CornerRadius="8" Padding="14,10" Margin="0,0,0,10" MaxWidth="680" HorizontalAlignment="Left">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10" Height="10" Fill="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding EstadoTexto}" Foreground="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Style="{StaticResource CaptionText}">
+                                        <Run Text="puerto " /><Run Text="{Binding Puerto, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Button Content="{Binding DataContext.Loc[hosting_stop], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                            Command="{Binding DetenerCommand}" Margin="16,0,0,0" Padding="10,3" HorizontalAlignment="Left" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding RecursosTexto}" Style="{StaticResource CaptionText}" Margin="18,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

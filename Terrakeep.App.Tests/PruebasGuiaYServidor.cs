@@ -661,7 +661,22 @@ internal static partial class Program
     private static void EjecutarHostingReal(MainWindow window, MainViewModel vm)
     {
         vm.SelectedTabIndex = 5; // AppTab.Hosting, reordenado T1 21-sep-2026
-        DoEvents(); DoEvents();
+        // ADR-TERRAKEEP-019 (26-sep-2026): 4 DoEvents (no 2) desde la extraccion real de esta
+        // pestaña a Views/HostingView.xaml. HALLAZGO REAL: con solo 2 DoEvents la captura de mas
+        // abajo salia completamente en blanco (comparado con el mismo punto ANTES de la
+        // extraccion, donde 2 DoEvents ya bastaban) - el contenido SI estaba bien ligado
+        // (TerrariaDetectado/ModsDisponibles se leen correctos un poco mas abajo, sin cambios), lo
+        // que fallaba era solo el PINTADO a tiempo de la captura: un UserControl recien
+        // CONSTRUIDO (su primer InitializeComponent()+layout, a diferencia del contenido que antes
+        // vivia directamente en el arbol ya cargado del Window) necesita un ciclo mas de bombeo
+        // del Dispatcher para completar su primera pasada de layout/render antes de que
+        // RenderTargetBitmap capture algo real. No es una regresion funcional (el resto del modo -
+        // arrancar/parar un servidor real - ya funcionaba igual con 2 DoEvents, la propia
+        // instancia se crea y comprueba por datos, no por pantalla) - es una leccion nueva sobre
+        // el COSTE de tiempo real de instanciar un UserControl por primera vez, a tener en cuenta
+        // en las extracciones que le queden a este plan si añaden una captura inmediata tras
+        // seleccionar la pestaña.
+        DoEvents(); DoEvents(); DoEvents(); DoEvents();
 
         // Evidencia CON NOMBRE de la pestaña Hosting (16-sep-2026, sesgo S1 de KeepQA -
         // AUDITORIA-SESGOS-16SEP.md: "Hosting" era la unica pantalla de Terrakeep sin ninguna
