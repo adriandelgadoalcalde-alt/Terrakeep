@@ -21,6 +21,13 @@ Electron, hasta que tenga paridad real. Nombre propio: **"Terrakeep"**.
 ## Descubrimiento, Skills y Codebase Memory en este proyecto
 (Detalle completo del mecanismo en `C:\Users\adrian\.claude\CLAUDE.md` - esto
 es solo la aplicación concreta a Terrakeep, no lo repite.)
+- Mapa operativo: si algo diverge, el código real y las pruebas vivas
+  prevalecen siempre sobre memoria/documentación desactualizada (Task
+  Context, Codebase Memory, Vault incluidos).
+- Busca por símbolo/identificador antes de leer un archivo gigante completo
+  (relevante en concreto para `MainWindow.xaml`, en proceso de división
+  progresiva a `Views/` - ver `bitacora.md` y los ADR-TERRAKEEP-0XX del
+  Decision Registry de KeepQA para el estado real de esa división).
 - Skills prioritarias aquí: `csharp-dotnet`, `wpf-xaml`, `tmodloader`,
   `visual-qa`, `debugging-qa`. Si aparece un stack nuevo dentro de este repo,
   Project Discovery debe detectarlo y asignar Skill/tooling antes de
@@ -33,7 +40,7 @@ es solo la aplicación concreta a Terrakeep, no lo repite.)
   snippet/source y `check_index_coverage`; si el índice está stale/parcial,
   usa Read/Grep en esas rutas antes de concluir. Un subagente no hereda MCP
   ni contexto por sí solo - el coordinador le pasa proyecto/tier/frescura/
-  símbolos/cobertura explícitamente.
+  símbolos/rutas/cobertura/fallback explícitamente.
 - KeepQA complementa el harness nativo (`Terrakeep.App.Tests` +
   `Terrakeep.Core.Tests` + `Terrakeep.App.ViewModels.Tests`) - nunca lo
   reemplaza ni duplica sus oráculos; el conocimiento de dominio real de este
