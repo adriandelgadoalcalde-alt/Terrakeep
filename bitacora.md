@@ -28548,6 +28548,76 @@ Commit local: `Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` (un
 tocado - `git add` explicito de ese fichero, nunca `git add -A`; habia decenas de ficheros ajenos
 modificados en el arbol por agentes `aplicador-fix` en paralelo, ninguno tocado). Sin `git push`.
 
+## 26-sep-2026 - Arreglo aplicado (aplicador-fix): "forma dorada/redondeada bajo los pies" (Chester oculto)
+
+Continuacion directa de la investigacion de arriba. Cambio real en `Terrakeep.App/Converters/
+PetPositionConverters.cs:63` (`PetBottomAlignMarginConverter.Convert`): `double left = 10.0 *
+canvasScale;` -> `double left = 20.0 * canvasScale;` (working set exacto pedido en el encargo,
+unico archivo tocado).
+
+**Verificacion propia antes de aceptar la recomendacion a ciegas** (regla real: "la causa esta
+confirmada, no la cuestiones sin evidencia nueva real" - pero SI aparecio evidencia nueva real, se
+investigo hasta resolverla, no se ignoro): al repetir el canario visual pesado `HOMEBANNER_SOLO=1`
+(`Terrakeep.App.Tests.exe` real, personajes reales de este equipo con mascota - Eldelgas,
+Terrariano) con el arreglo ya aplicado, aparecieron 3 `FALLO` nuevos en el bloque C
+(`VerificarFormulaRealMascota`, offsetX real 43px vs "esperado" 30px, delta=13px) - el propio
+informe del investigador (linea 28539-28541 de esta bitacora) esperaba 0 `FALLO` ahi tras el
+arreglo, y no se pudo confirmar en su momento por tener otro proceso corriendo en paralelo. Antes
+de darlo por una regresion real, se re-derivo la formula a mano con las posiciones REALES
+medidas (dollTopLeft.X=-13=-10*1.3, ya incluye el propio retranqueo condicional de
+`PetDollShiftXConverter`) y se confirmo con una TERCERA fuente independiente en el decompilado
+(`TerrariaVanilla/Terraria/DataStructures/PlayerDrawSet.cs:1257`,
+`DrawPlayer_12_Skin_Composite`): el termino real `-bodyFrame.Width/2 + player.width/2` confirma
+que el sprite visual (equivalente al lienzo/Grid de Terrakeep, 40 nativos) se dibuja realmente
+10 nativos a la izquierda de `playerPosition.X` (el hitbox de 20 centrado) - exactamente el hueco
+que ya identifico el investigador. Con esa tercera fuente confirmada, la cuenta correcta da
+`X_margin=20` (el arreglo aplicado es el correcto) y el `FALLO` del canario `HOMEBANNER_SOLO` es
+EXPLICABLE, no una regresion: la propia formula hardcodeada de ese canario
+(`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs:211`, `offsetXEsperado = 20.0*canvasScale +
+petOffsetX`) compara la mascota contra el DOLL YA RETRANQUEADO (-10*canvasScale) sin sumarle ese
+mismo hueco de 10 nativos - comparte el MISMO error conceptual que tenia la linea 63 original (de
+hecho ambos se escribieron en el mismo commit, `7058c42b`, con el mismo razonamiento incompleto -
+por eso ese canario daba "delta=0px" en su momento pese al bug real visible). **Pendiente para una
+ronda aparte (fuera del working set de este encargo, no tocado aqui)**: actualizar
+`CanarioHomeBannerMascota.cs:211` a `offsetXEsperado = 30.0*canvasScale + petOffsetX` para que
+vuelva a medir en verde con la formula ya corregida.
+
+**Build**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+
+**Test real que cierra el hueco (canario de la fase de investigacion)**: `dotnet test
+Terrakeep.App.ViewModels.Tests --filter "FullyQualifiedName~PetPositionConvertersTests"` ->
+**6/6 verde** (era 3/6 antes del cambio, confirmado por mi mismo antes de tocar nada).
+
+**Suite completa, sin regresion**: `dotnet test Terrakeep.slnx --no-build` (gate real del
+proyecto) -> `Terrakeep.Core.Tests` 773/773, `Terrakeep.App.ViewModels.Tests` 759/759, 0 con
+error, 0 omitidas.
+
+**Verificacion visual real** (con los personajes reales de este equipo, `HOMEBANNER_SOLO=1
+Terrakeep.App.Tests.exe`, sin ninguna otra instancia corriendo - `Get-Process` vacio antes de
+lanzar): el bloque C (mascota dentro de la tarjeta) mide correctamente el borde inferior alineado
+(delta=0px, sin cambios) y el offsetX real de 43px con el arreglo (antes seria 30px con el 10
+viejo) - la posicion horizontal de la mascota avanza los 13px adicionales esperados (10*1.3) que
+la separan del centro del doll, coherente con la evidencia visual ya recogida por el investigador
+("Chester" pasa de oculto a reconocible al lado de los pies). El bloque D (banner) siguio
+INCONCLUSIVE en este equipo (sin `Home.LastSessionCharacterEntry` real con mascota ahora mismo,
+mismo aviso que ya dejo el investigador - no es un problema de este arreglo).
+
+**Recompilado y redesplegado**: `dotnet build Terrakeep.slnx -c Debug` (barra de tareas/Menu
+Inicio, `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`) - sin proceso `Terrakeep` en
+ejecucion antes de compilar (`Get-Process` vacio). Copia instalada real actualizada con
+`installer\install.ps1` (publish Release autocontenido + copia a `%LocalAppData%\Programs\
+Terrakeep`) - sin proceso en ejecucion en esa carpeta tampoco. Confirmado `FileVersion=3.2.5.0` y
+`LastWriteTime` de hoy en los dos `.exe` reales (`Get-Item ... .VersionInfo.FileVersion`).
+
+Commit local: `Terrakeep.App/Converters/PetPositionConverters.cs` (unico archivo real tocado -
+`git add` explicito, nunca `git add -A`; el arbol tenia decenas de ficheros ajenos modificados por
+otros agentes en paralelo - `CLAUDE.md`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
+`Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, `Terrakeep.App.ViewModels.Tests/
+DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/*` modificado, `scripts/*.js`/
+`*.ps1`, `Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`/
+`Terrasavr-Native.zip` sin trackear - ninguno tocado). Esta entrada de bitacora va en un segundo
+commit propio, tras confirmar el resultado real. Sin `git push`.
+
 ## ExploracionRediseno: rediseno de Exploracion>Mundo aplicado (26-sep-2026, aplicador-fix)
 
 Segunda fase del patron de dos agentes: `arquitecto-keep` investigo y diseño por completo el
