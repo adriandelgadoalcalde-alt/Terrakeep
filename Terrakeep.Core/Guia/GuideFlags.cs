@@ -8,15 +8,12 @@ namespace Terrakeep.Core.Guia;
 //
 // POR QUE es mas corta que la del mod, con honestidad: TerrakeepMod lee las banderas en vivo del
 // motor (NPC.downedXxx, campos publicos siempre disponibles con la partida cargada). Terrakeep
-// solo tiene lo que su propio lector de .wld/.plr ya parsea - y WldHeader.cs documenta una
-// limitacion de arquitectura DELIBERADA (comentario real en ese archivo): el tramo de banderas
-// del .wld que se lee es de ANCHO FIJO justo hasta HardMode; los jefes tardios (Reina Slime aparte,
-// que SI tiene su propio campo opcional) - Duque Pezhongo, Emperatriz de la Luz, Culto Lunatico,
-// Torres, Señor de la Luna, Ejercito Goblin, Piratas, Legion de Escarcha, Marcianos, Luna de
-// Calabazas/Helada - viven DESPUES de secciones de ancho VARIABLE (lista de Anglers, banners) que
-// Terrakeep no atraviesa todavia (localizarlas exige mas trabajo de lector de .wld, fuera del
-// alcance de esta ronda de integracion - ver bitacora.md). Añadirlas es extender WldReader/
-// WldHeader, no este archivo.
+// solo tiene lo que su propio lector de .wld/.plr ya parsea. Guia Encargo5b (26-sep-2026): los
+// jefes tardios (Duque Pezhongo, Emperatriz de la Luz, Culto Lunatico, Torres, Señor de la Luna,
+// Marcianos, Reina Slime, Deerclops) YA se leen (ver WldReader.ReadLateBossFlags) - atraviesan de
+// verdad las dos secciones de ancho VARIABLE que los precedian (lista de Anglers, LoadBanners).
+// Luna de Calabazas/Helada sigue sin tener campo real en el .wld (son ventanas de tiempo/clima
+// en vivo, no una bandera persistida) - LIMITE real, no una omision de esta ronda.
 //
 // Las de Calamity (banderas de CalamityMod.DownedBossSystem) SI estan aqui desde el 25-sep-2026
 // (Guia Encargo A "GuiaCalamity"): a diferencia de lo que decia esta misma cabecera antes, sus
@@ -65,6 +62,28 @@ public static class GuideFlags
         { "downedGoblins", h => h.DownedGoblinArmy },
         { "downedFrost", h => h.DownedFrostLegion },
         { "downedPirates", h => h.DownedPirates },
+
+        // Guia Encargo5b (26-sep-2026, diseño de arquitecto-keep a84878b7): jefes tardios vanilla,
+        // ya leidos por WldReader.ReadLateBossFlags (bool? - null cuando el mundo es demasiado
+        // viejo para tener el campo). Claves canonicas EXACTAS ya presentes en guia_progresion.json
+        // (confirmadas por grep antes de escribirlas, no asumidas): "downedAncientCultist" (no
+        // "downedLunaticCultist" - el nombre real de campo de NPC.cs es mas corto, mismo criterio
+        // ya aplicado arriba con downedGoblins/downedFrost). "downedTowers" exige las 4 torres
+        // juntas (NPC.cs: la propiedad real downedTowers = downedTowerSolar && ...Vortex &&
+        // ...Nebula && ...Stardust) - mismo patron ya usado en downedMechBossAll: null solo si NI
+        // SIQUIERA el primer campo se pudo leer (mundo <140), false si esta incompleto, true solo
+        // si las 4 son true.
+        { "downedFishron", h => h.DownedFishron },
+        { "downedAncientCultist", h => h.DownedLunaticCultist },
+        { "downedMoonlord", h => h.DownedMoonlord },
+        { "downedMartians", h => h.DownedMartians },
+        { "downedTowers", h => h.DownedCelestialSolar == null
+            ? null
+            : h.DownedCelestialSolar == true && h.DownedCelestialVortex == true &&
+              h.DownedCelestialNebula == true && h.DownedCelestialStardust == true },
+        { "downedQueenSlime", h => h.DownedQueenSlime },
+        { "downedDeerclops", h => h.DownedDeerclops },
+        { "downedEmpressOfLight", h => h.DownedEmpressOfLight },
     };
 
     /// <summary>true si Terrakeep sabe (en principio) leer esta bandera - independientemente de

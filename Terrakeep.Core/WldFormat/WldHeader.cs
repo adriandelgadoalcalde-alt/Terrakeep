@@ -47,10 +47,13 @@ public sealed class WldHeader
     // sin ningun string variable de por medio, asi que es seguro seguir leyendolo Y parchearlo
     // despues por offset replicado, igual que ya hace WldWriter.PatchGameMode).
     //
-    // Los jefes tardios (Fishron, Martianos, Culto Lunatico, Lunatico) quedan FUERA a proposito:
-    // estan despues de la lista de Anglers (string[], longitud variable) y de LoadBanners - su
-    // offset no es fijo, localizarlo exige atravesar mas secciones variables y el riesgo de
-    // desincronizar la escritura sube sin necesidad para esta primera version.
+    // Guia Encargo5b (26-sep-2026): los jefes tardios (Fishron, Martianos, Culto Lunatico,
+    // Lunatico, Torres Celestiales, Emperatriz de la Luz, Reina Slime, Deerclops) YA se leen -
+    // ver WldReader.ReadLateBossFlags, confirmado linea a linea contra World.FileV2.cs de TEdit
+    // (xnb-lzx-tool-refs/World.FileV2.cs, LoadWorld real, lineas 2120-2366). Estan detras de DOS
+    // secciones de ancho variable (la lista de Anglers, string[], y LoadBanners: KilledMobs +
+    // ClaimableBanners), no de una sola - se leen y se descartan (nunca se parchean, solo
+    // lectura) porque su offset no es fijo como el resto del bloque de arriba.
     public required double Time { get; init; }
     public required bool DayTime { get; init; }
     public required int MoonPhase { get; init; }
@@ -84,13 +87,32 @@ public sealed class WldHeader
     // DownedSlimeKingBoss y HardMode - WldReader.ReadHeader YA los leia (y los descartaba, ver su
     // comentario real "SavedGoblin"/"DownedGoblins"/"DownedFrost"/"DownedPirates") para poder
     // seguir avanzando hasta HardMode. Exponerlos es ampliar lo que ya se leia, no ingenieria de
-    // formato nueva. "Marcianos" (Martian Madness) queda FUERA a proposito y sigue siendo un
-    // LIMITE real, distinto: su bandera vive muy por delante, detras de la lista de Anglers
-    // (string[], longitud variable) y de las banderas DD2 (Ejercito Viejo Uno) - mismo motivo real
-    // que ya bloquea a los jefes tardios (Fishron/Culto Lunatico/Lunatico), documentado arriba.
+    // formato nueva.
     public required bool DownedGoblinArmy { get; init; }
     public required bool DownedFrostLegion { get; init; }
     public required bool DownedPirates { get; init; }
+
+    // Guia Encargo5b (26-sep-2026, diseño de arquitecto-keep a84878b7): jefes/eventos tardios
+    // vanilla, leidos por WldReader.ReadLateBossFlags (ver su comentario real para el offset
+    // exacto de cada uno, confirmado contra World.FileV2.cs de TEdit). `bool?` en los 11: cada
+    // uno existe SOLO desde su propia version del formato - null significa "el archivo es
+    // demasiado viejo para tener este campo en absoluto" (nunca se finge un false que el .wld no
+    // guarda). CORRECCION (26-sep-2026): un comentario anterior de esta clase decia que Marcianos
+    // (Martian Madness) vivia "detras de las banderas DD2" (Ejercito Viejo Uno) - FALSO, la
+    // fuente real (World.FileV2.cs lineas 2197-2202 vs 2242-2248) confirma que va justo despues
+    // de DownedFishron, ANTES de DD2 (ambos dentro del mismo guarda `if (Version >= 140)`,
+    // simplemente en primer lugar).
+    public bool? DownedFishron { get; init; }
+    public bool? DownedMartians { get; init; }
+    public bool? DownedLunaticCultist { get; init; }
+    public bool? DownedMoonlord { get; init; }
+    public bool? DownedCelestialSolar { get; init; }
+    public bool? DownedCelestialVortex { get; init; }
+    public bool? DownedCelestialNebula { get; init; }
+    public bool? DownedCelestialStardust { get; init; }
+    public bool? DownedEmpressOfLight { get; init; }
+    public bool? DownedQueenSlime { get; init; }
+    public bool? DownedDeerclops { get; init; }
 
     public int TilesSectionOffset => Pointers[1];
     // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit
@@ -179,6 +201,15 @@ public sealed class WldHeader
         DownedGoblinArmy = downedGoblinArmy ?? DownedGoblinArmy,
         DownedFrostLegion = downedFrostLegion ?? DownedFrostLegion,
         DownedPirates = downedPirates ?? DownedPirates,
+        // Guia Encargo5b: ninguno de los With* actuales los edita (jefes tardios, solo lectura -
+        // ver el comentario real de arriba) - se copian TAL CUAL, nunca recalculados, para que un
+        // WithSpawn/WithTimeAndMoon/WithBossFlags no los borre a null por omision.
+        DownedFishron = DownedFishron, DownedMartians = DownedMartians,
+        DownedLunaticCultist = DownedLunaticCultist, DownedMoonlord = DownedMoonlord,
+        DownedCelestialSolar = DownedCelestialSolar, DownedCelestialVortex = DownedCelestialVortex,
+        DownedCelestialNebula = DownedCelestialNebula, DownedCelestialStardust = DownedCelestialStardust,
+        DownedEmpressOfLight = DownedEmpressOfLight, DownedQueenSlime = DownedQueenSlime,
+        DownedDeerclops = DownedDeerclops,
     };
 
     // Ver el comentario de WldReader.Read sobre por que este puntero (y no Pointers[9], el

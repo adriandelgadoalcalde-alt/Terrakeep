@@ -27137,3 +27137,100 @@ de la solución, cambio sin riesgo para el resto del código). Sin despliegue de
 modificados por otros agentes en paralelo (`scripts/extraer-nombres-calamity-en.js`,
 `scripts/sync-guia-desde-terrakeepmod.ps1`, varios `Terrakeep.*.Tests/*.cs`, `MainWindow.xaml*`)
 NO añadidos al stage. Sin `git push`.
+
+## 26-sep-2026 (Guia Encargo5b) - Flags reales de jefes tardios vanilla (Fishron/Marcianos/Culto
+Lunatico/Lunatico/Torres/Emperatriz de la Luz/Reina Slime/Deerclops) en `WldReader`/`WldHeader`
+
+Encargo YA diseñado por arquitecto-keep a84878b7 (offsets confirmados linea a linea contra
+`xnb-lzx-tool-refs/World.FileV2.cs` de TEdit, `LoadWorld` real, lineas 2120-2366) - aplicado
+directamente, sin reinvestigar la causa.
+
+**`WldReader.cs`**: nuevo metodo privado `ReadLateBossFlags(BinaryReader, uint version)` (llamado
+justo despues de leer `HardMode` en `ReadHeader`), replica EXACTA de `World.FileV2.cs` con
+`return` en cada guarda de version real (`if (version < N) return flags;`) en vez de anidar ifs -
+comparable linea a linea contra la fuente. Atraviesa las DOS secciones de ancho variable que antes
+bloqueaban esto (Anglers: `string[]`, y `LoadBanners`: KilledMobs+ClaimableBanners) mas todos los
+campos fijos intermedios (PartyOfDoom/Invasion*/SlimeRainTime/SundialCooldown/IsRaining/
+TempRain*/SavedOreTiers/Bg*/CloudBgActive/NumClouds/WindSpeedSet, SavedAngler/AnglerQuest/
+SavedStylist/SavedTaxCollector/SavedGolfer/InvasionSizeStart/CultistDelay, FastForwardTime,
+Halloween/Navidad x5, Party/Sandstorm/DD2/MushroomBg/UnderworldBg/BgTree2-4/CombatBookUsed/
+LanternNight/TreeTopVariations(seccion variable #2)/ForceHalloween-XMas/SavedOreTiers Copper-Gold/
+BoughtCat-Bunny). Los 11 flags de jefe tardio se devuelven en un `readonly record struct
+LateBossFlags` (bool? cada uno, `with` para ir rellenando sin nesting) - `null` exacto donde el
+`return` anticipado de su version se dispara antes de llegar a el.
+
+**`WldHeader.cs`**: 11 propiedades nuevas `bool?` (`DownedFishron`, `DownedMartians`,
+`DownedLunaticCultist`, `DownedMoonlord`, `DownedCelestialSolar/Vortex/Nebula/Stardust`,
+`DownedEmpressOfLight`, `DownedQueenSlime`, `DownedDeerclops`). **Corregido** un comentario
+ERRONEO de la propia clase que decia que Marcianos vivia "detras de las banderas DD2" - la fuente
+real (lineas 2197-2202 vs 2242-2248) confirma que va justo despues de `DownedFishron`, ANTES de
+DD2, ambos dentro del mismo `if (Version >= 140)`. **Bug real encontrado y corregido de paso**:
+`WldHeader.CopyWith` (usado por `WithSpawn`/`WithTimeAndMoon`/`WithBossFlags`/`WithGameMode`)
+construye el `WldHeader` nuevo con un inicializador de objeto que listaba explicitamente CADA
+propiedad - al no ser `required` los 11 campos nuevos, cualquier llamada a esos `With*` los habria
+puesto a `null` por omision, borrando en memoria un dato ya leido del archivo. Añadidos al literal
+(copiados tal cual, ninguno de esos metodos los edita) - cubierto por
+`WithSpawn_NoBorraLosJefesTardiosYaLeidos`.
+
+**`GuideFlags.cs`**: 8 entradas nuevas en `_deMundo` con las claves canonicas EXACTAS confirmadas
+por grep en `guia_progresion.json` (`downedFishron`, `downedAncientCultist` -no
+`downedLunaticCultist`, mismo criterio ya usado con `downedGoblins`/`downedFrost`-,
+`downedMoonlord`, `downedMartians`, `downedTowers` -las 4 torres juntas, mismo patron que
+`downedMechBossAll`-, `downedQueenSlime`, `downedDeerclops`, `downedEmpressOfLight`). Comentario de
+cabecera actualizado (ya no dice que Terrakeep "no atraviesa" las secciones variables).
+
+**Regresion real encontrada al extender `ReadHeader`**: 42 tests existentes empezaron a fallar con
+`EndOfStreamException` - construian cabeceras `.wld` sinteticas que terminaban justo en `HardMode`
+(valido antes, porque `ReadHeader` tambien se detenia ahi). Dos causas distintas, dos arreglos:
+1) **`WldWriter.WriteFullHeader`** (el serializador real usado por `WriteWorld`, documentado como
+"la inversa campo a campo de `WldReader.ReadHeader`") tambien terminaba en `HardMode` - extendido
+con el mismo tramo (secciones variables a longitud CERO, los 11 flags con `header.DownedXxx ??
+false`) para que los `.wld` que genera sigan siendo releibles por el `ReadHeader` ya extendido.
+Arregla `WldWriterWriteWorldTests`/`WldWriterWriteNpcsTests` sin tocarlos (no estaban en mi stage,
+la regresion se curó desde el lado del escritor real).
+2) 5 ficheros de test (`WldWriterProgressPatchTests`/`WldWriterTests`/
+`WldWriterSupportsGameModeTests`/`WldWriterChestSignTests`/`WldTileEntityReaderTests`) construyen
+sus propios bytes sinteticos SIN pasar por `WldWriter` (para probar `Patch*`/lectura de tile
+entities contra un archivo minimo) - nueva pieza compartida `LateBossFlagsTestBytes.WriteMinimal`
+(nunca duplicada 5 veces) llamada justo tras escribir `HardMode` en cada uno.
+
+**Tests nuevos**: `WldReaderLateBossFlagsTests.cs` (9 casos) - 4 rangos de version reales (<95,
+131-139, 140-222, >=240) verificando `null`/valor real de cada uno de los 11 flags con un builder
+sintetico byte a byte propio; control cruzado de que el resto de la cabecera sigue sano; regresion
+de `CopyWith` (`WithSpawn_NoBorraLosJefesTardiosYaLeidos`); 3 tests de integracion con `GuideFlags`
+construyendo un `GuideContext`/`WldWorld` minimo en memoria - confirman que con los jefes YA
+derrotados (version 279) las 8 claves nuevas dan `true` en vez de "no evaluable"
+(`GuideEvaluationEngine.EvaluarBandera` solo marca `NoEvaluable` cuando `ValorBandera` da `null`),
+que con un mundo demasiado viejo (v90) siguen `Existe()=true`/`Valor()=null` (reconocida pero sin
+datos, nunca un false inventado), y que `downedTowers` exige las 4 torres juntas.
+
+**Build/test**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores (incluye
+`Terrakeep.App`/`Terrakeep.App.Tests`/`Terrakeep.App.ViewModels.Tests`, sin tocar ninguno).
+`dotnet test Terrakeep.Core.Tests -c Release`: 751/751 (742 baseline + 9 nuevos), CERO
+regresiones. `Terrakeep.App.Tests` no descubre ningun test bajo `dotnet test`/`--list-tests` en
+esta maquina (exit 0, 0 salida mas alla del restore) - preexistente, no relacionado con este
+cambio (nunca se toco ese proyecto); `Terrakeep.App.ViewModels.Tests` filtrado sí corre bien
+(1/1). LÍMITE REAL: no se investigo mas a fondo por estar fuera de alcance de este encargo.
+
+**Deploy real**: cambio de logica pura en `Terrakeep.Core` con efecto visible en runtime (el panel
+de Guia deja de marcar estos pasos como "no evaluable" con un mundo real que ya los tenga
+derrotados) - `DEPLOY_LOCK` adquirido (`deployLock.js adquirir Terrakeep`, libre en el momento de
+pedirlo), `dotnet build Terrakeep.App -c Debug` (barra de tareas,
+`Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`, verificado por timestamp) +
+`installer\install.ps1` (copia instalada real en `%LocalAppData%\Programs\Terrakeep\Terrakeep.exe`,
+Release win-x64 autocontenido, verificado por timestamp) - `DEPLOY_LOCK` liberado al terminar.
+Ningun proceso `Terrakeep.exe` estaba abierto (comprobado con `tasklist` antes de desplegar), asi
+que no hizo falta forzar el cierre de nada.
+
+**Commit real**: `Terrakeep.Core/WldFormat/{WldReader.cs,WldHeader.cs,WldWriter.cs}`,
+`Terrakeep.Core/Guia/GuideFlags.cs`, `Terrakeep.Core.Tests/WldFormat/
+{WldWriterProgressPatchTests.cs,WldWriterTests.cs,WldWriterSupportsGameModeTests.cs,
+WldWriterChestSignTests.cs,WldTileEntityReaderTests.cs,LateBossFlagsTestBytes.cs (nuevo),
+WldReaderLateBossFlagsTests.cs (nuevo)}` + esta entrada de `bitacora.md`. `doNotTouch` respetado
+(`CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados; `MainWindow.xaml` del agente en paralelo tampoco). Ficheros
+ajenos ya modificados en el arbol de trabajo por otros agentes en paralelo (migracion de rutas
+`Downloads\Terrasavr-Win` -> `Downloads\Keep\Terrasavr-Win` en varios `Terrakeep.Core.Tests/Data/
+*.cs`, cambios de Roslynator/inicializadores en `WldWriterWriteWorldTests.cs`) NO añadidos al
+stage - confirmado con `git diff --stat` por fichero antes de `git add` que cada uno de los 11
+ficheros de mi stage contenia EXCLUSIVAMENTE mis lineas. Sin `git push`.

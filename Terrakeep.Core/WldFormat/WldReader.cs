@@ -238,6 +238,8 @@ public static class WldReader
         reader.ReadInt32();   // AltarCount
         bool hardMode = reader.ReadBoolean();
 
+        var lateBossFlags = ReadLateBossFlags(reader, version);
+
         return new WldHeader
         {
             Version = version,
@@ -275,8 +277,167 @@ public static class WldReader
             DownedGoblinArmy = downedGoblinArmy,
             DownedFrostLegion = downedFrostLegion,
             DownedPirates = downedPirates,
+            DownedFishron = lateBossFlags.DownedFishron,
+            DownedMartians = lateBossFlags.DownedMartians,
+            DownedLunaticCultist = lateBossFlags.DownedLunaticCultist,
+            DownedMoonlord = lateBossFlags.DownedMoonlord,
+            DownedCelestialSolar = lateBossFlags.DownedCelestialSolar,
+            DownedCelestialVortex = lateBossFlags.DownedCelestialVortex,
+            DownedCelestialNebula = lateBossFlags.DownedCelestialNebula,
+            DownedCelestialStardust = lateBossFlags.DownedCelestialStardust,
+            DownedEmpressOfLight = lateBossFlags.DownedEmpressOfLight,
+            DownedQueenSlime = lateBossFlags.DownedQueenSlime,
+            DownedDeerclops = lateBossFlags.DownedDeerclops,
         };
     }
+
+    // Guia Encargo5b (26-sep-2026, diseño ya entregado por arquitecto-keep a84878b7, confirmado
+    // linea a linea contra World.FileV2.cs de TEdit - LoadWorld real, xnb-lzx-tool-refs/
+    // World.FileV2.cs lineas 2120-2366): los jefes tardios (Fishron/Marcianos/Culto Lunatico/
+    // Lunatico/Torres Celestiales/Emperatriz de la Luz/Reina Slime/Deerclops) viven DETRAS de DOS
+    // secciones de ancho VARIABLE (Anglers: string[] y LoadBanners: KilledMobs+ClaimableBanners),
+    // no solo una - el comentario antiguo de WldHeader.cs decia que Marcianos iba "detras de DD2"
+    // (Ejercito Viejo Uno): FALSO, va justo despues de DownedFishron, ANTES de DD2 (linea 2197-2202
+    // vs 2242-2248 del archivo real) - corregido en el comentario de WldHeader.cs.
+    //
+    // Metodo SEPARADO (no inline en ReadHeader) para poder usar "return" en cada guarda de
+    // version exactamente como el original real (`if (w.Version < N) return;`), en vez de anidar
+    // ifs sin fin - se puede comparar linea a linea contra la fuente sin traducir la logica.
+    // Cada flag devuelto es null si el return anticipado de SU version se disparo antes de
+    // llegar a leerlo (el archivo ni siquiera guarda ese campo) - nunca se inventa un false.
+    // No hace falta seguir leyendo mas alla de DownedDeerclops (lo unico que interesa de este
+    // tramo): el resto de secciones del archivo (Tiles/Chests/Signs/NPCs/TileEntities/Bestiario)
+    // se ubican por Pointers[] absolutos, nunca por continuidad de este offset.
+    private static LateBossFlags ReadLateBossFlags(BinaryReader reader, uint version)
+    {
+        var flags = default(LateBossFlags);
+
+        if (version >= 257) reader.ReadBoolean(); // PartyOfDoom
+        reader.ReadInt32();  // InvasionDelay
+        reader.ReadInt32();  // InvasionSize
+        reader.ReadInt32();  // InvasionType
+        reader.ReadDouble(); // InvasionX
+        if (version >= 118) reader.ReadDouble(); // SlimeRainTime
+        if (version >= 113) reader.ReadByte();   // SundialCooldown
+        reader.ReadBoolean(); // IsRaining
+        reader.ReadInt32();   // TempRainTime
+        reader.ReadSingle();  // TempMaxRain
+        reader.ReadInt32(); reader.ReadInt32(); reader.ReadInt32(); // SavedOreTiers Cobalt/Mythril/Adamantite
+        reader.ReadBytes(8);   // BgTree/Corruption/Jungle/Snow/Hallow/Crimson/Desert/Ocean (1 byte cada uno)
+        reader.ReadInt32();    // CloudBgActive
+        reader.ReadInt16();    // NumClouds
+        reader.ReadSingle();   // WindSpeedSet
+
+        if (version < 95) return flags; // Anglers (string[], longitud variable) en adelante no existe
+
+        int anglerCount = reader.ReadInt32();
+        for (int i = 0; i < anglerCount; i++) reader.ReadString();
+
+        if (version < 99) return flags;
+        reader.ReadBoolean(); // SavedAngler
+
+        if (version < 101) return flags;
+        reader.ReadInt32(); // AnglerQuest
+
+        if (version < 104) return flags;
+        reader.ReadBoolean(); // SavedStylist
+        if (version >= 140) reader.ReadBoolean(); // SavedTaxCollector
+        if (version >= 201) reader.ReadBoolean(); // SavedGolfer
+        if (version >= 107) reader.ReadInt32();   // InvasionSizeStart
+        if (version >= 108) reader.ReadInt32();   // CultistDelay
+
+        if (version < 109) return flags;
+        // LoadBanners: KilledMobs (Int16 count + count x Int32) siempre; ClaimableBanners
+        // (Int16 count + count x UInt16) solo desde la version 289.
+        int killedMobsCount = reader.ReadInt16();
+        for (int i = 0; i < killedMobsCount; i++) reader.ReadInt32();
+        if (version >= 289)
+        {
+            int claimableBannerCount = reader.ReadInt16();
+            for (int i = 0; i < claimableBannerCount; i++) reader.ReadUInt16();
+        }
+
+        if (version < 128) return flags;
+        if (version >= 140) reader.ReadBoolean(); // FastForwardTime
+
+        if (version < 131) return flags;
+        flags = flags with { DownedFishron = reader.ReadBoolean() };
+
+        if (version >= 140)
+        {
+            flags = flags with
+            {
+                DownedMartians = reader.ReadBoolean(),
+                DownedLunaticCultist = reader.ReadBoolean(),
+                DownedMoonlord = reader.ReadBoolean(),
+            };
+        }
+
+        reader.ReadBytes(5); // DownedHalloweenKing/Tree, DownedChristmasQueen/Santa/Tree - siempre presentes
+
+        if (version < 140) return flags;
+        flags = flags with
+        {
+            DownedCelestialSolar = reader.ReadBoolean(),
+            DownedCelestialVortex = reader.ReadBoolean(),
+            DownedCelestialNebula = reader.ReadBoolean(),
+            DownedCelestialStardust = reader.ReadBoolean(),
+        };
+        reader.ReadBytes(4);   // Celestial*Active x4 (Solar/Vortex/Nebula/Stardust)
+        reader.ReadBoolean();  // Apocalypse
+
+        if (version >= 170)
+        {
+            reader.ReadBoolean(); reader.ReadBoolean(); reader.ReadInt32(); // PartyManual/PartyGenuine/PartyCooldown
+            int numParty = reader.ReadInt32();
+            for (int i = 0; i < numParty; i++) reader.ReadInt32(); // PartyingNPCs
+        }
+        if (version >= 174)
+        {
+            reader.ReadBoolean();  // SandStormHappening
+            reader.ReadInt32();    // SandStormTimeLeft
+            reader.ReadSingle();   // SandStormSeverity
+            reader.ReadSingle();   // SandStormIntendedSeverity
+        }
+        if (version >= 178) reader.ReadBytes(4); // SavedBartender + DownedDD2InvasionT1/T2/T3
+        if (version > 194) reader.ReadByte();    // MushroomBg
+        if (version >= 215) reader.ReadByte();   // UnderworldBg
+        if (version >= 195) reader.ReadBytes(3); // BgTree2/BgTree3/BgTree4
+        if (version >= 204) reader.ReadBoolean(); // CombatBookUsed
+        if (version >= 207)
+        {
+            reader.ReadInt32();   // LanternNightCooldown
+            reader.ReadBytes(3);  // LanternNightGenuine/Manual/NextNightIsGenuine
+        }
+        if (version >= 211)
+        {
+            int numTrees = reader.ReadInt32(); // TreeTopVariations (seccion variable #2)
+            for (int i = 0; i < numTrees; i++) reader.ReadInt32();
+        }
+        if (version >= 212) reader.ReadBytes(2); // ForceHalloweenForToday/ForceXMasForToday
+        if (version >= 216) { reader.ReadInt32(); reader.ReadInt32(); reader.ReadInt32(); reader.ReadInt32(); } // SavedOreTiers Copper/Iron/Silver/Gold
+        if (version >= 217) reader.ReadBytes(3); // BoughtCat/Dog/Bunny
+
+        if (version >= 223)
+        {
+            flags = flags with
+            {
+                DownedEmpressOfLight = reader.ReadBoolean(),
+                DownedQueenSlime = reader.ReadBoolean(),
+            };
+        }
+
+        if (version >= 240) flags = flags with { DownedDeerclops = reader.ReadBoolean() };
+
+        return flags;
+    }
+
+    // Agrupa los flags leidos por ReadLateBossFlags - record struct (nunca clase) para que
+    // "with" produzca una copia por valor sin alojar en el heap por cada guarda de version.
+    private readonly record struct LateBossFlags(
+        bool? DownedFishron, bool? DownedMartians, bool? DownedLunaticCultist, bool? DownedMoonlord,
+        bool? DownedCelestialSolar, bool? DownedCelestialVortex, bool? DownedCelestialNebula, bool? DownedCelestialStardust,
+        bool? DownedEmpressOfLight, bool? DownedQueenSlime, bool? DownedDeerclops);
 
     // Int16 length + esa cantidad de bits empaquetados en bytes, orden LSB-primero dentro de
     // cada byte (confirmado con una traza manual del algoritmo real del lector JS - coincide

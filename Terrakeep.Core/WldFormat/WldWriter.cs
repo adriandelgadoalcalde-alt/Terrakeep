@@ -213,6 +213,94 @@ public static class WldWriter
         writer.Write((byte)0); // ShadowOrbCount
         writer.Write(0); // AltarCount
         writer.Write(header.HardMode);
+
+        // Guia Encargo5b (26-sep-2026): tramo variable que WldReader.ReadLateBossFlags ahora SI
+        // lee - antes WriteFullHeader terminaba en HardMode porque ReadHeader tambien lo hacia
+        // (mismo contrato "escribe SOLO lo que el lector entiende", ver el comentario real de
+        // cabecera de WriteWorld). Anglers/KilledMobs/ClaimableBanners/PartyingNPCs/
+        // TreeTopVariations NO tienen modelo en WldWorld/WldHeader (WldReader los lee y los
+        // descarta) - se escriben con longitud CERO, mismo criterio ya aplicado mas abajo a
+        // PressurePlate/TownManager. Los 11 flags de jefe tardio SI tienen modelo (WldHeader.
+        // DownedFishron..DownedDeerclops, bool?) - se escriben con su valor real si se conoce, o
+        // false si el WldHeader en memoria no lo trae puesto (null, "no marcado" - mismo criterio
+        // que DownedSlimeKingBoss un poco mas arriba). Guardas de version EXACTAS, simetricas a
+        // WldReader.ReadLateBossFlags (nunca asumidas "siempre ciertas" solo porque WriteWorld
+        // hoy exija version>=210 - ver el comentario real de PointerCount sobre por que ese suelo
+        // podria bajar en el futuro).
+        if (version >= 257) writer.Write(false); // PartyOfDoom
+        writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0.0); // InvasionDelay/Size/Type/X
+        if (version >= 118) writer.Write(0.0); // SlimeRainTime
+        if (version >= 113) writer.Write((byte)0); // SundialCooldown
+        writer.Write(false); // IsRaining
+        writer.Write(0); // TempRainTime
+        writer.Write(0f); // TempMaxRain
+        writer.Write(0); writer.Write(0); writer.Write(0); // SavedOreTiers Cobalt/Mythril/Adamantite
+        writer.Write(new byte[8]); // BgTree..BgOcean
+        writer.Write(0); // CloudBgActive
+        writer.Write((short)0); // NumClouds
+        writer.Write(0f); // WindSpeedSet
+
+        if (version < 95) return;
+        writer.Write(0); // Anglers count = 0
+
+        if (version < 99) return;
+        writer.Write(false); // SavedAngler
+
+        if (version < 101) return;
+        writer.Write(0); // AnglerQuest
+
+        if (version < 104) return;
+        writer.Write(false); // SavedStylist
+        if (version >= 140) writer.Write(false); // SavedTaxCollector
+        if (version >= 201) writer.Write(false); // SavedGolfer
+        if (version >= 107) writer.Write(0); // InvasionSizeStart
+        if (version >= 108) writer.Write(0); // CultistDelay
+
+        if (version < 109) return;
+        writer.Write((short)0); // KilledMobs count = 0
+        if (version >= 289) writer.Write((short)0); // ClaimableBanners count = 0
+
+        if (version < 128) return;
+        if (version >= 140) writer.Write(false); // FastForwardTime
+
+        if (version < 131) return;
+        writer.Write(header.DownedFishron ?? false);
+
+        if (version >= 140)
+        {
+            writer.Write(header.DownedMartians ?? false);
+            writer.Write(header.DownedLunaticCultist ?? false);
+            writer.Write(header.DownedMoonlord ?? false);
+        }
+        writer.Write(false); writer.Write(false); writer.Write(false); writer.Write(false); writer.Write(false); // Halloween/Navidad x5
+
+        if (version < 140) return;
+        writer.Write(header.DownedCelestialSolar ?? false);
+        writer.Write(header.DownedCelestialVortex ?? false);
+        writer.Write(header.DownedCelestialNebula ?? false);
+        writer.Write(header.DownedCelestialStardust ?? false);
+        writer.Write(false); writer.Write(false); writer.Write(false); writer.Write(false); // Celestial*Active x4
+        writer.Write(false); // Apocalypse
+
+        if (version >= 170) { writer.Write(false); writer.Write(false); writer.Write(0); writer.Write(0); } // PartyManual/Genuine/Cooldown + numparty=0
+        if (version >= 174) { writer.Write(false); writer.Write(0); writer.Write(0f); writer.Write(0f); } // SandStorm*
+        if (version >= 178) { writer.Write(false); writer.Write(false); writer.Write(false); writer.Write(false); } // SavedBartender + DD2 T1/T2/T3
+        if (version > 194) writer.Write((byte)0); // MushroomBg
+        if (version >= 215) writer.Write((byte)0); // UnderworldBg
+        if (version >= 195) { writer.Write((byte)0); writer.Write((byte)0); writer.Write((byte)0); } // BgTree2/3/4
+        if (version >= 204) writer.Write(false); // CombatBookUsed
+        if (version >= 207) { writer.Write(0); writer.Write(false); writer.Write(false); writer.Write(false); } // LanternNight*
+        if (version >= 211) writer.Write(0); // TreeTopVariations count = 0
+        if (version >= 212) { writer.Write(false); writer.Write(false); } // ForceHalloweenForToday/ForceXMasForToday
+        if (version >= 216) { writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); } // SavedOreTiers Copper/Iron/Silver/Gold
+        if (version >= 217) { writer.Write(false); writer.Write(false); writer.Write(false); } // BoughtCat/Dog/Bunny
+
+        if (version >= 223)
+        {
+            writer.Write(header.DownedEmpressOfLight ?? false);
+            writer.Write(header.DownedQueenSlime ?? false);
+        }
+        if (version >= 240) writer.Write(header.DownedDeerclops ?? false);
     }
 
     // Inversa real de WldReader.ReadTiles/ReadOneTile, con el mismo algoritmo de compresion RLE

@@ -114,6 +114,10 @@ public class WldWriterTests
         w.Write(0); // AltarCount
         w.Write(false); // HardMode
 
+        // Guia Encargo5b (26-sep-2026): ReadHeader ya no se detiene aqui - ver el comentario real
+        // de LateBossFlagsTestBytes.
+        LateBossFlagsTestBytes.WriteMinimal(w, version);
+
         w.Flush();
         return ms.ToArray();
     }
