@@ -472,8 +472,21 @@ public static class PlayerPreviewRenderer
         // despues de BackHead, ANTES de la piel. A diferencia del resto de accesorios (tira
         // 40x(56*N) alineada al lienzo, DrawAccessory), AccBalloon NO sigue esa convencion para
         // este canal - LoadBalloonFrame tiene la cita real completa de la formula de posicion.
+        //
+        // GapAnalysis Encargo C, animacion (26-sep-2026): en el juego real el globo anima 4
+        // fotogramas por TIEMPO (`DateTime.Now.Millisecond % 800 / 200`, PlayerDrawLayers.cs) -
+        // Terrakeep no modela ningun reloj de pared propio en este renderer puro (Render es una
+        // funcion determinista de sus argumentos, sin efectos de tiempo real). Decision explicita
+        // del usuario (bitacora.md, ~linea 23330): animar "solo durante el hover, igual que el
+        // resto" - se reutiliza el MISMO ciclo de piernas (legAnimationFrame) que ya anima
+        // piernas/brazos durante el hover de la tarjeta (CharacterListEntryViewModel) y en
+        // Apariencia (AppearanceViewModel.WalkCycleRows), en vez de montar un timer nuevo siempre
+        // activo. legAnimationFrame%4 mapea las 14 filas reales del ciclo de andar (6..19) a los 4
+        // fotogramas reales del globo - fiel-por-defecto para reposo (legAnimationFrame=0 -> 0%4=0,
+        // el mismo fotograma de reposo que se usaba antes de este arreglo, comportamiento byte a
+        // byte identico para cualquier llamador que no anime).
         if (accessories?.BalloonFile is { } balloonFile)
-            Composite(canvas, LoadBalloonFrame(balloonFile), accessories?.BalloonDye);
+            Composite(canvas, LoadBalloonFrame(balloonFile, legAnimationFrame % 4), accessories?.BalloonDye);
 
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
@@ -1016,15 +1029,18 @@ public static class PlayerPreviewRenderer
     // Con K=(10,10) y bodyFrame.Y=0 (fila de reposo - el torso de este renderer NUNCA cambia de
     // fila, ver WalkArmColumn) el desplazamiento final resultante (posicion - origen) es EXACTO:
     // (24,30) - (30,34) = (-6,-4) respecto al origen (0,0) del lienzo que ya usan las 6 capas
-    // alineadas - por eso hace falta un compositor con offset propio (SliceBalloonFrame0) en vez
+    // alineadas - por eso hace falta un compositor con offset propio (SliceBalloonFrame) en vez
     // de reusar Composite/LoadStripFrameAbsolute (que asumen offset 0,0 y ancho fijo 40px, ninguna
     // de las dos cosas es cierta aqui: ancho real 52px, offset real negativo).
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] Pixels, int RealWidth, int RealHeight)> BalloonCache = new();
 
-    private static byte[] LoadBalloonFrame(string absolutePath)
+    // "frameIndex" (0-3, ya reducido con %4 en el llamador de Render): fotograma REAL a recortar,
+    // no siempre el 0 - ver el comentario del punto de llamada (Paso 1d) para la decision de
+    // animacion "solo durante el hover" del 26-sep-2026.
+    private static byte[] LoadBalloonFrame(string absolutePath, int frameIndex = 0)
     {
         var (pixels, w, h) = BalloonCache.GetOrAdd(absolutePath, LoadBalloonStrip);
-        return SliceBalloonFrame0(pixels, w, h);
+        return SliceBalloonFrame(pixels, w, h, frameIndex);
     }
 
     private static (byte[] Pixels, int RealWidth, int RealHeight) LoadBalloonStrip(string path)
@@ -1038,24 +1054,29 @@ public static class PlayerPreviewRenderer
         return (pixels, frame.PixelWidth, frame.PixelHeight);
     }
 
-    // Recorta SOLO el primer fotograma real (fila 0 de 4, alto/4 - "reposo") y lo compone YA en
-    // su posicion real dentro de un lienzo del mismo tamano que Width x Height (offset real fijo
-    // -6,-4, ver el comentario de la clase de arriba) - a diferencia de SliceStripRow/
-    // SliceShieldRow, el resultado ya sale del tamano exacto del lienzo, recortando/dejando
-    // transparente lo que cae fuera (el globo real se dibuja parcialmente fuera del lienzo por
-    // arriba/izquierda - fiel al juego real, que tampoco lo recorta al hitbox del jugador).
-    private static byte[] SliceBalloonFrame0(byte[] stripPixels, int realWidth, int realHeight)
+    // Recorta el fotograma real "frameIndex" (0-3 de 4, alto/4 cada uno - 0 es "reposo") y lo
+    // compone YA en su posicion real dentro de un lienzo del mismo tamano que Width x Height
+    // (offset real fijo -6,-4, ver el comentario de la clase de arriba) - a diferencia de
+    // SliceStripRow/SliceShieldRow, el resultado ya sale del tamano exacto del lienzo,
+    // recortando/dejando transparente lo que cae fuera (el globo real se dibuja parcialmente
+    // fuera del lienzo por arriba/izquierda - fiel al juego real, que tampoco lo recorta al
+    // hitbox del jugador). GapAnalysis Encargo C, animacion (26-sep-2026): antes SIEMPRE
+    // recortaba la fila 0 ("SliceBalloonFrame0") - ahora recorta la fila real pedida por el
+    // llamador (legAnimationFrame%4 durante el hover, ver Render), fiel-por-defecto para
+    // frameIndex=0 (mismo resultado byte a byte que antes de este arreglo).
+    private static byte[] SliceBalloonFrame(byte[] stripPixels, int realWidth, int realHeight, int frameIndex)
     {
         var outPixels = new byte[Width * Height * 4];
         if (realWidth <= 0 || realHeight <= 0) return outPixels;
         int frameHeight = realHeight / 4;
         if (frameHeight <= 0) return outPixels;
+        int srcFrameStart = frameIndex * frameHeight * realWidth * 4;
         const int offsetX = -6, offsetY = -4; // ver la derivacion real completa arriba
         for (int y = 0; y < frameHeight; y++)
         {
             int dstY = y + offsetY;
             if (dstY < 0 || dstY >= Height) continue;
-            int srcRowStart = y * realWidth * 4;
+            int srcRowStart = srcFrameStart + y * realWidth * 4;
             for (int x = 0; x < realWidth; x++)
             {
                 int dstX = x + offsetX;
@@ -1066,7 +1087,7 @@ public static class PlayerPreviewRenderer
         return outPixels;
     }
 
-    // Wings Encargo1 (25-sep-2026): gemelo de LoadBalloonFrame/SliceBalloonFrame0 (misma forma -
+    // Wings Encargo1 (25-sep-2026): gemelo de LoadBalloonFrame/SliceBalloonFrame (misma forma -
     // hoja REAL de tamaño variable, recorte de UN solo fotograma ya en su posicion final dentro
     // de un lienzo Width x Height), pero CADA wingId real tiene su PROPIA anchor/divisor/
     // fotograma (WingDrawTable, transcripcion+derivacion completa de

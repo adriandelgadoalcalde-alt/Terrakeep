@@ -937,4 +937,89 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         Assert.NotEqual(frame12, frame19);
         Assert.NotEqual(frame6, frame19);
     }
+
+    // GapAnalysis Encargo C, animacion (26-sep-2026, decision explicita del usuario - "solo
+    // durante el hover, igual que el resto"): antes de este arreglo, Render llamaba a
+    // LoadBalloonFrame(balloonFile) SIN parametro de fotograma (SIEMPRE recortaba la fila 0,
+    // "reposo" congelado) - ahora recorta legAnimationFrame%4, el MISMO ciclo de piernas que ya
+    // anima el resto del doll durante el hover (CharacterListEntryViewModel/AppearanceViewModel).
+    //
+    // Tira SINTETICA de 4 fotogramas (52x224, la MEDIDA REAL de acc_balloon/*.png - ver el
+    // comentario de LoadBalloonFrame/SliceBalloonFrame) con un color SOLIDO y UNICO por
+    // fotograma - mismo criterio de aislamiento ya establecido para CrearBarbaSinteticaAnimada,
+    // aplicado aqui al contrato de animacion del globo. Ningun fotograma usa (0,0,0): un globo
+    // "apagado"/sin dibujar deja la esquina transparente con RGB (0,0,0) tambien (canvas de fondo
+    // sin pintar), y una regresion que dejara de dibujar el globo del todo pasaria igual la
+    // comprobacion de color si el fotograma 0 fuera negro puro.
+    private string CrearGloboSinteticoAnimado(int fotogramas = 4)
+    {
+        Directory.CreateDirectory(_tempDir);
+        string path = Path.Combine(_tempDir, $"globo_animado_{Guid.NewGuid():N}.png");
+        const int w = 52, h = 56;
+        var pixels = new byte[w * h * fotogramas * 4];
+        for (int fotograma = 0; fotograma < fotogramas; fotograma++)
+        {
+            var (r, g, b) = ColorEsperadoDeFotogramaGlobo(fotograma);
+            int fotogramaOffset = fotograma * w * h * 4;
+            for (int i = 0; i < w * h * 4; i += 4)
+            {
+                pixels[fotogramaOffset + i + 0] = b; pixels[fotogramaOffset + i + 1] = g;
+                pixels[fotogramaOffset + i + 2] = r; pixels[fotogramaOffset + i + 3] = 255; // Bgra32, opaco
+            }
+        }
+        var bmp = BitmapSource.Create(w, h * fotogramas, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+        return path;
+    }
+
+    private static (byte r, byte g, byte b) ColorEsperadoDeFotogramaGlobo(int fotograma) =>
+        ((byte)((fotograma + 1) * 40 % 256), (byte)((fotograma + 1) * 70 % 256), (byte)((fotograma + 1) * 100 % 256));
+
+    [Theory]
+    [InlineData(0)]  // reposo (sin hover) -> 0%4=0, MISMO fotograma que antes de este arreglo
+    [InlineData(6)]  // 6%4=2
+    [InlineData(12)] // 12%4=0
+    [InlineData(19)] // 19%4=3
+    public void Balloon_AnimaConElMismoCicloDePiernasQueElRestoDelDoll_NoFrame0Congelado(int legAnimationFrame)
+    {
+        string balloonPath = CrearGloboSinteticoAnimado();
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BalloonFile: balloonPath, BalloonSlot: 1);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors,
+            legAnimationFrame: legAnimationFrame, accessories: acc);
+
+        var (r, g, b) = ColorEsperadoDeFotogramaGlobo(legAnimationFrame % 4);
+        AssertEsquinaEsColor(bmp, r, g, b); // fotograma REAL de legAnimationFrame%4, no el 0 congelado
+    }
+
+    [Fact]
+    public void Balloon_LosCuatroFotogramasRealesDelGloboDanColoresDistintosEntreSi()
+    {
+        // Complementa la prueba parametrizada de arriba: confirma que los 4 fotogramas reales
+        // (0, 1, 2, 3 - alcanzados via 12%4, 6%4, 19%4 y el propio 0) son de verdad DISTINTOS
+        // entre si, no solo distintos del fotograma 0 - descarta que un bug futuro congele el
+        // globo en cualquier OTRO fotograma fijo que no sea el 0.
+        string balloonPath = CrearGloboSinteticoAnimado();
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BalloonFile: balloonPath, BalloonSlot: 1);
+
+        byte[] Pix(WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        var frame0 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 0, accessories: acc));
+        var frame1 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 9, accessories: acc)); // 9%4=1
+        var frame2 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 6, accessories: acc)); // 6%4=2
+        var frame3 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 19, accessories: acc)); // 19%4=3
+
+        Assert.NotEqual(frame0, frame1);
+        Assert.NotEqual(frame1, frame2);
+        Assert.NotEqual(frame2, frame3);
+        Assert.NotEqual(frame0, frame3);
+    }
 }

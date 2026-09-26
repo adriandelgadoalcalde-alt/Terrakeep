@@ -1579,6 +1579,25 @@
                                        Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextTrimming="CharacterEllipsis" />
                         </DockPanel>
+                        <!-- ParidadPersonaje Fase6 (26-sep-2026, GapAnalysis coordinador): la
+                             pantalla real "Seleccionar jugador" de Terraria SIEMPRE muestra
+                             vida/mana/tiempo jugado por personaje - esta tarjeta solo enseñaba
+                             LastModifiedText (fecha de edicion en Terrakeep, que Terraria ni
+                             siquiera muestra ahi). Fila compacta con los 3 datos reales, mismo
+                             estilo/color secundario que LastModifiedText de mas abajo (que se
+                             CONSERVA, sigue siendo un dato real distinto - fecha de edicion vs
+                             tiempo jugado). WrapPanel (no StackPanel) por el mismo motivo real
+                             que ya justifica el WrapPanel de insignias mas abajo (R-05/H-05): con
+                             HealthMax/ManaMax de varias cifras (mods/Expert/Master) esta fila
+                             tambien puede desbordar el Width=240 fijo de la tarjeta. -->
+                        <WrapPanel Margin="0,4,0,0">
+                            <TextBlock Text="♥" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding HealthMax}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,10,0" />
+                            <TextBlock Text="★" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding ManaMax}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,10,0" />
+                            <TextBlock Text="◷" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding PlayTimeText}" Style="{StaticResource CaptionText}" FontSize="10" />
+                        </WrapPanel>
                         <!-- Auditoria de redimensionado, R-05/H-05: con 3 insignias nuevas
                              (tModLoader/Calamity/Vanilla, 4-sep-2026) mas la de dificultad, la
                              fila entera desbordaba el Width=240 de la tarjeta (linea de arriba) y
@@ -2718,6 +2737,16 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="♥" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- ParidadPersonaje Fase6 (26-sep-2026): 3er dato real que faltaba aqui -
+                                         mana, glifo real "★" (mismo glifo que usa Terraria en la pantalla real
+                                         "Seleccionar jugador"), bindeado a ManaMax (ya expuesto en
+                                         CharacterListEntryViewModel). -->
+                                    <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="★" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                            <TextBlock Text="{Binding Home.LastSessionCharacterEntry.ManaMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">

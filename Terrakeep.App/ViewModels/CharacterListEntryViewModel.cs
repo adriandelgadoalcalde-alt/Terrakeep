@@ -242,6 +242,13 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // Guia, no solo el .plr). Vida maxima y tiempo jugado SI son datos del propio character que
     // este constructor YA recibe entero, sin ninguna lectura ni calculo extra.
     public int HealthMax { get; }
+    // ParidadPersonaje Fase6 (26-sep-2026, GapAnalysis coordinador): la pantalla real "Seleccionar
+    // jugador" de Terraria SIEMPRE muestra mana ademas de vida/tiempo jugado - character.ManaMax
+    // ya existe en el modelo .plr real (usado en AppearanceViewModel.cs/CompareViewModel.cs/
+    // BackupHistoryService.cs) pero nunca se habia expuesto aqui. Mismo criterio que HealthMax de
+    // arriba: dato real ya presente en el character que este constructor recibe entero, sin
+    // ninguna lectura ni calculo extra.
+    public int ManaMax { get; }
     public string PlayTimeText { get; }
 
     public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isTModLoader,
@@ -259,6 +266,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         _usedMods = tplr?.UsedMods;
         LastModifiedText = lastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
         HealthMax = character.HealthMax;
+        ManaMax = character.ManaMax;
         // Misma formula real ya usada en BackupHistoryViewModel.HorasJugadas/CompareViewModel.
         // FormatPlayTime (PlayTimeLow/High son dos UInt32 que juntos forman los ticks reales de
         // .NET).
