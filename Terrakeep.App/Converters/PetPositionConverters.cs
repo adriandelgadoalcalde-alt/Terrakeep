@@ -58,9 +58,40 @@ public sealed class PetBottomAlignMarginConverter : IValueConverter
         if (parameter is not string s || !double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var canvasScale))
             return new Thickness(0);
 
-        // Neto real: -10 (retranqueo del jugador, GetPlayerPosition) + 20 (offset real de la
-        // mascota, DrawPets) = +10px nativos desde el origen del lienzo SIN retranquear.
-        double left = 10.0 * canvasScale;
+        // CORRECCION (26-sep-2026, investigador-bug + aplicador-fix, sesion
+        // d38ffe35-118f-4719-b326-0ca425888fe7): el -10+20=+10 de la nota de cabecera (lineas
+        // 15-21) simplifica de mas al asumir "el jugador ES directamente el propio lienzo del
+        // doll" (el borde izquierdo del Grid = playerPosition.X, la misma posicion que ya usa
+        // GetPlayerPosition/DrawPets). En realidad GetPlayerPosition centra el HITBOX real (20
+        // de ancho, _player.width), no el sprite visual (40 de ancho, el mismo lienzo nativo de
+        // PlayerPreviewRenderer que SI representa Terrakeep) - y DrawPlayer dibuja ese sprite de
+        // 40 SIEMPRE centrado sobre ese mismo hitbox de 20, con o sin mascota: el borde izquierdo
+        // del sprite (= borde izquierdo del lienzo/Grid de Terrakeep, SIN aplicar aqui ningun
+        // retranqueo, eso ya lo hace el doll por su lado via PetDollShiftXConverter) equivale a
+        // "playerPosition.X - 10" (sin mascota, sin retranqueo). La mascota (DrawPets) se ancla
+        // en "playerPosition.X + 20" con la mascota SI puesta (playerPosition.X ya retranqueado
+        // -10 en ese caso) = ("borde del lienzo" + 10) + 20 = "borde del lienzo" + 30 en
+        // coordenadas de playerPosition... pero como el retranqueo de -10 lo aplica el DOLL (no
+        // este margin), la mascota debe leerse desde el borde SIN retranquear = borde_lienzo +
+        // 20 nativos - de ahi el 20, no el 10 que habia aqui (perdia justo el hueco de 10 entre
+        // hitbox y sprite visual). Corroborado por: (1) esta re-derivacion campo a campo del
+        // decompilado (TerrariaVanilla\Terraria\GameContent\UI\Elements\UICharacter.cs,
+        // GetPlayerPosition:122-130 + DrawPets:132-149), (2) la evidencia visual real con los
+        // assets de produccion documentada en Terrakeep.App.ViewModels.Tests/
+        // PetPositionConvertersTests.cs (cabecera) - con 10 "Chester" queda oculto casi entero
+        // detras del doll, con 20 se ve reconocible al lado de los pies -, y (3) el propio mensaje
+        // del commit que introdujo este converter (7058c42b) - "la mascota se ancla al borde
+        // inferior del doll desplazada 20px a la derecha". NOTA para una ronda futura (fuera del
+        // alcance de este arreglo): el canario manual Terrakeep.App.Tests/
+        // CanarioHomeBannerMascota.cs (HOMEBANNER_SOLO, VerificarFormulaRealMascota linea 211)
+        // compara offsetXReal (mascota MENOS doll, doll ya retranqueado) contra un
+        // "offsetXEsperado" hardcodeado a 20.0*canvasScale+petOffsetX - esa comparacion relativa
+        // arrastra el MISMO hueco de 10 nativos que este converter tenia (nunca conto el
+        // retranqueo del doll como ya restado), asi que con este arreglo (20 aqui) ese canario
+        // pasara a marcar FALLO de forma esperada hasta que se actualice a
+        // 30.0*canvasScale+petOffsetX en un pase aparte - no se toca aqui porque cae fuera del
+        // working set de este encargo (solo esta linea 63).
+        double left = 20.0 * canvasScale;
 
         double top = 0;
         if (value is BitmapSource pet && pet.PixelHeight > 0)
