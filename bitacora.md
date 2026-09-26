@@ -29818,3 +29818,90 @@ grep de `ADR-021` - `CompareCharacterPickerItemTemplate`/`CompareItemCellTemplat
 `CompareInventoryCellTemplate` en `Window.Resources` lineas 264-304 - este SI necesitara
 promocion o `UserControl.Resources` local). Objetos (911 lineas) se deja para el final del
 grupo.
+
+## Septima extraccion real de una seccion de MainWindow.xaml a UserControl - VERSION (26-sep-2026)
+
+`ADR-TERRAKEEP-023`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Segunda extraccion del
+grupo 4.5 (sub-tabs de PERSONAJE), tras SPAWN POINTS/`ADR-022`. Entre los dos candidatos que
+quedaban (Unlocks 124 lineas, Version 186 lineas), se eligio **Version** tras grep exhaustivo
+real: Unlocks usa `StaticResource BoolToVis` (window-scoped, `x:Key` SOLO en `Window.Resources`
+de `MainWindow.xaml`) 5 veces en su propio markup, mientras que Version no lo usa en ningun
+sitio (solo `NullToVis`/`CountToVis`, definidos en `App.xaml`) - confirma otra vez la leccion ya
+acumulada de que "menos lineas" no predice complejidad real, el grep decide, no el recuento.
+
+Contenido movido a `Terrakeep.App/Views/VersionView.xaml` + `.xaml.cs` (mismo patron de las 6
+rondas anteriores: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio, contenido
+copiado BYTE A BYTE salvo re-indentado). `MainWindow.xaml` queda con `<views:VersionView />`
+dentro del `TabItem` VERSION (186 lineas de markup reemplazadas por 2).
+
+**Caso mas simple desde SPAWN POINTS/ADR-022**: grep exhaustivo confirmo cero `x:Name` dentro
+del bloque original. Los 2 `DataTemplate` propios de esta seccion (`VersionGroup`/`VersionOption`)
+estan ANIDADOS dentro de `ItemsControl.ItemTemplate` SIN `x:Key` - nunca dependen de
+`Window.Resources`, a diferencia de los 18 `DataTemplate` window-scoped reales del `ADR-016`. Los
+demas `StaticResource` (`CalamityBrush`/`OrangeBrush`/`TextPrimaryBrush`/`CaptionText`/
+`SectionText`/`BgElevatedBrush`/`VersionOptionButton`) ya viven en `Styles/Theme.xaml`, ninguno
+window-scoped - no hizo falta ningun `UserControl.Resources` local. Las 2 referencias a
+`RelativeSource AncestorType=Window` (`Loc[action_repair_fix]`, `VersionEditor.SetVersionCommand`)
+siguen funcionando sin cambios (mismo mecanismo ya confirmado por SpawnpointsView/ADR-022).
+
+**Canarios reales usados** (existentes, ninguno nuevo hizo falta): PB-06/PB-07 de
+`Terrakeep.App.Tests/PruebasBuffsAparienciaVersion.cs` (sin `_SOLO`, corre siempre en el
+recorrido completo) - PB-06 confirma que la rejilla de Buffs sigue a la version real tras
+cambiarla desde `VersionEditor.SetVersionCommand` (22/10/44 slots exactos), PB-07 confirma que el
+aviso de bajada de version (dentro de `VersionView` ahora) se pinta y es alcanzable en los 4
+tamaños reales. Ademas `IDEA9_SOLO=1` de `Program.cs` (gated) - fuerza un prefijo ilegal real,
+confirma que el `Expander` "Prefijos ilegales encontrados" (dentro de `VersionView`) esta en el
+arbol visual y visible, localiza el boton real "Arreglar" por `DataContext`
+(`RepairIssueViewModel`), lo pulsa via `Command` real, y confirma que el prefijo desaparece del
+diagnostico. Verificado en verde: 0 FALLO, captura real revisada a mano
+(`idea9-prefijos-ilegales.png`).
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline).
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline).
+Recorrido COMPLETO de `Terrakeep.App.Tests` (`dotnet run -c Release`, sin ningun `_SOLO`)
+ejecutado DOS VECES: la primera dio 17 FALLO (16 de las 9 categorias ya documentadas por
+`ADR-021`/`ADR-022` mas 1 aparicion de A8-02b, timing ajeno a Version); la segunda dio 16 FALLO,
+exactamente las 9 categorias ya documentadas (H5-05x1, A8-06x1, AR-14x4, A8-01x1, AR-11fx1,
+AR-MRK-CLICx1, AR-MRK-OTROSx5, A10-IDIOMA-BARRIDOx1, AR-LAYx1), sin A8-02b - mismo flake de
+contencion de maquina ya documentado por `ADR-020`/`ADR-021`/`ADR-022`, no una regresion real.
+Ninguna de las dos pasadas menciona Version/VersionView/RepairIssue/Desbloqueos en su log de
+FALLO.
+
+**Verificacion visual**: `idea9-prefijos-ilegales.png` revisada a mano - pestaña "Version"
+completa (aviso de cambio de version, Expander de prefijos ilegales desplegado con la fila real
+y el boton "Arreglar", los 4 grupos de version con 1.4.4.0 correctamente resaltado como version
+actual).
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion antes del despliegue. `DEPLOY_LOCK` adquirido
+antes de tocar `Assets/`. **Nota metodologica** (error propio detectado y corregido en esta misma
+ronda, no un incidente real): el primer snapshot "antes" se aplico por error contra
+`Terrakeep.App/Assets` (carpeta FUENTE, 13057 ficheros) en vez de contra la copia INSTALADA, lo
+que disparo una ALARMA de falso drift al comparar contra el "despues" (13056 ficheros) -
+investigado con `Compare-Object`: la diferencia real es `Assets/branding/app.ico`, presente en la
+carpeta fuente pero deliberadamente NO copiado a publish/instalado (`Terrakeep.App.csproj` solo
+declara `Content Include` para `Assets/**/*.json` y `Assets/**/*.png`; `app.ico` se usa unicamente
+como `ApplicationIcon`, embebido en el `.exe`) - exclusion real y preexistente, no una regresion.
+Repetido el snapshot antes/despues correctamente contra la MISMA ruta instalada: `Assets/`
+identico antes y despues del `/MIR` (13056 ficheros, hash `068603cc...`, identico al baseline de
+`ADR-020`/`ADR-021`/`ADR-022`, sin drift real). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+/MIR` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`). Hash SHA256 identico entre
+el `.exe` publicado y el instalado (`BAAF8ACB...` en ambos). Sanity check real: `Start-Process`
+del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio, sin proceso residual.
+`DEPLOY_LOCK` liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/VersionView.xaml` + `.xaml.cs` (nuevos) - nunca `git add -A`, seguia habiendo
+decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo. Registrado
+contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin
+`git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con VERSION cerrada,
+sigue pendiente del grupo 4.5 Unlocks (124 lineas, unico sub-tab que SI necesitara el patron
+`UserControl.Resources` local para `BoolToVis` window-scoped, 5 usos confirmados por esta misma
+ronda) y Compare (206 lineas, usa 3 `DataTemplate` window-scoped confirmados por grep de
+`ADR-021` - dejar para una ronda dedicada aparte, dado que ya se sabe que es mas delicado).
+Objetos (911 lineas) se deja para el final del grupo.
