@@ -2551,6 +2551,16 @@ internal static partial class Program
             Console.WriteLine("DONE (NAV123_SOLO)");
             Environment.Exit(0);
         }
+        // DIAG_NAVTOGGLE_POS_SOLO=1 (26-sep-2026, investigador-bug, mismo TASK CONTEXT de arriba):
+        // diagnostico desechable, mide con UI real la posicion Y del StackPanel "ObjetosNavToggle"
+        // (RadioButton 1/2/3) contra su celda Grid compartida con ObjetosPageHost - ver
+        // DiagnosticoPosicionNavToggle.cs para el detalle completo de la hipotesis.
+        if (Environment.GetEnvironmentVariable("DIAG_NAVTOGGLE_POS_SOLO") == "1")
+        {
+            EjecutarDiagnosticoPosicionNavToggleSolo(window, vm);
+            Console.WriteLine("DONE (DIAG_NAVTOGGLE_POS_SOLO)");
+            Environment.Exit(0);
+        }
         if (Environment.GetEnvironmentVariable("LIBCARD_CLIP_SOLO") == "1")
         {
             EjecutarLibCardClipSolo(window, vm);

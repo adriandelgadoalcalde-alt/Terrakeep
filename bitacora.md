@@ -28994,3 +28994,94 @@ evidencia "paridad visual completa contra el juego real" a 3 de las 4 capas pedi
 `480a9bdd-6d5f-4fa6-935d-46f895e97514` se deja `IN_PROGRESS` (NO `DONE`/`VERIFYING`) a proposito,
 para que el coordinador lance `revisor-visual`+`verificador-qa` con evidencia independiente antes
 de cerrarlo.
+
+---
+
+## Personaje > Objetos: selector 1/2/3 "mas abajo de lo que deberian" - investigador-bug FASE 1
+(26-sep-2026, SOLO investigacion, cero produccion tocada)
+
+Encargo directo del usuario (texto, sin captura): "Los botones 1, 2, 3 de objetos en terrakeep
+estan mas abajo de lo que deberian". El coordinador corrigio a mitad de investigacion el foco
+inicial (Loadout 1/2/3) hacia el real: `ObjetosNavToggle1/2/3` (`RadioButton`, Content="1"/"2"/"3",
+`MainWindow.xaml:3525-3545`), el selector flotante de pagina Equipamiento/Inventario/Almacenes de
+NAV123 (ver bloques anteriores de esta misma bitacora, mismo dia).
+
+**Build usado**: recompilado `dotnet build Terrakeep.App` justo antes de medir (commit real
+`5055e91d`, 26-sep-2026 12:50) para descartar un exe publicado desactualizado (el `publish3\
+Terrakeep.exe` instalado es del 16-sep, muy anterior a NAV123 - **si el usuario esta ejecutando ese
+build antiguo o el instalador `TerrakeepSetup-3.2.x.exe`, no vera el codigo aqui investigado en
+absoluto** - hueco real a confirmar por el coordinador con el usuario, no asumido).
+
+**Causa real confirmada (archivo:linea, medida, no supuesta)**:
+
+`ObjetosNavToggle` (`MainWindow.xaml:3525-3526`, `StackPanel VerticalAlignment="Top"
+Margin="0,4,4,0"`) y el `TextBlock` de titulo de cada pagina (`Style="SectionText"`, FontSize=14 -
+`MainWindow.xaml:2955` para "Equipamiento", `:3357` "Inventario", `:3460` "Almacenes") son DOS
+elementos independientes anclados cada uno contra un origen distinto, sin ningun contenedor
+compartido que los centre verticalmente entre si - el usuario los lee como una unica fila de
+cabecera (titulo a la izquierda, selector de pagina a la derecha) pero geometricamente no lo son.
+
+Medido con un diagnostico real nuevo (`Terrakeep.App.Tests/DiagnosticoPosicionNavToggle.cs`,
+`DIAG_NAVTOGGLE_POS_SOLO=1`), personaje real "Eldelgas" (Documents\...\Players\Eldelgas.plr), en
+**7 tamaños de ventana reales** (1080x700 minimo documentado, 1080x900, 1600x900, 900x700, y los
+DOS tamaños REALES guardados en `%LocalAppData%\Terrakeep\window.json` del propio usuario -
+1180x860 normal y 1476x1081 "pinned"): en TODOS, sin excepcion,
+
+- `TextBlock` "Equipamiento" real: `Y=142.3 Alto=18.6` -> **CentroY=151.6**
+- `RadioButton` "ObjetosNavToggle1" real: `Y=146.3 Alto=24.6` -> **CentroY=158.6**
+- **Delta de centros = 7.0px, el boton "1" SIEMPRE 7px mas abajo que el centro real del titulo**
+  (constante, no proporcional a ningun tamaño de ventana probado - es 100% Margin/Padding, cero
+  relacion con el layout elastico de esta zona).
+
+Causa exacta de esos 7px: el `TextBlock` (Y=142.3, sin ningun Padding/Margin superior en su
+`Border` contenedor `ObjetosSeccionEquipamiento`) arranca practicamente en el borde superior real
+de la celda compartida; el `StackPanel` flotante arranca 4px mas abajo (`Margin="0,4,...`) Y
+ademas es 6px MAS ALTO (24.6 vs 18.6 - `RadioButton Padding="10,4"` del estilo `ViewSelector` le
+suma relleno que el `TextBlock` no tiene) - la suma de "empieza mas abajo" + "es mas alto" desplaza
+su CENTRO visual 7px por debajo del centro real del titulo. Confirmado tambien visualmente:
+captura real recortada x3 en
+`Terrakeep.App.Tests/bin/Debug/net10.0-windows/diag-navtoggle-pos-1180x860-guardado-usuario.png`
+(zoom guardado en el scratchpad de la sesion) muestra el "1 2 3" flotando en el hueco vacio entre
+el titulo y el borde naranja de la tarjeta, sin alinear con ninguno de los dos.
+
+**Dato adicional real (no el bug reportado, pero la misma familia de causa)**: `Inventario`/
+`Almacenes` tienen `Margin="0,14,0,0"` en su `Border` de contenido (`:3355`/`:3458`) que
+`Equipamiento` NO tiene (`:2953`) - asimetria real entre las 3 paginas. Medido: en esas 2 paginas el
+selector flotante queda 10px POR ENCIMA del titulo (`Border` Y=156.3 vs toggle Y=146.3), el defecto
+inverso. Un arreglo que solo mueva el `Margin` del `StackPanel` para cuadrar con Equipamiento
+empeoraria Inventario/Almacenes - los 3 casos hay que resolverlos juntos.
+
+**Recomendacion concreta para `aplicador-fix` (NO aplicada aqui)**:
+1. Unificar primero el `Margin` de los 3 `Border` de contenido (`ObjetosSeccionEquipamiento`
+   `:2953`/`Inventario` `:3355`/`Almacenes` `:3458`) - hoy son inconsistentes entre si sin ningun
+   comentario que lo justifique (Equipamiento sin margen, las otras dos con `0,14,0,0`).
+2. Con las 3 paginas ya consistentes, retunear UNA sola vez el `Margin`/`VerticalAlignment` de
+   `ObjetosNavToggle` (`:3525-3526`) contra el centro REAL medido del `TextBlock` de titulo (no a
+   ojo) - alternativa mas robusta que un margen fijo: envolver titulo+selector en una fila
+   compartida (`Grid`/`DockPanel`) con `VerticalAlignment="Center"` en ambos, para que quede
+   centrado solo con la metrica de fuente real y no dependa de un numero mágico que se rompera si
+   `SectionText`/`ViewSelector` cambian de tamaño en el futuro.
+3. Verificar despues con el mismo canario nuevo (`DIAG_NAVTOGGLE_POS_SOLO=1` - ver mas abajo,
+   tolerancia 3px) en Equipamiento/Inventario/Almacenes a la vez, no solo Equipamiento.
+
+**Canario nuevo que cierra el hueco de cobertura** (`NAV123_SOLO` ya existente NO comprobaba
+alineacion vertical, solo existencia/exclusividad/ciclo de clic - hueco real que dejo pasar este
+bug): `Terrakeep.App.Tests/DiagnosticoPosicionNavToggle.cs`,
+`EjecutarDiagnosticoPosicionNavToggleSolo`, activado con `DIAG_NAVTOGGLE_POS_SOLO=1`. Mide con UI
+real (no visual a ojo) el centro Y del `RadioButton "1"` contra el centro Y real del `TextBlock` de
+titulo de Equipamiento en 7 tamaños de ventana (incluidos los 2 reales del usuario), y contra los
+`Border` de Inventario/Almacenes - **7 lineas `FALLO` reales hoy** (una por cada tamaño de ventana,
+delta=7.0px > tolerancia 3px), tal y como debe quedar hasta que `aplicador-fix` corrija la causa de
+arriba; deben pasar a 0 `FALLO` cuando se aplique el arreglo real, sin tocar la tolerancia para
+fabricar un verde.
+
+**Build/verificacion real de este bloque**: `dotnet build Terrakeep.App -c Debug` y `dotnet build
+Terrakeep.App.Tests -c Debug`: 0 avisos/0 errores. `DIAG_NAVTOGGLE_POS_SOLO=1 dotnet run --project
+Terrakeep.App.Tests -c Debug --no-build`: 7/7 `FALLO` reales (esperado hoy, confirma que el canario
+detecta el bug real en el build actual). Capturas reales guardadas en
+`Terrakeep.App.Tests/bin/Debug/net10.0-windows/diag-navtoggle-pos-*.png` (una por tamaño + una por
+pagina Inventario/Almacenes).
+
+**Ficheros tocados por este bloque (SOLO arnes/documentacion, cero produccion)**:
+`Terrakeep.App.Tests/DiagnosticoPosicionNavToggle.cs` (nuevo), `Terrakeep.App.Tests/Program.cs`
+(switch `DIAG_NAVTOGGLE_POS_SOLO`), `bitacora.md`. Sin `git push`.
