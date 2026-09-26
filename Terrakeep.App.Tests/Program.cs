@@ -2580,6 +2580,17 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // CHESTER_GEOMETRIA_SOLO=1 (26-sep-2026, GapAnalysis ParidadPersonaje, requirement
+        // 480a9bdd-6d5f-4fa6-935d-46f895e97514): evidencia real por capas (GEOMETRY_EXACT) del
+        // arreglo de PlayerPetPreviewLayout/PlayerPetPreviewControl - ver el comentario largo de
+        // cabecera en CanarioGeometriaChesterEvidencia.cs.
+        if (Environment.GetEnvironmentVariable("CHESTER_GEOMETRIA_SOLO") == "1")
+        {
+            EjecutarGeometriaChesterEvidenciaSolo(window, vm);
+            Console.WriteLine("DONE (CHESTER_GEOMETRIA_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA3_SOLO=1 (20-sep-2026, catalogo de funciones, idea 3 "Partida en vivo" - version
         // real, tercera ronda tras la correccion del coordinador: investigado a fondo
         // (SincronizacionEscritorio.cs, TerrakeepMod, otro repo) que la sincronizacion REAL entre

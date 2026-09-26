@@ -1389,8 +1389,18 @@
              .tplr al lado, y fecha real de ultima modificacion - un click carga y salta a
              Personaje (MainViewModel, Home.CharacterChosen). -->
         <DataTemplate x:Key="CharacterCardTemplate" DataType="{x:Type vm:CharacterListEntryViewModel}">
+            <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514):
+                 Width sube de 240 a 312 - la nueva columna del preview (PlayerPetPreviewControl,
+                 ver mas abajo) reserva un ancho FIJO y PERMANENTE (PlayerPetPreviewLayout.
+                 ReserveColumnWidth(1.3), ~119.6px, el peor caso real medido de las 63 mascotas del
+                 catalogo, decision final del usuario: "que quepan todas sin recortar ninguna,
+                 igual en reposo y en hover") en vez de los 52px fijos de antes - sin este aumento,
+                 la columna de texto (WrapPanel de insignias/KPIs ya ajustado hoy mismo) se
+                 quedaria sin espacio legible. 312 = mismo padding(24)+gap(12) de siempre + preview
+                 nuevo(~120) + columna de texto (~156, ligeramente MAS ancha que antes, nunca
+                 menos). -->
             <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
-                    Width="240" Margin="0,0,14,14" Cursor="Hand"
+                    Width="312" Margin="0,0,14,14" Cursor="Hand"
                     Effect="{StaticResource CardShadow}"
                     Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}"
                     MouseEnter="OnCharacterCardMouseEnter" MouseLeave="OnCharacterCardMouseLeave"
@@ -1488,90 +1498,31 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Grid Grid.Column="0" Width="52" Height="72.8" VerticalAlignment="Top">
-                        <!-- Mascota real equipada, ANIMADA de verdad durante el hover (correccion
-                             real 21-sep-2026, usuario comparando en vivo contra Terraria
-                             vanilla) - capa DETRAS del doll, mismo orden real que Terraria
-                             vanilla - UICharacter.cs real, DrawSelf(): DrawPets(spriteBatch) se
-                             dibuja ANTES que Main.PlayerRenderer.DrawPlayer(...) (linea 123 antes
-                             que la 127), la mascota queda por debajo/detras del personaje. Ver
-                             CharacterListEntryViewModel.PetImage/RefreshPetImage y
-                             PetPreviewRenderer/PetAnimationDriver para el detalle real completo.
-
-                             PortSeleccion Encargo3 (25-sep-2026, SUSTITUYE el Margin fijo/empirico
-                             de la ronda anterior, "-20,-16,0,0" ajustado a mano contra un umbral
-                             de "% tapado" en el canario HOMEBANNER_SOLO): formula REAL de Terraria
-                             portada al tamaño real del lienzo - Terraria/GameContent/UI/Elements/
-                             UICharacter.cs decompilado real, GetPlayerPosition (132-145: "if
-                             (_petProjectiles.Length != 0) result.X -= 10f;") + DrawPets (147-181:
-                             "playerPosition + (0, player.height) + (20, 0) + (0,
-                             -projectile.height)") - la mascota se ancla al borde INFERIOR del
-                             jugador (Player.cs:57446-57447, height=42 real del hitbox de pie)
-                             desplazada 20px a la derecha de la posicion YA retranqueada 10px del
-                             jugador. Ver Converters/PetPositionConverters.cs para la cita completa
-                             y el porque Terrakeep usa el borde inferior del propio lienzo (sin
-                             hitbox aparte, a diferencia de Terraria real) como referencia real de
-                             "borde inferior del jugador", con evidencia medida (HOMEBANNER_SOLO:
-                             el doll deja solo 3-10px de margen transparente en cada borde, pies
-                             pegados al borde inferior del lienzo). `PetBottomAlignMarginConverter`
-                             calcula el Margin real (offset X neto +10px nativos, offset Y real de
-                             alineado al borde inferior segun el alto NATIVO real de cada mascota),
-                             escalado al tamaño real del Grid (ConverterParameter="1.3", 52x72,8 =
-                             40x56 * 1.3). El propio doll se retranquea -10px en X via
-                             RenderTransform (`PetDollShiftXConverter`, mismo -10 real de
-                             GetPlayerPosition) - RenderTransform y no Margin, para no alterar el
-                             tamaño de caja que Stretch="Uniform" necesita para ajustar el lienzo
-                             40x56 al Grid 52x72,8 sin recorte.
-
-                             PortSeleccion Encargo4 (25-sep-2026): RenderTransform ADICIONAL, capa
-                             DISTINTA y complementaria a la formula GENERICA de arriba (igual para
-                             las 63 mascotas) - PetOffsetX/PetOffsetY/PetSpriteDirection son el
-                             ajuste fino REAL propio de CADA mascota que Terraria aplica encima
-                             (SettingsForCharacterPreview real, ver el comentario completo en
-                             Terrakeep.Core/Data/PetAnimationCatalog.cs). ScaleTransform primero
-                             (espejo horizontal alrededor del propio centro del fotograma,
-                             RenderTransformOrigin=0.5,0.5, SpriteDirection=-1 en la mayoria de
-                             mascotas) y TranslateTransform despues (el offset real en pixeles de
-                             sprite, mismo espacio 1:1 que el fotograma nativo sin escalar) - el
-                             orden importa: el espejo tiene que aplicarse ANTES de desplazar, igual
-                             que "proj.position += Offset" ya ocurre sobre un sprite cuyo
-                             spriteDirection ya esta fijado. Sin mascota catalogada, los tres valores
-                             son el 0,0,1 por defecto real de Terraria - transform identidad, no
-                             cambia nada visualmente respecto a antes de este encargo.
-
-                             PortSeleccion Encargo6 (26-sep-2026): RotateTransform NUEVO, añadido al
-                             mismo TransformGroup - COMBINADO con el ScaleTransform/TranslateTransform
-                             ya existentes, nunca sustituido. Bindea PetRotationDegrees (ver el
-                             comentario real de ese campo en CharacterListEntryViewModel.cs, cita del
-                             decompilado DelegateMethods.cs:119-130, FloatAndSpinWhenWalking). Va
-                             DESPUES del ScaleTransform (mismo motivo que el TranslateTransform:
-                             el espejo tiene que aplicarse antes) y ANTES del TranslateTransform
-                             (el giro tiene que ocurrir sobre el propio centro del fotograma,
-                             RenderTransformOrigin=0.5,0.5, antes de desplazarlo) - para las 61
-                             mascotas sin este delegado, el angulo siempre es 0, transform identidad,
-                             sin cambio visual respecto a antes de este encargo. -->
-                        <Image Source="{Binding PetImage}" Stretch="None"
-                               RenderOptions.BitmapScalingMode="NearestNeighbor"
-                               HorizontalAlignment="Left" VerticalAlignment="Top"
-                               Margin="{Binding PetImage, Converter={x:Static conv:PetBottomAlignMarginConverter.Instance}, ConverterParameter=1.3}"
-                               RenderTransformOrigin="0.5,0.5"
-                               Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
-                               ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}">
-                            <Image.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
-                                    <RotateTransform Angle="{Binding PetRotationDegrees}" />
-                                    <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
-                                </TransformGroup>
-                            </Image.RenderTransform>
-                        </Image>
-                        <Image Source="{Binding Preview}" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top">
-                            <Image.RenderTransform>
-                                <TranslateTransform X="{Binding PetImage, Converter={x:Static conv:PetDollShiftXConverter.Instance}, ConverterParameter=1.3}" />
-                            </Image.RenderTransform>
-                        </Image>
-                    </Grid>
+                    <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement
+                         480a9bdd-6d5f-4fa6-935d-46f895e97514) - SUSTITUYE el Grid+2 Image+2
+                         converters anterior (PetBottomAlignMarginConverter/PetDollShiftXConverter,
+                         ver bitacora.md y el commit anterior de este mismo encargo para el detalle
+                         historico completo) por PlayerPetPreviewControl - un unico control
+                         parametrizado por CanvasScale que calcula las posiciones reales con
+                         PlayerPetPreviewLayout (Terrakeep.Core, motor puro sin WPF, ver el
+                         comentario de esa clase para la cita completa del decompilado). Mismo
+                         orden Z real que Terraria vanilla (mascota detras, jugador delante) ya
+                         garantizado DENTRO del control, no aqui. Causa raiz real del bug "Chester
+                         parece un suelo/plataforma bajo los pies": no era la formula de posicion
+                         (ya era correcta), era el CONTENEDOR - nunca reservaba hueco de sobra para
+                         que una mascota mas ancha que el propio doll no se recortase contra el
+                         borde de la tarjeta. Este control reserva ese hueco el mismo, con
+                         PlayerPetPreviewLayout.ReserveColumnWidth(1.3) (~120px, el peor caso real
+                         de las 63 mascotas del catalogo, ver PlayerPetPreviewCatalogWidthTests.cs)
+                         - por eso ya no necesita un Width/Height fijo aqui como el Grid anterior. -->
+                    <controls:PlayerPetPreviewControl Grid.Column="0" CanvasScale="1.3" VerticalAlignment="Top"
+                                                       PreviewSource="{Binding Preview}"
+                                                       PetImageSource="{Binding PetImage}"
+                                                       PetOffsetX="{Binding PetOffsetX}"
+                                                       PetOffsetY="{Binding PetOffsetY}"
+                                                       PetSpriteDirection="{Binding PetSpriteDirection}"
+                                                       PetRotationDegrees="{Binding PetRotationDegrees}"
+                                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <DockPanel>
                             <TextBlock Text="✓" DockPanel.Dock="Right" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="4,0,0,0"
@@ -2660,66 +2611,29 @@
                                  antes el banner NO tenia NINGUNA Image ligada a PetImage (confirmado
                                  con grep sobre el fichero entero), la mascota real nunca se dibujaba
                                  aqui con o sin hover. -->
-                            <Grid DockPanel.Dock="Left" Width="104" Height="145.6" Margin="0,0,18,0" VerticalAlignment="Center"
-                                  Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
-                                <!-- DataContext propio (Option A del investigador, bitacora.md
-                                     25-sep-2026): re-atado a Home.LastSessionCharacterEntry para
-                                     que el binding de Source sea el mismo "PetImage" corto y literal
-                                     que ya usa la tarjeta (MainWindow.xaml linea ~1487) en vez de la
-                                     ruta larga "Home.LastSessionCharacterEntry.PetImage" - el Image
-                                     de Preview de abajo (fuera de este DataContext local, para no
-                                     romper el punto de anclaje real que ya usa el arnes para ubicar
-                                     este Border) sigue con la ruta completa sin tocar.
-
-                                     PortSeleccion Encargo3 (25-sep-2026, SUSTITUYE el Margin fijo/
-                                     empirico de la ronda anterior "-40,-32,0,0" - el doble exacto de
-                                     la tarjeta, mismo criterio empirico ya sustituido ahi): mismo
-                                     `PetBottomAlignMarginConverter`/`PetDollShiftXConverter` reales
-                                     que la tarjeta pequeña (ver el comentario completo en
-                                     MainWindow.xaml ~1505 y Converters/PetPositionConverters.cs),
-                                     con ConverterParameter="2.6" (104x145,6 = 40x56 * 2.6, el doble
-                                     exacto de la tarjeta - mismo criterio pedido explicitamente en
-                                     tarjeta y banner). El Image de Preview de abajo se retranquea
-                                     -10px nativos (26 WPF con este factor) via RenderTransform, no
-                                     Margin, mismo motivo real ya documentado en la tarjeta.
-
-                                     PortSeleccion Encargo4 (25-sep-2026): mismo RenderTransform
-                                     ADICIONAL real que la tarjeta pequeña (ver el comentario completo
-                                     en MainWindow.xaml ~1505) - PetOffsetX/PetOffsetY/
-                                     PetSpriteDirection resuelven contra el DataContext propio de
-                                     este Image (Home.LastSessionCharacterEntry, ya re-atado arriba),
-                                     mismo valor real en pixeles de sprite que la tarjeta (el Image
-                                     del banner tampoco escala su bitmap, Stretch="None" igual que la
-                                     tarjeta - el "2x" del banner es solo el tamaño de la Grid/Margin
-                                     que lo aloja, no del propio fotograma).
-
-                                     PortSeleccion Encargo6 (26-sep-2026): mismo RotateTransform NUEVO
-                                     que la tarjeta pequeña (ver el comentario completo en
-                                     MainWindow.xaml ~1541), bindeado igual contra el DataContext
-                                     propio de este Image (Home.LastSessionCharacterEntry). -->
-                                <Image DataContext="{Binding Home.LastSessionCharacterEntry}"
-                                       Source="{Binding PetImage}" Stretch="None"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                       HorizontalAlignment="Left" VerticalAlignment="Top"
-                                       Margin="{Binding PetImage, Converter={x:Static conv:PetBottomAlignMarginConverter.Instance}, ConverterParameter=2.6}"
-                                       RenderTransformOrigin="0.5,0.5"
-                                       Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
-                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}">
-                                    <Image.RenderTransform>
-                                        <TransformGroup>
-                                            <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
-                                            <RotateTransform Angle="{Binding PetRotationDegrees}" />
-                                            <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
-                                        </TransformGroup>
-                                    </Image.RenderTransform>
-                                </Image>
-                                <Image Source="{Binding Home.LastSessionCharacterEntry.Preview}" Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top">
-                                    <Image.RenderTransform>
-                                        <TranslateTransform X="{Binding Home.LastSessionCharacterEntry.PetImage, Converter={x:Static conv:PetDollShiftXConverter.Instance}, ConverterParameter=2.6}" />
-                                    </Image.RenderTransform>
-                                </Image>
-                            </Grid>
+                            <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement
+                                 480a9bdd-6d5f-4fa6-935d-46f895e97514) - SUSTITUYE el Grid+2 Image+2
+                                 converters anterior por PlayerPetPreviewControl, MISMO control real
+                                 que la tarjeta pequeña (ver el comentario completo junto a su uso en
+                                 CharacterCardTemplate mas arriba) - CanvasScale="2.6" (el doble
+                                 exacto de la tarjeta, mismo criterio ya documentado en el resto del
+                                 proyecto). DataContext propio (Home.LastSessionCharacterEntry) para
+                                 poder usar los mismos nombres de propiedad cortos que la tarjeta. Ya
+                                 no hace falta un Width/Height fijo en el Grid contenedor - el
+                                 control reserva su propio ancho real
+                                 (PlayerPetPreviewLayout.ReserveColumnWidth(2.6), ~239px, el peor
+                                 caso real de las 63 mascotas del catalogo escalado al doble). -->
+                            <controls:PlayerPetPreviewControl DataContext="{Binding Home.LastSessionCharacterEntry}"
+                                                               DockPanel.Dock="Left" CanvasScale="2.6"
+                                                               Margin="0,0,18,0" VerticalAlignment="Center"
+                                                               Visibility="{Binding Converter={StaticResource NullToVis}}"
+                                                               PreviewSource="{Binding Preview}"
+                                                               PetImageSource="{Binding PetImage}"
+                                                               PetOffsetX="{Binding PetOffsetX}"
+                                                               PetOffsetY="{Binding PetOffsetY}"
+                                                               PetSpriteDirection="{Binding PetSpriteDirection}"
+                                                               PetRotationDegrees="{Binding PetRotationDegrees}"
+                                                               ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
                             <StackPanel VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />

@@ -97,13 +97,13 @@ namespace Terrakeep.App.Services;
 // ver WalkArmColumn arriba): el brazo SI cambia de celda durante el ciclo de andar simple.
 public static class PlayerPreviewRenderer
 {
-    // PortSeleccion Encargo3 (25-sep-2026): Width/Height pasan de private a internal - hacen
-    // falta desde fuera (Converters/PetPositionConverters.cs) para portar la formula real de
-    // Terraria (UICharacter.cs, GetPlayerPosition/DrawPets) al tamano real del lienzo, en vez de
-    // duplicar el numero 56 a mano en dos sitios. Terrakeep no modela un hitbox aparte del
-    // sprite compuesto (a diferencia del jugador real, con player.width/height=20/42 vs el frame
-    // visual 40x56) - el lienzo entero ES el "jugador" para efectos de este calculo, ver el
-    // comentario completo de PetPositionConverters.cs.
+    // PortSeleccion Encargo3 (25-sep-2026): Width/Height pasan de private a internal. GapAnalysis
+    // ParidadPersonaje (26-sep-2026, requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514): el
+    // consumidor externo original (Converters/PetPositionConverters.cs) se retiro por completo -
+    // la formula real de Terraria (UICharacter.cs, GetPlayerPosition/DrawPets) vive ahora en
+    // Terrakeep.Core/Layout/PlayerPetPreviewLayout.cs (motor puro, sus propias constantes
+    // SpriteFrameWidth/SpriteFrameHeight, sin depender de estos dos campos) - se dejan internal
+    // por si algun consumidor futuro de Terrakeep.App los necesita, ninguno real hoy.
     internal const int Width = 40, Height = 56;
     private const int SheetWidth = 360, SheetHeight = 224;
     private const int HairStyleMin = 0, HairStyleMax = 227;

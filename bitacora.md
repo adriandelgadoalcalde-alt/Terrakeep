@@ -28845,3 +28845,152 @@ mismo repo - `PlayerPreviewRenderer.cs`/`PetPositionConverters.cs`/`MainWindow.x
 tocado aqui). Evidencia registrada en el Task Context con
 `requirement-add-evidence`/`requirement-link-commit`, requirement dejado en `IN_PROGRESS`, no
 `DONE`/`VERIFYING`.
+
+## GeometriaChester (26-sep-2026, aplicador-fix, TASK CONTEXT requirement
+## 480a9bdd-6d5f-4fa6-935d-46f895e97514) - arquitectura real de posicionamiento jugador+mascota
+## (motor puro + control WPF), combinada con el arreglo de Hide[] ya commiteado (`4486ad3c`)
+
+Segunda fase del patron de 2 agentes: `arquitecto-keep` diseño por completo la arquitectura nueva
+(motor puro `PlayerPetPreviewLayout` + control `PlayerPetPreviewControl`, caso oracle Chester ya
+verificado) antes de este arreglo - este agente la aplica tal cual, mas 3 refinamientos sucesivos
+del usuario sobre el ancho de reserva recibidos DURANTE la aplicacion (primero "percentil 90 +
+recorte del 10% extremo contra hueco vacio", despues "expandir solo en hover", finalmente la
+decision real aplicada: "ancho FIJO permanente = el 100% real/peor caso, igual en reposo y hover,
+sin estados especiales").
+
+**Causa raiz real** (ya confirmada por la investigacion, no reinvestigada aqui): la formula de
+posicion RELATIVA mascota-vs-doll de `PetPositionConverters.cs` (`left = 20.0 * canvasScale`) ya
+era matematicamente correcta - el problema real era de CONTENEDOR: el lienzo del doll (40x56
+nativo) nunca reservaba el colchon de espacio vacio que el viewport real de Terraria (59x58,
+`UICharacter.cs:43-44`) SI tiene para que mascotas grandes sobresalgan sin recortarse. Con Chester
+(46 nativos de ancho) el hueco disponible bastaba de sobra; con mascotas mas anchas del catalogo
+no.
+
+**1) Motor puro nuevo**: `Terrakeep.Core/Layout/PlayerPetPreviewLayout.cs` - sin ningun tipo de
+WPF (Terrakeep.Core compila tambien para net8.0, TerrakeepMod). `PlayerHitboxOrigin(hasPet)` /
+`PlayerSpriteBounds(origin)` / `PetBounds(origin, offsetX, offsetY, w, h)` (+ sobrecarga con
+`PetAnimationEntry`) / `CompositeBounds(player, pet)` replican campo a campo el decompilado real
+(`UICharacter.cs:122-130`/`132-149`, `Player.cs:56699-56703`, `PlayerDrawLayers.cs:1991/1187` para
+el `SpriteVerticalFudge=4f` que NINGUN codigo anterior de este repo modelaba). El `canvasScale`
+NUNCA entra en esta clase - se aplica una sola vez fuera, sobre el resultado ya compuesto (decision
+explicita del diseño, con una consecuencia real documentada: la mascota ahora SI escala su propio
+tamaño con `canvasScale`, no solo su posicion como antes - un cambio de comportamiento deliberado
+de esta arquitectura nueva, no un descuido).
+
+**Caso oracle Chester verificado exacto** (`Terrakeep.Core.Tests/Layout/
+PlayerPetPreviewLayoutTests.cs`, 9 tests): con mascota, `PlayerHitboxOrigin`=(9.5, 8.0), sprite del
+jugador en `[-0.5, 39.5]` (X), Chester (item 5098, proyectil 960, `Assets/pets/960.png` real 46x960
+= 48px/fotograma, `offsetX=4/offsetY=0`) en `[33.5, 79.5]` (X) - **cifras identicas, hasta el ultimo
+decimal, a las citadas en el informe de investigacion** - `CompositeBounds` da 80.0 unidades nativas
+de ancho, exacto.
+
+**2) Ancho de reserva REAL, medido, no percentil**: se repitio la medicion completa de las 63
+mascotas reales del catalogo (`Assets/pet_animations.json` + bbox ALPHA-VISIBLE real de cada
+`Assets/pets/*.png`, no el rectangulo de fotograma crudo con relleno transparente - metodologia
+mas estricta que la del informe original) con `PlayerPetPreviewCatalogWidthTests.cs`
+(`Terrakeep.App.ViewModels.Tests`, corre contra los assets reales en CADA `dotnet test`, canario
+permanente): **p90 real = 79.6 nativos** (documentado para el historial), **peor caso real = item
+4816 (proyectil 900), 90.0 nativos exactos** - decision final del usuario: usar el peor caso
+(100%), no el percentil, de forma PERMANENTE (`PlayerPetPreviewLayout.ReserveColumnWidthNative =
+92.0` = 90.0 + 2.0 de margen de redondeo sub-pixel, nunca un numero inventado). A escala 1.3
+(tarjeta pequeña) = ~119.6px; a escala 2.6 (banner hero) = ~239.2px.
+
+**3) Control WPF nuevo**: `Terrakeep.App/Controls/PlayerPetPreviewControl.cs` - `Canvas` con 2
+`Image` internas (mascota añadida PRIMERO -> detras, jugador SEGUNDO -> delante, mismo orden Z que
+`UICharacter.cs.DrawSelf`), parametrizado por 6 `DependencyProperty` (`CanvasScale`,
+`PreviewSource`, `PetImageSource`, `PetOffsetX/Y`, `PetSpriteDirection`, `PetRotationDegrees`) -
+cada cambio recalcula posiciones reales con `PlayerPetPreviewLayout` (nunca un Margin/offset nuevo
+a mano). `ClipToBounds=true` como salvaguarda real (si un caso futuro del catalogo superase
+`ReserveColumnWidthNative`, el canario de arriba lo detectaria antes, pero el recorte cae aqui,
+contra el borde del propio control, nunca contra el texto vecino).
+
+**4) Integracion en MainWindow.xaml**, reemplaza el bloque anterior (Grid + 2 Image + 2
+converters) en los 2 sitios reales, mismo control, sin duplicar logica:
+- Tarjeta pequeña de Inicio (`CharacterCardTemplate`): `Width` de la tarjeta sube de 240 a 312
+  (24 padding + ~120 preview nuevo + 12 gap + ~156 texto, MAS ancho que antes para el
+  WrapPanel de insignias/KPIs, nunca menos).
+- Banner hero "Continuar con X": `DockPanel.Dock="Left"` auto-acomoda el ancho nuevo sin tocar
+  ningun otro ancho fijo - `CanvasScale="2.6"`, `DataContext` re-atado a
+  `Home.LastSessionCharacterEntry` igual que antes.
+
+**5) Limpieza**: `Terrakeep.App/Converters/PetPositionConverters.cs` ELIMINADO por completo (los
+2 converters, `PetBottomAlignMarginConverter`/`PetDollShiftXConverter`, quedaron sin ningun
+consumidor real tras la integracion - confirmado con grep antes de borrar).
+`Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` ELIMINADO (su sujeto ya no existe)
+- sus 6 casos migrados a `PlayerPetPreviewLayoutTests.cs` (motor puro, mismo hallazgo real del
+offset neto de 20/30 nativos). `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: comentario de
+cabecera de `Width`/`Height` actualizado (referenciaba el converter ya retirado).
+
+**6) `Terrakeep.App.Tests/CanarioHomeBannerMascota.cs` actualizado** (pedido explicito del
+encargo, no solo tocado por casualidad): su formula hardcodeada `offsetXEsperado =
+20.0*canvasScale+petOffsetX` (y el delta de Y sin contar `SpriteVerticalFudge`) quedaba obsoleta
+con la arquitectura nueva - sustituida por `PlayerPetPreviewLayout`, la MISMA fuente de verdad que
+ya usa produccion, para que este canario nunca vuelva a desincronizarse por una segunda formula a
+mano. El mecanismo de localizar elementos por ruta de binding literal (`BindingOperations.
+GetBindingExpression`) ya no sirve (el control nuevo no tiene bindings XAML sobre sus 2 `Image`
+internas, las posiciona en codigo) - reemplazado por localizar el propio
+`PlayerPetPreviewControl` (por `DataContext`+`CanvasScale`, que distingue tarjeta de banner sin
+ambigüedad aunque compartan el mismo objeto `CharacterListEntryViewModel`).
+
+**7) Evidencia GEOMETRY_EXACT por capas** (pedido explicito, caso oracle `Terrariano.plr` real,
+Eye Bone/Chester equipado, SOLO LECTURA) - `Terrakeep.App.Tests/CanarioGeometriaChesterEvidencia.cs`
+(modo nuevo `CHESTER_GEOMETRIA_SOLO=1`): renderiza A) jugador solo, B) Chester solo, C) composicion
+real de Terrakeep - las 3 desde el MISMO `PlayerPetPreviewControl` real (mismo Width/Height/
+viewport logico, alternando que capa esta visible - CERO auto-crop/resize/normalizacion
+independiente entre capturas), en estado ESTATICO y HOVER (`SetHovering(true)`, ciclo de "Andar"
+real). Capturas reales en
+`Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\geometria-chester\` -
+confirmado visualmente: Chester se ve como una mascota identificable (criatura marron/dorada
+redonda) al lado de los pies del jugador, NUNCA como un "suelo"/plataforma, sin clipping, en las 2
+capas por separado y en la composicion, estatico y en hover. **D) captura de Terraria Vanilla
+real: AUSENTE, LIMITE REAL documentado con honestidad** - se revisó
+`scripts/ParidadVisual/capturas/caso01/vanilla.png` (unica captura vanilla real de esta sesion) y
+es un caso DISTINTO (pose de apariencia/skin sin mascota, "Caso1" de ParidadVisual, viewport
+distinto) - reutilizarla habria sido una comparacion `GEOMETRY_EXACT` falsa, no se hizo. Un intento
+nuevo de capturar la pantalla de seleccion de personaje de Terraria 1.4.5.8 vanilla real esta
+documentado en esta misma bitacora (entrada "Fase6", horas antes) como BLOQUEADO por motivos de
+entorno (ventana en blanco, 4 intentos con tecnicas de diagnostico distintas) - no se reintento
+aqui, fuera del alcance/tiempo de este encargo (arreglo de geometria de Terrakeep, no
+infraestructura de captura de Terraria). El bloque D del banner hero tampoco se pudo generar (mismo
+aviso ya dejado por el investigador: sin `Home.LastSessionCharacterEntry` real con mascota en este
+equipo ahora mismo) - el control es el MISMO codigo compartido que la tarjeta (verificado
+estructuralmente), pero no hay evidencia visual propia del banner en este pase.
+
+**Verificacion real**: `dotnet build Terrakeep.slnx -c Release`: **0 Advertencias/0 Errores**.
+`dotnet test Terrakeep.Core.Tests -c Release --no-build`: **782/782** (773 baseline + 9
+`PlayerPetPreviewLayoutTests` nuevos), sin regresion. `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release --no-build`: **756/756**, 0 errores, 0 omitidas (761
+baseline post-Hide[] - 6 de `PetPositionConvertersTests.cs` eliminado + 1
+`PlayerPetPreviewCatalogWidthTests` nuevo = 756 exacto, sin regresion real).
+
+**Recompilado y redesplegado, COMBINADO con el arreglo de Hide[] ya commiteado (`4486ad3c`)**: sin
+proceso `Terrakeep*` en ejecucion antes (`Get-Process` vacio, confirmado antes de compilar Y antes
+de publicar). `installer\install.ps1` (publish Release autocontenido win-x64 + copia a
+`%LocalAppData%\Programs\Terrakeep` + acceso directo de Menu Inicio) en verde. SHA-256 del
+`Terrakeep.exe` publicado = instalado, confirmado byte a byte
+(`86049BAAC5480770BB6B0C121F26D1074B652CB13EC5B44DF61279C666C5B729` en los dos), `FileVersion`
+instalado = `3.2.5.0`. Relanzado (via `Terrakeep.App.Tests`, que referencia el mismo
+`Terrakeep.App.csproj` compilado Release - mismo codigo real que el `.exe` instalado) para las
+capturas de evidencia del punto 7 - sin proceso `Terrakeep*` huerfano despues (`Get-Process`
+vacio).
+
+Commit local (working set exacto, nunca `git add -A` - el arbol seguia con decenas de ficheros
+ajenos modificados por otros agentes en paralelo, ninguno tocado):
+`Terrakeep.Core/Layout/PlayerPetPreviewLayout.cs` (nuevo),
+`Terrakeep.Core.Tests/Layout/PlayerPetPreviewLayoutTests.cs` (nuevo),
+`Terrakeep.App/Controls/PlayerPetPreviewControl.cs` (nuevo),
+`Terrakeep.App/Converters/PetPositionConverters.cs` (eliminado),
+`Terrakeep.App/MainWindow.xaml`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
+`Terrakeep.App.ViewModels.Tests/PetPositionConvertersTests.cs` (eliminado),
+`Terrakeep.App.ViewModels.Tests/PlayerPetPreviewCatalogWidthTests.cs` (nuevo),
+`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`,
+`Terrakeep.App.Tests/CanarioGeometriaChesterEvidencia.cs` (nuevo),
+`Terrakeep.App.Tests/Program.cs`, `bitacora.md`. Sin `git push`.
+
+**Pendiente real dejado honestamente**: bloque D (vanilla real) ausente en ambos sitios (tarjeta y
+banner) por los motivos ya documentados - no bloquea el cierre del requirement pero limita la
+evidencia "paridad visual completa contra el juego real" a 3 de las 4 capas pedidas. El requirement
+`480a9bdd-6d5f-4fa6-935d-46f895e97514` se deja `IN_PROGRESS` (NO `DONE`/`VERIFYING`) a proposito,
+para que el coordinador lance `revisor-visual`+`verificador-qa` con evidencia independiente antes
+de cerrarlo.
