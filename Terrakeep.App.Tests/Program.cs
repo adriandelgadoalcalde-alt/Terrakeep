@@ -1034,6 +1034,15 @@ internal static partial class Program
             Console.WriteLine("DONE (HOSTING_SOLO)");
             Environment.Exit(0);
         }
+        // GUIA_JEFES_TARDIOS_SOLO=1 (26-sep-2026, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d):
+        // confirmacion con .wld REALES (no sinteticos) de los 11 flags de jefes tardios de
+        // ea405518 - ver PruebasGuiaJefesTardiosReales.cs para el cuerpo real.
+        if (Environment.GetEnvironmentVariable("GUIA_JEFES_TARDIOS_SOLO") == "1")
+        {
+            EjecutarGuiaJefesTardiosReales(window, vm);
+            Console.WriteLine("DONE (GUIA_JEFES_TARDIOS_SOLO)");
+            Environment.Exit(0);
+        }
         // KEEPQA_TRANSICION_SOLO=1 (16-sep-2026, sesgo S2 de KeepQA): pares antes/despues de
         // hover/scroll/tamaño/idioma para verificarTransicion.js - ver AuditoriaTransicion.cs.
         if (Environment.GetEnvironmentVariable("KEEPQA_TRANSICION_SOLO") == "1")

@@ -28100,3 +28100,100 @@ sesion). `doNotTouch` respetado. Ficheros ajenos modificados en paralelo por otr
 `scripts/extraer-nombres-calamity-en.js`, `scripts/sync-guia-desde-terrakeepmod.ps1`,
 `Terrasavr-Native.zip`, `Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`) NO
 anadidos al stage.
+
+## Guia Encargo5b - confirmacion con .wld REALES (no sinteticos) de los 11 flags de jefes tardios
+(26-sep-2026, investigador-bug, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d) - OBSERVED,
+sin discrepancias
+
+**Objetivo del encargo**: el commit `ea405518` (WldReader.ReadLateBossFlags/GuideFlags._deMundo,
+Fishron/Culto Lunatico/Torres/Señor de la Luna/Reina Slime/Deerclops/Marcianos/Emperatriz de la Luz)
+solo se habia verificado contra mundos SINTETICOS (`WldReaderLateBossFlagsTests.cs`,
+`LateBossFlagsTestBytes.cs`, 9/9 en verde). Faltaba confirmar con un `.wld` REAL en la UI REAL de la
+pestaña Guia.
+
+**`.wld` reales encontrados en esta maquina** (busqueda en `Documents\My Games\Terraria\` completo,
+recursiva): 34 mundos reales localizados. Version cruda (primeros 4 bytes, UInt32 LE) de los
+candidatos con formato mas reciente:
+- `Documents\My Games\Terraria\Worlds\Blando_Río.wld` (version **326**, LastWriteTime
+  26/09/2026 05:26 - partida real ACTIVA del usuario, la misma que ya usa `BLANDO_RIO_SOLO` en
+  `Program.cs` de forma read-only).
+- `Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld` (version **326**,
+  mundo propio del servidor vanilla de KeepQA).
+- `Documents\My Games\Terraria\tModLoader\Worlds\*.wld` (5 mundos, version **279** - tModLoader,
+  formato de cabecera de mundo compartido con vanilla, sin diferencia relevante en el tramo leido
+  por `ReadLateBossFlags`).
+
+Los tres formatos (326/279) son >=240, el caso mas exigente pedido por el encargo (cubre
+Deerclops, que solo tiene campo real desde la version 240 - ver el comentario de `ReadLateBossFlags`
+en `WldReader.cs:308`).
+
+**Ground truth independiente, ANTES de tocar la UI**: script de solo lectura
+`leer_wld_ground_truth.py` (guardado en el scratchpad de esta sesion, no en el repo - reproduce
+`ReadHeader`+`ReadLateBossFlags` de `WldReader.cs` byte a byte en Python, como SEGUNDA fuente real
+independiente del mismo codigo de produccion, para no verificar la logica preguntandose a si misma).
+Resultado real:
+- `KeepQAVanilla.wld` (v326): las 11 banderas (`downedFishron/Martians/LunaticCultist/Moonlord/
+  CelestialSolar/Vortex/Nebula/Stardust/EmpressOfLight/QueenSlime/Deerclops`) TODAS en `False`
+  (mundo sin jefes tardios derrotados).
+- `Blando_Río.wld` (v326): las 11 banderas TODAS en `True` (partida real del usuario con los 8
+  jefes/eventos tardios ya superados).
+- `tModLoader\Worlds\roca_negra.wld` (v279, ya usado por `GUIA_SOLO`/`EjecutarGuiaReal` en
+  `PruebasGuiaYServidor.cs`): mezcla real (EoC/EoW-BoC/Skeletron/SlimeKing/Goblins=True, resto
+  incluidas las 11 tardias=False) - confirma tambien que un mundo intermedio real no rompe nada,
+  aunque no se uso en el canario final por no aportar cobertura nueva sobre las 11 banderas tardias
+  (todas False igual que `KeepQAVanilla.wld`, ya cubierto).
+
+**Canario nuevo que cierra el hueco real**: `Terrakeep.App.Tests\PruebasGuiaJefesTardiosReales.cs`
+(clase parcial nueva, mismo patron `_SOLO` que el resto del arnes) + una linea de enganche en
+`Program.cs` (`GUIA_JEFES_TARDIOS_SOLO=1`). Carga SOLO el mundo (nunca un personaje - las 8 filas
+comprobadas son banderas de `GuideFlags._deMundo`, evaluables sin `.plr`/`.tplr`, confirmado leyendo
+`GuideViewModel.Refresh` - `MostrarAvisoSinPersonaje` no bloquea la evaluacion del arbol) contra
+`KeepQAVanilla.wld` (todo False) y `Blando_Río.wld` (todo True, LEIDO, nunca escrito - copia
+efimera en temp, mismo criterio que el resto del arnes), navega a la pestaña Guia real,
+`vm.Guide.Refresh()`, expande cada `Expander` real (mismo control que un clic real activaria) y
+lee TRES fuentes por fila: `GuidePasoViewModel.Completado`, `GuideRequisitoViewModel.Cumplido`/
+`NoEvaluable`, y el `Text` REAL del `TextBlock` renderizado en el arbol visual (no solo el
+ViewModel - confirma que el binding XAML de verdad pinta el icono, no solo que la logica interna
+diria que si).
+
+**8 filas reales de `guia_progresion.json` cubiertas** (las 11 banderas colapsan a 8 filas de UI
+porque `downedTowers` agrupa 4 sub-banderas en un solo requisito): "Los opcionales de después" >
+Fishron/Emperatriz de la Luz, "Los primeros pasos del Modo Difícil" > Reina Slime, "Deerclops
+(opcional)" > Deerclops, "La Locura Marciana (opcional)" > Marcianos, "El Cultista y los Pilares" >
+Cultista/Torres, "El Señor de la Luna" > Moon Lord.
+
+**Resultado real, dos ejecuciones (`dotnet build` limpio, 0 avisos/0 errores; `dotnet run
+--project Terrakeep.App.Tests` con `GUIA_JEFES_TARDIOS_SOLO=1`)**:
+- Primera pasada: 5/8 OK, 3 FALLO por "no se encontro el paso" - **error del propio canario**, no
+  del codigo de produccion (transcribi "despues"/"Dificil" sin tilde al copiar los nombres de tramo
+  de `textos.es.json` a mano). Corregido leyendo el JSON con Python en UTF-8 sin garbling
+  (`Guia.Tramo.InicioModoDificil.Nombre` = "Los primeros pasos del Modo **Difícil**",
+  `Guia.Tramo.JefesOpcionalesTardios.Nombre` = "Los opcionales de **después**").
+- Segunda pasada, tras la correccion: **8/8 OK en los dos mundos** (16/16 filas en total). Con
+  `KeepQAVanilla.wld`: las 8 filas con `paso.Completado=False`, `requisito.Cumplido=False`,
+  `requisito.NoEvaluable=False` (evaluable de verdad, solo pendiente), icono renderizado real='○'
+  para las 8. Con `Blando_Río.wld`: las 8 filas con `paso.Completado=True`,
+  `requisito.Cumplido=True`, `requisito.NoEvaluable=False`, icono renderizado real='✓' para las 8.
+  Coincide exactamente con el ground truth independiente de arriba.
+
+**Evidencia visual real** (capturas en `Terrakeep.App.Tests\bin\Debug\net10.0-windows\
+keepqa-evidencia\`): `guia-jefes-tardios-todos-vivos.png` muestra el tramo "Deerclops (opcional)"
+expandido con "○ Derrotarlo (opcional) 0%" / "○ Derrotar a Deerclops"; `guia-jefes-tardios-
+todos-derrotados.png` muestra el MISMO tramo con "✓ Deerclops (opcional)" en la cabecera, "✓
+Derrotarlo (opcional) 100%" / "✓ Derrotar a Deerclops" - contraste real, mismo personaje (Zenith,
+irrelevante para estas banderas de mundo), mismo layout, unica variable real cambiada es el `.wld`
+cargado.
+
+**Veredicto: OBSERVED, sin discrepancias.** Las 11 banderas de jefes tardios de `ea405518` se leen
+correctamente en la UI real de la pestaña Guia contra DOS `.wld` reales de esta maquina (una de
+ellas la partida activa del propio usuario), en los dos extremos de progreso (todo pendiente / todo
+derrotado), con la version de formato mas exigente pedida (326, >=240). El hueco de cobertura
+("solo verificado contra sintetico") queda cerrado con `GUIA_JEFES_TARDIOS_SOLO=1` como canario
+permanente y reejecutable.
+
+**Sin cambios de codigo de produccion**: unicamente se toco el arnes de pruebas
+(`Terrakeep.App.Tests\PruebasGuiaJefesTardiosReales.cs` nuevo + 8 lineas de enganche en
+`Program.cs`) y esta entrada de `bitacora.md`. `WldReader.cs`/`WldHeader.cs`/`GuideFlags.cs`/
+`WldWriter.cs` (el `doNotTouch` real de este encargo) sin tocar. `dotnet test Terrakeep.Core.Tests
+--filter FullyQualifiedName~WldReaderLateBossFlagsTests` sigue en verde (9/9) tras el cambio. Sin
+`git push`.
