@@ -561,7 +561,12 @@ internal static partial class Program
                 // campo del elemento nombrado sale "internal" (mismo motivo real por el que el
                 // resto de este arnes localiza controles recorriendo el arbol visual en vez de
                 // referenciarlos por campo, ver Descendientes() arriba).
-                if (window.FindName("GuideObjetivoBanner") is FrameworkElement banner) banner.BringIntoView();
+                // ADR-TERRAKEEP-021 (26-sep-2026): GuideObjetivoBanner vive ahora dentro de
+                // GuideView.xaml (UserControl propio, dueño de su propio NameScope) tras la
+                // quinta extraccion de MainWindow.xaml - window.FindName ya no lo encuentra
+                // directamente, hay que pasar primero por el host x:Name="GuideView".
+                if (window.FindName("GuideView") is FrameworkElement guideView1 &&
+                    guideView1.FindName("GuideObjetivoBanner") is FrameworkElement banner) banner.BringIntoView();
                 DoEvents(); DoEvents();
                 try
                 {
@@ -583,7 +588,9 @@ internal static partial class Program
                 vm.Guide.ObjetivoTramo = conIconoJefe.Value.tramo;
                 vm.Guide.ObjetivoPaso = conIconoJefe.Value.paso;
                 DoEvents(); DoEvents();
-                if (window.FindName("GuideObjetivoBanner") is FrameworkElement bannerJefe) bannerJefe.BringIntoView();
+                // ADR-TERRAKEEP-021: mismo mecanismo de doble FindName que arriba.
+                if (window.FindName("GuideView") is FrameworkElement guideView2 &&
+                    guideView2.FindName("GuideObjetivoBanner") is FrameworkElement bannerJefe) bannerJefe.BringIntoView();
                 DoEvents(); DoEvents();
                 try
                 {
