@@ -1,3 +1,4 @@
+using System.Linq;
 using Terrakeep.Core.Data;
 using Xunit;
 
@@ -140,5 +141,49 @@ public class PetAnimationCatalogTests
 
         var catalog = PetAnimationCatalog.LoadFromFile(path);
         Assert.Null(catalog.ByItemId(-1));
+    }
+
+    // PortSeleccion Encargo5 (26-sep-2026): las 24 entradas reales del catalogo (de las 63) cuyo
+    // proyectil ("shoot") tiene un ".WithCode(...)" real en ProjectileID.Sets.
+    // CharacterPreviewAnimations (decompilado, Downloads\Keep\tModLoader-Decompiled\tModLoader\
+    // Terraria\ID\ProjectileID.cs:34-37) - sin este canario, una futura edicion a mano de
+    // pet_animations.json podria perder el campo "code" en silencio (JSON sin tipado) sin que
+    // ningun otro test lo notara, igual que ya protegia RealFile_Tiene63EntradasConLosOffsetsReales
+    // para OffsetX/OffsetY/SpriteDirection. Las 39 entradas restantes (no listadas aqui) deben
+    // seguir en Code=null - verificado abajo por diferencia de conjunto contra las 63 totales.
+    private static readonly Dictionary<int, string> CodigosReales = new()
+    {
+        { 994, "Float" }, { 1170, "Float" }, { 1171, "Float" }, { 1180, "Float" },
+        { 2420, "Float" }, { 3857, "Float" }, { 4425, "Float" }, { 4603, "Float" },
+        { 4605, "Float" }, { 4798, "Float" }, { 4802, "Float" }, { 4804, "Float" },
+        { 4808, "Float" }, { 4810, "Float" }, { 4817, "Float" },
+        { 4801, "FloatAndSpinWhenWalking" }, { 4805, "FloatAndSpinWhenWalking" },
+        { 4797, "SlimePet" }, { 4960, "SlimePet" }, { 5131, "SlimePet" },
+        { 5088, "BerniePet" },
+        { 4799, "WormPet" }, { 4803, "WormPet" }, { 4809, "WormPet" },
+    };
+
+    [Fact]
+    public void RealFile_MascotasConDelegadoCustom_TienenElCodeRealDelDecompilado()
+    {
+        string path = Path.Combine(AssetsDir, "pet_animations.json");
+        if (!File.Exists(path)) return;
+
+        var catalog = PetAnimationCatalog.LoadFromFile(path);
+
+        Assert.Equal(24, CodigosReales.Count);
+        foreach (var (itemId, code) in CodigosReales)
+        {
+            var entry = catalog.ByItemId(itemId);
+            Assert.True(entry is not null, $"item {itemId} deberia existir en pet_animations.json");
+            Assert.Equal(code, entry!.Code);
+        }
+
+        foreach (var itemId in ValoresReales.Keys.Except(CodigosReales.Keys))
+        {
+            var entry = catalog.ByItemId(itemId);
+            Assert.True(entry is not null);
+            Assert.Null(entry!.Code);
+        }
     }
 }

@@ -65,6 +65,15 @@ public sealed class PetAnimationEntry
     [JsonPropertyName("offsetX")] public double OffsetX { get; init; }
     [JsonPropertyName("offsetY")] public double OffsetY { get; init; }
     [JsonPropertyName("spriteDirection")] public int SpriteDirection { get; init; } = 1;
+
+    // PortSeleccion Encargo5 (26-sep-2026): nombre REAL del delegado custom de
+    // Terraria/DelegateMethods.cs (clase CharacterPreview) que ".WithCode(...)" asigna a este
+    // proyectil en la tabla real (Terraria/ID/ProjectileID.cs, CharacterPreviewAnimations) -
+    // null cuando la entrada NO tiene ningun WithCode (la mayoria: solo ciclan de frame, ya
+    // cubierto por SelStart/SelCount/SelDelay). Ver PetCustomAnimationCode.Evaluate para el
+    // significado real de cada valor y la cita exacta del decompilado que lo respalda -
+    // constantes de esa clase, nunca un texto libre inventado aqui.
+    [JsonPropertyName("code")] public string? Code { get; init; }
 }
 
 public sealed class PetAnimationCatalog

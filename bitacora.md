@@ -27336,3 +27336,99 @@ errores. `node deployLock.js despues Terrakeep ...Assets`: **sin alarma** - "Ass
 identico antes y despues del /MIR (13056 ficheros) - deploy seguro". `Terrakeep.exe` instalado
 confirmado con `LastWriteTime` igual a la hora real del deploy. `node deployLock.js liberar
 Terrakeep`: liberado. Despliegue funcional COMPLETO, no queda pendiente nada de infraestructura.
+
+## PortSeleccion Encargo5 (26-sep-2026): delegados de animacion custom por mascota - 5 delegados
+## reales identificados, 3 implementados con precision (Float/SlimePet/BerniePet), 2 documentados
+## como limite real (WormPet confirmado, rotacion de FloatAndSpinWhenWalking pendiente) — SIN
+## tocar `MainWindow.xaml` (coordinacion real con agente en paralelo sobre ChestInspector)
+
+Hallazgo original (arquitecto-keep a07c2c8f, PortSeleccion): "faltan ~15 delegados de animacion
+custom (`DelegateMethods.cs`, `WormPet` limite real)". Investigacion propia de este encargo
+(`Downloads\Keep\tModLoader-Decompiled\tModLoader\Terraria\DelegateMethods.cs` clase
+`CharacterPreview`, cruzado contra `Terraria/ID/ProjectileID.cs:34-37`,
+`CharacterPreviewAnimations`) confirma que la cifra real es **5 delegados distintos** usados por
+**24 de las 63 mascotas ya catalogadas** en `pet_animations.json` - "~15" describia solo las
+mascotas que usan UN delegado, `Float` (15 exactas), no el numero de delegados distintos:
+- `Float` (15 mascotas): `proj.position.Y` bob continuo, NUNCA depende de "walking" - implementado
+  con precision.
+- `FloatAndSpinWhenWalking` (2 mascotas): mismo bob de `Float` + rotacion cuando camina -
+  implementado SOLO el bob; la rotacion es limite real pendiente (ver mas abajo).
+- `SlimePet` (3 mascotas): bob distinto (`Utils.MultiLerp` real), solo si camina - implementado
+  con precision.
+- `BerniePet` (1 mascota): `proj.position.X += 6` constante, solo si camina - implementado con
+  precision.
+- `WormPet` (3 mascotas): cola de N segmentos independientes rotados
+  (`DelegateMethods.cs:63-117`) - limite real CONFIRMADO por esta investigacion (no un unico
+  offset/rotacion, arquitectura de render distinta), se mantiene igual que el hallazgo original.
+- `CompanionCubePet`/`EtsyPet`: 0 mascotas catalogadas los usan hoy (proyectiles 653/1018/764 sin
+  entrada en `pet_animations.json`) - no hacia falta cubrirlos en este encargo.
+
+Descubrimiento adicional real que revisa la premisa del encargo ("Terrakeep no simula tiempo
+real"): SI lo hace desde PortSeleccion/ParidadPersonaje previos - `CharacterListEntryViewModel`
+tiene un `DispatcherTimer` real de 90ms por tarjeta, activo SOLO durante el hover
+(`SetHovering`/`EnsureHoverWalkTimer`), que ya avanza `PetAnimationDriver` con ms reales
+(`PetPreviewRenderer.cs`). Por eso Float/SlimePet/BerniePet se implementaron con el mismo tipo de
+animacion CONTINUA real (no un "frame de reposo" fijo) - decision de ingenieria justificada por
+esta evidencia, consistente con el ciclo de piernas/brazos que YA anima igual durante el hover.
+
+**Arreglo real**: `Terrakeep.Core/Data/PetAnimationCatalog.cs` (`PetAnimationEntry.Code`, nuevo
+campo nullable) + `Terrakeep.Core/Data/PetCustomAnimationCode.cs` (nuevo, funcion pura
+`Evaluate(code, elapsedTicksReal, activo)` que reproduce literal la formula real de cada delegado,
+con la cita exacta del decompilado en el comentario de cada uno) + `Terrakeep.App/Assets/
+pet_animations.json` (24 de las 63 entradas reales marcadas con su `code` real) +
+`Terrakeep.App/Services/PetPreviewRenderer.cs` (`PetAnimationDriver.ElapsedTicksReal`, tiempo
+continuo desde el ultimo `Reiniciar()`, misma unidad que `Main.timeForVisualEffects`) +
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` (`PetOffsetX`/`PetOffsetY` pasan de
+constantes de solo lectura a `[ObservableProperty]`, `RefreshPetOffset()` suma la contribucion
+dinamica real al offset base ya fijado en PortSeleccion Encargo4 - los bindings de
+`TranslateTransform` YA existian en `MainWindow.xaml` desde ese encargo, asi que el efecto visual
+se ve SIN tocar el XAML).
+
+**LIMITE REAL pendiente** (no "imposible", solo fuera de alcance de este encargo por la
+coordinacion con el agente en paralelo): la rotacion de `FloatAndSpinWhenWalking` necesitaria una
+`RotateTransform` en el `RenderTransform` de la `Image` de mascota
+(`Terrakeep.App/MainWindow.xaml`, hoy solo tiene `ScaleTransform`/`TranslateTransform`) - ese
+fichero esta fuera del working set de este encargo (otro agente lo tenia ocupado con
+ChestInspector). Documentado en el comentario real de `PetCustomAnimationCode` para un encargo
+futuro que si pueda tocar ese XAML.
+
+**Verificacion real**: canario nuevo `Terrakeep.Core.Tests/Data/PetCustomAnimationCodeTests.cs`
+(12 pruebas, valores calculados a mano con la formula real citada, incluye periodicidad de
+`Float` y el caso "inactivo devuelve siempre cero") + ampliacion de
+`PetAnimationCatalogTests.RealFile_MascotasConDelegadoCustom_TienenElCodeRealDelDecompilado`
+(confirma los 24 `code` reales Y que las 39 restantes siguen en `null`). `dotnet build
+Terrakeep.slnx -c Release`: verde, 0 avisos. `dotnet test Terrakeep.Core.Tests`: 764/764 (baseline
+751 + 13 nuevas). `dotnet test Terrakeep.App.ViewModels.Tests`: 744/744, exactamente el baseline,
+0 regresion (la logica dinamica nueva no tiene test de ViewModel dedicado - mismo criterio ya
+establecido por PortSeleccion Encargo4 con `PetOffsetX`/`PetOffsetY`, la logica real vive y se
+prueba en `Terrakeep.Core`, el ViewModel es plomeria fina).
+
+**Recompilacion y redespliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(`Get-CimInstance Win32_Process`, sin resultados). `DEPLOY_LOCK` adquirido sin contencion (libre,
+sin proceso paralelo compitiendo). Sanidad de `Assets/` ANTES: 13056 ficheros, hash `9a86278f...`
+(coincide exacto con el `despues` del encargo anterior, ChestInspector). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat` (`MSYS_NO_PATHCONV=1`): 2 archivos
+copiados (`Terrakeep.exe` + `Assets/pet_animations.json`, los dos con cambio real), 13060
+omitidos, 0 errores, 0 extras. `node deployLock.js despues Terrakeep ...Assets`: **ALARMA**
+(mismo conteo 13056 ficheros, hash cambio `9a86278f...`→`068603cc...`) - investigada ANTES de
+liberar (protocolo real, nunca decidir sin evidencia): comparacion independiente
+`find -printf '%P %s'` (ruta+tamano real, no solo conteo) del `Assets/` publicado contra el
+instalado, en los dos sentidos, **0 diferencias** - confirma que la alarma es exactamente el
+cambio de CONTENIDO esperado de `pet_animations.json` (mismo numero de ficheros, hash distinto por
+texto distinto), no una purga/corrupcion ni contenido ajeno sin comitear de otro agente. `node
+deployLock.js liberar Terrakeep`: liberado tras confirmar. `LastWriteTime`/tamano del `.exe`
+instalado y del publish idénticos (26/09/2026 3:24:56, 139.246.721 bytes). Sanity check real:
+`Start-Process`, `PID=781464 Responding=True` a los 5s, cerrado limpio con `Stop-Process`, sin
+proceso residual.
+
+**Commit real**: `Terrakeep.Core/Data/PetAnimationCatalog.cs` + `Terrakeep.Core/Data/
+PetCustomAnimationCode.cs` (nuevo) + `Terrakeep.Core.Tests/Data/PetAnimationCatalogTests.cs` +
+`Terrakeep.Core.Tests/Data/PetCustomAnimationCodeTests.cs` (nuevo) + `Terrakeep.App/Assets/
+pet_animations.json` + `Terrakeep.App/Services/PetPreviewRenderer.cs` +
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` + esta entrada de `bitacora.md` -
+exactamente los ficheros de este encargo, `git add` con rutas explicitas, nunca `-A`. `doNotTouch`
+respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados; `MainWindow.xaml` del agente en paralelo (ChestInspector)
+tampoco tocado, ni falta hizo (los bindings de `TranslateTransform` ya existian desde PortSeleccion
+Encargo4). Sin `git push`.

@@ -74,10 +74,24 @@ public sealed class PetAnimationDriver(PetAnimationEntry entry)
 {
     private double _acumuladoMs;
 
+    // PortSeleccion Encargo5 (26-sep-2026): tiempo TOTAL transcurrido desde el ultimo Reiniciar(),
+    // en ms reales - a diferencia de "_acumuladoMs" (que se descuenta cada vez que avanza un
+    // fotograma del ciclo SelStart/SelCount), este NUNCA se descuenta, crece sin parar mientras el
+    // hover dura. Lo necesitan los delegados de codigo custom (Float/SlimePet/BerniePet, ver
+    // PetCustomAnimationCode) que dependen de tiempo CONTINUO real (equivalente a
+    // "Main.timeForVisualEffects" del decompilado, un contador que crece 1 por tick de juego sin
+    // descontar nada) y no del ciclo discreto de fotogramas.
+    private double _elapsedMsTotal;
+
     public int FrameActualEnCiclo { get; private set; }
+
+    // Ticks de juego reales (60/s) transcurridos desde el ultimo Reiniciar() - misma unidad que
+    // "Main.timeForVisualEffects" real, lista para pasar directa a PetCustomAnimationCode.Evaluate.
+    public float ElapsedTicksReal => (float)(_elapsedMsTotal * 60.0 / 1000.0);
 
     public void Avanzar(double deltaMs)
     {
+        _elapsedMsTotal += deltaMs;
         if (entry.SelCount <= 1) return;
         double msPorFotogramaReal = entry.SelDelay * (1000.0 / 60.0);
         if (msPorFotogramaReal <= 0) return;
@@ -91,6 +105,7 @@ public sealed class PetAnimationDriver(PetAnimationEntry entry)
     public void Reiniciar()
     {
         _acumuladoMs = 0;
+        _elapsedMsTotal = 0;
         FrameActualEnCiclo = 0;
     }
 }

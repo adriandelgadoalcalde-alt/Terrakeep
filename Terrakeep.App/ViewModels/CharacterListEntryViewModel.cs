@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terrakeep.App.Services;
 using Terrakeep.Core.Calamity;
+using Terrakeep.Core.Data;
 using Terrakeep.Core.PlrFormat;
 
 namespace Terrakeep.App.ViewModels;
@@ -101,13 +102,21 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // mascota-vs-personaje que vive en MainWindow.xaml (Margin fijo del Image de PetImage): esa
     // formula genérica es la misma para las 63 mascotas, esta de aqui es el ajuste fino REAL por
     // mascota que Terraria aplica encima (SettingsForCharacterPreview.ApplyTo, decompilado real:
-    // "proj.position += Offset"/"proj.spriteDirection = SpriteDirection"). Constantes (no
-    // ObservableProperty): se resuelven una unica vez en el constructor a partir del catalogo, no
-    // cambian nunca durante la vida de la tarjeta (a diferencia de PetImage, que si avanza fotograma
-    // a fotograma). Sin mascota animada catalogada (icono estatico de reserva), quedan en el valor
-    // por defecto real de Terraria: Offset=(0,0), SpriteDirection=1 - nunca un valor inventado.
-    public double PetOffsetX { get; }
-    public double PetOffsetY { get; }
+    // "proj.position += Offset"/"proj.spriteDirection = SpriteDirection").
+    //
+    // PortSeleccion Encargo5 (26-sep-2026): AHORA SI cambian durante el hover en las mascotas con
+    // delegado de codigo custom (PetAnimationEntry.Code != null, ver PetCustomAnimationCode) - por
+    // eso son [ObservableProperty] en vez de constantes de solo lectura. "_petBaseOffsetX/Y" es el
+    // valor ESTATICO del catalogo (el mismo de siempre, PortSeleccion Encargo4); RefreshPetOffset
+    // le suma la contribucion dinamica real de Float/SlimePet/BerniePet mientras el raton esta
+    // encima, y vuelve exactamente a la base al salir del hover (SetHovering(false) llama tambien
+    // a RefreshPetOffset con "activo=false", que Evaluate resuelve siempre a (0,0)). Sin mascota
+    // animada catalogada o sin "code" real, esto no cambia nada respecto al Encargo4: se queda en
+    // el valor base fijo de siempre.
+    [ObservableProperty] private double _petOffsetX;
+    [ObservableProperty] private double _petOffsetY;
+    private readonly double _petBaseOffsetX;
+    private readonly double _petBaseOffsetY;
     // Expuesto como double (1 o -1), listo para bindear directo a ScaleTransform.ScaleX en vez de
     // un bool + converter - es literalmente el mismo campo "SpriteDirection" del decompilado.
     public double PetSpriteDirection { get; } = 1;
@@ -153,6 +162,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         }
         RefreshPreview();
         RefreshPetImage();
+        RefreshPetOffset();
     }
 
     private DispatcherTimer EnsureHoverWalkTimer()
@@ -169,9 +179,25 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
             _petAnimationDriver?.Avanzar(90);
             RefreshPreview();
             RefreshPetImage();
+            RefreshPetOffset();
         };
         _hoverWalkTimer = timer;
         return timer;
+    }
+
+    // PortSeleccion Encargo5 (26-sep-2026): suma la contribucion dinamica real del delegado
+    // custom de la mascota (Float/SlimePet/BerniePet, ver PetCustomAnimationCode) al offset BASE
+    // ya fijado en el constructor (PortSeleccion Encargo4) - "_isHovering" hace exactamente de
+    // "walking" del decompilado (ver el comentario de clase de PetCustomAnimationCode). Sin
+    // mascota animada catalogada, o sin "code" real, Evaluate siempre devuelve (0,0) y esto no
+    // cambia nada respecto al Encargo4.
+    private void RefreshPetOffset()
+    {
+        string? code = _petPreview?.AnimationEntry?.Code;
+        float elapsedTicks = _petAnimationDriver?.ElapsedTicksReal ?? 0f;
+        var (dx, dy) = PetCustomAnimationCode.Evaluate(code, elapsedTicks, _isHovering);
+        PetOffsetX = _petBaseOffsetX + dx;
+        PetOffsetY = _petBaseOffsetY + dy;
     }
 
     private void RefreshPreview()
@@ -271,6 +297,8 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         {
             _petAnimationDriver = new PetAnimationDriver(petEntry);
             _petImage = PetPreviewRenderer.RenderFrame(petEntry, 0);
+            _petBaseOffsetX = petEntry.OffsetX;
+            _petBaseOffsetY = petEntry.OffsetY;
             PetOffsetX = petEntry.OffsetX;
             PetOffsetY = petEntry.OffsetY;
             PetSpriteDirection = petEntry.SpriteDirection;
