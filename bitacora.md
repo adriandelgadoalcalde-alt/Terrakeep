@@ -30395,3 +30395,122 @@ se extraiga, revisar el tratamiento de `ItemEditTemplate` (unificar con
 `ChestInspectorItemEditTemplate` via `ResourceDictionary.MergedDictionaries` compartido si la
 verificacion empirica lo confirma seguro) y considerar investigar el hallazgo secundario del
 binding de Meta/Grupo/Prefijo documentado arriba.
+
+## ADR-TERRAKEEP-029 - decimotercera extraccion real de MainWindow.xaml: submodo Browse (Exploracion), 27-sep-2026
+
+Tercera extraccion del grupo 4.6 (EXPLORACION), tras WorldTools (ADR-027) y ChestInspector
+(ADR-028) - `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`). Browse (774
+lineas de encargo, `MainWindow.xaml` 5018-5774 reales antes de esta extraccion) es el submodo mas
+grande y con mas `FindName` reales de los 4 submodulos de EXPLORACION - movido a
+`Terrakeep.App/Views/BrowseView.xaml` + `.xaml.cs`, mismo patron `Views/`+sufijo `View.xaml`+sin
+`DataContext` propio ya fijado por las 12 rondas anteriores.
+
+**Grep exhaustivo real de dependencias** (nunca fiarse del plan sin comprobar - precedente
+ADR-028): de los 20 recursos window-scoped del plan original, Browse usa CUATRO -
+`BoolToVis` (7 usos: 4 en el cuerpo + 3 dentro de plantillas) mas TRES recursos que el plan NO
+mencionaba (`InventoryRowTemplate`, `ChestRowTemplate`, `VirtualRowContainer`) que grep confirmo
+EXCLUSIVOS de Browse (cero usos fuera del rango en todo el archivo, `VirtualRowContainer` era
+ademas el ULTIMO recurso de `Window.Resources`). `BoolToVis` -> `UserControl.Resources` local
+(`BrowseBoolToVis`, mismo mecanismo ya validado 7 veces - promover a `App.xaml` revienta
+`InitializeComponent()` entero en runtime, ADR-019). Las 3 plantillas EXCLUSIVAS se movieron TAL
+CUAL (mismo x:Key, sin renombrar - mismo caso ya resuelto por `CharacterCardTemplate`/HomeView,
+ADR-026) salvo sus referencias internas a `BoolToVis` (renombradas igual, 3 de las 7).
+
+**HALLAZGO REAL no anticipado por el plan, el mas serio de esta ronda**: el `Height` del
+`DockPanel` raiz (`ExplorationSidebarBrowseContent`) usaba
+`ElementName=ExplorationSidebarScroll` (el `ScrollViewer` que envuelve TODO el sidebar, x:Name
+solo en `MainWindow.xaml`, fuera del bloque que se mueve). Un `ElementName` resuelve por
+`NameScope` (busca el MAS CERCANO al elemento objetivo y NO sigue buscando mas arriba si no
+encuentra el nombre ahi) - un `UserControl` crea su PROPIO `NameScope` en
+`InitializeComponent()`, asi que el binding habria fallado en silencio (Height sin fijar, el
+DockPanel volveria a tamaño natural) - justo el bug real que Fase H (ADR-TERRAKEEP-001) resolvio
+moviendo el suelo de scroll a este mismo DockPanel, no una mejora cosmetica que se pudiera perder
+sin mas. Arreglo real: `RelativeSource={RelativeSource AncestorType=ScrollViewer}` en vez de
+`ElementName` - a diferencia de `NameScope`, `RelativeSource` camina el arbol logico/visual de
+verdad y SI cruza limites de `UserControl` (mismo principio ya confirmado por
+ADR-TERRAKEEP-016 punto 2e para `AncestorType=Window`). Confirmado por grep que no hay ningun
+OTRO `ScrollViewer` entre el `DockPanel` y `ExplorationSidebarScroll` - sin ambiguedad posible.
+Verificado con evidencia real medida (no solo "compila"): `FALLO3_SOLO=1` tras el cambio sigue
+dando los MISMOS numeros historicos ya documentados en ADR-001 (viewport=597px a 1180x860,
+igual que "hoy ese viewport son 597px medidos" citado alli) - si el binding hubiera fallado y
+caido a tamaño natural, estos numeros habrian sido muy distintos.
+
+**Caso nuevo de code-behind** (a diferencia de los 5 handlers de HomeView/ADR-026, que se
+pudieron MOVER enteros porque no se usaban fuera de su seccion): el atajo Ctrl+Alt+F de
+`OnWindowKeyDown` (`MainWindow.xaml.cs`) necesita enfocar `WorldSearchBox`, que ahora vive dentro
+de `BrowseView` (NameScope propio). Gancho publico minimo `BrowseView.FocusWorldSearchBox()`
+(mismo contenido exacto que el original) invocado como `BrowseView.FocusWorldSearchBox()` desde
+`MainWindow.xaml.cs` (mismo patron de "gancho publico minimo" ya usado por `OnLoadClick` en
+HomeView/ADR-026).
+
+**x:Name reales** (`ExplorationSidebarBrowseContent`/`ExplorationResultsBlock`/
+`WorldSearchSummaryText`/`ZeroResultsPanel`/`ExplorationCategoryContent`/`MissingNpcsExpander`/
+`MissingNpcsScroll`/`MissingNpcsList`/`NpcResultsList`/`ChestModeSelector`/`ChestByChestList`)
+usados por `window.FindName` en 6 archivos de test (`AuditoriaKeepQA.cs`,
+`AuditoriaViewportScroll.cs`, `CanarioClusterCofresInspector.cs`,
+`CanarioExploracionLayoutPermanente.cs`, `CanarioFlujoCompletoCofres.cs`, `Program.cs`, 30
+call-sites reales) - pasan al patron de `FindName` DOBLE ya usado por GUIA/ADR-021,
+Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028: `window.FindName("BrowseView")`
+seguido de `browseView.FindName("<x:Name real>")`. Donde varios call-sites del mismo metodo
+comparten scope se cacheo `browseViewHost` UNA vez y se reutilizo (mismo criterio ya usado por
+WorldTools/ADR-027 en `AuditoriaViewportScroll.cs`) en vez de repetir
+`window.FindName("BrowseView")` en cada linea.
+
+**VERIFICACION REAL COMPLETA**:
+- `dotnet clean` + `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores.
+- `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline).
+- Suite COMPLETA de `Terrakeep.App.Tests` (sin `_SOLO`) relanzada DOS veces: 16 FALLO en ambas
+  pasadas, EXACTAMENTE las mismas 9 categorias ya documentadas desde ADR-020..028 (H5-05x1,
+  A8-06x1, AR-14x4, A8-01x1, AR-11fx1, AR-MRK-CLICx1, AR-MRK-OTROSx5, A10-IDIOMA-BARRIDOx1,
+  AR-LAYx1) - CERO mencion de Browse/BrowseView/ExplorationCategoryContent/ExplorationResultsBlock
+  /ChestByChestList/MissingNpcs en ninguna de las dos pasadas.
+- Canarios gated especificos, todos en 0 FALLO/0 EXCEPTION: `COFRES_INSPECTOR_SOLO=1`
+  (`CanarioClusterCofresInspector.cs`, incluye el `ListaDeCategoria16()` que localiza
+  `ChestByChestList` real con 505 filas), `FLUJOCOFRES_SOLO=1`
+  (`CanarioFlujoCompletoCofres.cs`), `KEEPQA_VIEWPORT_SOLO=1` (`AuditoriaViewportScroll.cs`,
+  confirma `MissingNpcsScroll`/`NpcResultsList` con 26/26 y 14/14 hijos realizados),
+  `FALLO3_SOLO=1` (`AuditoriaKeepQA.cs`, re-verificacion AR-EX1 en 3 tamaños/combos de sidebar).
+  El canario incondicional `EXPLORATION_LAYOUT` (parte del recorrido normal) confirmo Browse
+  encontrado/visible con pildoras reales en 1180x860 y 1080x700.
+- Verificacion visual real: 2 capturas reales revisadas a mano -
+  `fallo3-exploracion-normal1180x860-sidebar320(defecto).png` (busqueda real de "Piedra infernal",
+  1000 de 8183 resultados, pildoras de categoria con contadores reales, lista con checkboxes/
+  distancia/tipo) y `cofres-p3-cofre-a-cofre.png` (modo "Cofre a cofre" real, `ChestRowTemplate`
+  renderizando sprite/nombre/objetos/coordenadas/boton Editar correctamente) - ambas confirman que
+  las 3 plantillas movidas y el converter `BrowseBoolToVis` resuelven sin ningun recurso roto.
+
+**Recompilacion y redespliegue real**: build Debug
+(`Terrakeep.App/bin/Debug/net10.0-windows/Terrakeep.exe`) recompilado 0/0. Copia instalada real
+NO estaba en ejecucion antes del despliegue (`Get-Process -Name Terrakeep` sin resultados).
+`DEPLOY_LOCK` adquirido antes de tocar `Assets/`/publish (snapshot antes=13056 ficheros/hash
+`068603cc...`, identico al baseline de ADR-020..028, sin drift). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish "%LocalAppData%\Programs\Terrakeep" /MIR /XF unins000.exe unins000.dat` (via
+`MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`), 0 errores, 0 extras. `Assets/`
+identico antes/despues (13056 ficheros, confirmado por `deployLock.despues`). Hash SHA256
+identico entre el `.exe` publicado y el instalado
+(`AC46D127365D40ECABF34B573EE1540B8183828D89C23915CF52A54B74E74B75` en ambos). Sanity check real:
+`Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio
+(`Stop-Process -Force`), sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Bloqueos de coordinacion**: `terrakeep-mainwindow-xaml` (`KeepQA\src\bloqueos\bloqueo.js`)
+reservado antes de tocar el XAML y liberado al terminar - libre en todo momento durante esta
+ronda, sin colision real con otro agente.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (atajo Ctrl+Alt+F actualizado),
+`Terrakeep.App/Views/BrowseView.xaml` + `.xaml.cs` (nuevos), `Terrakeep.App.Tests/AuditoriaKeepQA.cs`
++ `AuditoriaViewportScroll.cs` + `CanarioClusterCofresInspector.cs` +
+`CanarioExploracionLayoutPermanente.cs` + `CanarioFlujoCompletoCofres.cs` + `Program.cs`
+(`FindName` doble) - nunca `git add -A`, seguia habiendo ficheros ajenos modificados en el arbol
+por otros agentes en paralelo (`AuditoriaMaquetacion.cs`, `ComplementoKeepQA.cs`,
+`KEEPQA-INTEGRACION.md`, varios `Terrakeep.Core.Tests/*`, `scripts/*` - ninguno tocado). Registrado
+contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin
+`git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con Browse cerrado, queda
+el mapa+minimapa (el mas grande y con mas code-behind real de toda la seccion EXPLORACION -
+`CaptureMouse`/`Focus`/3 handlers) como ultima extraccion del grupo 4.6. Objetos (911 lineas,
+sub-tab de PERSONAJE) sigue pendiente aparte, dejado deliberadamente para el final por el plan
+original.

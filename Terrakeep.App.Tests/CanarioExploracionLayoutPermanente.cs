@@ -67,8 +67,14 @@ internal static partial class Program
                 DoEvents();
             }
 
+            // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml (UserControl con
+            // su propio NameScope) - FindName DOBLE, mismo patron ya usado por GUIA/ADR-021,
+            // Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028. browseViewHost se
+            // reutiliza en el resto de este metodo.
+            var browseViewHost = window.FindName("BrowseView") as FrameworkElement;
+
             // ---- Punto 3: guardia estatica anti-regresion del MinHeight (independiente de tamano/modo) ----
-            var browseContentGuardia = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+            var browseContentGuardia = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
             if (browseContentGuardia == null)
             {
                 Console.WriteLine("FALLO: EXPLORATION_LAYOUT-MINHEIGHT - ExplorationSidebarBrowseContent no encontrado en el arbol visual (x:Name cambio en MainWindow.xaml)");
@@ -116,7 +122,8 @@ internal static partial class Program
                     scrollLateral.ScrollToTop();
                     DoEvents(); DoEvents();
 
-                    var browseContent = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                    // ADR-TERRAKEEP-029: reusa browseViewHost (FindName doble) ya obtenido arriba.
+                    var browseContent = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
                     bool browseConContenido = browseContent != null && browseContent.IsVisible
                         && Descendientes<RadioButton>(browseContent).Any(r => r.IsVisible);
                     Console.WriteLine($"EXPLORATION_LAYOUT-CONTENIDO: Browse a {etiqueta} -> encontrado={browseContent != null}, IsVisible={browseContent?.IsVisible}, con pildoras de categoria reales visibles={browseConContenido}");

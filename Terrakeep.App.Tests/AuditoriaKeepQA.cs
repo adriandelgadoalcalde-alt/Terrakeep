@@ -48,7 +48,7 @@ internal static partial class Program
     {
         try
         {
-            string catalogoPath = @"C:\Users\adrian\Downloads\KeepQA\src\adversarial\catalogo.json";
+            string catalogoPath = @"C:\Users\adrian\Downloads\Keep\KeepQA\src\adversarial\catalogo.json";
             if (!File.Exists(catalogoPath))
             {
                 Console.WriteLine("KEEPQA_SOLO: catalogo.json no encontrado en " + catalogoPath + " - omitido");
@@ -487,8 +487,12 @@ internal static partial class Program
             double anchoOriginal = window.Width, altoOriginal = window.Height;
             double sidebarOriginal = vm.Settings.ExplorationSidebarWidth;
 
-            var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
-            var bloqueRes = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+            // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml (UserControl con
+            // su propio NameScope) - FindName DOBLE, mismo patron ya usado por GUIA/ADR-021,
+            // Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028.
+            var browseViewHost = window.FindName("BrowseView") as FrameworkElement;
+            var contenidoCat = browseViewHost?.FindName("ExplorationCategoryContent") as FrameworkElement;
+            var bloqueRes = browseViewHost?.FindName("ExplorationResultsBlock") as FrameworkElement;
             var svLat = window.FindName("ExplorationSidebarScroll") as ScrollViewer;
             if (contenidoCat == null || bloqueRes == null || svLat == null)
             {
@@ -582,8 +586,10 @@ internal static partial class Program
                     vm.Exploration.SelectedCategory = cat;
                     if (cat == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = modoCofres;
                     DoEvents(); DoEvents();
+                    // ADR-TERRAKEEP-029: ChestByChestList vive en BrowseView - reusa browseViewHost
+                    // (FindName doble) ya obtenido arriba en este mismo metodo.
                     ItemsControl? lista = cat == WorldSearchCategory.Chests && modoCofres == 2
-                        ? window.FindName("ChestByChestList") as ItemsControl
+                        ? browseViewHost?.FindName("ChestByChestList") as ItemsControl
                         : Descendientes<ListBox>(window).FirstOrDefault(lb => lb.IsVisible && ReferenceEquals(lb.ItemsSource, vm.Exploration.Inventory));
                     int totalFilas = lista?.Items.Count ?? 0;
                     int visiblesEnteras = 0;

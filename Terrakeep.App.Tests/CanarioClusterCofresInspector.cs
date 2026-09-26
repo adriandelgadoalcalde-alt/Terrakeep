@@ -151,7 +151,14 @@ internal static partial class Program
                     Console.WriteLine("FALLO: COFRES-INSPECTOR-P1 - el Style del boton 'Editar' SI condiciona Visibility/Opacity a IsMouseOver - esto reproduciria el bug de hover del punto 1");
             }
 
-            var bloqueResultados = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+            // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml (UserControl con
+            // su propio NameScope) - FindName DOBLE, mismo patron ya usado por GUIA/ADR-021,
+            // Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028. browseViewHost se
+            // reutiliza en el resto de este mismo metodo (un unico window.FindName("BrowseView")
+            // real, BrowseView es un hijo SIEMPRE presente del Grid host, su Visibility no afecta
+            // a FindName).
+            var browseViewHost = window.FindName("BrowseView") as FrameworkElement;
+            var bloqueResultados = browseViewHost?.FindName("ExplorationResultsBlock") as FrameworkElement;
             int countResultados = vm.Exploration.WorldSearchResults.Count;
             int countCofres = vm.Exploration.ChestRows.Count;
             if (bloqueResultados == null)
@@ -278,7 +285,8 @@ internal static partial class Program
 
                 vm.Exploration.ChestViewMode = 1;
                 DoEvents(); DoEvents(); window.UpdateLayout();
-                var bloqueResultadosPorContenido = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                // ADR-TERRAKEEP-029: reusa browseViewHost (FindName doble) ya obtenido arriba.
+                var bloqueResultadosPorContenido = browseViewHost?.FindName("ExplorationResultsBlock") as FrameworkElement;
                 Console.WriteLine($"COFRES-INSPECTOR-P3: modo 'Por lo que contienen' (misma causa, sin buscar aun) -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado 0), ExplorationResultsBlock.Visibility={bloqueResultadosPorContenido?.Visibility}, ActualHeight real medido={bloqueResultadosPorContenido?.ActualHeight:0.#}px");
                 if (vm.Exploration.WorldSearchResults.Count == 0 && bloqueResultadosPorContenido?.Visibility == Visibility.Visible && bloqueResultadosPorContenido.ActualHeight > 40)
                     Console.WriteLine($"FALLO: COFRES-INSPECTOR-P3 - mismo hueco vacio real en 'Por lo que contienen' antes de buscar ({bloqueResultadosPorContenido.ActualHeight:0.#}px)");
@@ -441,14 +449,15 @@ internal static partial class Program
                 Directory.CreateDirectory(outDirFaseC);
 
                 var hostFaseC = window.FindName("ExplorationSidebarBrowseInspectorHost") as FrameworkElement;
-                var browseFaseC = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                // ADR-TERRAKEEP-029: reusa browseViewHost (FindName doble) ya obtenido arriba.
+                var browseFaseC = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
                 // ADR-TERRAKEEP-028 (26-sep-2026): ChestInspector se movio a ChestInspectorView.xaml
                 // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado por
                 // GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027.
                 var placeholderFaseC = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                 var wrapCategoriasFaseC = Descendientes<WrapPanel>(window).FirstOrDefault();
-                var contenidoCatFaseC = window.FindName("ExplorationCategoryContent") as FrameworkElement;
-                var bloqueResFaseC = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                var contenidoCatFaseC = browseViewHost?.FindName("ExplorationCategoryContent") as FrameworkElement;
+                var bloqueResFaseC = browseViewHost?.FindName("ExplorationResultsBlock") as FrameworkElement;
                 if (hostFaseC == null || browseFaseC == null || placeholderFaseC == null)
                     Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - no se encuentra ExplorationSidebarBrowseInspectorHost/ExplorationSidebarBrowseContent/ExplorationSidebarChestInspectorPlaceholder en el arbol visual (MainWindow.xaml)");
                 else
@@ -538,7 +547,8 @@ internal static partial class Program
             {
                 // ADR-TERRAKEEP-028: FindName DOBLE, ChestInspectorView tiene su propio NameScope.
                 var placeholderFaseD = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
-                var browseFaseD = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                // ADR-TERRAKEEP-029: reusa browseViewHost (FindName doble) ya obtenido arriba.
+                var browseFaseD = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
                 if (placeholderFaseD == null || browseFaseD == null)
                     Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED - no se encuentra ExplorationSidebarChestInspectorPlaceholder/ExplorationSidebarBrowseContent en el arbol visual");
                 else
@@ -551,7 +561,7 @@ internal static partial class Program
                     // Antes de abrir nada, confirma leyendo el arbol de la propia lista de filas que
                     // ningun descendiente de ChestByChestList tiene un binding Content a ChestItemEdit
                     // (si lo tuviera, seria el editor DUPLICADO reintroducido por error).
-                    var listaFilasFaseD = window.FindName("ChestByChestList") as ItemsControl;
+                    var listaFilasFaseD = browseViewHost?.FindName("ChestByChestList") as ItemsControl;
                     bool editorDuplicadoEnFila = listaFilasFaseD != null && Descendientes<ContentControl>(listaFilasFaseD).Any(cc =>
                         (BindingOperations.GetBindingExpression(cc, ContentControl.ContentProperty)?.ParentBinding?.Path?.Path)?.Contains("ChestItemEdit") == true);
                     Console.WriteLine($"COFRES-INSPECTOR-FASED: ChestByChestList encontrada={listaFilasFaseD != null}, ContentControl->ChestItemEdit DUPLICADO dentro de la fila={editorDuplicadoEnFila} (esperado False)");
@@ -811,7 +821,8 @@ internal static partial class Program
                     (BindingOperations.GetBindingExpression(r, RadioButton.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.ShowSidebarBrowseCommand");
                 var selectorMundo = Descendientes<RadioButton>(window).FirstOrDefault(r =>
                     (BindingOperations.GetBindingExpression(r, RadioButton.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.ShowSidebarWorldToolsCommand");
-                var browseFaseF = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                // ADR-TERRAKEEP-029: reusa browseViewHost (FindName doble) ya obtenido arriba.
+                var browseFaseF = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
                 // ADR-TERRAKEEP-027: WorldTools ahora vive en su propio UserControl
                 // (WorldToolsView) - FindName DOBLE (mismo patron ya usado por GUIA/ADR-021 y
                 // Compare/ADR-025).

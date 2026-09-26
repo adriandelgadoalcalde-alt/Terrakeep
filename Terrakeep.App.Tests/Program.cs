@@ -1317,7 +1317,11 @@ internal static partial class Program
                         foreach (var fila in acumuladasEx3) fila.IsChecked = true;
                         vm.Exploration.MarkObjectsOnMapCommand.Execute(null);
                         WaitForDispatcher(4000);
-                        var textoResumen = window.FindName("WorldSearchSummaryText") as System.Windows.Controls.TextBlock;
+                        // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml
+                        // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya
+                        // usado por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027 y
+                        // ChestInspector/ADR-028.
+                        var textoResumen = (window.FindName("BrowseView") as FrameworkElement)?.FindName("WorldSearchSummaryText") as System.Windows.Controls.TextBlock;
                         Console.WriteLine($"EX3_SOLO: {acumuladasEx3.Count} tile(s) marcados cubren {tilesAcumuladosEx3:N0} de {totalTilesEx3:N0} ({fraccionEx3:P1}) -> resumen='{vm.Exploration.WorldSearchSummary}', WorldSearchSummaryIsWarning={vm.Exploration.WorldSearchSummaryIsWarning} (esperado True, cubre mas del 40%)");
                         if (fraccionEx3 >= 0.4 && !vm.Exploration.WorldSearchSummaryIsWarning)
                             Console.WriteLine("FALLO: EX3_SOLO - la seleccion pasa del 40% y WorldSearchSummaryIsWarning sigue en False");
@@ -8832,9 +8836,13 @@ internal static partial class Program
                 try
                 {
                     var sidebar = window.FindName("ExplorationSidebarPanel") as FrameworkElement;
-                    var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
-                    var bloqueResultados = window.FindName("ExplorationResultsBlock") as FrameworkElement;
-                    var chipsCofres = window.FindName("ChestModeSelector") as FrameworkElement;
+                    // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                    // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028.
+                    var browseViewHostAr11 = window.FindName("BrowseView") as FrameworkElement;
+                    var contenidoCat = browseViewHostAr11?.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueResultados = browseViewHostAr11?.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    var chipsCofres = browseViewHostAr11?.FindName("ChestModeSelector") as FrameworkElement;
                     if (sidebar == null || contenidoCat == null || bloqueResultados == null || chipsCofres == null)
                         Console.WriteLine("FALLO: AR-11 - no se encontraron los elementos con nombre de la barra lateral de Exploracion (¿se renombraron en MainWindow.xaml?)");
                     else
@@ -9518,9 +9526,13 @@ internal static partial class Program
                 // (MinWidth=1080/MinHeight=700 en MainWindow.xaml).
                 try
                 {
-                    var expFaltan = window.FindName("MissingNpcsExpander") as System.Windows.Controls.Expander;
-                    var listaFaltan = window.FindName("MissingNpcsList") as ItemsControl;
-                    var listaNpcs = window.FindName("NpcResultsList") as FrameworkElement;
+                    // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                    // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028.
+                    var browseViewHostAr15 = window.FindName("BrowseView") as FrameworkElement;
+                    var expFaltan = browseViewHostAr15?.FindName("MissingNpcsExpander") as System.Windows.Controls.Expander;
+                    var listaFaltan = browseViewHostAr15?.FindName("MissingNpcsList") as ItemsControl;
+                    var listaNpcs = browseViewHostAr15?.FindName("NpcResultsList") as FrameworkElement;
                     if (expFaltan == null || listaFaltan == null)
                         Console.WriteLine("FALLO: AR-15 - no se encontro el Expander/lista de 'NPCs que faltan' en el arbol visual (¿se renombraron MissingNpcsExpander/MissingNpcsList en MainWindow.xaml?)");
                     else
@@ -9626,8 +9638,13 @@ internal static partial class Program
                 // se ven enteras.
                 try
                 {
-                    var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
-                    var bloqueRes = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                    // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028.
+                    // browseViewHost16 se reutiliza tambien dentro de ListaDeCategoria16() mas abajo.
+                    var browseViewHost16 = window.FindName("BrowseView") as FrameworkElement;
+                    var contenidoCat = browseViewHost16?.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueRes = browseViewHost16?.FindName("ExplorationResultsBlock") as FrameworkElement;
                     var svLat16 = window.FindName("ExplorationSidebarScroll") as System.Windows.Controls.ScrollViewer;
                     if (contenidoCat == null || bloqueRes == null || svLat16 == null)
                         Console.WriteLine("FALLO: AR-EX1 - no se encontro ExplorationCategoryContent/ExplorationResultsBlock/ExplorationSidebarScroll en el arbol visual");
@@ -9656,7 +9673,7 @@ internal static partial class Program
                         // una de las dos esta visible en cada momento).
                         ItemsControl? ListaDeCategoria16() => vm.Exploration.SelectedCategory switch
                         {
-                            WorldSearchCategory.Chests when vm.Exploration.ChestViewMode == 2 => window.FindName("ChestByChestList") as ItemsControl,
+                            WorldSearchCategory.Chests when vm.Exploration.ChestViewMode == 2 => browseViewHost16?.FindName("ChestByChestList") as ItemsControl,
                             WorldSearchCategory.Chests or WorldSearchCategory.Objects =>
                                 Descendientes<ListBox>(window).FirstOrDefault(lb => lb.IsVisible && ReferenceEquals(lb.ItemsSource, vm.Exploration.Inventory)),
                             WorldSearchCategory.Ores =>
@@ -10339,8 +10356,10 @@ internal static partial class Program
                 try
                 {
                     // (c) El reparto vertical de AR-EX1, en INGLES y en los tamaños que mas aprietan.
-                    var contenidoCatEn = window.FindName("ExplorationCategoryContent") as FrameworkElement;
-                    var bloqueResEn = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    // ADR-TERRAKEEP-029: Browse se movio a BrowseView.xaml - FindName DOBLE.
+                    var browseViewHostEx4 = window.FindName("BrowseView") as FrameworkElement;
+                    var contenidoCatEn = browseViewHostEx4?.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueResEn = browseViewHostEx4?.FindName("ExplorationResultsBlock") as FrameworkElement;
                     if (contenidoCatEn == null || bloqueResEn == null) Console.WriteLine("FALLO: AR-EX4-IDIOMA - no se encontro el contenido de categoria / bloque de resultados");
                     else
                     {

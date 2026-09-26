@@ -217,7 +217,10 @@ public partial class MainWindow : Window
         if (ctrl && alt && e.Key == Key.F)
         {
             _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion
-            Dispatcher.BeginInvoke(new Action(() => { WorldSearchBox.Focus(); WorldSearchBox.SelectAll(); }),
+            // ADR-TERRAKEEP-016/029 (26-sep-2026): WorldSearchBox vive ahora dentro de
+            // Views/BrowseView.xaml (NameScope propio) - gancho publico minimo en vez de un campo
+            // directo, mismo mecanismo real ya usado por HomeView/ADR-026 para OnLoadClick.
+            Dispatcher.BeginInvoke(new Action(() => BrowseView.FocusWorldSearchBox()),
                 System.Windows.Threading.DispatcherPriority.Background);
             e.Handled = true;
         }

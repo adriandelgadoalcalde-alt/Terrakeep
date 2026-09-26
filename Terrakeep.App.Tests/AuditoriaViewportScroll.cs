@@ -575,13 +575,17 @@ internal static partial class Program
                     vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
                     vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
                     DoEvents(); DoEvents();
-                    var missingExpanderFaseH = window.FindName("MissingNpcsExpander") as Expander;
+                    // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                    // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027 y ChestInspector/ADR-028.
+                    var browseViewHostFaseH = window.FindName("BrowseView") as FrameworkElement;
+                    var missingExpanderFaseH = browseViewHostFaseH?.FindName("MissingNpcsExpander") as Expander;
                     if (missingExpanderFaseH != null) { missingExpanderFaseH.IsExpanded = true; DoEvents(); DoEvents(); }
-                    var missingScrollFaseH = window.FindName("MissingNpcsScroll") as ScrollViewer;
-                    var missingListFaseH = window.FindName("MissingNpcsList") as ItemsControl;
+                    var missingScrollFaseH = browseViewHostFaseH?.FindName("MissingNpcsScroll") as ScrollViewer;
+                    var missingListFaseH = browseViewHostFaseH?.FindName("MissingNpcsList") as ItemsControl;
                     VolcarViewport("MissingNpcsScroll", "scrollviewer_expander", missingScrollFaseH, missingListFaseH, "contenido");
 
-                    var npcResultsScrollFaseH = window.FindName("NpcResultsList") as ScrollViewer;
+                    var npcResultsScrollFaseH = browseViewHostFaseH?.FindName("NpcResultsList") as ScrollViewer;
                     var icNpcResultsFaseH = npcResultsScrollFaseH == null ? null : Descendientes<ItemsControl>(npcResultsScrollFaseH).FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Exploration.NpcSearchResults));
                     VolcarViewport("NpcResultsList", "scrollviewer_sidebar", npcResultsScrollFaseH, icNpcResultsFaseH, "contenido");
 

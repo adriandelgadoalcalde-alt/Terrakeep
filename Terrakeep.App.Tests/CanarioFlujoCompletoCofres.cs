@@ -81,7 +81,10 @@ internal static partial class Program
             // GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027.
             var chestInspectorViewHost = window.FindName("ChestInspectorView") as FrameworkElement;
             var placeholder = chestInspectorViewHost?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
-            var browseContent = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+            // ADR-TERRAKEEP-029 (26-sep-2026): Browse se movio a BrowseView.xaml (UserControl con
+            // su propio NameScope) - mismo patron de FindName DOBLE que ChestInspectorView arriba.
+            var browseViewHost = window.FindName("BrowseView") as FrameworkElement;
+            var browseContent = browseViewHost?.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
 
             vm.Exploration.EditChestCommand.Execute(chestA);
             DoEvents(); DoEvents(); window.UpdateLayout();
