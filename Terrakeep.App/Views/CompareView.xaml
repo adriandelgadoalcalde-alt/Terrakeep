@@ -1,0 +1,354 @@
+<!-- ADR-TERRAKEEP-016/025 (26-sep-2026): NOVENA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, cuarta y ULTIMA del grupo de sub-tabs de PERSONAJE (punto
+     4.5 del plan, siguiente paso recomendado por ADR-TERRAKEEP-024 tras Unlocks) - Objetos
+     (911 lineas) queda fuera de este grupo, para el final segun el propio plan original.
+
+     Compare (206 lineas) es la seccion mas delicada del grupo de sub-tabs, senalada como tal por
+     el propio ADR-TERRAKEEP-016: usa TRES DataTemplate window-scoped (x:Key SOLO en
+     Window.Resources de MainWindow.xaml, lineas 264-329 ANTES de esta extraccion) -
+     CompareCharacterPickerItemTemplate (DataType=CharacterListEntryViewModel, ItemTemplate de
+     los 2 ComboBox de seleccion de personaje), CompareItemCellTemplate (DataType=
+     CompareItemViewModel, celda de "Equipo") y CompareInventoryCellTemplate (DataType=
+     CompareInventorySlotViewModel, celda de "Inventario", 2x50 usos reales). Grep exhaustivo
+     confirmado ANTES de mover nada (mismo criterio de ADR-TERRAKEEP-019/021/024): las TRES
+     plantillas solo se referencian a si mismas por StaticResource dentro del propio TabItem
+     COMPARE (ComboBox.ItemTemplate en los 2 selectores + ContentPresenter/ContentControl.
+     ContentTemplate en las filas de Equipo/Inventario) - ninguna otra seccion del arbol
+     (Objetos, Inicio, etc.) las usa, así que las tres viajan JUNTAS a este UserControl sin dejar
+     ninguna huerfana en Window.Resources ni partir una referencia cruzada entre plantillas (a
+     diferencia de lo que temia el plan original, ninguna de las tres se usa como ItemTemplate/
+     ContentTemplate DENTRO de otra de las tres - las tres son hojas independientes, solo
+     comparten el mismo TabItem que las consume).
+
+     Igual que HostingView/ADR-019, GuideView/ADR-021 y UnlocksView/ADR-024: BoolToVis
+     (BooleanToVisibilityConverter, x:Key SOLO en Window.Resources) se usa 4 veces dentro de este
+     bloque (2 dentro de CompareItemCellTemplate/CompareInventoryCellTemplate, 2 mas en el cuerpo
+     del TabItem) - NUNCA promovido a Application.Resources, <UserControl.Resources> LOCAL con
+     clave propia CompareBoolToVis (distinta de BoolToVis/GuideBoolToVis/HostingBoolToVis/
+     UnlocksBoolToVis, sin colision con ninguna ya usada por otro UserControl extraido). El resto
+     de recursos que usa esta seccion (CaptionText, BodyText, SectionText, MetricAccentText,
+     BgSecondaryBrush, AccentBrush, AccentMutedBrush, PinkBrush, TextSecondaryBrush,
+     BgElevatedBrush, TextPrimaryBrush, NullToVis, InverseBoolToVis, LocFormat) confirmados en
+     Styles/Theme.xaml o App.xaml, ninguno mas window-scoped.
+
+     x:Name="CompareResultsScrollViewer" (usado por T9_SOLO y COMPARE_SOLO de Program.cs via
+     window.FindName) pasa al patron de FindName DOBLE ya usado por GUIA/ADR-021: los call-sites
+     ahora hacen window.FindName("CompareView") y despues compareView.FindName(
+     "CompareResultsScrollViewer") - un UserControl compilado es dueño de su propio NameScope.
+
+     Contenido copiado BYTE A BYTE del TabItem "COMPARE" (septimo y ultimo sub-tab real del
+     TabControl interno de PERSONAJE) en MainWindow.xaml - solo re-indentado al moverse de sitio
+     y BoolToVis->CompareBoolToVis en los 4 sitios señalados arriba, ningun otro caracter de
+     contenido cambiado. El UserControl no fija su propio DataContext, hereda el MainViewModel
+     real del Window. Sin code-behind propio en MainWindow.xaml.cs para este sub-tab (todo
+     Bindings/Commands). -->
+<UserControl x:Class="Terrakeep.App.Views.CompareView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="CompareBoolToVis" />
+
+        <!-- Comparador de personajes: entrada de los dos selectores. DisplayMemberPath a secas
+             (probado primero, mas simple) se quedo mostrando el NOMBRE DE TIPO en bruto
+             ("Terrakeep.App.ViewModels.CharacterListEntryViewModel") en el cuadro cerrado del
+             ComboBox real - SelectionBoxItem/SelectionBoxItemTemplate del ControlTemplate
+             propio de este ComboBox (en MainWindow.xaml) no generan la plantilla implicita de
+             DisplayMemberPath cuando SelectedItem se fija por Binding en vez de por un clic real
+             en la lista desplegada (encontrado en la PRIMERA captura real de esa ronda, no
+             adivinado) - ItemTemplate explicito no depende de esa generacion automatica,
+             funciona en los dos casos. Nombre + dificultad + fecha real de modificacion: dos
+             personajes reales de esta maquina se llaman igual y estan en el mismo modo (dos
+             "adrian | Viaje" de fechas distintas) - solo el nombre no bastaria para elegir el
+             correcto. -->
+        <DataTemplate x:Key="CompareCharacterPickerItemTemplate" DataType="{x:Type vm:CharacterListEntryViewModel}">
+            <TextBlock TextTrimming="CharacterEllipsis" MaxWidth="260">
+                <Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" />
+                <Run Text=" — " />
+                <Run Text="{Binding DifficultyLabel, Mode=OneWay}" />
+                <Run Text=" — " />
+                <Run Text="{Binding LastModifiedText, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" />
+            </TextBlock>
+        </DataTemplate>
+
+        <!-- Comparador de personajes (13-sep-2026): una celda de "Equipo" (icono + nombre +
+             prefijo, mas el tinte puesto si lo hay) - CompareItemViewModel es de solo lectura, a
+             diferencia de LibraryItemViewModel/ItemSlotViewModel no lleva ningun Command. Objeto
+             vacio real (IsEmpty) enseña el mismo guion mudo que el resto de la app usa para
+             "nada puesto", nunca un icono en blanco sin explicacion. -->
+        <DataTemplate x:Key="CompareItemCellTemplate" DataType="{x:Type vm:CompareItemViewModel}">
+            <StackPanel Orientation="Horizontal" MinHeight="32">
+                <TextBlock Text="{Binding Loc[compare_empty_slot], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                           VerticalAlignment="Center" Visibility="{Binding IsEmpty, Converter={StaticResource CompareBoolToVis}}" />
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsEmpty, Converter={StaticResource InverseBoolToVis}}">
+                    <Image Source="{Binding IconPath}" Width="26" Height="26" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="220">
+                            <Run Text="{Binding Name, Mode=OneWay}" />
+                            <Run Text="{Binding CountLabel, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding PrefixName}" Style="{StaticResource CaptionText}" FontSize="10.5"
+                                   Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" MaxWidth="220"
+                                   Visibility="{Binding PrefixName, Converter={StaticResource NullToVis}}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Comparador de personajes: una celda de "Inventario" (icono pequeño, tooltip con el
+             detalle - 50 por lado no caben con texto al lado, mismo criterio de densidad que
+             cualquier rejilla de inventario de la app). Borde de acento cuando el mismo INDICE
+             de slot difiere entre los dos personajes - IsDifferent ya la calculo
+             CompareViewModel comparando A y B en la MISMA posicion. -->
+        <DataTemplate x:Key="CompareInventoryCellTemplate" DataType="{x:Type vm:CompareInventorySlotViewModel}">
+            <Border Width="34" Height="34" Margin="2" CornerRadius="5" Background="{StaticResource BgElevatedBrush}"
+                    BorderThickness="2" ToolTip="{Binding Item.Name}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Image Source="{Binding Item.IconPath}" Margin="3" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding Item.IconPath, Converter={StaticResource NullToVis}}" />
+                    <TextBlock Text="{Binding Item.Count}" FontSize="9" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
+                               Visibility="{Binding Item.ShowCount, Converter={StaticResource CompareBoolToVis}}">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Black" Direction="0" ShadowDepth="0" BlurRadius="3" Opacity="0.9" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- Catalogo de rediseño visual T9 (20-sep-2026): "Comparador como vista dividida, no como
+         modal de 1400x900... libera el patron overlay para lo que de verdad es modal (Historial,
+         Codigo de build)". Pestaña real de Personaje en vez de overlay de nivel de ventana -
+         cabecera pegajosa con los dos selectores (Grid.Row=1, FUERA del ScrollViewer de mas
+         abajo) y el cuerpo con scroll debajo (Grid.Row=2). Mismo CompareViewModel de siempre,
+         sin IsOpen/Open/Close/Noop (ya no hacen falta: la pestaña VISIBLE es el propio "abierto",
+         MainViewModel.OpenCompareCommand solo selecciona esta pestaña). Fondos de tarjeta
+         subidos de BgPrimaryBrush a BgSecondaryBrush: dentro del overlay antiguo (fondo
+         BgSecondaryBrush) BgPrimaryBrush quedaba mas oscuro que su alrededor a proposito; aqui el
+         fondo real ya es BgPrimaryBrush (el de toda la ventana, Theme.xaml Window), asi que la
+         misma tarjeta con BgPrimaryBrush se habria fundido con el fondo sin ningun contraste -
+         BgSecondaryBrush es el que SI se distingue, mismo criterio ya usado por SidePanelCard. -->
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding Loc[compare_panel_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                   TextWrapping="Wrap" Margin="0,0,0,10" />
+
+        <!-- Selectores: dos personajes reales de la MISMA lista ya escaneada
+             por Inicio (Compare.AvailableCharacters=Home.Characters, sin
+             volver a recorrer el disco). -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="10">
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedA.Preview}" Width="36" Height="36" Margin="0,0,10,0"
+                           Visibility="{Binding Compare.SelectedA, Converter={StaticResource NullToVis}}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Loc[compare_pick_a], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                        <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
+                                  SelectedItem="{Binding Compare.SelectedA}" MinWidth="200" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="2" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="10">
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedB.Preview}" Width="36" Height="36" Margin="0,0,10,0"
+                           Visibility="{Binding Compare.SelectedB, Converter={StaticResource NullToVis}}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Loc[compare_pick_b], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                        <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
+                                  SelectedItem="{Binding Compare.SelectedB}" MinWidth="200" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- Cuerpo: cuatro estados reales posibles, mutuamente excluyentes
+             (NeedsMoreCharacters/sin elegir los dos/error de carga/resultados). -->
+        <Grid Grid.Row="2">
+            <TextBlock Text="{Binding Loc[compare_button_need_two], Mode=OneWay}" Style="{StaticResource BodyText}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400"
+                       Visibility="{Binding Compare.NeedsMoreCharacters, Converter={StaticResource CompareBoolToVis}}" />
+
+            <TextBlock Text="{Binding Loc[compare_pick_prompt], Mode=OneWay}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Compare.NeedsMoreCharacters}" Value="False" />
+                                    <Condition Binding="{Binding Compare.HasBothSelected}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <TextBlock Text="{Binding Compare.ErrorMessage}" Foreground="{StaticResource PinkBrush}" Style="{StaticResource BodyText}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="500"
+                       Visibility="{Binding Compare.ErrorMessage, Converter={StaticResource NullToVis}}" />
+
+            <ScrollViewer x:Name="CompareResultsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding Compare.ShowResults, Converter={StaticResource CompareBoolToVis}}">
+                <StackPanel>
+                    <!-- Familia "MetricAccentText" (rediseno de badges, 25-sep-2026): SIN
+                         Border propio - la metrica manda por si misma, con una barra de
+                         acento vertical al lado en vez de una capsula que la encierre. -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,10">
+                        <Border Width="2" Height="14" CornerRadius="1" VerticalAlignment="Center"
+                                Background="{StaticResource AccentBrush}" Margin="0,0,6,0" />
+                        <TextBlock VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource MetricAccentText}">
+                                    <Setter Property="Text">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource LocFormat}">
+                                                <Binding Path="Loc[compare_difference_count]" Mode="OneWay" />
+                                                <Binding Path="Compare.DifferenceCount" Mode="OneWay" />
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Compare.DifferenceCount}" Value="0">
+                                            <Setter Property="Text" Value="{Binding Loc[compare_no_differences], Mode=OneWay}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Bloque Estadisticas -->
+                    <TextBlock Text="{Binding Loc[compare_section_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Compare.StatRows}" Margin="0,0,0,16">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:CompareStatRowViewModel}">
+                                <Border CornerRadius="6" Padding="8,5" Margin="0,0,0,2">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="220" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ValueA}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding ValueB}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" HorizontalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Bloque Equipo -->
+                    <TextBlock Text="{Binding Loc[compare_section_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Compare.EquipmentRows}" Margin="0,0,0,16">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:CompareEquipmentRowViewModel}">
+                                <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,2">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <ContentPresenter Grid.Column="1" Content="{Binding ItemA}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
+                                        <ContentPresenter Grid.Column="2" Content="{Binding ItemB}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Bloque Inventario: 50 celdas por lado, en rejilla que
+                         se ajusta sola al ancho real (WrapPanel), nunca
+                         desbordando. -->
+                    <TextBlock Text="{Binding Loc[compare_section_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="6">
+                            <ItemsControl ItemsSource="{Binding Compare.InventoryA}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                        <Border Grid.Column="2" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="6">
+                            <ItemsControl ItemsSource="{Binding Compare.InventoryB}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

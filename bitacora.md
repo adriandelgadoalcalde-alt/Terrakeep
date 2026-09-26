@@ -29982,3 +29982,106 @@ contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`)
 **Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): del grupo 4.5 solo queda
 Compare (206 lineas, usa 3 `DataTemplate` window-scoped confirmados por grep de `ADR-021`, mas
 delicado - ronda dedicada aparte). Objetos (911 lineas) se deja para el final del grupo.
+
+## Novena extraccion real de una seccion de MainWindow.xaml a UserControl - COMPARE (26-sep-2026)
+
+`ADR-TERRAKEEP-025`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Cuarta y ULTIMA extraccion
+del grupo 4.5 (sub-tabs de PERSONAJE), tras Unlocks/`ADR-024` - cierra el grupo entero
+(Spawnpoints/`ADR-022`, Version/`ADR-023`, Unlocks/`ADR-024`, Compare/`ADR-025`). Compare (206
+lineas) era la seccion mas delicada del grupo, senalada como tal por el propio plan original
+`ADR-TERRAKEEP-016`: usa TRES `DataTemplate` window-scoped (`x:Key` SOLO en `Window.Resources` de
+`MainWindow.xaml`, lineas 264-329 antes de esta ronda) - `CompareCharacterPickerItemTemplate`
+(`DataType=CharacterListEntryViewModel`), `CompareItemCellTemplate`
+(`DataType=CompareItemViewModel`) y `CompareInventoryCellTemplate`
+(`DataType=CompareInventorySlotViewModel`).
+
+**Grep exhaustivo ANTES de mover nada** (mismo criterio de `ADR-019`/`021`/`024`): las TRES
+plantillas SOLO se referencian a si mismas por `StaticResource` dentro del propio `TabItem`
+COMPARE (los 2 `ComboBox.ItemTemplate` de los selectores + los
+`ContentPresenter`/`ContentControl.ContentTemplate` de las filas de Equipo/Inventario) - ninguna
+otra seccion del arbol (Objetos, Inicio, etc.) las usa. Confirmado tambien que NINGUNA de las tres
+se referencia a si misma ni a otra de las tres desde dentro (a diferencia de lo que temia el
+encargo sobre "referencias cruzadas entre templates") - las tres son hojas independientes que solo
+comparten el mismo `TabItem` consumidor, asi que viajaron JUNTAS a
+`Terrakeep.App/Views/CompareView.xaml` sin dejar ninguna huerfana en `Window.Resources` ni partir
+ninguna referencia cruzada real.
+
+Mismo caso ya resuelto por `ADR-TERRAKEEP-019`/HostingView, `ADR-021`/GuideView y
+`ADR-024`/UnlocksView: `BoolToVis` (`BooleanToVisibilityConverter`, `x:Key` SOLO en
+`Window.Resources`) se usa 4 veces dentro de este bloque (2 dentro de
+`CompareItemCellTemplate`/`CompareInventoryCellTemplate`, 2 mas en el cuerpo del `TabItem`:
+`Compare.NeedsMoreCharacters` y `Compare.ShowResults`) - NUNCA promovido a `Application.Resources`,
+`<UserControl.Resources>` LOCAL con clave propia `CompareBoolToVis` (distinta de
+`BoolToVis`/`GuideBoolToVis`/`HostingBoolToVis`/`UnlocksBoolToVis`, sin colision con ninguna ya
+usada). El resto de recursos (`CaptionText`, `BodyText`, `SectionText`, `MetricAccentText`,
+`BgSecondaryBrush`, `AccentBrush`, `AccentMutedBrush`, `PinkBrush`, `TextSecondaryBrush`,
+`BgElevatedBrush`, `TextPrimaryBrush`, `NullToVis`, `InverseBoolToVis`, `LocFormat`) confirmados en
+`Styles/Theme.xaml` o `App.xaml`, ninguno mas window-scoped.
+
+**Hallazgo real secundario (timing, no funcional, mismo mecanismo que `ADR-019`/HostingView)**:
+`x:Name="CompareResultsScrollViewer"` paso al patron de `FindName` DOBLE ya usado por
+GUIA/`ADR-021` (`window.FindName("CompareView")` + `compareView.FindName(
+"CompareResultsScrollViewer")`, actualizado en los 2 call-sites de `Program.cs`: `T9_SOLO` y
+`COMPARE_SOLO`). Ademas, el canario `T9_SOLO` (cabecera pegajosa: el selector A NO debe moverse al
+desplazar el `ScrollViewer` de resultados) fallaba tras la extraccion con un desplazamiento real de
+5,1px con los mismos 2 `DoEvents()` que bastaban antes - confirmado por comparacion directa con
+`git stash` temporal de `MainWindow.xaml`/`Program.cs` (reproduce 0px de diferencia, `T9_SOLO` en
+verde, en el codigo SIN extraer). Causa real identica a HostingView/`ADR-019`: el nivel extra de
+`UserControl` (`CompareView`) necesita un ciclo mas de bombeo del Dispatcher para completar su
+pasada de layout tras `ScrollToVerticalOffset` antes de que `TransformToAncestor` mida una posicion
+estable. Arreglado subiendo esos 2 `DoEvents()` a 4 en el bloque `T9_SOLO` de `Program.cs` (mismo
+ajuste 2->4 ya aplicado por HostingView/`EjecutarHostingReal`) - con 4, antes y despues quedan
+pixel-identicos (`208,51666666666668` en ambos), `T9_SOLO` en verde.
+
+Contenido copiado BYTE A BYTE del `TabItem` COMPARE (septimo y ultimo sub-tab del `TabControl`
+interno de PERSONAJE) en `MainWindow.xaml` - solo re-indentado al moverse de sitio y
+`BoolToVis`->`CompareBoolToVis` en los 4 sitios senalados, ningun otro caracter de contenido
+cambiado. `MainWindow.xaml` queda con `<views:CompareView x:Name="CompareView" />` dentro del
+`TabItem` COMPARE (206 lineas de markup reemplazadas por 2, ademas de retirar las 3 `DataTemplate`
+window-scoped ahora movidas, ~66 lineas menos en `Window.Resources`). El `UserControl` no fija su
+propio `DataContext`, hereda el `MainViewModel` real del `Window`. Sin code-behind propio en
+`MainWindow.xaml.cs` para este sub-tab.
+
+**Canarios reales usados** (existentes, ninguno nuevo hizo falta): `T9_SOLO` (cabecera pegajosa,
+arreglado como arriba) y `COMPARE_SOLO` (4 capturas reales: `comparador-es-minima.png`,
+`comparador-es-completa.png`, `comparador-en-minima.png`, `comparador-es-inventario.png`) de
+`Program.cs`, mas el barrido AR-LAY incondicional. Verificado con 2 personajes reales DISTINTOS de
+esta maquina (Zenith Clasico vs Eldelgas Nucleo medio, 70 diferencias reales) en español e ingles,
+capturas revisadas a mano: cabecera con los 2 selectores, tabla Estadisticas (9 filas reales),
+Equipo (14 filas con iconos/prefijos tenidos, ej. "Violento"), Inventario (2x50 celdas con
+iconos/badges de cantidad reales, ej. 9999/150/72).
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline). `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). Recorrido COMPLETO
+de `Terrakeep.App.Tests` (sin ningun `_SOLO`) ejecutado DOS VECES: primera pasada 17 `FALLO` (9
+categorias ya documentadas: `A10-IDIOMA-BARRIDO`x1, `A8-01`x1, `A8-02b`x1 flake, `A8-06`x1,
+`AR-11f`x1, `AR-14`x4, `AR-LAY`x1, `AR-MRK-CLIC`x1, `AR-MRK-OTROS`x5), segunda pasada 16 `FALLO`
+(las mismas 9 categorias sin `A8-02b`, mismo flake de contencion de maquina ya documentado desde
+`ADR-020`). CERO mencion de Compare/CompareView en el log de `FALLO` de ninguna de las dos pasadas.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion antes del despliegue (`Get-Process -Name Terrakeep`
+sin resultados). `DEPLOY_LOCK` adquirido antes de tocar `Assets/`/publish (snapshot
+antes=13056 ficheros/hash `068603cc...`, identico al baseline de `ADR-020`/`021`/`022`/`023`/`024`,
+sin drift). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado
+(`Terrakeep.exe`), 0 errores, 0 extras. `Assets/` identico antes/despues (13056 ficheros, mismo
+hash, confirmado por `deployLock.despuesDeMir`). Hash SHA256 identico entre el `.exe` publicado y
+el instalado (`D3CAAA29FC51D570786913F8B06CB2AD74268896F1329E51D10F210FDA0735AD` en ambos). Sanity
+check real: `Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio
+(`Stop-Process`), sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/CompareView.xaml` + `.xaml.cs` (nuevos), `Terrakeep.App.Tests/Program.cs` (2
+call-sites `FindName` doble + 2 `DoEvents()` extra en `T9_SOLO`) - nunca `git add -A`, seguia
+habiendo decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo.
+Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en
+KeepQA. Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con Compare cerrado, el
+grupo 4.5 (sub-tabs de PERSONAJE) queda COMPLETO - Spawnpoints/`ADR-022`, Version/`ADR-023`,
+Unlocks/`ADR-024` y Compare/`ADR-025`. Solo queda Objetos (911 lineas, la mas grande y acoplada de
+`MainWindow.xaml`), dejada deliberadamente para el final del grupo por el propio plan original.

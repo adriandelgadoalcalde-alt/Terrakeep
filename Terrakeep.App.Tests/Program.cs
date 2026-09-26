@@ -4701,7 +4701,11 @@ internal static partial class Program
                 // que pide el catalogo, no solo "se ve arriba en la primera captura".
                 var comboA = Descendientes<System.Windows.Controls.ComboBox>(window)
                     .FirstOrDefault(c => c.ItemsSource == vm.Compare.AvailableCharacters && c.SelectedItem == vm.Compare.SelectedA);
-                var sv = window.FindName("CompareResultsScrollViewer") as System.Windows.Controls.ScrollViewer;
+                // ADR-TERRAKEEP-025 (26-sep-2026): Compare paso a UserControl (CompareView) - un
+                // UserControl compilado es dueño de su propio NameScope, patron de FindName DOBLE
+                // ya usado por GUIA/ADR-021.
+                var compareViewT9 = window.FindName("CompareView") as System.Windows.FrameworkElement;
+                var sv = compareViewT9?.FindName("CompareResultsScrollViewer") as System.Windows.Controls.ScrollViewer;
                 if (comboA == null || sv == null)
                 {
                     Console.WriteLine($"FALLO: T9_SOLO - no se encuentra el combo del selector A ({comboA != null}) o CompareResultsScrollViewer ({sv != null}) en el arbol visual real");
@@ -4710,7 +4714,12 @@ internal static partial class Program
                 {
                     var antes = comboA.TransformToAncestor(window).Transform(new System.Windows.Point(0, 0));
                     sv.ScrollToVerticalOffset(sv.ScrollableHeight); // al final del todo, si hay algo que desplazar
-                    DoEvents(); DoEvents();
+                    // ADR-TERRAKEEP-025 (26-sep-2026): mismo hallazgo de timing ya documentado por
+                    // ADR-TERRAKEEP-019/HostingView - el nivel extra de UserControl (CompareView)
+                    // necesita un ciclo mas de bombeo del Dispatcher para completar su pasada de
+                    // layout tras el ScrollToVerticalOffset antes de medir con TransformToAncestor
+                    // (2 DoEvents ya no bastaban, subido a 4 igual que EjecutarHostingReal).
+                    DoEvents(); DoEvents(); DoEvents(); DoEvents();
                     var despues = comboA.TransformToAncestor(window).Transform(new System.Windows.Point(0, 0));
                     Console.WriteLine($"T9_SOLO: selector A en pantalla antes={antes} despues de desplazar el ScrollViewer={despues} (esperado identico -> cabecera pegajosa real), ScrollableHeight={sv.ScrollableHeight:0}");
                     if (Math.Abs(antes.Y - despues.Y) > 0.5) Console.WriteLine($"FALLO: T9_SOLO - el selector A se movio {Math.Abs(antes.Y - despues.Y):0.0}px al desplazar los resultados (la cabecera NO es pegajoza de verdad)");
@@ -5207,7 +5216,10 @@ internal static partial class Program
                     vm.Compare.SelectedB = vm.Home.Characters[1];
                 }
                 DoEvents(); DoEvents();
-                if (window.FindName("CompareResultsScrollViewer") is System.Windows.Controls.ScrollViewer sv)
+                // ADR-TERRAKEEP-025 (26-sep-2026): mismo patron de FindName DOBLE de arriba
+                // (Compare paso a UserControl, CompareView es dueño de su propio NameScope).
+                var compareViewCS = window.FindName("CompareView") as System.Windows.FrameworkElement;
+                if (compareViewCS?.FindName("CompareResultsScrollViewer") is System.Windows.Controls.ScrollViewer sv)
                 {
                     sv.ScrollToEnd();
                     DoEvents(); DoEvents();
