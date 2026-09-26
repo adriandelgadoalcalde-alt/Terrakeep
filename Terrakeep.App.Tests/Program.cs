@@ -5691,21 +5691,14 @@ internal static partial class Program
         Console.WriteLine($"AmmoContainer.Slots={vm.AmmoContainer?.Slots.Count} Columns={vm.AmmoContainer?.Columns}");
         Console.WriteLine($"EquipmentGroup.Current(inicial)={vm.EquipmentGroup?.Current.DisplayName} Columns={vm.EquipmentGroup?.Current.Columns} (esperado: Columns=5)");
 
-        string[] tabNames = ["Equipamiento", "Inventario", "Almacenes"]; // quinta pasada: Monturas/Monedas ya no son pestañas, se fusionaron dentro de Equipamiento
-        foreach (var name in tabNames)
+        // NAV123 (25-sep-2026): "Equipamiento"/"Inventario"/"Almacenes" ya no son TabItem - son
+        // 3 paginas reales exclusivas seleccionadas por vm.ObjetosSubTabIndex (0/1/2).
+        (string name, int sub)[] tabNames = [("Equipamiento", 0), ("Inventario", 1), ("Almacenes", 2)]; // quinta pasada: Monturas/Monedas ya no son pestañas, se fusionaron dentro de Equipamiento
+        foreach (var (name, sub) in tabNames)
         {
             try
             {
-                var tabCondition = new AndCondition(
-                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                    new PropertyCondition(AutomationElement.NameProperty, name));
-                var tabItem = root.FindFirst(TreeScope.Descendants, tabCondition);
-                if (tabItem == null) { Console.WriteLine($"TAB {name}: NOT-FOUND"); continue; }
-
-                if (tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pat))
-                    ((SelectionItemPattern)pat).Select();
-                else
-                    Console.WriteLine($"TAB {name}: NO-SELECTIONITEMPATTERN");
+                vm.ObjetosSubTabIndex = sub;
 
                 DoEvents();
                 DoEvents();
@@ -5736,11 +5729,7 @@ internal static partial class Program
         // verdad) con el tamaño de celda REAL renderizado, no calculado a mano.
         try
         {
-            var equipTabAgain = root.FindFirst(TreeScope.Descendants, new AndCondition(
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.NameProperty, "Equipamiento")));
-            if (equipTabAgain != null && equipTabAgain.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var equipAgainPat))
-                ((SelectionItemPattern)equipAgainPat).Select();
+            vm.ObjetosSubTabIndex = 0; // Equipamiento (NAV123: pagina real, ya no TabItem)
             DoEvents();
             DoEvents();
 
@@ -5830,11 +5819,7 @@ internal static partial class Program
         // primero (el bucle de arriba la dejo en "Almacenes", ultima pestaña real ahora).
         try
         {
-            var almacenesTab = root.FindFirst(TreeScope.Descendants, new AndCondition(
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.NameProperty, "Almacenes")));
-            if (almacenesTab != null && almacenesTab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPat))
-                ((SelectionItemPattern)selPat).Select();
+            vm.ObjetosSubTabIndex = 2; // Almacenes (NAV123: pagina real, ya no TabItem)
             DoEvents();
             DoEvents();
 
@@ -5865,11 +5850,7 @@ internal static partial class Program
         // medida).
         try
         {
-            var equipTab = root.FindFirst(TreeScope.Descendants, new AndCondition(
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.NameProperty, "Equipamiento")));
-            if (equipTab != null && equipTab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var equipSelPat))
-                ((SelectionItemPattern)equipSelPat).Select();
+            vm.ObjetosSubTabIndex = 0; // Equipamiento (NAV123: pagina real, ya no TabItem)
             DoEvents();
             DoEvents();
 
@@ -6673,19 +6654,27 @@ internal static partial class Program
             Console.WriteLine($"  Ventana pedida {w}x{h} -> real ActualWidth={window.ActualWidth:0.#} ActualHeight={window.ActualHeight:0.#}");
 
             // "Equipamiento"/"Inventario"/"Almacenes" viven DENTRO de "Personaje" > "Objetos" -
-            // hace falta seleccionar esos dos primero o el TabItem interno ni siquiera existe
+            // hace falta seleccionar esos dos primero o la pagina interna ni siquiera existe
             // en el arbol visual (TabControl solo realiza el contenido de la pestaña activa).
             vm.SelectedTabIndex = 1;
             vm.PersonajeInnerTabIndex = 0;
             DoEvents();
 
-            var tabItem = root.FindFirst(TreeScope.Descendants, new AndCondition(
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.NameProperty, tabName)));
-            if (tabItem != null && tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPat))
-                ((SelectionItemPattern)selPat).Select();
+            // NAV123 (25-sep-2026): "Equipamiento"/"Inventario"/"Almacenes" ya NO son TabItem -
+            // son 3 paginas reales exclusivas (ObjetosPageHost, MainWindow.xaml) seleccionadas
+            // por vm.ObjetosSubTabIndex (0/1/2), mismo patron ya usado en este archivo en
+            // vm.ObjetosSubTabIndex = 1; // Inventario (ver p.ej. linea ~10909).
+            int? subTab = tabName switch
+            {
+                "Equipamiento" => 0,
+                "Inventario" => 1,
+                "Almacenes" => 2,
+                _ => null
+            };
+            if (subTab.HasValue)
+                vm.ObjetosSubTabIndex = subTab.Value;
             else
-                Console.WriteLine($"  AVISO: TabItem '{tabName}' no encontrado");
+                Console.WriteLine($"  AVISO: tabName '{tabName}' no mapea a ningun ObjetosSubTabIndex conocido");
             DoEvents();
             DoEvents();
 
@@ -6740,28 +6729,34 @@ internal static partial class Program
             CaptureAt(1080, 700, "Inventario", "resize-inv-minimo.png");
             CaptureAt(1080, 700, "Almacenes", "resize-almacenes-minimo.png");
 
-            // Verificacion real de A-4 (auditoria de Opus, Bloque 4): por debajo de
-            // AmplioMinWidth=1520 (umbral real, medido - ver el comentario de
-            // MainViewModel.IsStorageExpanded; AR-14 lo subio de 1500 a 1520 tras medir de 2 en
-            // 2px que entre 1500 y 1512 las 3 vistas de Equipamiento aun se recortan), la pestaña
-            // "Inventario" sigue mostrando solo
-            // Inventario - Almacenes ni siquiera existe en el arbol visual en ese momento
-            // (drag&drop cruzado imposible, tal cual hasta ahora). Se prueba justo por debajo
-            // (1350) para confirmar que el umbral real es de verdad el de Amplio, no el "Normal".
+            // A4-EXPANDIDO (rediseñado tras NAV123, 25-sep-2026): el A-4 original (auditoria de
+            // Opus, Bloque 4) probaba la "coexistencia" de Inventario+Almacen fusionados dentro
+            // del bloque de 2 columnas que solo aparecia en Amplio (IsStorageExpanded) - ese
+            // bloque quedo RETIRADO por completo con NAV123 (ver comentario "T3 PASO 1" en
+            // MainWindow.xaml), asi que esa coexistencia ya no es un concepto real y no se puede
+            // seguir probando. La invariante NUEVA que Nav123 introdujo de verdad y hay que
+            // proteger es la contraria: Almacenes (ObjetosSubTabIndex=2) es ahora una pagina
+            // PERMANENTE, alcanzable a CUALQUIER ancho (antes, por debajo de AmplioMinWidth=1520,
+            // se ocultaba entera) - y a la inversa, Almacenes ya NO vive fusionado dentro de la
+            // pagina Inventario (ObjetosSubTabIndex=1) a ningun ancho (exclusividad real de
+            // paginas). Se prueba en los mismos 2 anchos que ya usaba A-4 (1350, justo por debajo
+            // del umbral, y 1520, el umbral real) con la pildora real de Almacenes ("Banco...").
             static List<AutomationElement> BuscarPildoraBanco(AutomationElement r) =>
                 r.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button))
                     .Cast<AutomationElement>().Where(b => b.Current.Name.StartsWith("Banco")).ToList();
 
-            CaptureAt(1350, 860, "Inventario", "a4-todavia-compacto-1350.png");
-            Console.WriteLine($"A4-1350: pildora 'Banco' presente en el arbol visual={BuscarPildoraBanco(root).Count > 0} (esperado False)");
+            foreach (double wA4 in new[] { 1350.0, 1520.0 })
+            {
+                CaptureAt(wA4, 860, "Almacenes", $"a4-almacenes-{wA4:0}.png");
+                bool almacenesPresenteEnSub2 = BuscarPildoraBanco(root).Count > 0;
+                Console.WriteLine($"A4-EXPANDIDO: a {wA4:0}px, ObjetosSubTabIndex=2 (Almacenes) -> pildora real de Almacenes presente={almacenesPresenteEnSub2} (esperado True - pagina permanente a cualquier ancho, Nav123)");
+                if (!almacenesPresenteEnSub2) Console.WriteLine($"FALLO: A4-EXPANDIDO - a {wA4:0}px, la pagina de Almacenes (ObjetosSubTabIndex=2) no muestra su contenido real en el arbol visual");
 
-            // A partir de 1520px (AmplioMinWidth real), Inventario Y Almacenes deben coexistir de
-            // verdad en el mismo arbol visual - prueba real (no solo el ViewModel): la pildora
-            // real de Almacenes ("Banco...") tiene que aparecer YA, sin cambiar de pestaña.
-            CaptureAt(1520, 860, "Inventario", "a4-expandido-1520.png");
-            bool a4Expandido = BuscarPildoraBanco(root).Count > 0;
-            Console.WriteLine($"A4-EXPANDIDO: pildora real de Almacenes presente en Inventario={a4Expandido} (esperado True - coexisten de verdad, no solo el ViewModel)");
-            if (!a4Expandido) Console.WriteLine("FALLO: A4-EXPANDIDO - a 1520px (AmplioMinWidth) Almacenes no coexiste con Inventario en el arbol visual real");
+                CaptureAt(wA4, 860, "Inventario", $"a4-inventario-{wA4:0}.png");
+                bool almacenesAusenteEnSub1 = BuscarPildoraBanco(root).Count == 0;
+                Console.WriteLine($"A4-EXPANDIDO: a {wA4:0}px, ObjetosSubTabIndex=1 (Inventario) -> pildora real de Almacenes ausente={almacenesAusenteEnSub1} (esperado True - exclusividad real entre paginas, Nav123)");
+                if (!almacenesAusenteEnSub1) Console.WriteLine($"FALLO: A4-EXPANDIDO - a {wA4:0}px, Almacenes sigue presente dentro de la pagina Inventario (ObjetosSubTabIndex=1): la exclusividad de paginas no se respeta");
+            }
 
             // Prueba real de intercambio cruzado (no solo "coexisten en pantalla" - que el
             // intercambio Inventario<->Almacen funcione de verdad): SwapWith es el mismo
@@ -10829,12 +10824,11 @@ internal static partial class Program
 
             vm.SelectedTabIndex = 1; // Personaje
             vm.PersonajeInnerTabIndex = 0; // Objetos
-            DoEvents(); DoEvents(); // deja que el TabControl realice el contenido de "Objetos" antes de buscar la sub-pestaña "Inventario" dentro
-            var invTabForKeys = root.FindFirst(TreeScope.Descendants, new AndCondition(
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
-                new PropertyCondition(AutomationElement.NameProperty, "Inventario")));
-            if (invTabForKeys != null && invTabForKeys.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var invSelPatForKeys))
-                ((SelectionItemPattern)invSelPatForKeys).Select();
+            DoEvents(); DoEvents(); // deja que el TabControl realice el contenido de "Objetos" antes de mostrar la pagina "Inventario" dentro
+            // NAV123 (25-sep-2026): "Inventario" ya no es un TabItem que buscar por nombre - es
+            // la pagina real seleccionada con ObjetosSubTabIndex=1 (mismo patron ya usado mas
+            // abajo en este mismo metodo, ver OBJ-10).
+            vm.ObjetosSubTabIndex = 1; // Inventario
             DoEvents(); DoEvents();
 
             var slotOrigen = vm.InventoryContainer!.Slots[20]; // vacio (0-11 ocupados por la fixture, 12/49 por H5-12)
