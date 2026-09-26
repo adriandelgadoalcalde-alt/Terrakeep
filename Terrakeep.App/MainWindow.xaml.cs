@@ -667,21 +667,6 @@ public partial class MainWindow : Window
             _viewModel.RequestObjetosSection(indice);
     }
 
-    // F-14 (auditoria de Opus vs TEdit, E-16/E-17): dialogo real en la View (mismo criterio que
-    // SaveItemSetDialog/ExportMapToPng) - BuildWorldReportText solo compone el texto.
-    private void OnSaveWorldReportClick(object sender, RoutedEventArgs e)
-    {
-        string texto = _viewModel.Exploration.BuildWorldReportText();
-        if (string.IsNullOrEmpty(texto)) return;
-        var dialog = new SaveFileDialog
-        {
-            Title = Loc["dlg_save_world_report"],
-            Filter = Loc["dlg_filter_text"],
-            FileName = $"{_viewModel.Exploration.WorldTitle}-informe.txt",
-        };
-        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, texto);
-    }
-
     // F-12 (auditoria de Opus vs TEdit, E-13): dialogo real en la View (mismo criterio que
     // SaveItemSetDialog) - la composicion+codificacion vive en ExportMapToPng.
     private void OnExportMapClick(object sender, RoutedEventArgs e)

@@ -219,10 +219,15 @@ internal static partial class Program
                     vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
                     DoEvents(); DoEvents(); window.UpdateLayout();
 
-                    var worldTools = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
-                    var subviewOverview = window.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
-                    var subviewEdit = window.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
-                    var subviewBestiary = window.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
+                    // ADR-TERRAKEEP-027: WorldTools ahora vive en su propio UserControl
+                    // (WorldToolsView) - FindName DOBLE (mismo patron ya usado por GUIA/ADR-021 y
+                    // Compare/ADR-025): window.FindName("WorldToolsView") primero, despues
+                    // worldToolsViewHost.FindName(...) sobre el NameScope propio del UserControl.
+                    var worldToolsViewHost = window.FindName("WorldToolsView") as FrameworkElement;
+                    var worldTools = worldToolsViewHost?.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
+                    var subviewOverview = worldToolsViewHost?.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
+                    var subviewEdit = worldToolsViewHost?.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
+                    var subviewBestiary = worldToolsViewHost?.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
 
                     foreach (var seccion in new[] { WorldToolsSection.Overview, WorldToolsSection.Edit, WorldToolsSection.Bestiary })
                     {

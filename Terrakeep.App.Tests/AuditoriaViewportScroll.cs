@@ -537,7 +537,11 @@ internal static partial class Program
                     // de los 3 ScrollViewer internos ya eliminados.
                     vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
                     DoEvents(); DoEvents();
-                    var worldToolsFaseH = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
+                    // ADR-TERRAKEEP-027: WorldTools ahora vive en su propio UserControl
+                    // (WorldToolsView) - FindName DOBLE (mismo patron ya usado por GUIA/ADR-021 y
+                    // Compare/ADR-025).
+                    var worldToolsViewHostFaseH = window.FindName("WorldToolsView") as FrameworkElement;
+                    var worldToolsFaseH = worldToolsViewHostFaseH?.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
                     if (worldToolsFaseH == null)
                     {
                         Console.WriteLine("VIEWPORT-faseH: ExplorationSidebarWorldToolsContent no encontrado - se omiten las 3 subvistas");

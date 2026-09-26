@@ -30180,3 +30180,98 @@ dejada deliberadamente para el final por el propio plan original) - unica extrac
 queda de verdad pendiente ademas de Objetos es EXPLORACION (4.6, 2532 lineas, la mas grande y con
 mas code-behind/`FindName` reales de todo el plan), a abordar por partes segun el orden ya fijado
 por `ADR-016` (WorldTools -> ChestInspector -> Browse -> mapa+minimapa).
+
+## Undecima extraccion real de una seccion de MainWindow.xaml a UserControl - WORLDTOOLS (26-sep-2026)
+
+`ADR-TERRAKEEP-027`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Primera extraccion del
+grupo 4.6 (EXPLORACION, la seccion mas grande y con mas code-behind real de `MainWindow.xaml`,
+2532 lineas - se extrae SOLO por partes, nunca de una vez). Sub-modo elegido: **WorldTools** (296
+lineas, `MainWindow.xaml` 5921-6223 antes de la extraccion) - "el submodo mas aislado, la propia
+Fase F ya lo dejo con su propio `DockPanel` independiente" (`ADR-016`). Contenido movido a
+`Terrakeep.App/Views/WorldToolsView.xaml` + `.xaml.cs` (mismo patron de las 10 rondas anteriores).
+`MainWindow.xaml` queda con `<views:WorldToolsView x:Name="WorldToolsView" />` dentro de
+`<Grid x:Name="ExplorationSidebarBrowseInspectorHost">` (junto a Browse/ChestInspector).
+
+**Cuidado extra justificado**: WorldTools fue REDISEÑADO el mismo dia (commit `44557095`,
+"ExploracionRediseno" - 3 subvistas exclusivas Overview/Edit/Bestiary via `CategorySelector`, sin
+scroll interno propio, verificado con QA geometrico en 6 combinaciones). Baseline confirmado ANTES
+de tocar nada con `EXPLORATION_LAYOUT_SOLO=1` (`CanarioExploracionLayoutPermanente.cs`, el canario
+PERMANENTE de ese rediseño), y repetido DESPUES de la extraccion - identico en las 6 combinaciones
+(3 subvistas x 2 tamaños 1180x860/1080x700): `ScrollableWidth=0px` en las 3, `ScrollViewer`
+descendientes de `ExplorationSidebarWorldToolsContent=0` en las 3, contenido real=True en las 6.
+0 `FALLO` en ambas pasadas de este canario.
+
+**Hallazgo real confirmado por grep exhaustivo** (mismo mecanismo ya resuelto por
+HostingView/`ADR-019`, GuideView/`ADR-021`, UnlocksView/`ADR-024`, CompareView/`ADR-025`,
+HomeView/`ADR-026`): `BoolToVis` (window-scoped, x:Key SOLO en `Window.Resources`) se usa 7 veces
+dentro de este bloque - `<UserControl.Resources>` LOCAL con clave propia `WorldToolsBoolToVis`
+(sin colision con `BoolToVis`/`GuideBoolToVis`/`HostingBoolToVis`/`UnlocksBoolToVis`/
+`CompareBoolToVis`/`HomeBoolToVis`). El resto de recursos confirmados en `Styles/Theme.xaml` o
+`App.xaml`, ninguno mas window-scoped. Cero `DataTemplate x:Key` propio.
+
+**x:Name reales** (`ExplorationSidebarWorldToolsContent`/`SubviewHost`/`Overview`/`Edit`/
+`Bestiary`) usados por `window.FindName` en 3 archivos de test
+(`CanarioExploracionLayoutPermanente.cs`, `CanarioClusterCofresInspector.cs`,
+`AuditoriaViewportScroll.cs`) - actualizados al patron de `FindName` DOBLE ya usado por
+GUIA/`ADR-021` y Compare/`ADR-025`: `window.FindName("WorldToolsView")` seguido de
+`worldToolsViewHost?.FindName("ExplorationSidebarWorldTools...")`.
+
+`Click="OnSaveWorldReportClick"` (unico call-site real en todo el archivo, confirmado por grep)
+movido a `WorldToolsView.xaml.cs` tal cual, mismo mecanismo de AboutView/`ADR-020` y
+HomeView/`ADR-026`: `this` (Window) -> `Window.GetWindow(this)`, `_viewModel` de MainWindow ->
+`(MainViewModel)DataContext`.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline). `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). Recorrido
+COMPLETO de `Terrakeep.App.Tests` (sin ningun `_SOLO`) ejecutado DOS VECES: primera pasada 18
+`FALLO` (las 9 categorias ya documentadas desde `ADR-020` MAS 2 flakes de contencion de maquina:
+`A8-02b` y, por primera vez, `LIB-01-ID` - busqueda de biblioteca por id exacto,
+`WaitForDispatcher(300)` fijo, codigo totalmente ajeno a Exploracion/WorldTools/`BoolToVis`);
+segunda pasada 16 `FALLO`, EXACTAMENTE las 9 categorias documentadas, sin `A8-02b` ni
+`LIB-01-ID` - confirma que ambos fueron flakes de esa pasada concreta, no una regresion real.
+CERO mencion de WorldTools/`ExplorationSidebarWorldTools`/`WorldToolsView`/`WorldToolsBoolToVis`
+en el log de `FALLO` de ninguna de las dos pasadas.
+
+**Canarios gated adicionales** (no forman parte del recorrido incondicional, ejecutados aparte
+tras la extraccion): `COFRES_INSPECTOR_SOLO=1` (`CanarioClusterCofresInspector.cs`, bloque Fase
+F) - 0 `FALLO`, confirma `FindName` doble en runtime para selector Buscar/Mundo, las 3
+pastillas/subvistas, y los 3 guardados reales del editor de mundo (Spawn/Tiempo-Luna/Banderas,
+ida y vuelta reversible sobre Blando Río.wld). `KEEPQA_VIEWPORT_SOLO=1`
+(`AuditoriaViewportScroll.cs`) - 0 `FALLO`, confirma 0 `ScrollViewer` internos en las 3 subvistas.
+
+**Verificacion visual**: 3 capturas reales (`fasef-worldtools-overview.png`/`edit.png`/
+`bestiary.png`, mundo real Blando Río cargado) revisadas a mano - aspecto identico al esperado
+tras el rediseño de hoy (pastillas Buscar/Mundo y Este mundo/Editar mundo/Bestiario, contenido
+correcto en las 3: semilla/version/dificultad/estadisticas en Overview, spawn/hora-luna/banderas
+en Edit, 426 especies reales con iconos/pastillas Visto-Hablado en Bestiary).
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real NO estaba en ejecucion antes del despliegue
+(`Get-Process -Name Terrakeep` sin resultados). `DEPLOY_LOCK` adquirido antes de tocar
+`Assets/`/publish (snapshot antes=13056 ficheros/hash `068603cc...`, identico al baseline de
+`ADR-020`-`ADR-026`, sin drift). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado
+(`Terrakeep.exe`), 0 errores, 0 extras. `Assets/` identico antes/despues (13056 ficheros, mismo
+hash, confirmado por `deployLock.despuesDeMir`). Hash SHA256 identico entre el `.exe` publicado y
+el instalado (`E3450CC1F58C4AD0F89D7C96092FE98C61BA0D34C8A3724CF53EA4B4388E4FD0` en ambos). Sanity
+check real: `Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio
+(`Stop-Process -Force`), sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (`OnSaveWorldReportClick` movido),
+`Terrakeep.App/Views/WorldToolsView.xaml` + `.xaml.cs` (nuevos),
+`Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs` +
+`CanarioClusterCofresInspector.cs` + `AuditoriaViewportScroll.cs` (`FindName` doble) - nunca
+`git add -A`, seguia habiendo decenas de ficheros ajenos modificados en el arbol por otros agentes
+en paralelo (incluido un `CLAUDE.md` muy reducido de forma sospechosa, no tocado, fuera de alcance
+de esta ronda). Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto
+`Terrakeep`) en KeepQA. Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con WorldTools cerrado,
+sigue el orden ya fijado por `ADR-TERRAKEEP-016` para el grupo 4.6 (EXPLORACION) - ChestInspector
+(el editor real de cofre, movido desde `ChestRowTemplate` en Fase D), despues Browse, y finalmente
+el mapa+minimapa (el mas grande y con mas code-behind real de toda la seccion) - cada uno en su
+propia ronda dedicada, nunca de una vez. Objetos (911 lineas, sub-tab de PERSONAJE) sigue
+pendiente aparte, dejado deliberadamente para el final de ese grupo por el plan original.

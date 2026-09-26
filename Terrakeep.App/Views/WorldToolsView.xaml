@@ -1,0 +1,366 @@
+<!-- ADR-TERRAKEEP-016/027 (26-sep-2026): UNDECIMA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, PRIMERA del grupo 4.6 (EXPLORACION, la seccion mas grande
+     y con mas code-behind real de todo MainWindow.xaml, 2532 lineas antes de este plan - se
+     extrae SOLO por partes, nunca de una vez, empezando por WorldTools segun el propio
+     ADR-TERRAKEEP-016: "el submodo mas aislado, la propia Fase F ya lo dejo con su propio
+     DockPanel independiente").
+
+     WorldTools (296 lineas, MainWindow.xaml 5921-6223 antes de esta extraccion) es el submodo
+     "Mundo" del sidebar de la pestaña EXPLORACION - uno de los 3 hijos EXCLUSIVOS (junto a
+     Browse y ChestInspector) de <Grid x:Name="ExplorationSidebarBrowseInspectorHost"> segun
+     Exploration.SidebarMode (EnumEqualsToVis). Fue REDISEÑADO el mismo dia de esta extraccion
+     (commit 44557095, "ExploracionRediseno"): los 3 Expander simultaneos de "Mundo" (Este
+     mundo/Editar mundo/Bestiario), cada uno con su propio ScrollViewer interno, se sustituyeron
+     por 3 subvistas EXCLUSIVAS (WorldToolsSection, ExplorationViewModel) navegadas con el mismo
+     CategorySelector/EnumEquals/EnumEqualsToVis ya en uso en este mismo panel - una sola
+     subvista visible cada vez, ninguna con scroll propio (las 3 comparten el UNICO
+     ExplorationSidebarScroll exterior). Contenido movido BYTE A BYTE (solo re-indentado al
+     moverse de sitio, ningun otro caracter de contenido cambiado) - MainWindow.xaml queda con
+     <views:WorldToolsView x:Name="WorldToolsView" /> en el mismo punto exacto.
+
+     HALLAZGO REAL confirmado por grep exhaustivo (mismo mecanismo ya resuelto por
+     HostingView/ADR-019, GuideView/ADR-021, UnlocksView/ADR-024, CompareView/ADR-025,
+     HomeView/ADR-026): BoolToVis (BooleanToVisibilityConverter, x:Key SOLO en Window.Resources
+     de MainWindow.xaml) se usa 7 veces dentro de este bloque (HasBestiary x2, IsWorldLoaded x2,
+     HasSlimeKingField, Sighted, Chatted) - NUNCA promovido a Application.Resources (revienta
+     MainWindow.InitializeComponent() ENTERO en runtime, tabla BAML OptimizedStaticResource
+     compartida por ensamblado), <UserControl.Resources> LOCAL con clave propia
+     WorldToolsBoolToVis (distinta de BoolToVis/GuideBoolToVis/HostingBoolToVis/UnlocksBoolToVis/
+     CompareBoolToVis/HomeBoolToVis, sin colision con ninguna ya usada por otro UserControl
+     extraido). El resto de recursos que usa este bloque (CaptionText, TextSecondaryBrush,
+     TextPrimaryBrush, ViewSelector, NullToCollapsed, BorderBrush0, CategorySelector,
+     EnumEquals, EnumEqualsToVis, BgElevatedBrush, NullToVis, BgHoverBrush, AccentMutedBrush,
+     AccentHoverBrush) confirmados en Styles/Theme.xaml o App.xaml, ninguno mas window-scoped.
+     Cero DataTemplate x:Key propio (el unico DataTemplate del bloque, el de BestiaryRows, va
+     ANIDADO sin x:Key dentro de ItemsControl.ItemTemplate - se resuelve junto con su propio
+     ItemsControl, nunca depende de Window.Resources).
+
+     x:Name reales dentro del bloque (ExplorationSidebarWorldToolsContent/SubviewHost/Overview/
+     Edit/Bestiary) usados por window.FindName en 3 archivos de test
+     (CanarioExploracionLayoutPermanente.cs, CanarioClusterCofresInspector.cs,
+     AuditoriaViewportScroll.cs) - pasan al patron de FindName DOBLE ya usado por GUIA/ADR-021 y
+     Compare/ADR-025: window.FindName("WorldToolsView") seguido de
+     worldToolsView.FindName("ExplorationSidebarWorldTools...") - un UserControl compilado es
+     dueño de su propio NameScope.
+
+     Click="OnSaveWorldReportClick" (unico call-site real en todo el archivo, confirmado por
+     grep) movido a WorldToolsView.xaml.cs tal cual, mismo mecanismo de AboutView/ADR-020 y
+     HomeView/ADR-026: `this` (Window) -> Window.GetWindow(this), `_viewModel` ->
+     (MainViewModel)DataContext. El UserControl no fija su propio DataContext, hereda el
+     MainViewModel real del Window que lo hospeda. -->
+<UserControl x:Class="Terrakeep.App.Views.WorldToolsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="WorldToolsBoolToVis" />
+    </UserControl.Resources>
+    <!-- ExploracionRediseno (rediseño de Exploracion>Mundo, 26-sep-2026, ver
+         bitacora.md): los 3 Expander simultaneos de "Mundo" (Este mundo/
+         Editar mundo/Bestiario), cada uno con su propio ScrollViewer interno
+         (demasiados propietarios de scroll a la vez, dentro del
+         ExplorationSidebarScroll exterior), se sustituyen por 3 subvistas
+         EXCLUSIVAS (WorldToolsSection, ExplorationViewModel) navegadas con el
+         mismo CategorySelector/EnumEquals/EnumEqualsToVis YA en uso en este
+         mismo panel (selector Buscar/Mundo de mas arriba, pastillas de
+         categoria de Browse) - una sola subvista visible cada vez, ninguna con
+         scroll propio: las 3 comparten el UNICO ExplorationSidebarScroll
+         exterior (BestiaryRows mide como maximo 361 filas en el mundo de
+         prueba mas grande de este repo, sin virtualizacion necesaria).
+         Contenido interno de cada subvista INTACTO respecto a los Expander
+         anteriores (mismos Commands/bindings, cero logica nueva) - solo cambia
+         el contenedor; los Visibility=IsWorldLoaded/HasBestiary que ya
+         llevaban los Expander se conservan como salvaguarda extra dentro de
+         cada StackPanel de contenido. -->
+    <DockPanel x:Name="ExplorationSidebarWorldToolsContent"
+               Visibility="{Binding Exploration.SidebarMode, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=WorldTools}">
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+        <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                     IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Overview}">
+            <TextBlock Text="{Binding Loc[explore_this_world], Mode=OneWay}" />
+        </RadioButton>
+        <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                     IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Edit}">
+            <TextBlock Text="{Binding Loc[explore_edit_world], Mode=OneWay}" />
+        </RadioButton>
+        <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionMundoSubvista"
+                     Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource WorldToolsBoolToVis}}"
+                     IsChecked="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEquals}, ConverterParameter=Bestiary}">
+            <TextBlock Text="{Binding Loc[explore_bestiary], Mode=OneWay}" />
+        </RadioButton>
+    </WrapPanel>
+
+    <Grid x:Name="ExplorationSidebarWorldToolsSubviewHost" DockPanel.Dock="Top">
+    <!-- F-14 (auditoria de Opus vs TEdit, E-16/E-17): "Este mundo" - todo el
+         contenido ya estaba calculado (WldHeader/WorldPresenceIndex) - esto es
+         solo un sitio real donde verlo de un vistazo, cero recorridos nuevos. -->
+    <StackPanel x:Name="ExplorationSidebarWorldToolsOverview"
+                Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Overview}">
+        <StackPanel Margin="0,6,0,0"
+                    Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource WorldToolsBoolToVis}}">
+            <TextBlock Style="{StaticResource CaptionText}">
+                <Run Text="{Binding Loc[explore_seed_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldSeedText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </TextBlock>
+            <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                <Run Text="{Binding Loc[explore_version_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldVersionText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </TextBlock>
+            <!-- Hallazgo real (feedback directo del usuario, 5-sep-2026): unica
+                 excepcion real a "Solo lectura" en toda la app - la dificultad
+                 del mundo, las 4 posibilidades reales de Terraria (ver tambien
+                 el tooltip actualizado de la insignia "Solo lectura" de arriba).
+                 Mismo patron de chips (RadioButton+EnumEquals) ya usado abajo
+                 para ChestViewMode/ObjectsViewMode - tocar un chip NUNCA
+                 escribe nada por si solo, solo cambia la seleccion en memoria;
+                 el boton "Guardar" (solo activo si de verdad cambio algo) es
+                 el UNICO punto que toca el archivo real. -->
+            <TextBlock Text="{Binding Loc[appearance_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,4" />
+            <!-- AR-11b: cuartos, todavia mas estrechos que los tercios de Cofres
+                 - mismo TextBlock hijo con Wrap por el mismo motivo real. -->
+            <UniformGrid Columns="4">
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="0,0,3,0"
+                             IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
+                             IsEnabled="{Binding Exploration.CanUseGameModeClassic}"
+                             ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
+                    <TextBlock Text="{Binding Loc[explore_gamemode_classic], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
+                             IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
+                             IsEnabled="{Binding Exploration.CanUseGameModeExpert}"
+                             ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
+                    <TextBlock Text="{Binding Loc[explore_gamemode_expert], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
+                             IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
+                             IsEnabled="{Binding Exploration.CanUseGameModeMaster}"
+                             ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
+                    <TextBlock Text="{Binding Loc[explore_gamemode_master], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,0,0"
+                             IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}"
+                             IsEnabled="{Binding Exploration.CanUseGameModeJourney}"
+                             ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
+                    <TextBlock Text="{Binding Loc[explore_gamemode_journey], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                </RadioButton>
+            </UniformGrid>
+            <Button Content="{Binding Loc[explore_save_difficulty], Mode=OneWay}" Margin="0,6,0,0" HorizontalAlignment="Stretch"
+                    Command="{Binding Exploration.SaveWorldGameModeCommand}"
+                    ToolTip="{Binding Loc[explore_save_difficulty_tooltip], Mode=OneWay}" />
+            <TextBlock Text="{Binding Exploration.WorldGameModeSaveStatus}" Style="{StaticResource CaptionText}"
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="{Binding Exploration.WorldGameModeSaveStatus, Converter={StaticResource NullToCollapsed}}" />
+            <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8" />
+            <TextBlock Style="{StaticResource CaptionText}">
+                <Run Text="{Binding Loc[explore_air_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldAirPercentText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                <Run Text="{Binding Loc[explore_tile_types_label], Mode=OneWay}" /><Run Text="{Binding Exploration.ObjectsPillCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                <Run Text="{Binding Loc[explore_walls_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WallTypesPresentCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </TextBlock>
+            <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                <Run Text="{Binding Loc[explore_chests_label], Mode=OneWay}" /><Run Text="{Binding Exploration.ChestsPillCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                <Run Text="{Binding Loc[explore_signs_label], Mode=OneWay}" /><Run Text="{Binding Exploration.SignCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                <Run Text="{Binding Loc[explore_npcs_label], Mode=OneWay}" /><Run Text="{Binding Exploration.Npcs.Count, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </TextBlock>
+            <Button Content="{Binding Loc[explore_save_report], Mode=OneWay}" Tag="Ghost" Margin="0,8,0,0" HorizontalAlignment="Left" Padding="8,3"
+                    Click="OnSaveWorldReportClick" />
+        </StackPanel>
+    </StackPanel>
+
+    <!-- Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026):
+         tres grupos de edicion nuevos, cada uno con su propio boton "Guardar"
+         (nunca un unico "guardar todo" - tres escrituras atomicas
+         independientes, mismo criterio real que la dificultad de arriba). -->
+    <StackPanel x:Name="ExplorationSidebarWorldToolsEdit"
+                Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Edit}">
+        <StackPanel Margin="0,6,0,0"
+                    Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource WorldToolsBoolToVis}}">
+            <!-- Punto de aparicion -->
+            <TextBlock Text="{Binding Loc[explore_spawn_point], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <StackPanel Margin="0,0,10,0">
+                    <TextBlock Text="X" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBox Text="{Binding Exploration.EditSpawnX, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="Y" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBox Text="{Binding Exploration.EditSpawnY, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                </StackPanel>
+            </StackPanel>
+            <Button Content="{Binding Loc[explore_save_spawn], Mode=OneWay}" Margin="0,4,0,0" HorizontalAlignment="Stretch"
+                    Command="{Binding Exploration.SaveSpawnPointCommand}"
+                    ToolTip="{Binding Loc[explore_save_spawn_tooltip], Mode=OneWay}" />
+            <TextBlock Text="{Binding Exploration.SpawnSaveStatus}" Style="{StaticResource CaptionText}"
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="{Binding Exploration.SpawnSaveStatus, Converter={StaticResource NullToCollapsed}}" />
+
+            <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,10" />
+
+            <!-- Hora, fase lunar, luna de sangre, eclipse -->
+            <TextBlock Text="{Binding Loc[explore_time_and_moon], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_time_hour], Mode=OneWay}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <Slider Minimum="0" Maximum="23.99" Value="{Binding Exploration.EditTimeHour}" Width="120" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Exploration.EditTimeHour, StringFormat={}{0:00.0}h}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+            <ComboBox SelectedIndex="{Binding Exploration.EditMoonPhase}" Margin="0,0,0,6">
+                <ComboBoxItem Content="{Binding Loc[explore_moon_0], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_1], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_2], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_3], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_4], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_5], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_6], Mode=OneWay}" />
+                <ComboBoxItem Content="{Binding Loc[explore_moon_7], Mode=OneWay}" />
+            </ComboBox>
+            <CheckBox IsChecked="{Binding Exploration.EditBloodMoon}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_blood_moon], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditIsEclipse}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_eclipse], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <Button Content="{Binding Loc[explore_save_time], Mode=OneWay}" Margin="0,4,0,0" HorizontalAlignment="Stretch"
+                    Command="{Binding Exploration.SaveTimeAndMoonCommand}"
+                    ToolTip="{Binding Loc[explore_save_time_tooltip], Mode=OneWay}" />
+            <TextBlock Text="{Binding Exploration.TimeSaveStatus}" Style="{StaticResource CaptionText}"
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="{Binding Exploration.TimeSaveStatus, Converter={StaticResource NullToCollapsed}}" />
+
+            <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,10" />
+
+            <!-- Banderas de progreso: jefes principales + modo dificil -->
+            <TextBlock Text="{Binding Loc[explore_boss_flags], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <CheckBox IsChecked="{Binding Exploration.EditDownedBoss1}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_eoc], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedBoss2}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_eow_boc], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedBoss3}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_skeletron], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedQueenBee}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_queenbee], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedMech1}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_destroyer], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedMech2}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_twins], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedMech3}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_prime], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedPlant}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_plantera], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedGolem}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_golem], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <!-- HasSlimeKingField: null real en un mundo <118 (ver el comentario de
+                 ExplorationViewModel) - la casilla se oculta en vez de dejar
+                 marcar algo que jamas podria guardarse. -->
+            <CheckBox IsChecked="{Binding Exploration.EditDownedSlimeKing}" Margin="0,0,0,4"
+                      Visibility="{Binding Exploration.HasSlimeKingField, Converter={StaticResource WorldToolsBoolToVis}}">
+                <TextBlock Text="{Binding Loc[explore_boss_slimeking], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <!-- Idea 1 del catalogo de funciones ("Estado del mundo editable" -
+                 bitacora.md 20-sep-2026, quinta ronda: reconsiderado a peticion
+                 explicita del coordinador/usuario). "Marcianos" queda fuera a
+                 proposito, sigue siendo LIMITE real (ver el comentario de
+                 ExplorationViewModel.EditDownedGoblinArmy). -->
+            <CheckBox IsChecked="{Binding Exploration.EditDownedGoblinArmy}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_invasion_goblin], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedFrostLegion}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_invasion_frost], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <CheckBox IsChecked="{Binding Exploration.EditDownedPirates}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_invasion_pirates], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+            </CheckBox>
+            <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,6" />
+            <CheckBox IsChecked="{Binding Exploration.EditHardMode}" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Loc[explore_boss_hardmode], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />
+            </CheckBox>
+            <Button Content="{Binding Loc[explore_save_flags], Mode=OneWay}" Margin="0,4,0,0" HorizontalAlignment="Stretch"
+                    Command="{Binding Exploration.SaveBossFlagsCommand}"
+                    ToolTip="{Binding Loc[explore_save_flags_tooltip], Mode=OneWay}" />
+            <TextBlock Text="{Binding Exploration.FlagsSaveStatus}" Style="{StaticResource CaptionText}"
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="{Binding Exploration.FlagsSaveStatus, Converter={StaticResource NullToCollapsed}}" />
+        </StackPanel>
+    </StackPanel>
+
+    <!-- Bestiario (punto 6 de bitacora.md, 13-sep-2026: paneles de progreso) -
+         SOLO LECTURA (el bestiario del propio juego tampoco se edita desde
+         fuera - ver el comentario real de WldBestiary) - oculto por completo
+         en un mundo anterior a Journey's End (HasBestiary=false), nunca una
+         tabla vacia fingiendo datos que el archivo no tiene. -->
+    <StackPanel x:Name="ExplorationSidebarWorldToolsBestiary"
+                Visibility="{Binding Exploration.WorldToolsSection, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Bestiary}">
+        <StackPanel Margin="0,6,0,0"
+                    Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource WorldToolsBoolToVis}}">
+            <!-- Bug real reportado en vivo ("panel del Bestiario cortado") - segundo
+                 intento real (21-sep-2026), tras el limite documentado de la ronda
+                 anterior (que solo midio los ENCABEZADOS de la columna, nunca este
+                 resumen). CaptionText no fija TextWrapping (por diseño, la mayoria
+                 de sus usos son textos cortos de una linea) y este texto real
+                 concreto ("N especies registradas (vistas, con las que has hablado
+                 o que has matado) · M muertes en total") es una frase larga de
+                 verdad - sin Wrap se recortaba en SILENCIO (sin "...", sin aviso)
+                 contra el ancho minimo real del sidebar (260px), confirmado con
+                 BESTIARIO_SOLO y el mundo/personaje reales de mas especies de esta
+                 maquina (Blando_Río.wld, 361 especies, captura real). -->
+            <TextBlock Text="{Binding Exploration.BestiarySummaryText, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                       Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                <!-- Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del
+                     mundo con sprites reales"): icono real cuando existe
+                     (NpcIconResolver, solo los 27 NPCs de pueblo reales -
+                     Collapsed sin hueco reservado para el resto, nunca un
+                     icono generico fingido) + pastillas reales de Visto/
+                     Hablado (BestiaryRowViewModel.Sighted/Chatted, antes
+                     calculados pero NUNCA pintados en esta fila). -->
+                <ItemsControl ItemsSource="{Binding Exploration.BestiaryRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0" Source="{Binding IconPath}" Width="18" Height="18" Margin="0,0,6,0"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource CaptionText}"
+                                           Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                                    <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="4,1" Margin="0,0,3,0"
+                                            Visibility="{Binding Sighted, Converter={StaticResource WorldToolsBoolToVis}}"
+                                            ToolTip="{Binding Loc[explore_bestiary_sighted], Mode=OneWay}">
+                                        <TextBlock Text="{Binding Loc[explore_bestiary_sighted_short], Mode=OneWay}"
+                                                   Style="{StaticResource CaptionText}" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    </Border>
+                                    <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="4,1"
+                                            Visibility="{Binding Chatted, Converter={StaticResource WorldToolsBoolToVis}}"
+                                            ToolTip="{Binding Loc[explore_bestiary_chatted], Mode=OneWay}">
+                                        <TextBlock Text="{Binding Loc[explore_bestiary_chatted_short], Mode=OneWay}"
+                                                   Style="{StaticResource CaptionText}" FontSize="9.5" Foreground="{StaticResource AccentHoverBrush}" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Text="{Binding Kills}" Style="{StaticResource CaptionText}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+        </StackPanel>
+    </StackPanel>
+    </Grid>
+    </DockPanel>
+</UserControl>

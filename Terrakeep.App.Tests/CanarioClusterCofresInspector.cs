@@ -808,7 +808,11 @@ internal static partial class Program
                 var selectorMundo = Descendientes<RadioButton>(window).FirstOrDefault(r =>
                     (BindingOperations.GetBindingExpression(r, RadioButton.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.ShowSidebarWorldToolsCommand");
                 var browseFaseF = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
-                var worldToolsFaseF = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
+                // ADR-TERRAKEEP-027: WorldTools ahora vive en su propio UserControl
+                // (WorldToolsView) - FindName DOBLE (mismo patron ya usado por GUIA/ADR-021 y
+                // Compare/ADR-025).
+                var worldToolsViewHostFaseF = window.FindName("WorldToolsView") as FrameworkElement;
+                var worldToolsFaseF = worldToolsViewHostFaseF?.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
                 Console.WriteLine($"EXPLORACION-FASEF: selector 'Buscar' encontrado={selectorBuscar != null}, selector 'Mundo' encontrado={selectorMundo != null}, ExplorationSidebarWorldToolsContent encontrado={worldToolsFaseF != null}, ExplorationSidebarBrowseContent encontrado={browseFaseF != null}");
                 if (selectorBuscar == null || selectorMundo == null || worldToolsFaseF == null || browseFaseF == null)
                     Console.WriteLine("FALLO: EXPLORACION-FASEF - falta el selector real 'Buscar'/'Mundo' o alguno de los 2 contenedores de modo en el arbol visual (MainWindow.xaml)");
@@ -859,9 +863,9 @@ internal static partial class Program
                         (BindingOperations.GetBindingExpression(r, RadioButton.IsCheckedProperty)?.ParentBinding?.ConverterParameter as string) == "Edit");
                     var pillBestiaryFaseF = Descendientes<RadioButton>(worldToolsFaseF).FirstOrDefault(r =>
                         (BindingOperations.GetBindingExpression(r, RadioButton.IsCheckedProperty)?.ParentBinding?.ConverterParameter as string) == "Bestiary");
-                    var subviewOverviewFaseF = window.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
-                    var subviewEditFaseF = window.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
-                    var subviewBestiaryFaseF = window.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
+                    var subviewOverviewFaseF = worldToolsViewHostFaseF?.FindName("ExplorationSidebarWorldToolsOverview") as FrameworkElement;
+                    var subviewEditFaseF = worldToolsViewHostFaseF?.FindName("ExplorationSidebarWorldToolsEdit") as FrameworkElement;
+                    var subviewBestiaryFaseF = worldToolsViewHostFaseF?.FindName("ExplorationSidebarWorldToolsBestiary") as FrameworkElement;
                     Console.WriteLine($"EXPLORACION-FASEF: pastillas/subvistas de Mundo -> 'Este mundo' pastilla={pillOverviewFaseF != null}/subvista={subviewOverviewFaseF != null}; 'Editar mundo' pastilla={pillEditFaseF != null}/subvista={subviewEditFaseF != null}; 'Bestiario' pastilla={pillBestiaryFaseF != null}/subvista={subviewBestiaryFaseF != null} (HasBestiary={vm.Exploration.HasBestiary}); WorldToolsSection inicial={vm.Exploration.WorldToolsSection} (esperado Overview)");
                     if (pillOverviewFaseF == null || pillEditFaseF == null || subviewOverviewFaseF == null || subviewEditFaseF == null
                         || vm.Exploration.WorldToolsSection != WorldToolsSection.Overview || subviewOverviewFaseF.IsVisible != true)
