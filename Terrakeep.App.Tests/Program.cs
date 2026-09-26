@@ -415,6 +415,20 @@ internal static partial class Program
             return;
         }
 
+        // FLUJOCOFRES_SOLO=1 (26-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d,
+        // investigador-bug). Vive en CanarioFlujoCompletoCofres.cs (misma clase parcial) - ver su
+        // cabecera para el detalle completo: reconfirma el flujo END-TO-END completo de editar un
+        // cofre (abrir/seleccionar/editar/cambiar de slot/guardar/cancelar/volver/cambiar de cofre)
+        // contra la arquitectura NUEVA de pagina exclusiva del sidebar (ExploracionRediseno Fase
+        // B-I + ChestInspector slots vacios), tras el aplazamiento explicito del punto 1 original.
+        if (Environment.GetEnvironmentVariable("FLUJOCOFRES_SOLO") == "1")
+        {
+            EjecutarFlujoCompletoCofresSolo(window, vm);
+            window.Close();
+            DoEvents();
+            return;
+        }
+
         // MAXSTACK_SOLO=1 (25-sep-2026, encargo Keep "+10/+100/MAX en el editor de objeto"). Vive
         // en CanarioControlesRapidosStack.cs (misma clase parcial) - visual-QA real de los 3
         // botones nuevos (sin overflow/clipping en ningun idioma) + verificacion de que MAX/Count

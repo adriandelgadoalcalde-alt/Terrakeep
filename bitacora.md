@@ -27742,3 +27742,203 @@ no aplica publish/deploy de `Terrakeep.exe`.
 tocado, `git add` con ruta explicita, nunca `-A` (mismo trabajo en paralelo de otros agentes ya
 descrito arriba, ninguno tocado). `doNotTouch` respetado (`CLAUDE.md`, `Terrasavr-Native.zip`,
 `ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` sin tocar). Sin `git push`.
+
+## Cofres punto1 REVALIDADO contra la arquitectura NUEVA (26-sep-2026, investigador-bug, TASK
+## CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d) - flujo end-to-end OBSERVED, PERO hallazgo real
+## NUEVO: el editor de cofre SI puede volver a quedar inalcanzable, por un eje nunca probado
+## (ancho del sidebar de Exploracion, independiente del tamano de ventana)
+
+Encargo del coordinador: reconfirmar desde cero, ya con ExploracionRediseno Fase B-I +
+"ChestInspector slots vacios" cerrados, el requisito real "editar un cofre debe ser estable,
+alcanzable y evidente" - flujo completo abrir/seleccionar/editar/cambiar de slot/guardar/cancelar/
+volver/cambiar de cofre. NO se toco ningun `.cs`/`.xaml` de produccion (`Terrakeep.App`/
+`Terrakeep.Core`) - solo el arnes (`Terrakeep.App.Tests`), como pide el patron de 2 fases.
+
+### Los 8 pasos del flujo: los 8 OBSERVED, con evidencia real
+
+Canario nuevo `Terrakeep.App.Tests/CanarioFlujoCompletoCofres.cs` (`FLUJOCOFRES_SOLO=1`, wiring en
+`Program.cs`), contra una COPIA de `Blando_Río.wld` (358 cofres) en el scratchpad de la sesion -
+nunca el mundo real, porque el paso "Guardar" escribe de verdad en disco
+(`WorldFileService.SaveChestItems`, `WriteAtomic`). Dos cofres reales distintos localizados
+(`chestA`=(3206,428) "Cofre de champiñón"/YoYo, `chestB`=(3204,428) "Cofre de champiñón"/Latigos, 16
+objetos cada uno). Ejecucion real (`dotnet Terrakeep.App.Tests.dll`, Release): **0 `FALLO`, 0
+`EXCEPTION`** en las 9 comprobaciones OBSERVED del flujo:
+
+1. **ABRIR** (`EditChestCommand`, mismo boton "Editar" ya confirmado sin dependencia de hover en la
+   investigacion anterior de este mismo punto): `SidebarMode=ChestInspector`,
+   `EditingChest==chestA`, `EditingChestSlots.Count=40`, `Placeholder.Visibility=Visible`,
+   `BrowseContent.Visibility=Collapsed` - pagina exclusiva real, no un popup. Captura
+   `flujo-1-abrir.png`.
+2. **SELECCIONAR** (vacio y ocupado): `SelectChestSlot` sobre un slot vacio y luego uno ocupado,
+   ambos casos con `ChestItemEdit.Slot` siguiendo la seleccion, exclusividad real
+   (`slotVacio.IsSelected` se apaga al elegir el ocupado) Y evidencia de UI real (no solo VM): el
+   `Border` interior de resaltado (`BorderBrush=AccentBrush`, `MainWindow.xaml`~7902) SI esta
+   `Visible` en el arbol visual ya montado. Captura `flujo-2-seleccionar-ocupado.png`.
+3. **EDITAR**: `slot.ItemId = <id real de "Poción curativa", 188>` (mismo camino real que escribir
+   en el campo "Indice" - `OnItemIdChanged`→`PlaceItem`) coloca el objeto de verdad
+   (`DisplayName='Poción curativa'`). Captura `flujo-3-editar.png`.
+4. **CAMBIAR DE SLOT SIN GUARDAR**: seleccionar OTRO slot sin guardar NO pierde la edicion del paso
+   3 (`slotOcupado.ItemId` sigue en 188 tras el cambio de seleccion) - confirma que
+   `ItemEditViewModel.Slot` muta el objeto REAL de `EditingChestSlots` (misma referencia), no una
+   copia descartable. `SidebarMode`/`EditingChest` no se alteran. Captura
+   `flujo-4-cambiar-slot.png`. Verificado ademas por hash SHA256 que TODO lo anterior (abrir+
+   seleccionar+editar+cambiar de slot) es 100% en memoria: `hash del .wld antes de abrir == hash
+   tras cambiar de slot`.
+5. **GUARDAR**: `SaveEditingChestCommand` deja `SidebarMode=Browse`/`EditingChest=null`,
+   `ChestEditStatus='Guardado en el archivo - copia de seguridad en
+   flujo-completo-cofres.wld.bak'`. Verificacion FUERTE (no solo el estado en memoria que
+   `SaveChestItems` ya actualiza via `WithChestItems`): hash SHA256 del `.wld` CAMBIA de verdad
+   tras Guardar, Y una RECARGA INDEPENDIENTE del mundo desde cero (`WldReader` real, nuevo
+   `LoadFromPathAsync`) confirma que el cofre releido en (3206,428) SI tiene el objeto guardado
+   (NetId=188) - guardado persistente real, no solo un cambio de VM.
+6. **CANCELAR SIN GUARDAR**: edicion real hecha (ItemId 188→1) + `CancelEditingChestCommand` ->
+   `SidebarMode=Browse`/`EditingChest=null`, Y el hash SHA256 del `.wld` queda **intacto** (Cancelar
+   nunca toca el archivo). Reabrir el MISMO cofre confirma que el contenido original (188) SIGUE
+   ahi y el descartado (1) NO aparece en ningun slot - descarte real, no solo oculto.
+7. **VOLVER** (boton real "<- Cofres" de la cabecera, `MainWindow.xaml:7799-7801`): localizado en el
+   arbol visual por su binding real a `Exploration.CancelEditingChestCommand` (mismo patron ya
+   usado por `botonEditarCofre` en `CanarioClusterCofresInspector.cs`), no solo invocado el comando
+   a mano - ejecutar `button.Command` real deja `SidebarMode=Browse`,
+   `BrowseContent.Visibility=Visible`, `Placeholder.Visibility=Collapsed`. Confirma que el mismo
+   comando que respalda "Cancelar" tambien respalda "Volver" (mismo camino de codigo, dos
+   entradas de UI), y que la UI real (no solo la VM) refleja el cambio. Captura `flujo-7-volver.png`
+   (se ve la lista Browse con LOS DOS cofres reales, "YoYo" y "Latigos", cada uno con su propio
+   boton "Editar").
+8. **CAMBIAR DE COFRE** (abrir OTRO cofre DIRECTAMENTE, sin pasar por Cancelar/Guardar/Volver -
+   el hueco real que NINGUN canario existente probaba: todos encadenaban un cierre expreso entre
+   dos aperturas): con `chestA` abierto y una edicion SIN GUARDAR hecha (ItemId→2),
+   `EditChestCommand.Execute(chestB)` DIRECTO no lanza excepcion, deja `SidebarMode=ChestInspector`,
+   `EditingChest==chestB`, `EditingChestSlots` reconstruido de verdad con el contenido REAL de
+   `chestB` (16/16, sin contaminacion del cofre anterior), `ChestItemEdit.Slot` reseteado a `null`.
+   Captura `flujo-8-cambiar-cofre.png` (se ve "Cofre de champiñón - Latigos" (3204,428), objetos
+   reales distintos a chestA). **Observacion de diseño, NO fallo**: el cambio sin guardar de chestA
+   se descarta en SILENCIO al saltar a chestB - mismo comportamiento ya aceptado en el resto de la
+   app para Cancelar/Volver (ningun punto de guardado de Terrakeep tiene dialogo de confirmacion,
+   ni Guardar mundo/letreros/NPCs) - consistente, no una regresion nueva.
+
+**Veredicto de los 8 pasos: OBSERVED, con evidencia real (log + 7 capturas +
+verificacion de disco por hash SHA256 y recarga independiente)**. La arquitectura de pagina
+exclusiva del sidebar (`ExplorationSidebarMode.ChestInspector`) SI resuelve de raiz el sintoma
+original del punto 1 ("Editar cofre inalcanzable por perdida de hover al desplazar el raton") - no
+existe NINGUN camino de apertura/edicion/cierre en esta arquitectura que dependa de mantener el
+cursor sobre un elemento concreto; las 3 vias de apertura (fila/marcador del mapa/resultado de
+busqueda) y las 2-3 de cierre (Guardar/Cancelar/Volver, mismo comando) son clics directos.
+
+### Hallazgo real NUEVO (no el punto 1 original): el eje "ancho del sidebar" nunca se probo, y SI
+### rompe la alcanzabilidad de los slots - severidad real: MEDIA, activo YA en el settings.json real
+
+Mientras se ejecutaba este flujo, `COFRES_INSPECTOR_SOLO` (el canario que cerro "ChestInspector
+slots vacios REABIERTO", commit `83b466fc`, ese mismo dia) **empezo a fallar de verdad**, 2/2 veces
+reproducido: `COFRES-INSPECTOR-SLOTSVACIOS-{1180x860,1080x700}: algun slot fuera del ancho real del
+placeholder=True`.
+
+**Causa real confirmada** (leyendo `MainWindow.xaml:5709` y `SettingsViewModel.cs:133-141`, y
+cuantificada con un nuevo bloque `FLUJOCOFRES-SIDEBARWIDTH` dentro del mismo canario): el
+comentario de `83b466fc` (`MainWindow.xaml`~7850-7872) calculo el suelo "Columns=6" asumiendo que el
+ancho del sidebar dependia SOLO del tamaño de la VENTANA ("296px por defecto, 279px al minimo real
+de ventana 1080x700") - pero el ancho real del sidebar de Exploracion es un eje **INDEPENDIENTE**:
+`ColumnDefinition Width="{Binding Settings.ExplorationSidebarWidth, Mode=TwoWay}"`
+(`MainWindow.xaml:5709`), un ancho persistido en disco
+(`%LocalAppData%\Terrakeep\settings.json`, el MISMO archivo que usa el `Terrakeep.exe` REAL
+instalado del usuario) y arrastrable en vivo con un `GridSplitter` real, con su propio suelo de
+260px (`SettingsViewModel.cs:138`, feature "F-10", **preexistente y AJENO al fix de ChestInspector**
+- confirmado con `git log -S "value < 260"`, introducido en el commit de renombrado
+`TerrasavrNative→Terrakeep`, muchisimo antes de que `SlotGridPanel`/`ChestInspector` existieran).
+260px de COLUMNA no es lo mismo que 260px de contenido real disponible para la rejilla - hay ~41px
+reales de diferencia (padding/bordes/scrollbar) entre `Settings.ExplorationSidebarWidth` y
+`placeholderSlotsVacios.ActualWidth`.
+
+`EXPLORATION_LAYOUT_SOLO` (el canario PERMANENTE que se penso que cubria este riesgo, guarda
+`AR-EX-HSCROLL`) **NO lo detecta**, por el MISMO motivo ya documentado por el propio commit
+`83b466fc`: mide `ScrollableWidth` (`ExplorationSidebarScroll`), que se queda en `0px` aunque haya
+recorte real, porque `HorizontalScrollBarVisibility="Disabled"` hace que el
+`ScrollContentPresenter` recorte en SILENCIO sin extender el `Extent` - el mismo punto ciego ya
+nombrado para el eje de tamaño de ventana, aqui aplicado sin querer al eje de ancho del sidebar.
+Solo la medicion GEOMETRICA real (`TransformToAncestor` de cada slot contra el ancho real del
+placeholder, la tecnica de `COFRES-INSPECTOR-SLOTSVACIOS`) lo caza.
+
+**Cuantificado con datos reales** (bloque nuevo `FLUJOCOFRES-SIDEBARWIDTH`, mismo canario,
+`vm.Settings.ExplorationSidebarWidth` fijado a 3 valores reales, ventana 1180x860, cofre real de 40
+slots, restaurado el valor original al terminar):
+
+| `Settings.ExplorationSidebarWidth` pedido | `placeholder.ActualWidth` real | Slots inalcanzables |
+|---|---|---|
+| 260px (suelo real de `SettingsViewModel`, "F-10") | 219px | **6** (columna 6 entera, en las 6 filas que la usan) |
+| 280px (**valor REAL persistido ahora mismo en el `settings.json` real del usuario**) | 239px | **6** |
+| 320px (valor de fabrica, `SettingsService.cs:20`) | 279px | 0 |
+
+El valor que HAY AHORA MISMO en `%LocalAppData%\Terrakeep\settings.json` (280px) **YA esta roto**
+- no es un caso extremo teorico del suelo (260px), rompe tambien en un valor intermedio
+perfectamente normal que cualquier arrastre real del `GridSplitter` puede producir. Dado que ese
+archivo es compartido con el `Terrakeep.exe` REAL instalado, el usuario, ahora mismo, si abre
+Exploracion > un cofre real con los 40 slots, tiene la columna 6 de la rejilla (6 de 40 slots,
+15%) parcialmente fuera del area de scroll visible/clicable, sin ninguna barra ni aviso que lo
+delate - exactamente la clase de bug ("inalcanzable sin aviso visual") que el punto 1 original
+describia, solo que por una causa distinta (ancho del sidebar, no hover del raton). **No se pudo
+determinar CON CERTEZA si el usuario arrastro el sidebar a 280px el mismo, o si algun canario de
+otro agente en paralelo el mismo dia lo dejo asi** (el archivo es compartido por diseño entre la
+app real y el arnes) - LIMITE REAL, no investigado mas a fondo por no tocar produccion ni gastar mas
+tiempo en el origen exacto del valor persistido, que no cambia la causa ni el arreglo.
+
+**Severidad real**: MEDIA, no CRITICA - el resto de columnas (1-5, 34/40 slots) siguen alcanzables,
+y arrastrar el sidebar a un ancho mayor (¡con el propio `GridSplitter` ya visible!) lo arregla sin
+tocar nada; pero es un bug real y activo hoy mismo en el `settings.json` real del usuario, en la
+MISMA area (edicion de cofres) que este encargo pide revalidar como "alcanzable".
+
+**Recomendacion concreta para `aplicador-fix`** (causa y arreglo ya identificados, NO reinvestigar):
+- Opcion A (minima, mas segura): subir el suelo real de `SettingsViewModel.cs:138` de `260` a
+  `301` (el valor real minimo que hace que `placeholder.ActualWidth>=260` con el offset de chroma
+  medido, `301-239+260=~301`, verificar con el mismo canario `FLUJOCOFRES-SIDEBARWIDTH` tras el
+  cambio) - un solo numero, sin tocar el `SlotGridPanel`/`Columns` que ya arreglo
+  "ChestInspector slots vacios REABIERTO".
+- Opcion B (mas general, cubre cualquier ancho futuro): enlazar `AvailableWidth`/recalcular
+  `Columns` de forma dinamica segun el ancho REAL disponible del placeholder (en vez de la
+  constante literal `Columns="6"`, `MainWindow.xaml:7873`), igual que ya se hace con
+  `MinCell`/`MaxCell` via converters - mas trabajo, pero nunca vuelve a depender de que el ancho
+  del sidebar coincida por casualidad con la constante elegida.
+- Cualquiera de las 2 debe reverificarse con `COFRES_INSPECTOR_SOLO=1` (ya en verde antes de este
+  hallazgo, debe volver a estarlo) Y con el nuevo bloque `FLUJOCOFRES-SIDEBARWIDTH` de
+  `CanarioFlujoCompletoCofres.cs` (`FLUJOCOFRES_SOLO=1`) a los 3 anchos reales de la tabla de
+  arriba.
+
+### Cierre del hueco de cobertura KeepQA
+
+Canario nuevo permanente: `Terrakeep.App.Tests/CanarioFlujoCompletoCofres.cs` (`FLUJOCOFRES_SOLO=1`,
+wiring real en `Program.cs` junto a `COFRES_INSPECTOR_SOLO`) - cubre DOS huecos reales que NINGUN
+canario existente cubria:
+1. El flujo end-to-end completo (abrir→seleccionar→editar→cambiar de slot→guardar→cancelar→
+   volver→cambiar de cofre) encadenado sobre el MISMO editor en una sola sesion real, con
+   verificacion de disco por hash+recarga independiente (ni `CanarioClusterCofresInspector.cs` ni
+   `CanarioExploracionLayoutPermanente.cs` encadenaban 2 `EditChestCommand.Execute` sin un cierre
+   expreso entre medias - el "cambiar de cofre directo" del paso 8 no tenia ninguna cobertura
+   previa).
+2. El eje "ancho del sidebar" (`Settings.ExplorationSidebarWidth`, independiente del tamaño de
+   ventana) para la alcanzabilidad real de los slots del Inspector - bloque
+   `FLUJOCOFRES-SIDEBARWIDTH`, permanente, corre en la misma pasada.
+
+**Verificacion de regresion del arnes**: `dotnet build Terrakeep.slnx -c Release`: verde, 0
+avisos/0 errores (unico aviso real detectado y corregido durante el desarrollo, CS0219 variable sin
+usar). `dotnet test Terrakeep.Core.Tests -c Release --no-build`: **773/773**, 0 regresion (no se
+toco Terrakeep.Core). `FLUJOCOFRES_SOLO=1`: 9 lineas OBSERVED, 0 `FALLO` en el flujo de 8 pasos + 2
+`FALLO` reales (esperados, el hallazgo nuevo) en `FLUJOCOFRES-SIDEBARWIDTH` a 260px/280px, 0
+`FALLO` a 320px - exactamente lo que predice la causa real. `COFRES_INSPECTOR_SOLO=1` (canario
+preexistente, sin tocar): reproduce el mismo `FALLO` real 2/2 veces con `settings.json` en su valor
+actual (280px) - confirma que no es un artefacto de mi canario nuevo, es un estado real y
+reproducible del propio `COFRES-INSPECTOR-SLOTSVACIOS` ya existente. `settings.json` real
+restaurado a su valor original (280px) tras el diagnostico, confirmado por lectura directa del
+archivo.
+
+**Commit real**: `Terrakeep.App.Tests/CanarioFlujoCompletoCofres.cs` (nuevo) +
+`Terrakeep.App.Tests/Program.cs` (wiring `FLUJOCOFRES_SOLO`) + esta entrada de `bitacora.md` -
+unicos ficheros tocados, `git add` con rutas explicitas, nunca `-A`. `doNotTouch` respetado
+(`CLAUDE.md`, `Terrasavr-Native.zip`, `Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md`, y NINGUN `.cs`/`.xaml` de `Terrakeep.App`/`Terrakeep.Core` - la causa del
+hallazgo nuevo esta identificada con archivo:linea exactos arriba, para que `aplicador-fix` actue
+sin reinvestigar). Sin `git push`.
+
+**Pendiente explicito para el coordinador**: despachar `aplicador-fix` con el hallazgo nuevo de
+arriba (ancho del sidebar) - severidad MEDIA pero activa hoy mismo en el `settings.json` real del
+usuario. El punto 1 original (hover) puede darse por CERRADO de verdad esta vez (ya van 3
+investigaciones independientes sin reproducirlo: la de antes del rediseño, la de despues, y este
+flujo end-to-end completo) - no hace falta una 4a revalidacion salvo que reaparezca con evidencia
+real nueva (video/captura del usuario).
