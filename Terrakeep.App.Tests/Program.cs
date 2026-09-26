@@ -5456,6 +5456,72 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // NOVEDADES_SOLO=1 (26-sep-2026, ADR-TERRAKEEP-016/017, primera extraccion real de una
+        // seccion de MainWindow.xaml a un UserControl): canario minimo que la propia ADR-016
+        // marcaba como hueco real (punto 5, "HUECOS REALES" - ningun test cubria antes la
+        // pestaña NOVEDADES ni el mecanismo de extraccion en si, solo "compila"). Confirma que
+        // Views/WhatsNewView.xaml se monta sin lanzar (sus 3 recursos - CaptionText/AccentBrush/
+        // InnerTabControl - viven en Styles/Theme.xaml via App.xaml, NINGUNO es window-scoped,
+        // por eso se resuelven igual desde dentro de un UserControl que desde el Window) y que
+        // su contenido (las 2 sub-pestañas Terraria/tModLoader-Calamity con datos reales) es
+        // exactamente el mismo que tenia el TabItem antes de moverse.
+        if (Environment.GetEnvironmentVariable("NOVEDADES_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 6; // AppTab.Novedades
+                FijarTamaño(window, 1180, 860);
+                DoEvents(); DoEvents();
+
+                var vista = Descendientes<Terrakeep.App.Views.WhatsNewView>(window).FirstOrDefault();
+                Console.WriteLine($"NOV-EXT-01: WhatsNewView montada en el arbol visual del Window={vista != null} (esperado True)");
+                if (vista == null) Console.WriteLine("FALLO: NOV-EXT-01 - no se encontro ninguna WhatsNewView tras seleccionar la pestaña Novedades");
+
+                var tabInterna = vista != null ? Descendientes<TabControl>(vista).FirstOrDefault() : null;
+                int subPestañas = tabInterna?.Items.Count ?? -1;
+                Console.WriteLine($"NOV-EXT-02: sub-pestañas dentro de WhatsNewView={subPestañas} (esperado 2)");
+                if (subPestañas != 2) Console.WriteLine("FALLO: NOV-EXT-02 - deberian existir exactamente 2 sub-pestañas (Terraria / tModLoader-Calamity Mod)");
+
+                // NOV-EXT-03: el TabControl interno solo ADJUNTA al arbol visual el Content de
+                // la sub-pestaña SELECCIONADA (comportamiento real de WPF, no un bug) - hay que
+                // seleccionar cada una por turno antes de buscar su ItemsControl. Ademas, cada
+                // WhatsNewEntryViewModel real (Window.Resources, plantilla implicita por tipo)
+                // trae SUS PROPIOS ItemsControl anidados (lista de cambios/items), por eso se
+                // busca por REFERENCIA exacta el ItemsControl de nivel superior que la vista liga
+                // directamente a WhatsNew.VanillaEntries/CalamityEntries (mismo objeto en
+                // memoria, no una copia) en vez de contar todos los descendientes.
+                if (tabInterna != null) tabInterna.SelectedIndex = 0;
+                DoEvents(); DoEvents();
+                bool tieneVanilla = tabInterna != null && Descendientes<ItemsControl>(tabInterna).Any(ic => ReferenceEquals(ic.ItemsSource, vm.WhatsNew.VanillaEntries));
+
+                if (tabInterna != null) tabInterna.SelectedIndex = 1;
+                DoEvents(); DoEvents();
+                bool tieneCalamity = tabInterna != null && Descendientes<ItemsControl>(tabInterna).Any(ic => ReferenceEquals(ic.ItemsSource, vm.WhatsNew.CalamityEntries));
+
+                Console.WriteLine($"NOV-EXT-03: ItemsControl de nivel superior ligado a VanillaEntries={tieneVanilla} (esperado True), ligado a CalamityEntries={tieneCalamity} (esperado True), entradas vanilla reales={vm.WhatsNew.VanillaEntries.Count}, entradas Calamity reales={vm.WhatsNew.CalamityEntries.Count}");
+                if (!tieneVanilla || !tieneCalamity) Console.WriteLine("FALLO: NOV-EXT-03 - los dos ItemsControl de nivel superior deberian seguir ligados a las mismas colecciones reales del ViewModel que antes de la extraccion");
+                if (vm.WhatsNew.VanillaEntries.Count == 0 || vm.WhatsNew.CalamityEntries.Count == 0)
+                    Console.WriteLine("FALLO: NOV-EXT-03 - el changelog real deberia traer entradas en ambas listas");
+
+                // Captura real para verificacion visual manual (comportamiento preservado byte a
+                // byte: mismo XAML que antes de la extraccion, solo movido a WhatsNewView.xaml).
+                if (tabInterna != null) tabInterna.SelectedIndex = 0;
+                DoEvents(); DoEvents(); DoEvents(); DoEvents();
+                var rtbNov = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbNov.Render(window);
+                var encoderNov = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoderNov.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbNov));
+                var shotNov = Path.Combine(AppContext.BaseDirectory, "novedades-tras-extraccion.png");
+                using (var fsNov = File.Create(shotNov)) encoderNov.Save(fsNov);
+                Console.WriteLine($"NOV-EXT-04: captura real de la pestaña Novedades tras la extraccion -> {shotNov}");
+            }
+            catch (Exception ex) { Console.WriteLine("NOVEDADES-EXCEPTION: " + ex); }
+
+            Console.WriteLine("DONE (NOVEDADES_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.

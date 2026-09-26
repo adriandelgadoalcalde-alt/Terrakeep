@@ -8,6 +8,7 @@
         xmlns:data="clr-namespace:Terrakeep.Core.Data;assembly=Terrakeep.Core"
         xmlns:controls="clr-namespace:Terrakeep.App.Controls"
         xmlns:conv="clr-namespace:Terrakeep.App.Converters"
+        xmlns:views="clr-namespace:Terrakeep.App.Views"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
         Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing" KeyDown="OnWindowKeyDown"
@@ -7928,42 +7929,11 @@
                     <TextBlock Text="{Binding Loc[tab_whatsnew], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
-            <DockPanel Margin="14">
-                <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
-                    <Run Text="{Binding Loc[whatsnew_intro_1], Mode=OneWay}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_game], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_2], Mode=OneWay}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_link], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                    <Run Text="." />
-                </TextBlock>
-                <TabControl Style="{StaticResource InnerTabControl}">
-                    <!-- H5-09: MaxWidth compartido (DetailContentMaxWidth) + las tarjetas de version
-                         pasan de tira unica a UniformGrid de verdad (DetailCardColumns, 2 en Amplio)
-                         en vez de "una tira unica" (texto literal del hallazgo). -->
-                    <TabItem Header="Terraria">
-                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                                <ItemsControl ItemsSource="{Binding WhatsNew.VanillaEntries}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="tModLoader / Calamity Mod">
-                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                                <ItemsControl ItemsSource="{Binding WhatsNew.CalamityEntries}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
-            </DockPanel>
+            <!-- ADR-TERRAKEEP-016/017 (26-sep-2026): contenido extraido a Views/WhatsNewView.xaml,
+                 primera extraccion real a UserControl de este repo (ver el comentario real de
+                 ese archivo). Comportamiento preservado byte a byte: mismo XAML, solo movido de
+                 sitio - el UserControl hereda el DataContext de este Window sin fijarlo. -->
+            <views:WhatsNewView />
         </TabItem>
 
         <!-- ===================== ACERCA DE ===================== -->

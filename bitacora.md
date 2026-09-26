@@ -29264,3 +29264,77 @@ cs`, `Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs`, todo `Te
 *` modificado, `scripts/*.js`/`*.ps1` y ficheros nuevos sin trackear - ninguno tocado). Esta entrada
 de `bitacora.md` va en un commit propio separado, tras confirmar el resultado real. Sin `git push`
 en ninguno de los dos.
+
+## Primera extraccion real de una seccion de MainWindow.xaml a UserControl - NOVEDADES (26-sep-2026)
+
+Ejecucion real (no solo el plan) de `ADR-TERRAKEEP-016` (Decision Registry de KeepQA, requirement
+`b108d4bf-f1a7-4466-b2f6-69fdb54bf603`): primer paso de la "separacion progresiva de hotspots"
+pedida por el usuario, empezando por la seccion que el propio plan marcaba como de MENOR riesgo
+(punto 4.1) - la pestaña **NOVEDADES** (45 lineas, `MainWindow.xaml` 7919-7967 antes de tocarla).
+Detalle completo de lo aplicado, el patron establecido (primer `UserControl` de este repo, sin
+precedente previo) y las lecciones reales encontradas al ejecutarlo (que difieren un poco de lo
+teorico del plan) en `ADR-TERRAKEEP-017` (Decision Registry, mismo requirement).
+
+**Resumen del arreglo real**: contenido del `TabItem` NOVEDADES movido byte a byte a
+`Terrakeep.App/Views/WhatsNewView.xaml` + `WhatsNewView.xaml.cs` (namespace `Terrakeep.App.Views`,
+`UserControl` nuevo). `MainWindow.xaml` queda con `<views:WhatsNewView />` dentro del `TabItem`
+(que conserva su `Header`/`ToolTip`/`AutomationProperties.Name`, especificos del Window). Los 3
+recursos que usa esta seccion (`CaptionText`/`AccentBrush`/`InnerTabControl`) ya vivian en
+`Styles/Theme.xaml` via `App.xaml` - confirmado real que NINGUNO de los 20 recursos
+window-scoped del plan afecta a esta seccion, no hizo falta promover nada. Grep confirmado:
+ningun `x:Name` vive en esta seccion y ninguno de los 9 archivos de test con
+`window.FindName(...)` la toca - no hizo falta `NameScope` compartido ni tocar ningun test
+existente. El `UserControl` NO fija su propio `DataContext` (hereda el `MainViewModel` real del
+Window que lo hospeda, regla 2d del plan).
+
+**Canario nuevo** (cerraba el hueco real que el propio `ADR-TERRAKEEP-016` señalaba: ningun test
+cubria antes la pestaña NOVEDADES ni el mecanismo de extraccion en si): `Terrakeep.App.Tests/
+Program.cs`, modo `NOVEDADES_SOLO=1` nuevo (mismo patron que el resto de modos `_SOLO` ya
+existentes) - NOV-EXT-01 (`WhatsNewView` presente en el arbol visual del `Window` tras seleccionar
+`AppTab.Novedades`), NOV-EXT-02 (2 sub-pestañas reales dentro del `UserControl`), NOV-EXT-03 (los
+2 `ItemsControl` de nivel superior siguen ligados por REFERENCIA exacta a
+`WhatsNew.VanillaEntries`/`CalamityEntries`, con entradas reales en ambas), NOV-EXT-04 (captura
+real de la pestaña completa tras la extraccion, revisada a mano - aspecto identico al esperado).
+
+**Hallazgo real no anticipado por el plan** (mecanismo, no solo resultado visual): el `TabControl`
+interno de `WhatsNewView` solo adjunta al arbol VISUAL el `Content` de la sub-pestaña
+SELECCIONADA (comportamiento real y esperado de WPF) - un primer intento de canario que contaba
+`Descendientes<ItemsControl>` sin seleccionar cada sub-pestaña encontraba solo la de Vanilla y
+fallaba en Calamity; corregido seleccionando `TabControl.SelectedIndex` + `DoEvents()` antes de
+buscar cada una. Ademas, contar TODOS los `Descendientes<ItemsControl>` de la vista da 8 (no 2) -
+cada `WhatsNewEntryViewModel` real trae sus propios `ItemsControl` anidados (plantilla implicita
+de `Window.Resources`, lista de cambios/items por entrada) - hubo que localizar por
+`ReferenceEquals` contra `ItemsSource` los 2 `ItemsControl` de nivel superior reales. Detalle
+completo del primer intento fallido y la correccion en `ADR-TERRAKEEP-017`.
+
+**Verificacion real**: `dotnet build Terrakeep.slnx -c Release` 0/0 (antes y despues). `dotnet
+test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline citado por el plan). `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). `dotnet run
+--project Terrakeep.App.Tests -c Debug` con `NOVEDADES_SOLO=1`: NOV-EXT-01/02/03/04 sin ningun
+`FALLO:` ni `DISPATCHER-EXCEPTION`/`NOVEDADES-EXCEPTION`. El recorrido COMPLETO de
+`Terrakeep.App.Tests` (sin ningun `_SOLO`, 5+ minutos reales) NO se relanzo entero en esta ronda -
+se opto por el modo de foco nuevo (mismo criterio ya establecido en el repo para el resto de
+modos `_SOLO`, pensados para verificar un cambio acotado sin pagar el arnes completo cada vez);
+queda pendiente relanzarlo completo antes de cerrar toda la serie de extracciones de
+`MainWindow.xaml`.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`, la ruta indexada en `herramientas.json`) recompilado como parte de `dotnet build
+Terrakeep.App.Tests`. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`, self-contained
+win-x64) NO estaba en ejecucion (`Get-Process -Name Terrakeep` -> sin resultados) antes del
+despliegue. `DEPLOY_LOCK` (`KeepQA\src\bloqueos\deployLock.js`) adquirido antes de tocar
+`Assets/`/publish, liberado despues de confirmar. `dotnet publish Terrakeep.App/Terrakeep.App.csproj
+-c Release -p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\
+Terrakeep" /MIR /XF unins000.exe unins000.dat`: 1 archivo copiado (`Terrakeep.exe`, el unico con
+cambio real - este arreglo no toco ningun asset), `Assets/` identico antes/despues (13056
+ficheros, mismo hash). Hash SHA256 identico entre el `.exe` publicado y el instalado
+(`DD6DA8B7...46D3D` en ambos). Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True` a los 5s, cerrado limpio con `Stop-Process -Force`, sin proceso residual
+verificado despues.
+
+**Commit local pendiente**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/WhatsNewView.xaml` + `.xaml.cs` (nuevos) y `Terrakeep.App.Tests/Program.cs`
+(canario `NOVEDADES_SOLO` nuevo) - nunca `git add -A`, habia decenas de ficheros ajenos
+modificados en el arbol por otros agentes en paralelo (mismo patron que la entrada anterior).
+Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en
+KeepQA. Sin `git push`.
