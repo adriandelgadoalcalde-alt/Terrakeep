@@ -30275,3 +30275,123 @@ sigue el orden ya fijado por `ADR-TERRAKEEP-016` para el grupo 4.6 (EXPLORACION)
 el mapa+minimapa (el mas grande y con mas code-behind real de toda la seccion) - cada uno en su
 propia ronda dedicada, nunca de una vez. Objetos (911 lineas, sub-tab de PERSONAJE) sigue
 pendiente aparte, dejado deliberadamente para el final de ese grupo por el plan original.
+
+## Duodecima extraccion real de una seccion de MainWindow.xaml a UserControl - CHESTINSPECTOR (26-sep-2026)
+
+`ADR-TERRAKEEP-028`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Segunda extraccion del
+grupo 4.6 (EXPLORACION), tras WorldTools/`ADR-027`. Sub-modo elegido: **ChestInspector** (Inspector
+de cofre, 144 lineas de encargo, `MainWindow.xaml` 5775-5919 reales antes de la extraccion).
+
+**Correccion real de la premisa del encargo**: el plan asumia que ChestInspector "comparte
+`ContainerCompactTemplate` con Objetos". Grep exhaustivo confirma que ChestInspector NUNCA usa
+`ContainerCompactTemplate` - el propio comentario Fase D, ya en el codigo antes de esta ronda, lo
+decia explicitamente ("NUNCA el MultiConverter de `ContainerCompactTemplate` que depende de un
+`ContainerViewModel` que aqui no existe" - la rejilla usa `SlotGridPanel` a pelo). Los 10 usos
+reales de `ContainerCompactTemplate` en todo el archivo viven TODOS dentro de `ObjetosPageHost`
+(Equipamiento/Inventario/Almacenes, `MainWindow.xaml` ~2207-2730, sub-tab Objetos de PERSONAJE sin
+extraer). `ContainerCompactTemplate` se queda intacta en `Window.Resources` sin ningun tratamiento
+esta ronda.
+
+La dependencia cruzada REAL con Objetos (misma familia de problema, nombre distinto al anticipado)
+es **`ItemEditTemplate`** (`MainWindow.xaml:26-250`, `DataTemplate` `x:Key` SOLO en
+`Window.Resources`, 225 lineas): usada por Objetos (linea ~2726, sin extraer) Y por ChestInspector
+(`ContentControl`->`Exploration.ChestItemEdit`). Promover a `Application.Resources`/`App.xaml`
+descartado por el mismo motivo YA PROBADO real por `ADR-019`/HostingView (revienta
+`MainWindow.InitializeComponent()` ENTERO en runtime por la tabla BAML `OptimizedStaticResource`
+compartida por ensamblado, confirmado en su momento con `dotnet clean` + build limpio) - no se
+repitio el experimento, se confio en la evidencia ya documentada. Unica solucion segura ya
+validada 6 veces (`GuideBoolToVis`/`HostingBoolToVis`/`UnlocksBoolToVis`/`CompareBoolToVis`/
+`HomeBoolToVis`/`WorldToolsBoolToVis`): `<UserControl.Resources>` LOCAL. A diferencia de las 6
+rondas anteriores (siempre un converter de 1 linea), esta vez el recurso window-scoped es el
+`DataTemplate` `ItemEditTemplate` completo - se duplico como `ChestInspectorItemEditTemplate`
+(`BoolToVis` interno renombrado a `ChestInspectorBoolToVis`, mismo patron, 5 referencias
+internas). Esto contradice el comentario original de Fase D ("MISMA instancia de recurso, NUNCA
+duplicada") - la duplicacion deja de ser evitable en cuanto el consumo cruza dos paginas XAML
+compiladas sin tocar `App.xaml` (opcion ya probada rota). **Riesgo real aceptado y documentado**:
+dos definiciones del mismo editor visual (225 lineas) deben mantenerse sincronizadas a mano hasta
+que Objetos se extraiga tambien - en esa ronda reconsiderar una solucion de fondo
+(`ResourceDictionary.MergedDictionaries` con `Source=` compartido por ambos `UserControl` sin
+tocar `Application.Resources`, tecnica NO probada todavia, pendiente de verificacion empirica
+real, no asumida aqui por prudencia).
+
+Contenido movido a `Terrakeep.App/Views/ChestInspectorView.xaml` + `.xaml.cs` (mismo patron de las
+11 rondas anteriores: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio,
+`d:DesignInstance`). `MainWindow.xaml` queda con `<views:ChestInspectorView
+x:Name="ChestInspectorView" />` dentro de `<Grid x:Name="ExplorationSidebarBrowseInspectorHost">`
+(junto a Browse/WorldTools). `OnChestItemSlotMouseDown` (unico call-site real, confirmado por
+grep) y `OnCommitTextOnEnter` (usado por 2 `TextBox` de la plantilla duplicada - `MainWindow.xaml.cs`
+conserva su propia copia porque Objetos la sigue usando, handler trivial sin estado, sin riesgo
+real de divergencia) movidos/duplicados a `ChestInspectorView.xaml.cs`.
+
+**Hallazgo secundario fuera de alcance** (documentado, NO corregido - "no ampliar alcance sin
+escalar"): dentro de `ItemEditTemplate`/`ChestInspectorItemEditTemplate`, los 3 niveles del
+selector de prefijo (Metas/Groups/Prefixes) enlazan su `Command` via `RelativeSource
+AncestorType=Window` a `DataContext.ItemEdit.SelectMetaCommand`/`SelectGroupCommand`/
+`ApplyPrefixCommand` - SIEMPRE el `ItemEditViewModel` RAIZ (`vm.ItemEdit`, de Personaje), NUNCA
+`vm.Exploration.ChestItemEdit` (instancia DISTINTA, confirmado `MainViewModel.cs:1194` vs
+`ExplorationViewModel.cs:2513`, dos `new ItemEditViewModel(...)` separados). Binding preexistente
+a esta extraccion (ya estaba asi en `MainWindow.xaml` antes de mover nada), dinamico
+(`RelativeSource`, no `StaticResource`) - sigue resolviendo igual tras la extraccion porque
+`ChestInspectorView` vive parented dentro de la MISMA `Window` en runtime. Posible bug real de
+produccion (pulsar un boton de Meta/Grupo/Prefijo dentro del Inspector de cofre podria estar
+operando sobre el editor de Personaje en vez del propio cofre) - recomendado investigarlo en una
+ronda propia, nunca mezclado con esta extraccion estructural.
+
+**x:Name reales** (`ExplorationSidebarChestInspectorPlaceholder`) usados por `window.FindName` en
+3 archivos de test (`CanarioClusterCofresInspector.cs` x3, `CanarioFlujoCompletoCofres.cs` x2,
+`CanarioExploracionLayoutPermanente.cs` x1) - actualizados al patron de `FindName` DOBLE ya usado
+por GUIA/`ADR-021`, Compare/`ADR-025` y WorldTools/`ADR-027`:
+`window.FindName("ChestInspectorView")` seguido de
+`chestInspectorView.FindName("ExplorationSidebarChestInspectorPlaceholder")`.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline). `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). Canarios
+especificos en verde: `COFRES_INSPECTOR_SOLO=1` (135 lineas, 0 `FALLO`, 0 `EXCEPTION`),
+`FLUJOCOFRES_SOLO=1` (31 lineas, 0 `FALLO`, 0 `EXCEPTION`), `EXPLORATION_LAYOUT_SOLO=1` (60 lineas,
+0 `FALLO`, 0 `EXCEPTION`). Recorrido COMPLETO de `Terrakeep.App.Tests` (sin ningun `_SOLO`)
+ejecutado DOS VECES: 16 `FALLO` en ambas pasadas, EXACTAMENTE las mismas 9 categorias ya
+documentadas como baseline preexistente desde WorldTools/`ADR-027` (`H5-05`x1, `A8-06`x1,
+`AR-14`x4, `A8-01`x1, `AR-11f`x1, `AR-MRK-CLIC`x1, `AR-MRK-OTROS`x5, `A10-IDIOMA-BARRIDO`x1,
+`AR-LAY`x1) - CERO mencion de ChestInspector/`ItemEditTemplate`/`ChestInspectorView` en ninguna de
+las dos pasadas.
+
+**Verificacion visual**: captura real `fased-inspector-completo-picaro.png` (cofre real con Hacha
+Arrojadiza de Adamantita, 17 prefijos legales reales) revisada a mano - cabecera con
+icono/nombre/coordenadas, rejilla de slots, panel "Editar" (Indice/Cantidad/Prefijo) y selector de
+prefijo de 3 niveles (Biblioteca/Positivos/Negativos, Mejor/Daño/Critico...) renderizados
+correctamente, sin ningun recurso roto.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real NO estaba en ejecucion antes del despliegue
+(`Get-Process -Name Terrakeep` sin resultados). `DEPLOY_LOCK` (`KeepQA\src\bloqueos\deployLock.js`)
+adquirido antes de tocar `Assets/`/publish (snapshot antes=13057 ficheros/hash `c273111a...`).
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy .../publish "%LocalAppData%\Programs\Terrakeep" /MIR /XF unins000.exe unins000.dat` (via
+`MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`), 0 errores, 0 extras. `Assets/`
+identico antes/despues (13057 ficheros, confirmado por `deployLock.despues`). Hash SHA256
+identico entre el `.exe` publicado y el instalado
+(`EB82013CD7E2035DE09CFE9635DEA57710476D82ED216CBE22F55A354735451D` en ambos). Sanity check real:
+`Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio
+(`Stop-Process -Force`), sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Bloqueos de coordinacion**: `terrakeep-mainwindow-xaml` (`KeepQA\src\bloqueos\bloqueo.js`)
+reservado antes de commit/build/deploy y liberado al terminar - libre en todo momento durante esta
+ronda, sin colision real con otro agente.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (`OnChestItemSlotMouseDown` movido),
+`Terrakeep.App/Views/ChestInspectorView.xaml` + `.xaml.cs` (nuevos),
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` + `CanarioFlujoCompletoCofres.cs` +
+`CanarioExploracionLayoutPermanente.cs` (`FindName` doble) - nunca `git add -A`. Registrado contra
+`requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin
+`git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con ChestInspector
+cerrado, sigue Browse (el listado/buscador de resultados de EXPLORACION) y finalmente el
+mapa+minimapa (el mas grande y con mas code-behind real de toda la seccion) - cada uno en su
+propia ronda dedicada. Objetos (911 lineas, sub-tab de PERSONAJE) sigue pendiente aparte - cuando
+se extraiga, revisar el tratamiento de `ItemEditTemplate` (unificar con
+`ChestInspectorItemEditTemplate` via `ResourceDictionary.MergedDictionaries` compartido si la
+verificacion empirica lo confirma seguro) y considerar investigar el hallazgo secundario del
+binding de Meta/Grupo/Prefijo documentado arriba.

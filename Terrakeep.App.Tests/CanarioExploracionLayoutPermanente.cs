@@ -165,7 +165,11 @@ internal static partial class Program
                             Console.WriteLine($"EXPLORATION_LAYOUT-CHESTINSPECTOR: AVISO ({etiqueta}) - no se pudo colocar el Picaro de 17 prefijos, se mide el Inspector con el contenido real del cofre");
                         }
 
-                        var placeholder = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                        // ADR-TERRAKEEP-028 (26-sep-2026): ChestInspector se movio a ChestInspectorView.xaml
+                        // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado por
+                        // GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027.
+                        var chestInspectorViewHost = window.FindName("ChestInspectorView") as FrameworkElement;
+                        var placeholder = chestInspectorViewHost?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                         var botonVolver = placeholder == null ? null : Descendientes<Button>(placeholder).FirstOrDefault(b =>
                             (BindingOperations.GetBindingExpression(b, Button.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.CancelEditingChestCommand");
                         bool inspectorConContenido = placeholder != null && placeholder.IsVisible && botonVolver != null && botonVolver.IsVisible;

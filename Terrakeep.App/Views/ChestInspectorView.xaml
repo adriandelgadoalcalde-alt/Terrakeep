@@ -1,0 +1,407 @@
+<!-- ADR-TERRAKEEP-016/028 (26-sep-2026): DUODECIMA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, SEGUNDA del grupo 4.6 (EXPLORACION), tras WorldTools
+     (ADR-027).
+
+     ChestInspector (144 lineas de encargo, en la practica 145 lineas reales MainWindow.xaml
+     5775-5919 antes de esta extraccion, incluido el comentario de diseño Fase D que se conserva
+     integro mas abajo) es el submodo "Inspector de cofre" del sidebar de EXPLORACION - uno de los
+     3 hijos EXCLUSIVOS (junto a Browse y WorldTools) de <Grid
+     x:Name="ExplorationSidebarBrowseInspectorHost"> segun Exploration.SidebarMode
+     (EnumEqualsToVis). Contenido movido BYTE A BYTE (solo re-indentado al moverse de sitio) -
+     MainWindow.xaml queda con <views:ChestInspectorView x:Name="ChestInspectorView" /> en el
+     mismo punto exacto.
+
+     HALLAZGO REAL QUE CORRIGE LA PREMISA DEL PLAN ORIGINAL (encargo de esta ronda: "ChestInspector
+     comparte ContainerCompactTemplate con Objetos"): grep exhaustivo confirma que este bloque NUNCA
+     usa ContainerCompactTemplate (el propio comentario de Fase D, linea ~5839 de MainWindow.xaml,
+     ya lo decia explicitamente: "NUNCA el MultiConverter de ContainerCompactTemplate que depende de
+     un ContainerViewModel que aqui no existe" - la rejilla de slots usa SlotGridPanel a pelo, sin
+     ContainerViewModel). Los 10 usos reales de ContainerCompactTemplate en todo MainWindow.xaml
+     viven TODOS dentro de ObjetosPageHost (Equipamiento/Inventario/Almacenes, MainWindow.xaml
+     ~2207-2730) - el sub-tab Objetos de PERSONAJE, que sigue sin extraer. ContainerCompactTemplate
+     por tanto NO necesita ningun tratamiento en esta ronda - se queda intacta en Window.Resources
+     de MainWindow.xaml hasta que Objetos se extraiga.
+
+     La dependencia cruzada REAL con Objetos (no anticipada por el plan, pero de la MISMA familia
+     de problema) es `ItemEditTemplate` (MainWindow.xaml:26-250, DataTemplate x:Key SOLO en
+     Window.Resources): usado por Objetos (linea ~2726, ContentControl->ItemEdit, sin extraer
+     todavia) Y por este bloque (ContentControl->Exploration.ChestItemEdit). Mismo mecanismo YA
+     confirmado real por ADR-019/HostingView (ver bitacora.md, "revienta MainWindow.
+     InitializeComponent() ENTERO en runtime, tabla BAML OptimizedStaticResource compartida por
+     ensamblado" al promover CUALQUIER clave nueva a Application.Resources/App.xaml, comprobado con
+     dotnet clean + build limpio) - promover ItemEditTemplate a un ResourceDictionary compartido
+     mergeado en App.xaml queda DESCARTADO por el mismo motivo ya probado, no una suposicion nueva.
+     Unica solucion segura ya validada 6 veces por la familia (GuideBoolToVis/HostingBoolToVis/
+     UnlocksBoolToVis/CompareBoolToVis/HomeBoolToVis/WorldToolsBoolToVis): <UserControl.Resources>
+     LOCAL. A diferencia de las 6 rondas anteriores (siempre un converter de 1 linea), esta vez el
+     recurso window-scoped es el DataTemplate completo `ItemEditTemplate` (225 lineas reales,
+     selector de prefijo de 3 niveles incluido) - se duplica aqui como `ChestInspectorItemEditTemplate`
+     (BoolToVis interno renombrado a ChestInspectorBoolToVis, mismo patron). Esto SI contradice el
+     comentario original de Fase D ("MISMA instancia de recurso, NUNCA duplicada") - la duplicacion
+     ya no es evitable en cuanto el consumo cruza dos paginas XAML compiladas distintas sin tocar
+     App.xaml (opcion probada rota). Riesgo real documentado con honestidad en ADR-TERRAKEEP-028:
+     dos definiciones del mismo editor visual (esta copia y la original de MainWindow.xaml) deben
+     mantenerse sincronizadas a mano hasta que Objetos se extraiga tambien - en ese momento hay que
+     reconsiderar una solucion de fondo (p.ej. ResourceDictionary.MergedDictionaries con Source=
+     compartido por AMBOS UserControl, sin tocar Application.Resources - no probado todavia, pendiente
+     de verificacion empirica real en la ronda de Objetos, no asumido aqui).
+
+     HALLAZGO SECUNDARIO (fuera de alcance de esta ronda, solo documentado, NO corregido - "no
+     amplíes alcance sin escalar"): dentro de ItemEditTemplate/ChestInspectorItemEditTemplate, los
+     3 niveles del selector de prefijo (Metas/Groups/Prefixes) enlazan su Command via
+     `RelativeSource AncestorType=Window` a `DataContext.ItemEdit.SelectMetaCommand/
+     SelectGroupCommand/ApplyPrefixCommand` - SIEMPRE el ItemEditViewModel RAIZ (vm.ItemEdit, de
+     Personaje), NUNCA vm.Exploration.ChestItemEdit (instancia DISTINTA, confirmado en
+     MainViewModel.cs:1194 vs ExplorationViewModel.cs:2513, dos "new ItemEditViewModel(...)"
+     separados). Este binding es preexistente a esta extraccion (ya estaba asi en MainWindow.xaml
+     antes de mover nada) y es dinamico (RelativeSource, no StaticResource) - sigue resolviendo
+     igual tras la extraccion porque ChestInspectorView vive parented dentro de la MISMA Window en
+     runtime. Posible bug real de produccion (pulsar un boton de Meta/Grupo/Prefijo dentro del
+     Inspector de cofre podria estar operando sobre el editor de Personaje en vez del propio cofre)
+     - recomendado investigarlo en una ronda propia, nunca mezclado con esta extraccion estructural.
+
+     x:Name reales dentro del bloque (ExplorationSidebarChestInspectorPlaceholder) usados por
+     window.FindName en 3 archivos de test (CanarioClusterCofresInspector.cs x3,
+     CanarioFlujoCompletoCofres.cs x2, CanarioExploracionLayoutPermanente.cs x1) - pasan al patron
+     de FindName DOBLE ya usado por GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027:
+     window.FindName("ChestInspectorView") seguido de
+     chestInspectorView.FindName("ExplorationSidebarChestInspectorPlaceholder").
+
+     PreviewMouseLeftButtonDown="OnChestItemSlotMouseDown" (unico call-site real en todo el
+     archivo, confirmado por grep) movido a ChestInspectorView.xaml.cs tal cual, mismo mecanismo de
+     WorldToolsView/ADR-027: `_viewModel` de MainWindow -> `ViewModel` (MainViewModel)DataContext
+     (este control hereda el MainViewModel real del Window que lo hospeda, sin fijar su propio
+     DataContext). -->
+<UserControl x:Class="Terrakeep.App.Views.ChestInspectorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:controls="clr-namespace:Terrakeep.App.Controls"
+             xmlns:conv="clr-namespace:Terrakeep.App.Converters"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="320">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="ChestInspectorBoolToVis" />
+
+        <!-- Duplicado local NECESARIO de ItemEditTemplate (MainWindow.xaml:26-250, Window.Resources
+             de MainWindow.xaml, consumido tambien por Objetos sin extraer todavia) - ver el
+             comentario largo de arriba (ADR-TERRAKEEP-028) para la justificacion completa de por
+             que esta duplicacion, aunque indeseable, es la unica solucion segura ya probada por la
+             familia. Contenido IDENTICO a ItemEditTemplate salvo el x:Key y las 5 referencias
+             internas a BoolToVis, renombradas a ChestInspectorBoolToVis (mismo motivo: BoolToVis
+             tambien es exclusivo de Window.Resources de MainWindow.xaml). -->
+        <DataTemplate x:Key="ChestInspectorItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[action_edit], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+
+                <TextBlock DockPanel.Dock="Top" Text="{Binding NoPrefixMessage}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Margin="0,0,0,10"
+                           Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
+
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10"
+                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="{Binding Loc[legend_title], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Border Width="14" Height="14" CornerRadius="3" Background="{StaticResource EquippedGreenBrush}" Opacity="0.5" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_equipped], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource CalamityBrush}" Margin="2,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_calamity_item], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="14" Height="14" CornerRadius="3" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_selected_slot], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource ChestInspectorBoolToVis}}">
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding Slot.ClearCommand}"
+                                ToolTip="{Binding Loc[tt_empty_this_slot], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
+                        <Button DockPanel.Dock="Right" Command="{Binding Slot.ToggleFavoriteCommand}"
+                                ToolTip="{Binding Loc[tt_toggle_favorite], Mode=OneWay}" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
+                                FontSize="12" VerticalAlignment="Center"
+                                Visibility="{Binding Slot.SupportsFavorite, Converter={StaticResource ChestInspectorBoolToVis}}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content" Value="&#9734;" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Slot.IsFavorited}" Value="True">
+                                            <Setter Property="Content" Value="&#9733;" />
+                                            <Setter Property="Foreground" Value="{StaticResource MasterGoldBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220"
+                                       Foreground="{Binding Slot.RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
+                            <TextBlock Style="{StaticResource CaptionText}">
+                                <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
+                                <Run Text="{Binding Loc[label_dot_slot], Mode=OneWay}" />
+                                <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding Slot.SlotRoleLabel}" Style="{StaticResource CaptionText}"
+                                       FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
+                                       Visibility="{Binding Slot.SlotRoleLabel, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <TextBlock Text="{Binding Loc[label_index_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.ItemId}" Padding="6,4" Margin="0,0,0,8" KeyDown="OnCommitTextOnEnter"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <TextBlock Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
+                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
+
+                    <TextBlock Text="{Binding Loc[label_quantity], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,6"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="{Binding Loc[action_add_ten], Mode=OneWay}" Command="{Binding Slot.AddTenToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_ten_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" FontSize="11" />
+                        <Button Content="{Binding Loc[action_add_hundred], Mode=OneWay}" Command="{Binding Slot.AddHundredToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_hundred_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                        <Button Content="{Binding Loc[action_set_max], Mode=OneWay}" Command="{Binding Slot.SetCountToMaxCommand}"
+                                ToolTip="{Binding Loc[tt_set_max_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Loc[label_prefix_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBox Text="{Binding Slot.PrefixId}" Width="50" Padding="6,4" KeyDown="OnCommitTextOnEnter"
+                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                        <Button Content="★" Command="{Binding ApplyBestPrefixCommand}" ToolTip="{Binding Loc[tt_apply_best_prefix], Mode=OneWay}"
+                                Tag="Accent" Padding="6,2" Margin="6,0,0,0" FontSize="12"
+                                Visibility="{Binding Slot.HasBestPrefixSuggestion, Converter={StaticResource ChestInspectorBoolToVis}}" />
+                        <Button Content="{Binding Loc[action_remove], Mode=OneWay}" Command="{Binding ClearPrefixCommand}" ToolTip="{Binding Loc[tt_remove_current_prefix], Mode=OneWay}"
+                                Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"
+                               Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+
+                    <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
+                               Margin="0,4,0,10" Visibility="{Binding CanHavePrefix, Converter={StaticResource ChestInspectorBoolToVis}}" />
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding CanHavePrefix, Converter={StaticResource ChestInspectorBoolToVis}}">
+                    <ItemsControl ItemsSource="{Binding Metas}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Prefixes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                    <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
+                                            Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
+                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </DockPanel>
+            </ScrollViewer>
+        </DataTemplate>
+    </UserControl.Resources>
+    <!-- ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): relleno real del
+         Inspector de cofre, movido TAL CUAL desde ChestRowTemplate (Fase C dejaba
+         aqui solo un TextBlock provisional). SidebarMode=ChestInspector ya llega
+         solo desde las 3 rutas reales de apertura (EditChest desde la fila,
+         TryOpenChestAtTile desde el marcador del mapa, GoToWorldSearchHitCommand
+         desde un resultado de busqueda con ChestItem - Fase B). DataContext aqui
+         es la raiz (MainViewModel, igual que el resto del sidebar), NUNCA
+         ChestRowViewModel como en la fila - por eso los bindings de abajo son
+         Exploration.EditingChest.* directos, sin el RelativeSource AncestorType=
+         Window que hacia falta dentro de ChestRowTemplate. Ancho completo del
+         sidebar (este Grid ya no vive indentado dentro de una fila de ListBox con
+         Margin="33,0,..." como antes) - el WrapPanel de slots de abajo es el MISMO
+         de siempre (auto-wrap), simplemente cabe mas columnas reales por fila al
+         tener mas ancho disponible, sin tocar su definicion. Vive dentro del mismo
+         ScrollViewer exterior que ya envuelve todo ExplorationSidebarPanel
+         (ExplorationSidebarScroll de MainWindow.xaml) - por eso no lleva ScrollViewer
+         propio, mismo criterio que ya tenia el editor incrustado (Fase C, "MaxHeight
+         quitado, crece igual que el resto del sidebar"). -->
+    <Grid x:Name="ExplorationSidebarChestInspectorPlaceholder"
+          Visibility="{Binding Exploration.SidebarMode, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=ChestInspector}">
+        <StackPanel Margin="0,0,0,8">
+            <!-- Cabecera: "<- Cofres" (mismo CancelEditingChestCommand que el
+                 boton Cancelar de abajo - Fase B ya deja SidebarMode=Browse solo
+                 al vaciar EditingChest, OnEditingChestChanged) + titulo dinamico
+                 con icono/nombre/nombre propio/coordenadas reales del cofre -
+                 mismos datos y mismo reparto visual que ya usaba la cabecera de la
+                 fila en ChestRowTemplate (VariantName/ChestName/TileX,TileY). -->
+            <Button HorizontalAlignment="Left" Padding="7,3" FontSize="10.5" Margin="0,0,0,10" Tag="Ghost"
+                    Command="{Binding Exploration.CancelEditingChestCommand}"
+                    Content="{Binding Loc[explore_inspector_back], Mode=OneWay}" />
+            <DockPanel Margin="0,0,0,10" LastChildFill="True">
+                <Grid DockPanel.Dock="Left" Width="30" Height="30" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Image Source="{Binding Exploration.EditingChest.IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding Exploration.EditingChest.IconPath, Converter={StaticResource NullToVis}}" />
+                </Grid>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap"
+                               Text="{Binding Exploration.EditingChest.VariantName, Mode=OneWay}" />
+                    <TextBlock Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap"
+                               Visibility="{Binding Exploration.EditingChest.ChestName, Converter={StaticResource NullToVis}}"
+                               Text="{Binding Exploration.EditingChest.ChestName, Mode=OneWay}" />
+                    <TextBlock Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}">
+                        <Run Text="(" /><Run Text="{Binding Exploration.EditingChest.TileX, Mode=OneWay}" /><Run Text=", " /><Run Text="{Binding Exploration.EditingChest.TileY, Mode=OneWay}" /><Run Text=")" />
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Rejilla de edicion real - reutiliza SlotCompactTemplate TAL CUAL
+                 (mismo pedido explicito de origen: "reutilizando el mismo editor
+                 de slots que ya existe... no reinventes el control") - mismo
+                 control real que Personaje, con su propio manejador de clic
+                 (OnChestItemSlotMouseDown, NUNCA el de Personaje: este cofre tiene
+                 su propia seleccion, independiente de ItemEdit del personaje). -->
+            <!-- ChestInspector slots vacios REABIERTO (26-sep-2026, causa
+                 confirmada): el WrapPanel de arriba sin ItemWidth fijo dejaba
+                 que WrapPanel.ArrangeOverride estirara cada hijo a la ALTURA
+                 maxima de su fila (heredada de vecinos con icono) pero al
+                 ANCHO propio del hijo (casi 0 para un slot vacio, sin
+                 IconPath/Count visibles que le den ancho natural) -> linea
+                 vertical estrecha en vez de celda cuadrada. Mismo patron
+                 literal que la rejilla de la Libreria (MinCell/
+                 MaxCell via CompactCellSizeConverter single-binding, NUNCA el
+                 MultiConverter de ContainerCompactTemplate que depende de un
+                 ContainerViewModel que aqui no existe - ver ADR-TERRAKEEP-028 para
+                 la confirmacion real de que ContainerCompactTemplate no se usa en
+                 ningun otro punto de este archivo). CRITICO: sin
+                 AvailableHeight (se queda en su default 0.0 adrede) - este
+                 Inspector NUNCA tiene ScrollViewer propio (comparte
+                 ExplorationSidebarScroll con todo el sidebar, ver comentario
+                 arriba), y SlotGridPanel.MeasureOverride ya maneja
+                 availH<=0 creciendo libre en vertical (parte de MaxCell*rows
+                 hasta que el remedido real llegue) - exactamente lo correcto
+                 aqui. Enlazar AvailableHeight contra el ScrollViewer exterior
+                 (AncestorType=ScrollViewer) resolveria mal, contra el alto de
+                 TODO el sidebar, no el de esta rejilla. -->
+            <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <!-- Columns se recalcula en vivo (ChestInspectorColumnsConverter) contra el ANCHO REAL del Grid ancestro, nunca contra Settings.ExplorationSidebarWidth crudo (eje independiente ajustable 260-520px, sin el overhead real de padding/margen/scrollbar, ~41px). ReferenceColumns=10, mismo techo que el resto de rejillas de la app. Historial completo (por que Columns=6 literal se rompia con sidebar estrecho, canario FLUJOCOFRES-SIDEBARWIDTH): ADR-TERRAKEEP-010. -->
+                        <controls:SlotGridPanel
+                            MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                            MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                            Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                            ReferenceColumns="10">
+                            <controls:SlotGridPanel.Columns>
+                                <MultiBinding Converter="{x:Static conv:ChestInspectorColumnsConverter.Instance}">
+                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}" />
+                                    <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                </MultiBinding>
+                            </controls:SlotGridPanel.Columns>
+                        </controls:SlotGridPanel>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
+                        <Border AllowDrop="False" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
+                                PreviewMouseLeftButtonDown="OnChestItemSlotMouseDown"
+                                Style="{StaticResource ItemSlotCardCompact}" Margin="0,0,4,4">
+                            <Border.ToolTip>
+                                <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <StackPanel MaxWidth="220">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                                   Visibility="{Binding IsNotEmpty, Converter={StaticResource ChestInspectorBoolToVis}}" />
+                                        <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
+                                                   Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                                    </StackPanel>
+                                </ToolTip>
+                            </Border.ToolTip>
+                            <Grid>
+                                <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly" Margin="4"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                <TextBlock Text="{Binding Count}" Style="{StaticResource CaptionText}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
+                                           Visibility="{Binding ShowCount, Converter={StaticResource ChestInspectorBoolToVis}}" />
+                                <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" CornerRadius="4"
+                                        Visibility="{Binding IsSelected, Converter={StaticResource ChestInspectorBoolToVis}}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Mismo panel "Editar" REAL ya usado en Personaje (Indice/Cantidad/
+                 Prefijo, todos editables directamente sobre el slot seleccionado) -
+                 aqui apunta a Exploration.ChestItemEdit (instancia propia, nunca la
+                 de Personaje) y usa ChestInspectorItemEditTemplate, el duplicado
+                 local NECESARIO de ItemEditTemplate (ver ADR-TERRAKEEP-028 arriba -
+                 esta extraccion rompe la instancia compartida original, unica
+                 solucion segura ya probada por la familia). Sin MaxHeight (mismo
+                 criterio ya fijado en Fase C: el ScrollViewer "de seguridad" que ya
+                 trae la plantilla basta, y ahora vive dentro del ScrollViewer
+                 exterior de todo el sidebar). -->
+            <ContentControl Content="{Binding Exploration.ChestItemEdit}"
+                            ContentTemplate="{StaticResource ChestInspectorItemEditTemplate}" Margin="0,10,0,0" />
+
+            <UniformGrid Columns="2" Margin="0,8,0,0">
+                <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Accent" Margin="0,0,3,0" Padding="6,4"
+                        Command="{Binding Exploration.SaveEditingChestCommand}" />
+                <Button Content="{Binding Loc[action_cancel], Mode=OneWay}" Tag="Ghost" Margin="3,0,0,0" Padding="6,4"
+                        Command="{Binding Exploration.CancelEditingChestCommand}" />
+            </UniformGrid>
+            <TextBlock Text="{Binding Exploration.ChestEditStatus}"
+                       Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Visibility="{Binding Exploration.ChestEditStatus, Converter={StaticResource NullToVis}}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

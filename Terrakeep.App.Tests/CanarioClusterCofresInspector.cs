@@ -442,7 +442,10 @@ internal static partial class Program
 
                 var hostFaseC = window.FindName("ExplorationSidebarBrowseInspectorHost") as FrameworkElement;
                 var browseFaseC = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
-                var placeholderFaseC = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                // ADR-TERRAKEEP-028 (26-sep-2026): ChestInspector se movio a ChestInspectorView.xaml
+                // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado por
+                // GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027.
+                var placeholderFaseC = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                 var wrapCategoriasFaseC = Descendientes<WrapPanel>(window).FirstOrDefault();
                 var contenidoCatFaseC = window.FindName("ExplorationCategoryContent") as FrameworkElement;
                 var bloqueResFaseC = window.FindName("ExplorationResultsBlock") as FrameworkElement;
@@ -533,7 +536,8 @@ internal static partial class Program
             // usa Personaje (nunca duplicados).
             try
             {
-                var placeholderFaseD = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                // ADR-TERRAKEEP-028: FindName DOBLE, ChestInspectorView tiene su propio NameScope.
+                var placeholderFaseD = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                 var browseFaseD = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
                 if (placeholderFaseD == null || browseFaseD == null)
                     Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED - no se encuentra ExplorationSidebarChestInspectorPlaceholder/ExplorationSidebarBrowseContent en el arbol visual");
@@ -1094,7 +1098,8 @@ internal static partial class Program
                         // se cuentan 2 Border por slot (confirmado: 80 encontrados para un cofre de 40
                         // slots antes de este filtro). Solo el Border exterior (parent=ContentPresenter) es
                         // el que realmente recibe el tamaño de celda de SlotGridPanel.Arrange.
-                        var placeholderSlotsVacios = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                        // ADR-TERRAKEEP-028: FindName DOBLE, ChestInspectorView tiene su propio NameScope.
+                        var placeholderSlotsVacios = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                         var bordesSlots = placeholderSlotsVacios == null
                             ? Enumerable.Empty<Border>().ToList()
                             : Descendientes<Border>(placeholderSlotsVacios)

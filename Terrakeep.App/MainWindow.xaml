@@ -5772,151 +5772,19 @@
                         </DockPanel>
                         </Grid>
                         </DockPanel>
-                        <!-- ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): relleno real del
-                             Inspector de cofre, movido TAL CUAL desde ChestRowTemplate (Fase C dejaba
-                             aqui solo un TextBlock provisional). SidebarMode=ChestInspector ya llega
-                             solo desde las 3 rutas reales de apertura (EditChest desde la fila,
-                             TryOpenChestAtTile desde el marcador del mapa, GoToWorldSearchHitCommand
-                             desde un resultado de busqueda con ChestItem - Fase B). DataContext aqui
-                             es la raiz (MainViewModel, igual que el resto del sidebar), NUNCA
-                             ChestRowViewModel como en la fila - por eso los bindings de abajo son
-                             Exploration.EditingChest.* directos, sin el RelativeSource AncestorType=
-                             Window que hacia falta dentro de ChestRowTemplate. Ancho completo del
-                             sidebar (este Grid ya no vive indentado dentro de una fila de ListBox con
-                             Margin="33,0,..." como antes) - el WrapPanel de slots de abajo es el MISMO
-                             de siempre (auto-wrap), simplemente cabe mas columnas reales por fila al
-                             tener mas ancho disponible, sin tocar su definicion. Vive dentro del mismo
-                             ScrollViewer exterior que ya envuelve todo ExplorationSidebarPanel
-                             (ExplorationSidebarScroll, linea ~6779) - por eso no lleva ScrollViewer
-                             propio, mismo criterio que ya tenia el editor incrustado (Fase C, "MaxHeight
-                             quitado, crece igual que el resto del sidebar"). -->
-                        <Grid x:Name="ExplorationSidebarChestInspectorPlaceholder"
-                              Visibility="{Binding Exploration.SidebarMode, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=ChestInspector}">
-                            <StackPanel Margin="0,0,0,8">
-                                <!-- Cabecera: "<- Cofres" (mismo CancelEditingChestCommand que el
-                                     boton Cancelar de abajo - Fase B ya deja SidebarMode=Browse solo
-                                     al vaciar EditingChest, OnEditingChestChanged) + titulo dinamico
-                                     con icono/nombre/nombre propio/coordenadas reales del cofre -
-                                     mismos datos y mismo reparto visual que ya usaba la cabecera de la
-                                     fila en ChestRowTemplate (VariantName/ChestName/TileX,TileY). -->
-                                <Button HorizontalAlignment="Left" Padding="7,3" FontSize="10.5" Margin="0,0,0,10" Tag="Ghost"
-                                        Command="{Binding Exploration.CancelEditingChestCommand}"
-                                        Content="{Binding Loc[explore_inspector_back], Mode=OneWay}" />
-                                <DockPanel Margin="0,0,0,10" LastChildFill="True">
-                                    <Grid DockPanel.Dock="Left" Width="30" Height="30" Margin="0,0,8,0" VerticalAlignment="Center">
-                                        <Image Source="{Binding Exploration.EditingChest.IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
-                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Visibility="{Binding Exploration.EditingChest.IconPath, Converter={StaticResource NullToVis}}" />
-                                    </Grid>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap"
-                                                   Text="{Binding Exploration.EditingChest.VariantName, Mode=OneWay}" />
-                                        <TextBlock Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap"
-                                                   Visibility="{Binding Exploration.EditingChest.ChestName, Converter={StaticResource NullToVis}}"
-                                                   Text="{Binding Exploration.EditingChest.ChestName, Mode=OneWay}" />
-                                        <TextBlock Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}">
-                                            <Run Text="(" /><Run Text="{Binding Exploration.EditingChest.TileX, Mode=OneWay}" /><Run Text=", " /><Run Text="{Binding Exploration.EditingChest.TileY, Mode=OneWay}" /><Run Text=")" />
-                                        </TextBlock>
-                                    </StackPanel>
-                                </DockPanel>
-
-                                <!-- Rejilla de edicion real - reutiliza SlotCompactTemplate TAL CUAL
-                                     (mismo pedido explicito de origen: "reutilizando el mismo editor
-                                     de slots que ya existe... no reinventes el control") - mismo
-                                     control real que Personaje, con su propio manejador de clic
-                                     (OnChestItemSlotMouseDown, NUNCA el de Personaje: este cofre tiene
-                                     su propia seleccion, independiente de ItemEdit del personaje). -->
-                                <!-- ChestInspector slots vacios REABIERTO (26-sep-2026, causa
-                                     confirmada): el WrapPanel de arriba sin ItemWidth fijo dejaba
-                                     que WrapPanel.ArrangeOverride estirara cada hijo a la ALTURA
-                                     maxima de su fila (heredada de vecinos con icono) pero al
-                                     ANCHO propio del hijo (casi 0 para un slot vacio, sin
-                                     IconPath/Count visibles que le den ancho natural) -> linea
-                                     vertical estrecha en vez de celda cuadrada. Mismo patron
-                                     literal que la rejilla de la Libreria (linea ~3890, MinCell/
-                                     MaxCell via CompactCellSizeConverter single-binding, NUNCA el
-                                     MultiConverter de ContainerCompactTemplate que depende de un
-                                     ContainerViewModel que aqui no existe). CRITICO: sin
-                                     AvailableHeight (se queda en su default 0.0 adrede) - este
-                                     Inspector NUNCA tiene ScrollViewer propio (comparte
-                                     ExplorationSidebarScroll con todo el sidebar, ver comentario
-                                     arriba), y SlotGridPanel.MeasureOverride ya maneja
-                                     availH<=0 creciendo libre en vertical (parte de MaxCell*rows
-                                     hasta que el remedido real llegue) - exactamente lo correcto
-                                     aqui. Enlazar AvailableHeight contra el ScrollViewer exterior
-                                     (AncestorType=ScrollViewer) resolveria mal, contra el alto de
-                                     TODO el sidebar, no el de esta rejilla. -->
-                                <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <!-- Columns se recalcula en vivo (ChestInspectorColumnsConverter) contra el ANCHO REAL del Grid ancestro, nunca contra Settings.ExplorationSidebarWidth crudo (eje independiente ajustable 260-520px, sin el overhead real de padding/margen/scrollbar, ~41px). ReferenceColumns=10, mismo techo que el resto de rejillas de la app. Historial completo (por que Columns=6 literal se rompia con sidebar estrecho, canario FLUJOCOFRES-SIDEBARWIDTH): ADR-TERRAKEEP-010. -->
-                                            <controls:SlotGridPanel
-                                                MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
-                                                MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
-                                                Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
-                                                ReferenceColumns="10">
-                                                <controls:SlotGridPanel.Columns>
-                                                    <MultiBinding Converter="{x:Static conv:ChestInspectorColumnsConverter.Instance}">
-                                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}" />
-                                                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
-                                                    </MultiBinding>
-                                                </controls:SlotGridPanel.Columns>
-                                            </controls:SlotGridPanel>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
-                                            <Border AllowDrop="False" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
-                                                    PreviewMouseLeftButtonDown="OnChestItemSlotMouseDown"
-                                                    Style="{StaticResource ItemSlotCardCompact}" Margin="0,0,4,4">
-                                                <Border.ToolTip>
-                                                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                                        <StackPanel MaxWidth="220">
-                                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
-                                                                       Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
-                                                            <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
-                                                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
-                                                        </StackPanel>
-                                                    </ToolTip>
-                                                </Border.ToolTip>
-                                                <Grid>
-                                                    <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly" Margin="4"
-                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                    <TextBlock Text="{Binding Count}" Style="{StaticResource CaptionText}"
-                                                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
-                                                               Visibility="{Binding ShowCount, Converter={StaticResource BoolToVis}}" />
-                                                    <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" CornerRadius="4"
-                                                            Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <!-- Mismo panel "Editar" REAL ya usado en Personaje (Indice/Cantidad/
-                                     Prefijo, todos editables directamente sobre el slot seleccionado -
-                                     ver ItemEditTemplate, MISMA instancia de recurso, NUNCA duplicada
-                                     - solo cambia el ContentControl que la envuelve) - aqui apunta a
-                                     Exploration.ChestItemEdit (instancia propia, nunca la de
-                                     Personaje). Sin MaxHeight (mismo criterio ya fijado en Fase C: el
-                                     ScrollViewer "de seguridad" que ya trae ItemEditTemplate basta, y
-                                     ahora vive dentro del ScrollViewer exterior de todo el sidebar). -->
-                                <ContentControl Content="{Binding Exploration.ChestItemEdit}"
-                                                ContentTemplate="{StaticResource ItemEditTemplate}" Margin="0,10,0,0" />
-
-                                <UniformGrid Columns="2" Margin="0,8,0,0">
-                                    <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Accent" Margin="0,0,3,0" Padding="6,4"
-                                            Command="{Binding Exploration.SaveEditingChestCommand}" />
-                                    <Button Content="{Binding Loc[action_cancel], Mode=OneWay}" Tag="Ghost" Margin="3,0,0,0" Padding="6,4"
-                                            Command="{Binding Exploration.CancelEditingChestCommand}" />
-                                </UniformGrid>
-                                <TextBlock Text="{Binding Exploration.ChestEditStatus}"
-                                           Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap"
-                                           Visibility="{Binding Exploration.ChestEditStatus, Converter={StaticResource NullToVis}}" />
-                            </StackPanel>
-                        </Grid>
+                        <!-- ADR-TERRAKEEP-016/028 (26-sep-2026): ChestInspector (submodo "Inspector
+                             de cofre" del sidebar de Exploracion, relleno real movido en su dia desde
+                             ChestRowTemplate por la Fase D de ExploracionRediseno) movido a
+                             Terrakeep.App/Views/ChestInspectorView.xaml - ver el comentario real
+                             alli, incluida la correccion de la premisa original del plan
+                             (ContainerCompactTemplate NO es la dependencia cruzada real con
+                             Objetos - lo es ItemEditTemplate, duplicada localmente por el mismo
+                             mecanismo ya probado por ADR-019/HostingView). x:Name="ChestInspectorView"
+                             en el host: window.FindName("ChestInspectorView") seguido de
+                             chestInspectorView.FindName("ExplorationSidebarChestInspectorPlaceholder")
+                             en CanarioClusterCofresInspector.cs/CanarioFlujoCompletoCofres.cs/
+                             CanarioExploracionLayoutPermanente.cs. -->
+                        <views:ChestInspectorView x:Name="ChestInspectorView" />
 
                         <!-- ADR-TERRAKEEP-016/027 (26-sep-2026): WorldTools (submodo "Mundo" del
                              sidebar de Exploracion, 3 subvistas exclusivas Overview/Edit/

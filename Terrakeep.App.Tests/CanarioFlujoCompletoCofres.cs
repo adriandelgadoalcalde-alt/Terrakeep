@@ -76,7 +76,11 @@ internal static partial class Program
 
             // ========================= PASO 1: ABRIR =========================
             byte[] hashAntesDeAbrir = HashArchivo();
-            var placeholder = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+            // ADR-TERRAKEEP-028 (26-sep-2026): ChestInspector se movio a ChestInspectorView.xaml
+            // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado por
+            // GUIA/ADR-021, Compare/ADR-025 y WorldTools/ADR-027.
+            var chestInspectorViewHost = window.FindName("ChestInspectorView") as FrameworkElement;
+            var placeholder = chestInspectorViewHost?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
             var browseContent = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
 
             vm.Exploration.EditChestCommand.Execute(chestA);
@@ -392,7 +396,8 @@ internal static partial class Program
                         vm.Settings.ExplorationSidebarWidth = anchoPrueba; // dispara OnExplorationSidebarWidthChanged real (clamp+Persist, MISMO camino que arrastrar el GridSplitter de verdad)
                         DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents();
 
-                        var placeholderAncho = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                        // ADR-TERRAKEEP-028: FindName DOBLE, ChestInspectorView tiene su propio NameScope.
+                        var placeholderAncho = (window.FindName("ChestInspectorView") as FrameworkElement)?.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
                         var bordesAncho = placeholderAncho == null
                             ? Enumerable.Empty<Border>().ToList()
                             : Descendientes<Border>(placeholderAncho).Where(b => b.DataContext is ItemSlotViewModel && VisualTreeHelper.GetParent(b) is ContentPresenter).ToList();
