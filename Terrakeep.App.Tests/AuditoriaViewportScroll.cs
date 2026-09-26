@@ -601,7 +601,12 @@ internal static partial class Program
                     var scrollWorldsFaseH = BuscarScrollViewerAncestro(icWorldsFaseH);
                     VolcarSoloScroll("WorldPillTemplate_TiraMundos", "scrollviewer_tira", scrollWorldsFaseH, permitido: true);
 
-                    var scrollMapaFaseH = window.FindName("WorldMapScroll") as ScrollViewer;
+                    // ADR-TERRAKEEP-030 (27-sep-2026): Mapa+minimapa se movio a WorldMapView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                    // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027, ChestInspector/ADR-028
+                    // y Browse/ADR-029.
+                    var worldMapViewHostFaseH = window.FindName("WorldMapView") as FrameworkElement;
+                    var scrollMapaFaseH = worldMapViewHostFaseH?.FindName("WorldMapScroll") as ScrollViewer;
                     VolcarSoloScroll("WorldMapScroll", "scrollviewer_mapa", scrollMapaFaseH, permitido: true);
 
                     vm.Exploration.SelectedCategory = WorldSearchCategory.All;

@@ -2414,8 +2414,13 @@ internal static partial class Program
                     while (!tarea.IsCompleted) DoEvents();
                     DoEvents(); DoEvents(); DoEvents();
 
-                    var mapaImagen = window.FindName("WorldMapImage") as FrameworkElement;
-                    var mapaScroll = window.FindName("WorldMapScroll") as FrameworkElement;
+                    // ADR-TERRAKEEP-030 (27-sep-2026): Mapa+minimapa se movio a WorldMapView.xaml
+                    // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya
+                    // usado por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027,
+                    // ChestInspector/ADR-028 y Browse/ADR-029.
+                    var worldMapViewHostT6 = window.FindName("WorldMapView") as FrameworkElement;
+                    var mapaImagen = worldMapViewHostT6?.FindName("WorldMapImage") as FrameworkElement;
+                    var mapaScroll = worldMapViewHostT6?.FindName("WorldMapScroll") as FrameworkElement;
                     Console.WriteLine($"T6_SOLO: WorldMapImage encontrado={mapaImagen != null}, WorldMapScroll encontrado={mapaScroll != null}");
 
                     // Sanidad del METODO antes de fiarse de un FALLO real: comprueba que
@@ -4114,7 +4119,12 @@ internal static partial class Program
                 fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
                 DoEvents(); DoEvents();
 
-                var worldMapImage = window.FindName("WorldMapImage") as Image;
+                // ADR-TERRAKEEP-030 (27-sep-2026): Mapa+minimapa se movio a WorldMapView.xaml
+                // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027, ChestInspector/ADR-028 y
+                // Browse/ADR-029.
+                var worldMapViewHostZorder = window.FindName("WorldMapView") as FrameworkElement;
+                var worldMapImage = worldMapViewHostZorder?.FindName("WorldMapImage") as Image;
                 var itemsControlNpcs = Descendientes<System.Windows.Controls.ItemsControl>(window).FirstOrDefault(ic => ic.ItemsSource == vm.Exploration.Npcs);
                 Console.WriteLine($"NPC_ZORDER_SOLO: WorldMapImage encontrado={worldMapImage != null}, ItemsControl Npcs encontrado={itemsControlNpcs != null}");
                 if (worldMapImage != null && itemsControlNpcs != null)
@@ -7816,7 +7826,12 @@ internal static partial class Program
                 // WorldMapScroll es x:Name (internal por defecto, invisible desde este ensamblado
                 // distinto) - FindName es el metodo real PUBLICO para resolver un nombre del
                 // namescope XAML sin depender de la accesibilidad del campo generado.
-                var worldScroll = (ScrollViewer)window.FindName("WorldMapScroll");
+                // ADR-TERRAKEEP-030 (27-sep-2026): Mapa+minimapa se movio a WorldMapView.xaml
+                // (UserControl con su propio NameScope) - FindName DOBLE, mismo patron ya usado
+                // por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027, ChestInspector/ADR-028 y
+                // Browse/ADR-029.
+                var worldMapViewHostFit = window.FindName("WorldMapView") as FrameworkElement;
+                var worldScroll = (ScrollViewer)worldMapViewHostFit!.FindName("WorldMapScroll");
                 bool cabeDeVerdad = anchoEscalado <= worldScroll.ViewportWidth + 1 && altoEscalado <= worldScroll.ViewportHeight + 1;
                 Console.WriteLine($"X-a AJUSTAR-A-LA-VENTANA: zoom {zoomAntes:P0} -> {zoomDespues:P0}, mundo escalado={anchoEscalado:0}x{altoEscalado:0}px, viewport={worldScroll.ViewportWidth:0}x{worldScroll.ViewportHeight:0}px, cabe={cabeDeVerdad} (esperado True)");
                 if (!cabeDeVerdad) Console.WriteLine("FALLO: X-a (segunda auditoria) - 'Ajustar a la ventana' no dejo el mundo dentro del viewport real");
@@ -10022,12 +10037,18 @@ internal static partial class Program
                             DoEvents();
                             var posEnMini = System.Windows.Input.Mouse.GetPosition(miniImgEx);
                             int tileClicadoX = (int)((posEnMini.X - huecoXMini) / escalaMini);
-                            var handlerMini = typeof(MainWindow).GetMethod("OnMinimapClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                            handlerMini?.Invoke(window, [miniImgEx, new System.Windows.Input.MouseButtonEventArgs(
+                            // ADR-TERRAKEEP-030 (27-sep-2026): OnMinimapClick se movio a
+                            // Terrakeep.App/Views/WorldMapView.xaml.cs - la reflexion tiene que
+                            // apuntar a esa clase y a la instancia real WorldMapView (no a
+                            // MainWindow), mismo patron ya establecido en este archivo para
+                            // reflexion sobre metodos privados de un UserControl.
+                            var worldMapViewInstanciaMini = window.FindName("WorldMapView") as FrameworkElement;
+                            var handlerMini = worldMapViewInstanciaMini?.GetType().GetMethod("OnMinimapClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                            handlerMini?.Invoke(worldMapViewInstanciaMini, [miniImgEx, new System.Windows.Input.MouseButtonEventArgs(
                                 System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left)]);
                             WaitForDispatcher(250);
                             if (handlerMini == null)
-                                Console.WriteLine("FALLO: AR-EX2-MINIMAPA-CLIC - no se encontro OnMinimapClick (¿se renombro en MainWindow.xaml.cs?)");
+                                Console.WriteLine("FALLO: AR-EX2-MINIMAPA-CLIC - no se encontro OnMinimapClick (¿se renombro en WorldMapView.xaml.cs?)");
                             // La comprobacion vale para CUALQUIER punto en el que el cursor haya
                             // caido de verdad ("el mapa acaba centrado en el tile pulsado"), no solo
                             // para el que se pidio. Lo unico que NO se puede juzgar es un punto

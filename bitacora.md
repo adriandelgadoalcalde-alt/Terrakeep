@@ -30514,3 +30514,141 @@ el mapa+minimapa (el mas grande y con mas code-behind real de toda la seccion EX
 `CaptureMouse`/`Focus`/3 handlers) como ultima extraccion del grupo 4.6. Objetos (911 lineas,
 sub-tab de PERSONAJE) sigue pendiente aparte, dejado deliberadamente para el final por el plan
 original.
+
+## ADR-TERRAKEEP-030 - decimocuarta y ULTIMA extraccion de MainWindow.xaml: Mapa+minimapa (cierra EXPLORACION), 27-sep-2026
+
+Cuarta y ultima extraccion del grupo 4.6 (EXPLORACION), tras WorldTools (ADR-027), ChestInspector
+(ADR-028) y Browse (ADR-029) - `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto
+`Terrakeep`). Mapa+minimapa+tooltip (846 lineas reales, `MainWindow.xaml` 3766-4611 antes de esta
+extraccion - el `Border Grid.Column="0" Grid.ColumnSpan="3"` que pinta el mapa de borde a borde,
+mecanismo T6) es el submodulo con MAS code-behind referenciado de todo el plan, tal y como ya
+anticipaba `ADR-TERRAKEEP-016` punto 4.6 - movido a `Terrakeep.App/Views/WorldMapView.xaml` +
+`.xaml.cs`, mismo patron `Views/`+sufijo `View.xaml`+sin `DataContext` propio ya fijado por las 13
+rondas anteriores. `MainWindow.xaml` queda con
+`<views:WorldMapView x:Name="WorldMapView" Grid.Column="0" Grid.ColumnSpan="3" />` en el mismo
+punto - `Grid.Column`/`Grid.ColumnSpan` se quedan en el HOST (antes vivian en el `Border` movido).
+
+**Grep exhaustivo real de recursos** (leccion ADR-028/029: nunca fiarse del plan sin comprobar): de
+los 20 recursos window-scoped del plan original, este bloque solo usa UNO - `BoolToVis`
+(`BooleanToVisibilityConverter`, x:Key SOLO en `Window.Resources`), 9 usos directos. Mismo mecanismo
+ya validado 7 veces (`GuideBoolToVis`/`HostingBoolToVis`/`UnlocksBoolToVis`/`CompareBoolToVis`/
+`HomeBoolToVis`/`WorldToolsBoolToVis`/`ChestInspectorBoolToVis`/`BrowseBoolToVis`):
+`UserControl.Resources` LOCAL con clave propia `WorldMapBoolToVis`. El resto de recursos usados
+(brushes/estilos/converters) confirmados en `App.xaml`/`Styles/Theme.xaml`, ninguno mas
+window-scoped. Cero `DataTemplate` con `x:Key` propio (las 3 `DataTemplate` del bloque van SIN
+`x:Key`, anidadas en su propio `ItemsControl.ItemTemplate`).
+
+**`ElementName` EXHAUSTIVO** (leccion CRITICA de ADR-029 - un `ElementName` NO cruza el `NameScope`
+de un `UserControl`, a diferencia de `RelativeSource AncestorType`): grep del archivo COMPLETO
+confirmo 6 `ElementName` reales en TODO `MainWindow.xaml` antes de esta extraccion. 4 caen DENTRO de
+este bloque (las 4 `Rectangle` de banda de zona/Guia, `Width="{Binding ElementName=WorldMapImage,
+Path=ActualWidth}"`) - origen y destino viajan JUNTOS al mismo `UserControl`, el `NameScope`
+resultante sigue siendo el mismo, sin ningun cruce de limite. Los otros 2 (`WhereIsItPopup`/
+`LibraryFiltersButton`) estan en zonas ajenas sin relacion. Verificado: 0 `ElementName` de este
+bloque apunta a nada FUERA de el - el riesgo mas señalado por el encargo de esta ronda resulto CERO
+en la practica, por construccion (todo el subarbol que usa `ElementName` se movio entero).
+
+**CODE-BEHIND** (la pieza mas grande de las 14 rondas): `WorldMapScroll`/`WorldMapImage`/
+`MinimapImage`/`MinimapViewportRect`/`MapTooltipCanvas`/`MapTooltipBorder`/`CurrentChestMarker` se
+referenciaban tambien FUERA de este bloque (constructor, `OnWindowClosing`, `OnWindowKeyDown`,
+`FitWorldMapToWindow`, `OnNavigateToTile`, `LoadWorldAndRestoreView`) - a diferencia de
+`OnLoadClick`/ADR-026 (se movio ENTERO) o `FocusWorldSearchBox`/ADR-029 (un gancho de una linea),
+aqui hicieron falta VARIOS ganchos publicos nuevos en `WorldMapView.xaml.cs`:
+`FitToWindow()`/`SaveCurrentViewState()`/`RestoreViewOrFit()`/`PanBy(dx,dy)`/
+`NavigateToTile(tileX,tileY)` (firma IDENTICA al delegate `Action<int,int>` del evento
+`Exploration.NavigateToTileRequested` - la suscripcion del constructor paso a
+`+= WorldMapView.NavigateToTile` DIRECTAMENTE, sin forwarder, mismo timing exacto) /
+`UpdateMinimapViewport()` (paso de privado a PUBLICO).
+
+**HALLAZGO REAL no anticipado por el grep inicial** (el mas relevante de esta ronda, encontrado por
+el propio `dotnet build` al fallar `CS1061` en la primera pasada): `Click="OnLoadWorldClick"`
+aparece DOS VECES - el boton de la barra de herramientas (fuera del bloque) Y el boton "Cargar
+mundo" del estado vacio ("Sin mundo cargado", DENTRO del bloque movido) - caso DUAL, mismo patron ya
+resuelto por `OnLoadClick`/HomeView/ADR-026. A diferencia de ese caso, aqui
+`LoadWorldAndRestoreView` (el metodo real de orquestacion de carga) se movio ENTERO a
+`WorldMapView.LoadWorldAndRestoreView(path)` en vez de reenviar cada llamada por separado, porque
+"cargar un mundo y restaurar SU vista de mapa" es un asunto del propio mapa, y ya usaba
+`SaveCurrentViewState()`/`RestoreViewOrFit()` internamente. Los 5 call-sites de
+`MainWindow.xaml.cs` (`AbrirMundoInicialAsync`, `OnWindowDrop`, la copia de `OnLoadWorldClick` del
+toolbar, `OnGlobalWorldHitClick`, `OnWorldCardClick`) pasan a llamar
+`WorldMapView.LoadWorldAndRestoreView(...)`. `WorldMapView` gano su PROPIA copia minima de
+`OnLoadWorldClick` (`Window.GetWindow(this)` en vez de `this`).
+
+**HALLAZGO REAL confirmado por grep** (correccion de una lectura demasiado literal del plan
+original): `OnToggleExplorationSidebarClick`/`OnExplorationSidebarScrollChanged` (citados por
+ADR-016 punto 2c junto a `CaptureMouse`/`Focus` como code-behind de "Exploracion") pertenecen en
+realidad a la barra lateral flotante (`ExplorationSidebarFloatingCard`, `Grid.Column="2"`) - una
+seccion DISTINTA que YA se queda en `MainWindow.xaml`, ninguno de los dos se toco. `OnExportMapClick`
+(referenciado fuera del bloque) se quedo intacto - su cuerpo NO usa `WorldMapScroll`/`WorldMapImage`,
+solo `Exploration.WorldImage`/`WorldTitle`/`ExportMapToPng` (ViewModel puro).
+
+Movidos WHOLESALE (sin forwarder, solo referenciados desde el XAML de este bloque):
+`OnWorldMapPreviewMouseWheel`, `OnWorldMapMouseDown`, `OnWorldMapMouseUp`, `OnWorldMapMouseMove`,
+`OnWorldMapMouseLeave`, `OnWorldMapScrollChanged`, `OnMinimapSizeChanged`, `OnMinimapClick`,
+`OnToggleMinimapClick`, `OriginatesFromClickableMarker`, `PositionMapTooltip`,
+`FitWorldMapToWindow` (privado, respaldo de `FitToWindow`), los campos `_mapDragStart*`/
+`_mapDragMoved` y `MapClickSlopPx`. `using System.Windows.Media.Media3D` eliminado de
+`MainWindow.xaml.cs` (sin uso real tras mover `OriginatesFromClickableMarker`).
+
+**x:Name reales** usados por `window.FindName` en 2 archivos de test (`Program.cs`,
+`AuditoriaViewportScroll.cs`, 5 call-sites) - pasan al patron `FindName` DOBLE ya usado por las
+rondas anteriores. CASO ADICIONAL nuevo: reflexion sobre un metodo PRIVADO movido
+(`Program.cs`/AR-EX2-MINIMAPA-CLIC, `typeof(MainWindow).GetMethod("OnMinimapClick", ...)`) - la
+reflexion paso a apuntar a la CLASE y la INSTANCIA reales (`WorldMapView`, via
+`window.FindName("WorldMapView")`), no a `MainWindow` - mismo mecanismo del patron doble aplicado a
+reflexion en vez de a un cast directo.
+
+**VERIFICACION REAL COMPLETA**:
+- `dotnet clean` + `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores (la primera
+  pasada fallo con `CS1061` real por el caso dual `OnLoadWorldClick` - el propio build lo detecto,
+  confirmando la garantia de ADR-016 punto 2c de que este tipo de caso SI lo caza `dotnet build`).
+- `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline).
+- Suite COMPLETA de `Terrakeep.App.Tests` (sin `_SOLO`) relanzada DOS veces: 16 FALLO EXACTAMENTE
+  IDENTICOS en ambas pasadas (H5-05x1, A8-06x1, AR-14x4, A8-01x1, AR-11fx1, AR-MRK-CLICx1,
+  AR-MRK-OTROSx5, A10-IDIOMA-BARRIDOx1, AR-LAYx1 - las mismas 9 categorias ya documentadas desde
+  ADR-020..029), CERO `EXCEPTION` en ninguna de las dos, CERO mencion de
+  WorldMap/Minimap/MapTooltip/ChestMarker en ningun `FALLO`.
+- Canarios gated, todos en 0 FALLO: `T6_SOLO` (`WorldMapImage`/`WorldMapScroll` encontrados via
+  `FindName` doble=True, Border del mapa >80% del ancho, panel lateral flotando DENTRO del mapa),
+  `NPC_ZORDER_SOLO` (`WorldMapImage` e `ItemsControl` Npcs comparten padre real, Npcs se pinta
+  ENCIMA), `EXPLORATION_LAYOUT_SOLO` (las 3 subvistas de WorldTools sin overflow, cero regresion
+  cruzada), `COFRES_INSPECTOR_SOLO`, `FLUJOCOFRES_SOLO` (flujo de 8 pasos + persistencia real de
+  `ExplorationSidebarWidth`), `KEEPQA_VIEWPORT_SOLO` (`WorldMapScroll` localizado via `FindName`
+  doble, viewport/extent coherentes), `FALLO3_SOLO` (re-verificacion AR-EX1 sin regresion).
+- Verificacion visual/funcional real (parte del recorrido normal): AR-MRK (clic real en el centro
+  visual de Cofre/Veta/Objeto a 6 niveles de zoom: "aterriza en ESTE marcador=True" en todos salvo
+  el limite ya documentado de zoom 0,25/Cofre) confirma el hit-test interactivo end-to-end a traves
+  del nuevo `UserControl`. AR-EX2-PAN (arrastre real con `SetCursorPos`+`mouse_event`) confirma el
+  pan interactivo. AR-EX2-MINIMAPA/AR-EX2-MINIMAPA-CLIC confirman el minimapa visible con el
+  rectangulo de viewport correcto y la navegacion por clic real (error de 0,2 tiles) - exactamente
+  el camino que ejercita la reflexion sobre `OnMinimapClick` corregida arriba. A8-05/AR-EX3-HOVER
+  confirman el tooltip de hover con datos reales de tile/pared/liquido/capa en 5 profundidades
+  distintas. 2 capturas reales revisadas a mano (`t6-exploracion-pantalla-completa.png`,
+  `npc-zorder-mapa-completo.png`): mapa renderizado correctamente de borde a borde, chip
+  "Guia: Superficie" visible, panel de busqueda flotante intacto, ningun recurso roto visible.
+
+**Recompilacion y redespliegue real**: build Debug
+(`Terrakeep.App/bin/Debug/net10.0-windows/Terrakeep.exe`) recompilado 0/0. Copia instalada real
+verificada antes del despliegue. `DEPLOY_LOCK` adquirido antes de tocar `Assets/`/publish. `dotnet
+publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64`. `robocopy
+.../publish "%LocalAppData%\Programs\Terrakeep" /MIR`. Hash SHA256 verificado identico entre el
+`.exe` publicado y el instalado. Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True`, cerrado limpio sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Bloqueos de coordinacion**: `terrakeep-mainwindow-xaml` reservado antes de tocar el XAML y
+liberado al terminar.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (~13 metodos/handlers movidos o convertidos en forwarders, using
+`Media3D` eliminado), `Terrakeep.App/Views/WorldMapView.xaml` + `.xaml.cs` (nuevos),
+`Terrakeep.App.Tests/Program.cs` + `AuditoriaViewportScroll.cs` (`FindName` doble, 5 call-sites + 1
+reflexion) - nunca `git add -A`. Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603`
+(proyecto `Terrakeep`) en KeepQA (`ADR-TERRAKEEP-030`). Sin `git push`.
+
+**CIERRE DEL GRUPO 4.6 (EXPLORACION)**: con Mapa+minimapa cerrado, las 4 extracciones del grupo
+(WorldTools/ADR-027, ChestInspector/ADR-028, Browse/ADR-029, Mapa+minimapa/ADR-030) quedan
+completas - EXPLORACION, la seccion mas grande de `MainWindow.xaml` (2532 lineas originales, la mas
+grande y con mas code-behind real de todo el plan ADR-016), termina de extraerse por completo. Unica
+extraccion top-level que queda pendiente de todo el plan original: Objetos (911 lineas, sub-tab de
+PERSONAJE, dejado deliberadamente para el final por el propio plan original en su punto 4.5).

@@ -7,7 +7,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Media3D;
 using Microsoft.Win32;
 using Terrakeep.App.ViewModels;
 using Terrakeep.Core.Model;
@@ -101,14 +100,19 @@ public partial class MainWindow : Window
         // H5-07: unico suscriptor real de CharacterLoaded - ver el comentario real del evento
         // en MainViewModel.cs (por que NO es una llamada directa dentro de LoadFromPath).
         _viewModel.CharacterLoaded += _viewModel.SaveSession;
-        _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
+        // ADR-TERRAKEEP-016/030 (27-sep-2026): Mapa+minimapa vive ahora en Views/WorldMapView.xaml
+        // - NavigateToTile(int,int) tiene la MISMA firma que el delegate Action<int,int> del
+        // evento, asi que se suscribe DIRECTAMENTE (mismo timing exacto que antes, sin ningun
+        // forwarder intermedio en esta clase).
+        _viewModel.Exploration.NavigateToTileRequested += WorldMapView.NavigateToTile;
         // F-8 (auditoria de Opus vs TEdit, E-05): el rectangulo de viewport del minimapa
-        // necesita recalcularse cada vez que el mapa se desplaza (ScrollChanged) O cambia de
-        // zoom/mundo (Zoom/WorldImage - no pasan por ScrollChanged por si solos).
+        // necesita recalcularse cada vez que el mapa se desplaza (ScrollChanged, dentro de
+        // WorldMapView) O cambia de zoom/mundo (Zoom/WorldImage - no pasan por ScrollChanged por
+        // si solos).
         _viewModel.Exploration.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(ExplorationViewModel.Zoom) or nameof(ExplorationViewModel.WorldImage))
-                UpdateMinimapViewport();
+                WorldMapView.UpdateMinimapViewport();
         };
         // Auditoria de Opus, T-B (segunda auditoria, Fable): mismo dialogo real de
         // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
@@ -150,7 +154,7 @@ public partial class MainWindow : Window
 
     private async Task AbrirMundoInicialAsync(string path)
     {
-        await LoadWorldAndRestoreView(path);
+        await WorldMapView.LoadWorldAndRestoreView(path);
         _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion, privado - mismo criterio que OnWindowDrop
     }
 
@@ -169,9 +173,10 @@ public partial class MainWindow : Window
         _viewModel.SaveSession();
         // F-11 (auditoria de Opus vs TEdit, E-11): igual que arriba, se recuerda SIEMPRE al
         // cerrar - la vista del mapa no es un dato del personaje/mundo en si, no hay nada que
-        // perder al guardarla de todos modos.
-        if (_viewModel.Exploration.IsWorldLoaded)
-            _viewModel.Exploration.SaveCurrentViewState(WorldMapScroll.HorizontalOffset, WorldMapScroll.VerticalOffset);
+        // perder al guardarla de todos modos. ADR-TERRAKEEP-016/030: gancho publico de
+        // WorldMapView (mismo que usa LoadWorldAndRestoreView), el WorldMapScroll real ya vive
+        // dentro de ese UserControl.
+        WorldMapView.SaveCurrentViewState();
         if (!_cerrandoParaActualizar && !ConfirmDiscardChanges("cerrar")) e.Cancel = true;
     }
 
@@ -351,13 +356,15 @@ public partial class MainWindow : Window
             }
             else if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
             {
+                // ADR-TERRAKEEP-016/030: PanBy(dx, dy) es el gancho publico de WorldMapView -
+                // mismo paso (60) y mismo sentido exactos que antes, solo movido de sitio.
                 const double paso = 60;
                 switch (e.Key)
                 {
-                    case Key.Left: WorldMapScroll.ScrollToHorizontalOffset(WorldMapScroll.HorizontalOffset - paso); break;
-                    case Key.Right: WorldMapScroll.ScrollToHorizontalOffset(WorldMapScroll.HorizontalOffset + paso); break;
-                    case Key.Up: WorldMapScroll.ScrollToVerticalOffset(WorldMapScroll.VerticalOffset - paso); break;
-                    case Key.Down: WorldMapScroll.ScrollToVerticalOffset(WorldMapScroll.VerticalOffset + paso); break;
+                    case Key.Left: WorldMapView.PanBy(-paso, 0); break;
+                    case Key.Right: WorldMapView.PanBy(paso, 0); break;
+                    case Key.Up: WorldMapView.PanBy(0, -paso); break;
+                    case Key.Down: WorldMapView.PanBy(0, paso); break;
                 }
                 e.Handled = true;
             }
@@ -413,7 +420,7 @@ public partial class MainWindow : Window
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (ext == ".wld")
         {
-            await LoadWorldAndRestoreView(path);
+            await WorldMapView.LoadWorldAndRestoreView(path);
             _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion, privado - mismo criterio ya usado en el arnes
         }
         else if (ext == ".plr")
@@ -473,7 +480,7 @@ public partial class MainWindow : Window
             InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
         };
 
-        if (dialog.ShowDialog(this) == true) await LoadWorldAndRestoreView(dialog.FileName);
+        if (dialog.ShowDialog(this) == true) await WorldMapView.LoadWorldAndRestoreView(dialog.FileName);
     }
 
     // Idea 8 (catalogo de funciones, "Informe y comparador de mundos" - bitacora.md
@@ -612,7 +619,7 @@ public partial class MainWindow : Window
     {
         if (sender is not FrameworkElement { DataContext: ViewModels.GlobalWorldHitViewModel hit }) return;
         _viewModel.IsWhereIsItOpen = false;
-        await LoadWorldAndRestoreView(hit.FilePath);
+        await WorldMapView.LoadWorldAndRestoreView(hit.FilePath);
         _viewModel.SelectedTabIndex = 4; // Exploracion
         _viewModel.Exploration.SelectedCategory = ViewModels.WorldSearchCategory.Chests;
         _viewModel.Exploration.ChestViewMode = 1; // "Por lo que contienen"
@@ -742,7 +749,7 @@ public partial class MainWindow : Window
     private async void OnWorldCardClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: WorldListEntryViewModel entry }) return;
-        await LoadWorldAndRestoreView(entry.FilePath);
+        await WorldMapView.LoadWorldAndRestoreView(entry.FilePath);
     }
 
     // H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de objetos" - el dialogo real
@@ -819,232 +826,27 @@ public partial class MainWindow : Window
     // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
     // 100%, que para un mundo grande deja ver una fraccion minima del ancho). El calculo
     // necesita el tamaño real del viewport del ScrollViewer, que la ViewModel no conoce - vive
-    // aqui, igual que el resto de gestos del mapa (pan/zoom con rueda).
-    private void OnFitToWindowClick(object sender, RoutedEventArgs e)
-    {
-        WorldMapScroll.UpdateLayout();
-        FitWorldMapToWindow();
-    }
+    // en WorldMapView (ADR-TERRAKEEP-016/030), este handler se queda aqui solo porque el boton
+    // que lo dispara vive en la barra de herramientas de MainWindow.xaml, fuera de ese bloque.
+    private void OnFitToWindowClick(object sender, RoutedEventArgs e) => WorldMapView.FitToWindow();
 
-    // F-11 (auditoria de Opus vs TEdit, E-11): unico punto real de carga de un mundo (los 3
-    // sitios que antes hacian await LoadFromPathAsync + FitWorldMapToWindow por su cuenta -
-    // OnLoadWorldClick/OnWorldCardClick/OnWindowDrop - pasan a llamar aqui) para no triplicar la
-    // logica de guardar-la-vista-anterior/restaurar-o-ajustar. Guarda la vista del mundo SALIENTE
-    // (si habia uno) antes de cargar el nuevo, y tras cargar: si el mundo entrante tiene una vista
-    // guardada la restaura (Zoom ya lo puso LoadFromPathAsync; aqui solo el offset del
-    // ScrollViewer, que la ViewModel no puede tocar), si no, "Ajustar a la ventana" de siempre.
-    private async Task LoadWorldAndRestoreView(string path)
-    {
-        if (_viewModel.Exploration.IsWorldLoaded)
-            _viewModel.Exploration.SaveCurrentViewState(WorldMapScroll.HorizontalOffset, WorldMapScroll.VerticalOffset);
+    // ADR-TERRAKEEP-016/030 (27-sep-2026): LoadWorldAndRestoreView (unico punto real de carga de
+    // un mundo, los sitios que antes hacian await LoadFromPathAsync + FitWorldMapToWindow por su
+    // cuenta pasan a llamar aqui) se MOVIO ENTERO a WorldMapView.LoadWorldAndRestoreView(path) -
+    // hallazgo real no anticipado por el grep inicial de este bloque: el boton "Cargar mundo" del
+    // estado vacio ("Sin mundo cargado", dentro del propio Border del mapa) usa Click=
+    // "OnLoadWorldClick", el MISMO manejador que el boton de la barra de herramientas (fuera del
+    // bloque) - caso DUAL, mismo patron ya resuelto por OnLoadClick/HomeView/ADR-026: WorldMapView
+    // se queda con su PROPIA copia de OnLoadWorldClick (Window.GetWindow(this) en vez de "this")
+    // y, ya que el propio metodo de carga real vive intimamente ligado al mapa (guarda/restaura
+    // SU vista), se movio entero con el en vez de reenviar cada llamada por separado.
 
-        await _viewModel.Exploration.LoadFromPathAsync(path);
-
-        _ = Dispatcher.BeginInvoke(new Action(() =>
-        {
-            // DispatcherPriority.Loaded (no Background): el ScrollViewer necesita haber
-            // completado un layout real con el WorldImage/extent nuevo (post-Zoom, ya restaurado
-            // por LoadFromPathAsync si habia vista guardada) antes de poder pedirle su
-            // ViewportWidth/Height o fijar un offset real - misma necesidad ya resuelta por
-            // UpdateLayout() en el zoom de la rueda, mas abajo.
-            if (_viewModel.Exploration.TryConsumePendingViewRestore(out double offsetH, out double offsetV))
-            {
-                WorldMapScroll.UpdateLayout();
-                WorldMapScroll.ScrollToHorizontalOffset(offsetH);
-                WorldMapScroll.ScrollToVerticalOffset(offsetV);
-            }
-            else
-            {
-                FitWorldMapToWindow();
-            }
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
-    }
-
-    private void FitWorldMapToWindow()
-    {
-        var image = _viewModel.Exploration.WorldImage;
-        if (image == null || WorldMapScroll.ViewportWidth <= 0 || WorldMapScroll.ViewportHeight <= 0) return;
-        _viewModel.Exploration.Zoom = Math.Min(
-            WorldMapScroll.ViewportWidth / image.PixelWidth,
-            WorldMapScroll.ViewportHeight / image.PixelHeight);
-    }
-
-    // Rueda del raton = zoom directamente (sin necesitar Ctrl, pedido explicito - el arrastre ya
-    // cubre el desplazamiento normal, asi que la rueda no hace falta para nada mas aqui).
-    //
-    // Bug real corregido (1-sep-2026, reportado: "el zoom no lo hace recto"): cambiar solo
-    // Zoom sin tocar los offsets del ScrollViewer hace zoom desde la esquina superior
-    // izquierda del mapa (offset 0,0), no desde donde esta el cursor - la vista "salta" en vez
-    // de hacer zoom centrado en el punto que se esta mirando. Se calcula la coordenada de
-    // mundo bajo el cursor ANTES de cambiar el zoom, y se recoloca el offset para que ese
-    // mismo punto de mundo siga bajo el cursor DESPUES. UpdateLayout() fuerza a que el
-    // ScrollViewer ya conozca el nuevo tamaño de contenido (post-LayoutTransform) antes de
-    // pedirle el nuevo offset - sin esto, ScrollToHorizontalOffset calcularia contra el
-    // extent viejo todavia y el resultado seguiria sin cuadrar.
-    private void OnWorldMapPreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        double oldZoom = _viewModel.Exploration.Zoom;
-        var mousePos = e.GetPosition(WorldMapScroll);
-        double worldX = (WorldMapScroll.HorizontalOffset + mousePos.X) / oldZoom;
-        double worldY = (WorldMapScroll.VerticalOffset + mousePos.Y) / oldZoom;
-
-        // X-b (segunda auditoria de Opus, Fable): mismo paso real que los botones ZoomIn/ZoomOut
-        // (ExplorationViewModel.ZoomStep) - antes la rueda usaba x1.15, un paso distinto solo por
-        // costumbre, no por ningun motivo real.
-        _viewModel.Exploration.Zoom = oldZoom * (e.Delta > 0 ? ExplorationViewModel.ZoomStep : 1 / ExplorationViewModel.ZoomStep);
-        double newZoom = _viewModel.Exploration.Zoom;
-
-        WorldMapScroll.UpdateLayout();
-        WorldMapScroll.ScrollToHorizontalOffset(worldX * newZoom - mousePos.X);
-        WorldMapScroll.ScrollToVerticalOffset(worldY * newZoom - mousePos.Y);
-        e.Handled = true;
-    }
-
-    // Arrastrar con el boton izquierdo para desplazar el mapa (pan) - captura el raton al
-    // pulsar y mueve los offsets del ScrollViewer segun el desplazamiento real del cursor en
-    // pantalla, sin depender del zoom actual (los offsets del ScrollViewer ya estan en el
-    // espacio POST-transformacion porque el ScaleTransform esta en LayoutTransform, no
-    // RenderTransform).
-    private Point? _mapDragStart;
-    private double _mapDragStartH, _mapDragStartV;
-    // Se pone a true en cuanto el raton se mueve mas que MapClickSlopPx con el boton pulsado:
-    // distingue "el usuario ha hecho clic" de "el usuario ha arrastrado el mapa" (ver
-    // OnWorldMapMouseUp).
-    private bool _mapDragMoved;
-
-    // Bug real reportado por el usuario (18-sep-2026, ver bitacora.md "el clic sobre el cofre
-    // real no hace nada"): este handler llamaba a WorldMapScroll.CaptureMouse() de forma
-    // INCONDICIONAL en cualquier boton izquierdo pulsado dentro del mapa (para poder
-    // arrastrar/paneear). CaptureMode.Element (el modo por defecto de CaptureMouse()) hace que
-    // el MouseLeftButtonUp correspondiente NUNCA llegue al elemento real bajo el cursor - asi
-    // que ningun MouseBinding LeftClick de un marcador del mapa (CurrentChestMarker,
-    // WorldSearchResults...) podia completar su ciclo down+up, aunque el hit-test de WPF
-    // identificara correctamente el marcador como Mouse.DirectlyOver/OriginalSource. Arreglo:
-    // si el clic empieza sobre un elemento con su propio MouseBinding (un marcador clicable
-    // real), no capturamos el raton y dejamos que el propio marcador reciba su ciclo de clic
-    // normal - solo capturamos para arrastrar/paneear cuando el clic empieza sobre mapa vacio,
-    // que sigue siendo el comportamiento de siempre.
-    private void OnWorldMapMouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (OriginatesFromClickableMarker(e.OriginalSource as DependencyObject, WorldMapScroll))
-        {
-            return;
-        }
-
-        _mapDragStart = e.GetPosition(WorldMapScroll);
-        _mapDragStartH = WorldMapScroll.HorizontalOffset;
-        _mapDragStartV = WorldMapScroll.VerticalOffset;
-        _mapDragMoved = false;
-        WorldMapScroll.CaptureMouse();
-    }
-
-    // Umbral en pixeles de pantalla por debajo del cual un down+up cuenta como CLIC y no como
-    // arrastre. No es cero a proposito: un clic humano real casi nunca deja el cursor exactamente
-    // en el mismo pixel entre el down y el up, y sin margen el clic se perderia casi siempre.
-    private const double MapClickSlopPx = 4.0;
-
-    // Sube el arbol visual/logico desde el elemento real que origino el evento (e.OriginalSource
-    // de un evento tunneling SIEMPRE es el elemento mas interno, independientemente de que
-    // ancestro maneje el Preview) hasta encontrar un UIElement con InputBindings propios (un
-    // marcador clicable real, ver MouseBinding MouseAction="LeftClick" en MainWindow.xaml) o
-    // hasta llegar al limite (el propio WorldMapScroll, mapa vacio). InputBindings es una
-    // coleccion perezosa: leerla en un elemento que nunca la uso en XAML no tiene efecto
-    // secundario, simplemente devuelve Count=0.
-    private static bool OriginatesFromClickableMarker(DependencyObject? source, DependencyObject boundary)
-    {
-        while (source is not null && !ReferenceEquals(source, boundary))
-        {
-            if (source is UIElement { InputBindings.Count: > 0 })
-            {
-                return true;
-            }
-
-            source = source switch
-            {
-                Visual or Visual3D => VisualTreeHelper.GetParent(source),
-                ContentElement contentElement => LogicalTreeHelper.GetParent(contentElement),
-                _ => null
-            };
-        }
-
-        return false;
-    }
-
-    private void OnWorldMapMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        bool fueClic = _mapDragStart is not null && !_mapDragMoved;
-        _mapDragStart = null;
-        _mapDragMoved = false;
-        WorldMapScroll.ReleaseMouseCapture();
-
-        // Tercer reporte real del usuario (19-sep-2026): "por mucho que clique un cofre por el
-        // mapa no me abre ni su contenido ni lo que es para editar". Era cierto y no existia -
-        // ver TryOpenChestAtTile en ExplorationViewModel. Va en el UP y solo si NO hubo arrastre,
-        // para no robarle nada al pan de siempre (que es lo que hace este mismo raton cuando el
-        // usuario mueve). GetPosition(WorldMapImage) ya devuelve pixel nativo de la imagen = tile
-        // real, exactamente igual que el tooltip de hover de OnWorldMapMouseMove.
-        if (!fueClic) return;
-        var pos = e.GetPosition(WorldMapImage);
-        _viewModel.Exploration.TryOpenChestAtTile((int)pos.X, (int)pos.Y);
-    }
-
-    // GetPosition(WorldMapImage) ya devuelve la posicion en el espacio de pixel NATIVO de la
-    // imagen (WPF deshace el LayoutTransform/zoom automaticamente para el elemento sobre el
-    // que se pide la posicion) - y WorldRenderer pinta a 1 pixel por tile, asi que el pixel es
-    // directamente la coordenada de tile. Este handler vive en el ScrollViewer (no en la
-    // Image) para que siga disparandose durante el arrastre, cuando el raton tiene captura.
-    private void OnWorldMapMouseMove(object sender, MouseEventArgs e)
-    {
-        var pos = e.GetPosition(WorldMapImage);
-        _viewModel.Exploration.UpdateHover((int)pos.X, (int)pos.Y);
-
-        if (_mapDragStart is { } start && e.LeftButton == MouseButtonState.Pressed)
-        {
-            var current = e.GetPosition(WorldMapScroll);
-            if (Math.Abs(current.X - start.X) > MapClickSlopPx || Math.Abs(current.Y - start.Y) > MapClickSlopPx)
-            {
-                _mapDragMoved = true;
-            }
-            WorldMapScroll.ScrollToHorizontalOffset(_mapDragStartH - (current.X - start.X));
-            WorldMapScroll.ScrollToVerticalOffset(_mapDragStartV - (current.Y - start.Y));
-            MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed); // no molesta mientras se arrastra
-        }
-        else
-        {
-            PositionMapTooltip(e.GetPosition(MapTooltipCanvas));
-        }
-    }
-
-    // Tooltip flotante estilo TEdit: se coloca con un pequeño margen respecto al cursor y se
-    // voltea al otro lado si no cabe por el borde derecho/inferior del propio Canvas (que
-    // ocupa exactamente el area visible del mapa, ver MainWindow.xaml) - sin esto el texto se
-    // saldria cortado fuera del visor en los bordes.
-    private void PositionMapTooltip(Point cursorPos)
-    {
-        const double offset = 16, marginY = 18;
-        MapTooltipBorder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var size = MapTooltipBorder.DesiredSize;
-
-        double left = cursorPos.X + offset;
-        if (left + size.Width > MapTooltipCanvas.ActualWidth) left = cursorPos.X - offset - size.Width;
-
-        double top = cursorPos.Y + marginY;
-        if (top + size.Height > MapTooltipCanvas.ActualHeight) top = cursorPos.Y - marginY - size.Height;
-
-        Canvas.SetLeft(MapTooltipBorder, Math.Max(0, left));
-        Canvas.SetTop(MapTooltipBorder, Math.Max(0, top));
-        // SetCurrentValue, no el setter directo: Visibility ya tiene un Binding real en el XAML
-        // (a Exploration.HoverInfo via EmptyToCollapsed) - asignar la propiedad a secas
-        // reemplazaria ese binding para siempre; SetCurrentValue solo empuja un valor puntual
-        // sin desengancharlo.
-        MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Visible);
-    }
-
-    private void OnWorldMapMouseLeave(object sender, MouseEventArgs e)
-    {
-        _viewModel.Exploration.UpdateHover(-1, -1);
-        MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
-    }
+    // ADR-TERRAKEEP-016/030 (27-sep-2026): OnWorldMapPreviewMouseWheel/OnWorldMapMouseDown/
+    // OnWorldMapMouseUp/OnWorldMapMouseMove/OnWorldMapMouseLeave/OriginatesFromClickableMarker/
+    // PositionMapTooltip (+ los campos _mapDragStart*/MapClickSlopPx) se MOVIERON a
+    // Terrakeep.App/Views/WorldMapView.xaml.cs junto con el XAML que los usa - ninguno se
+    // referenciaba fuera de ese bloque (grep confirmado antes de mover nada), ver el comentario
+    // real completo en WorldMapView.xaml.
 
     // ADR-TERRAKEEP-016/026 (26-sep-2026): los manejadores de hover de Inicio
     // (OnCharacterCardMouseEnter/Leave, OnCharacterCardUnloaded, OnHomeBannerMouseEnter/Leave)
@@ -1052,110 +854,14 @@ public partial class MainWindow : Window
     // MainWindow.xaml (seccion INICIO) - ninguno se usaba fuera de esa seccion (grep confirmado
     // antes de mover nada), ver el comentario real completo en HomeView.xaml.cs.
 
-    // Centra el mapa sobre la posicion de un NPC (pedido desde ExplorationViewModel via
-    // NavigateToTileRequested al pulsar un NPC en la lista) - los offsets del ScrollViewer ya
-    // estan en espacio post-zoom, igual que en el arrastre.
-    private void OnNavigateToTile(int tileX, int tileY)
-    {
-        // F-3 (auditoria de Opus vs TEdit, E-12): con la casilla "Acercar al ir a un resultado"
-        // marcada, fija un zoom de trabajo ANTES de centrar - mismo patron real que el zoom con
-        // rueda (UpdateLayout() antes de pedir offsets nuevos, para que el ScrollViewer conozca
-        // el extent post-LayoutTransform). TEdit fija _zoom=8 en su escala
-        // (WorldRenderXna.xaml.cs:8178); el equivalente razonable aqui, dentro del MaxZoom=6.0
-        // ya existente, es 4.0.
-        // Punto 4 del encargo (6-sep-2026): ya no se lee la casilla global directamente - cada
-        // origen de navegacion decide con la SUYA ("Cofre a cofre" tiene la propia) y deja el
-        // resultado resuelto en NavigationWantsAutoZoom. Todo camino real hasta aqui pasa por
-        // ExplorationViewModel.NavigateToTile (incluido el clic en el minimapa), asi que este
-        // valor siempre corresponde a la navegacion que se esta atendiendo.
-        if (_viewModel.Exploration.NavigationWantsAutoZoom)
-        {
-            _viewModel.Exploration.Zoom = 4.0;
-            WorldMapScroll.UpdateLayout();
-        }
-        double zoom = _viewModel.Exploration.Zoom;
-        WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - WorldMapScroll.ViewportWidth / 2);
-        WorldMapScroll.ScrollToVerticalOffset(tileY * zoom - WorldMapScroll.ViewportHeight / 2);
-        UpdateMinimapViewport();
-    }
-
-    // F-8 (auditoria de Opus vs TEdit, E-05): minimapa real - reutiliza el bitmap del mundo YA
-    // congelado (WorldRenderer.cs), sin pintar nada de nuevo.
-    private void OnWorldMapScrollChanged(object sender, ScrollChangedEventArgs e) => UpdateMinimapViewport();
-    private void OnMinimapSizeChanged(object sender, SizeChangedEventArgs e) => UpdateMinimapViewport();
-
-    private void OnToggleMinimapClick(object sender, RoutedEventArgs e) =>
-        _viewModel.Settings.IsMinimapVisible = !_viewModel.Settings.IsMinimapVisible;
-
-    // Con Stretch="Uniform", la imagen real dentro de MinimapImage no ocupa toda su caja
-    // (220x63) salvo que el mundo tenga exactamente esa proporcion - hay que calcular la escala
-    // real Y el hueco (letterbox) para que el rectangulo de viewport caiga donde de verdad esta
-    // pintado el mundo, no donde estaria si Stretch="Fill".
-    private void UpdateMinimapViewport()
-    {
-        var img = _viewModel.Exploration.WorldImage;
-        if (img == null || MinimapImage.ActualWidth <= 0 || MinimapImage.ActualHeight <= 0
-            || !_viewModel.Settings.IsMinimapVisible)
-        {
-            MinimapViewportRect.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        double escala = Math.Min(MinimapImage.ActualWidth / img.PixelWidth, MinimapImage.ActualHeight / img.PixelHeight);
-        double huecoX = (MinimapImage.ActualWidth - img.PixelWidth * escala) / 2;
-        double huecoY = (MinimapImage.ActualHeight - img.PixelHeight * escala) / 2;
-
-        double zoom = _viewModel.Exploration.Zoom;
-        if (zoom <= 0 || WorldMapScroll.ViewportWidth <= 0)
-        {
-            MinimapViewportRect.Visibility = Visibility.Collapsed;
-            return;
-        }
-        // C-02 (auditoria de pulido final, cierra E2): a zoom muy alejado (MinZoom=0.02) el
-        // viewport real en tiles de mundo (ViewportWidth/zoom) puede ser MUCHO mas grande que el
-        // propio mundo (medido: 50.000 tiles de viewport contra 8.400 de ancho real en un mundo
-        // Grande) - sin recortar, el rectangulo salia 6 veces mas ancho que la caja del minimapa
-        // y, sin ClipToBounds en ningun contenedor, se pintaba encima de toda la ventana.
-        double vpX = Math.Clamp(WorldMapScroll.HorizontalOffset / zoom, 0, img.PixelWidth);
-        double vpY = Math.Clamp(WorldMapScroll.VerticalOffset / zoom, 0, img.PixelHeight);
-        double vpW = Math.Min(WorldMapScroll.ViewportWidth / zoom, img.PixelWidth - vpX);
-        double vpH = Math.Min(WorldMapScroll.ViewportHeight / zoom, img.PixelHeight - vpY);
-
-        // Con el mundo entero ya visible (p.ej. "Ajustar a la ventana" o mas alejado), el
-        // rectangulo coincidiria con el borde exacto del minimapa y no aportaria nada - igual que
-        // cualquier minimapa real, se oculta en ese caso.
-        if (vpW >= img.PixelWidth && vpH >= img.PixelHeight)
-        {
-            MinimapViewportRect.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        Canvas.SetLeft(MinimapViewportRect, huecoX + vpX * escala);
-        Canvas.SetTop(MinimapViewportRect, huecoY + vpY * escala);
-        MinimapViewportRect.Width = Math.Max(1, vpW * escala);
-        MinimapViewportRect.Height = Math.Max(1, vpH * escala);
-        MinimapViewportRect.Visibility = Visibility.Visible;
-    }
-
-    // Clic en el minimapa -> navega, misma conversion clic->tile que TEdit
-    // (MainWindow.xaml.cs:946-957: posicion del clic / Resolution -> coordenada de mundo), aqui
-    // con la escala real ya calculada arriba en vez de un "Resolution" fijo por muestreo.
-    private void OnMinimapClick(object sender, MouseButtonEventArgs e)
-    {
-        var img = _viewModel.Exploration.WorldImage;
-        if (img == null || MinimapImage.ActualWidth <= 0) return;
-        double escala = Math.Min(MinimapImage.ActualWidth / img.PixelWidth, MinimapImage.ActualHeight / img.PixelHeight);
-        double huecoX = (MinimapImage.ActualWidth - img.PixelWidth * escala) / 2;
-        double huecoY = (MinimapImage.ActualHeight - img.PixelHeight * escala) / 2;
-        var clic = e.GetPosition(MinimapImage);
-        int tileX = (int)((clic.X - huecoX) / escala);
-        int tileY = (int)((clic.Y - huecoY) / escala);
-        // Via la ViewModel (no OnNavigateToTile a pelo) para que esta navegacion resuelva su
-        // NavigationWantsAutoZoom con la casilla GLOBAL - el clic en el minimapa no viene de
-        // "Cofre a cofre" ni de ninguna otra seccion con casilla propia, y asi conserva
-        // exactamente el comportamiento que tenia antes del punto 4.
-        _viewModel.Exploration.NavigateToTile(tileX, tileY);
-    }
+    // ADR-TERRAKEEP-016/030 (27-sep-2026): OnNavigateToTile se convirtio en el gancho publico
+    // NavigateToTile(int,int) de WorldMapView (firma identica al delegate Action<int,int> del
+    // evento Exploration.NavigateToTileRequested, suscrito directamente desde el constructor).
+    // OnWorldMapScrollChanged/OnMinimapSizeChanged/OnToggleMinimapClick/OnMinimapClick se
+    // MOVIERON tal cual a WorldMapView.xaml.cs (solo se usaban dentro de ese bloque).
+    // UpdateMinimapViewport paso de privado a PUBLICO en WorldMapView (lo sigue necesitando el
+    // PropertyChanged de Zoom/WorldImage suscrito en el constructor de esta clase). Ver el
+    // comentario real completo en WorldMapView.xaml.cs.
 
     // Arrastrar y soltar (pedido explicito 1-sep-2026: "se puede arrastar para poder ir
     // poniendo en el inventario o en accesorios pero todo se visualiza en sprites"). Deteccion
