@@ -1,0 +1,62 @@
+<!-- ADR-TERRAKEEP-016/018 (26-sep-2026): SEGUNDA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, siguiendo el orden de menor a mayor riesgo del plan
+     (punto 4.2, tras NOVEDADES en ADR-017). Seccion BUILDS elegida por ser el siguiente paso
+     recomendado: sin x:Name (ningun test FindName la toca - PruebasLibreriaYBuilds.cs usa
+     Descendientes<T>(window), un recorrido del arbol VISUAL que cruza UserControls sin
+     problema, nunca window.FindName), sin code-behind propio en MainWindow.xaml.cs.
+     El plan (ADR-016) anticipaba que esta seccion SI necesitaria promover BuildClassTemplate
+     (window-scoped, x:Key en Window.Resources) a un ResourceDictionary compartido antes de
+     mover el XAML - verificado con evidencia real (grep de este mismo bloque) que NO es asi:
+     esta seccion nunca escribe "{StaticResource BuildClassTemplate}" en su propio markup, solo
+     deja que Builds.VanillaStages/CalamityStages (listas de BuildStageViewModel) se pinten con
+     la plantilla implicita (sin x:Key, por DataType) que Window.Resources ya tiene para ese
+     tipo - y esa plantilla implicita es quien referencia BuildClassTemplate por dentro, ya
+     resuelta en tiempo de COMPILACION de MainWindow.xaml, sin depender de donde se use despues.
+     La resolucion de una plantilla implicita SI es una busqueda en TIEMPO DE EJECUCION que
+     recorre el arbol logico hacia arriba (a diferencia de un StaticResource escrito a mano en
+     el propio UserControl, que se resuelve durante su InitializeComponent(), antes de estar
+     enganchado a ningun Window) - por eso sigue encontrando Window.Resources del Window real que
+     hospeda este UserControl, exactamente el mismo mecanismo ya confirmado por NOVEDADES/
+     ADR-017 con los ItemsControl anidados de WhatsNewEntryViewModel. Confirmado con
+     dotnet build + dotnet test + el canario real BUILDS-01/02/03/04/05 de
+     PruebasLibreriaYBuilds.cs, ver bitacora.md y ADR-TERRAKEEP-018 para el detalle completo.
+     Contenido copiado BYTE A BYTE del TabItem "BUILDS" en MainWindow.xaml, solo movido de sitio -
+     el UserControl no fija su propio DataContext, hereda el MainViewModel real del Window. -->
+<UserControl x:Class="Terrakeep.App.Views.BuildsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <DockPanel Margin="14">
+        <!-- Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - antes
+             una unica lista plana de TODAS las clases de TODAS las etapas de golpe. -->
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Builds.ClassFilterOptions}" Margin="0,0,0,10">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:BuildClassFilterOptionViewModel}">
+                    <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                            Command="{Binding DataContext.Builds.SelectClassFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TabControl Style="{StaticResource InnerTabControl}">
+        <TabItem Header="Vanilla">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Builds.VanillaStages}" Margin="4,10,0,0" />
+            </ScrollViewer>
+        </TabItem>
+        <TabItem Header="Calamity Mod">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Builds.CalamityStages}" Margin="4,10,0,0" />
+            </ScrollViewer>
+        </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

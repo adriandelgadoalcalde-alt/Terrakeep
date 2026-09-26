@@ -29338,3 +29338,78 @@ verificado despues.
 modificados en el arbol por otros agentes en paralelo (mismo patron que la entrada anterior).
 Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en
 KeepQA. Sin `git push`.
+
+## Segunda extraccion real de una seccion de MainWindow.xaml a UserControl - BUILDS (26-sep-2026)
+
+Ejecucion real del siguiente paso del plan (`ADR-TERRAKEEP-016`, punto 4.2, recomendado por el
+propio `ADR-TERRAKEEP-017` tras NOVEDADES), requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`.
+Antes de tocar nada se confirmo con `git status`/`git log` que el arbol de Terrakeep seguia
+estable (decenas de ficheros modificados por otros agentes en paralelo, ninguno tocaba
+`MainWindow.xaml` ni la carpeta `Views/` - mismo patron de convivencia ya documentado en la
+entrada anterior). Detalle tecnico completo, el hallazgo real que corrige una prediccion
+demasiado pesimista del plan original y la leccion sobre el canario ya existente en
+`ADR-TERRAKEEP-018` (Decision Registry, mismo requirement) - resumen aqui.
+
+**Resumen del arreglo real**: contenido del `TabItem` BUILDS (37 lineas, `MainWindow.xaml`
+4972-5009 antes de tocarla: filtro de clase + `TabControl` interno Vanilla/Calamity Mod) movido
+byte a byte a `Terrakeep.App/Views/BuildsView.xaml` + `BuildsView.xaml.cs` (mismo patron ya
+fijado por `ADR-017`: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio,
+`d:DesignInstance` para IntelliSense). `MainWindow.xaml` queda con `<views:BuildsView />` dentro
+del `TabItem` BUILDS.
+
+**Hallazgo real que difiere del plan**: `ADR-016` daba por hecho que esta seccion necesitaria
+promover `BuildClassTemplate` (recurso window-scoped) a un `ResourceDictionary` compartido antes
+de mover el XAML. Grep exhaustivo del bloque real a mover confirmo que NO hacia falta: el
+`TabItem` BUILDS nunca escribe `{StaticResource BuildClassTemplate}` en su propio markup, solo dos
+`ItemsControl` sin `ItemTemplate` propio que dependen de la plantilla IMPLICITA (sin `x:Key`) que
+`Window.Resources` ya tiene para `BuildStageViewModel` - y esa plantilla implicita se resuelve en
+TIEMPO DE EJECUCION recorriendo el arbol logico hacia arriba (a diferencia de un `StaticResource`
+escrito a mano, que se resuelve durante el `InitializeComponent()` del `UserControl`, antes de
+estar enganchado a ningun `Window`), asi que SI encuentra `Window.Resources` una vez el
+`UserControl` esta insertado en el arbol del `Window` que lo hospeda. Mismo mecanismo ya
+confirmado por NOVEDADES con los `ItemsControl` anidados de `WhatsNewEntryViewModel` - regla
+general que queda escrita en `ADR-018` para el resto de extracciones: solo hace falta promover un
+recurso window-scoped cuando el XAML que se mueve lo referencia con `StaticResource` DIRECTAMENTE
+en su propio markup, nunca cuando llega por una plantilla implicita heredada.
+
+**Canario real, no nuevo**: a diferencia de lo que `ADR-016` asumia ("BUILDS no tiene ningun
+canario de geometria dedicado"), `Terrakeep.App.Tests/PruebasLibreriaYBuilds.cs` ya cubria esta
+seccion en profundidad (`BUILDS-01-POSESION`/`02-FILTRO`/`03-AUTOEQUIP`/`04-AVISO-CALAMITY`/
+`05-MAQUETACION`), ejecutado siempre como parte del recorrido completo de `Program.cs` (nunca
+detras de un `_SOLO`). No aparecia en el grep de `window.FindName(...)` de `ADR-016` porque usa
+`Descendientes<T>(window)` (recorrido del arbol VISUAL real), un mecanismo distinto que tambien
+cruza la frontera de un `UserControl` sin romperse.
+
+**Verificacion real**: `dotnet build Terrakeep.slnx -c Release` 0/0 (antes y despues). `dotnet
+test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). Recorrido COMPLETO de
+`Terrakeep.App.Tests` (`dotnet run -c Release`, SIN ningun `_SOLO`) SI relanzado entero esta vez
+(pendiente que `ADR-017` dejo explicito) - 16 `FALLO:` en el log completo, todos limites conocidos
+preexistentes ya documentados en esta misma bitacora antes de hoy (`AR-14`, `AR-MRK-CLIC`/
+`AR-MRK-OTROS`, `A10-IDIOMA-BARRIDO`, `AR-11f`, `AR-LAY`, `A8-01`, `A8-06`, `H5-05`), ninguno
+relacionado con Builds/Novedades/`BuildClassTemplate`. `BUILDS-01` a `BUILDS-05`: 0 `FALLO`,
+`BUILDS-05-MAQUETACION` con 162/162 tarjetas de equipo alcanzables y 0 titulos de clase en bruto en
+los 5 tamaños de ventana reales. Verificacion visual real antes/despues (captura
+`RenderTargetBitmap` real de la pestaña BUILDS a 1180x860, con el personaje real `Zenith`, con el
+codigo ANTES de la extraccion vía `git stash` temporal de `MainWindow.xaml`/`Views/BuildsView.*` y
+DESPUES) - identicas a simple vista, revisadas a mano.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`, la ruta indexada en `herramientas.json`) recompilado con `dotnet build
+Terrakeep.App -c Debug`. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion (`Get-Process -Name Terrakeep` sin resultados)
+antes del despliegue. `DEPLOY_LOCK` (`KeepQA\src\bloqueos\deployLock.js`) adquirido antes de tocar
+`Assets/`/publish, liberado despues de confirmar. `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish "%LocalAppData%\Programs\Terrakeep" /MIR /XF unins000.exe unins000.dat`: 1 archivo
+copiado (`Terrakeep.exe`, el unico con cambio real - este arreglo no toco ningun asset), `Assets/`
+identico antes/despues (13056 ficheros, mismo hash). Hash SHA256 identico entre el `.exe`
+publicado y el instalado (`1E636E73...DCAE2EF` en ambos). Sanity check real: `Start-Process` del
+`.exe` instalado, `Responding=True` a los 5s, cerrado limpio con `Stop-Process -Force`, sin
+proceso residual verificado despues.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/BuildsView.xaml` + `.xaml.cs` (nuevos) y esta entrada de `bitacora.md` -
+nunca `git add -A`, seguia habiendo decenas de ficheros ajenos modificados en el arbol por otros
+agentes en paralelo. Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603`
+(proyecto `Terrakeep`) en KeepQA. Sin `git push`.

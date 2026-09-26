@@ -4978,34 +4978,11 @@
                     <TextBlock Text="{Binding Loc[tab_builds], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
-            <DockPanel Margin="14">
-                <!-- Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - antes
-                     una unica lista plana de TODAS las clases de TODAS las etapas de golpe. -->
-                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Builds.ClassFilterOptions}" Margin="0,0,0,10">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:BuildClassFilterOptionViewModel}">
-                            <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
-                                    Command="{Binding DataContext.Builds.SelectClassFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TabControl Style="{StaticResource InnerTabControl}">
-                <TabItem Header="Vanilla">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Builds.VanillaStages}" Margin="4,10,0,0" />
-                    </ScrollViewer>
-                </TabItem>
-                <TabItem Header="Calamity Mod">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Builds.CalamityStages}" Margin="4,10,0,0" />
-                    </ScrollViewer>
-                </TabItem>
-                </TabControl>
-            </DockPanel>
+            <!-- ADR-TERRAKEEP-016/018 (26-sep-2026): contenido extraido a Views/BuildsView.xaml,
+                 segunda extraccion real a UserControl de este repo (ver el comentario real de
+                 ese archivo). Comportamiento preservado byte a byte: mismo XAML, solo movido de
+                 sitio - el UserControl hereda el DataContext de este Window sin fijarlo. -->
+            <views:BuildsView />
         </TabItem>
 
         <!-- ===================== GUIA ===================== -->
