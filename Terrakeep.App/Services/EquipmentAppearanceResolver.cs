@@ -178,6 +178,44 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // trayectoria del jugador mientras se mueve), algo que no existe ni tiene sentido para un doll
 // ESTATICO sin fisica. No hay ningun sprite que extraer ni ninguna capa que dibujar - documentado
 // aqui, sin campo en EquippedAccessories para este item.
+//
+// ParidadPersonaje Fase5 (26-sep-2026): FloatingTube (item.type==4404, "Floating Tube") -
+// investigacion previa lo habia marcado INCONCLUSIVE ("depende de estar mojado"), CORREGIDO aqui
+// contra el decompilado real: NO existe ninguna dependencia de "wet"/mojado en todo el pipeline de
+// dibujado. `hasFloatingTube` se fija exactamente igual que hasUnicornHorn/hasAngelHalo
+// (Player.cs:37345-37348, dentro del MISMO UpdateVisibleAccessory, "if (item.type == 4404)
+// hasFloatingTube = true;") y `drawFloatingTube = drawPlayer.hasFloatingTube && !hideEntirePlayer;`
+// (PlayerDrawSet.cs:2776) - IDENTICO al gate real de drawUnicornHorn/drawAngelHalo en la linea de
+// arriba, sin ningun campo "wet"/"lavaWet"/"honeyWet" involucrado (grep completo confirmado). Es
+// el 5º estado especial "aislado" de este tipo, simplemente omitido por error del GapAnalysis
+// Encargo J original (que solo listo 4). TextureAssets.Extra[105] (grep completo confirma que es
+// el UNICO Extra[] real usado para FloatingTube), dibujado dos veces en dos capas reales distintas
+// con la MISMA posicion "torso" (formula identica a torsoskin/ArmorBodyComposite[torso], sin
+// compositeOffset_BackArm/FrontArm) pero DOS FRAMES DISTINTOS de la misma tira 40x112 (2 filas) -
+// no es animacion en el tiempo, es un split espacial real fijo: frame0 (fila 0) en
+// DrawPlayer_12_Skin_Composite (PlayerDrawLayers.cs:2294-2300, DENTRO del mismo gate
+// "!hidesTopSkin" que la piel del torso) y frame1 (fila 1) en DrawPlayer_17_TorsoComposite
+// (PlayerDrawLayers.cs:3352-3358, SIEMPRE, tras el bloque hasBody/else, sin gate de hidesTopSkin -
+// mismo punto real donde ya se dibuja Coat). Dye propio real (`cFloatingTube`, Player.cs:8149,
+// "cFloatingTube = dyeItem.dye;" - canal independiente de BodyDye, mismo patron que CoatDye).
+//
+// ParidadPersonaje Fase5 (26-sep-2026): otros 2 casos de la MISMA ronda, CONFIRMADOS como NO
+// APLICA (sin sprite estatico portable) contra el decompilado real - ninguno de los dos tiene
+// campo en EquippedAccessories, mismo criterio que Yoraiz0r Eye arriba:
+// - **Leinfors Hair Shampoo** (item.type==3929, `leinforsHair`): capa real
+//   `DrawPlayer_07_LeinforsHairShampoo` (PlayerDrawLayers.cs:742-846) - confirmado leyendo el
+//   cuerpo COMPLETO del metodo: NUNCA dibuja un sprite/DrawData propio, unicamente llama
+//   `Dust.NewDust(...)` con probabilidad `Main.rand.Next(20/40/15)==0` (particulas de purpurina
+//   aleatorias, tintadas en tiempo real con `GameShaders.Armor.GetSecondaryShader(cLeinShampoo,
+//   drawPlayer)`) - no hay NINGUN frame fijo que extraer, es un sistema de particulas puramente
+//   aleatorio y dependiente del tiempo/velocidad del jugador. Mas alla de "shader": no existe
+//   ninguna textura base que recortar. LIMITE REAL confirmado, sin cambio de codigo.
+// - **Rainbow Cursor** (item.type==5075, `hasRainbowCursor`, Player.cs:2359/36357-36359):
+//   confirmado con grep completo sobre `PlayerDrawLayers.cs`/`LegacyPlayerRenderer.cs` - 0
+//   referencias a `hasRainbowCursor` en todo el pipeline de dibujado del jugador. El UNICO uso
+//   real es `Main.cs:62543-62544` ("if (!gameMenu && LocalPlayer.hasRainbowCursor) ...") para
+//   colorear `Main.cursorColor` - el cursor del RATON, una capa de UI completamente aparte del
+//   doll/jugador. NO APLICA confirmado, sin cambio de codigo.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
@@ -208,7 +246,9 @@ public sealed record EquippedAccessories(
     string? UnicornHornFile = null, PlayerPreviewRenderer.Tint? UnicornHornDye = null,
     string? AngelHaloFile = null, PlayerPreviewRenderer.Tint? AngelHaloDye = null,
     string? Yoraiz0rDarknessFile = null,
-    string? CoatFile = null, int? CoatSlot = null, PlayerPreviewRenderer.Tint? CoatDye = null);
+    string? CoatFile = null, int? CoatSlot = null, PlayerPreviewRenderer.Tint? CoatDye = null,
+    // ParidadPersonaje Fase5 (26-sep-2026): ver el comentario de cabecera de esta clase.
+    string? FloatingTubeFile = null, PlayerPreviewRenderer.Tint? FloatingTubeDye = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -374,7 +414,8 @@ public sealed class EquipmentAppearanceResolver
         public AccessoryMatch? Balloon, BalloonFront;
         // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales de bajo impacto - ver el
         // comentario de cabecera de EquippedAccessories para la cita real completa de cada uno.
-        public AccessoryMatch? UnicornHorn, AngelHalo, Yoraiz0rDarkness, Coat;
+        // ParidadPersonaje Fase5 (26-sep-2026): FloatingTube, el 5º estado especial del mismo tipo.
+        public AccessoryMatch? UnicornHorn, AngelHalo, Yoraiz0rDarkness, Coat, FloatingTube;
 
         // Fiel CAMPO A CAMPO a Player.cs:37151-37283 (UpdateVisibleAccessory), EN ESE ORDEN - el
         // orden importa de verdad: backSlot se procesa ANTES que frontSlot dentro del MISMO item,
@@ -474,6 +515,9 @@ public sealed class EquipmentAppearanceResolver
             if (item.Id == 4563) UnicornHorn = match;
             if (item.Id == 1987) AngelHalo = match;
             if (item.Id == 5587) Coat = match;
+            // ParidadPersonaje Fase5 (26-sep-2026): FloatingTube (Player.cs:36345-36347, "if
+            // (item.type == 4404) hasFloatingTube = true;") - mismo mecanismo item.type EXACTO.
+            if (item.Id == 4404) FloatingTube = match;
         }
     }
 
@@ -666,6 +710,11 @@ public sealed class EquipmentAppearanceResolver
         string? coatFile = state.Coat is not null ? FixedVanillaPath("armor_body", 251) : null;
         int? coatSlotId = state.Coat is not null ? 251 : null;
         var coatDye = ResolveDye(state.Coat?.Dye ?? PlrItemSlot.Empty);
+        // ParidadPersonaje Fase5 (26-sep-2026): FloatingTube - misma tira 40x112 (2 filas), la
+        // eleccion de fila (0 o 1) es responsabilidad del renderer (PlayerPreviewRenderer.Render),
+        // aqui solo se resuelve la ruta fija real del fichero, mismo criterio que el resto.
+        string? floatingTubeFile = state.FloatingTube is not null ? FixedVanillaPath("extra", 105) : null;
+        var floatingTubeDye = ResolveDye(state.FloatingTube?.Dye ?? PlrItemSlot.Empty);
 
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
@@ -681,7 +730,8 @@ public sealed class EquipmentAppearanceResolver
             backpackDye, tailDye, shoesDye, balloonDye, balloonFrontDye, beardDye,
             faceHeadDye, faceMaskDye, faceFlowerDye, frontDye, wingDye,
             unicornHornFile, unicornHornDye, angelHaloFile, angelHaloDye, yoraiz0rDarknessFile,
-            coatFile, coatSlotId, coatDye);
+            coatFile, coatSlotId, coatDye,
+            floatingTubeFile, floatingTubeDye);
     }
 
     // GapAnalysis Encargo J (25-sep-2026): resuelve una ruta de sprite con un id FIJO (no

@@ -275,6 +275,28 @@ public static class PlayerPreviewRenderer
             if (accessories?.CoatFile is { } coatFile) Composite(canvas, LoadArmorCell(coatFile, cell), accessories?.CoatDye);
         }
 
+        // ParidadPersonaje Fase5 (26-sep-2026): FloatingTube (item.type==4404) - investigacion
+        // previa lo marcaba INCONCLUSIVE ("depende de estar mojado"), CORREGIDO contra el
+        // decompilado real: `drawFloatingTube = drawPlayer.hasFloatingTube && !hideEntirePlayer;`
+        // (PlayerDrawSet.cs:2776) es IDENTICO al gate de drawUnicornHorn/drawAngelHalo, sin
+        // ninguna dependencia real de wet/lavaWet/honeyWet en todo el pipeline de dibujado (grep
+        // completo confirmado) - ver el comentario real completo de EquipmentAppearanceResolver.
+        // A diferencia de Coat (misma hoja/celdas que armor.BodyFile), FloatingTube es una tira
+        // SUELTA propia de 2 filas (Assets/player/extra/105.png, 40x112) sin relacion con la
+        // rejilla 360x224 del cuerpo - se dibuja DOS VECES con la MISMA posicion "torso" (formula
+        // identica a torsoskin/ArmorBodyComposite[torso], sin compositeOffset_BackArm/FrontArm)
+        // pero fila DISTINTA cada vez: fila 0 (PlayerDrawLayers.cs:2294-2300, DrawPlayer_12_
+        // Skin_Composite, mitad "trasera") y fila 1 (PlayerDrawLayers.cs:3352-3358, DrawPlayer_17_
+        // TorsoComposite, mitad "delantera") - split espacial fijo, NO animacion en el tiempo
+        // (por eso usa LoadStripFrameAbsolute con una fila FIJA por punto de llamada, nunca
+        // legAnimationFrame como DrawAccessory). Dye propio real (`cFloatingTube`,
+        // Player.cs:8149), independiente de BodyDye - mismo patron que CoatDye.
+        void DrawFloatingTube(int frameRow)
+        {
+            if (accessories?.FloatingTubeFile is { } floatingTubeFile)
+                Composite(canvas, LoadStripFrameAbsolute(floatingTubeFile, frameRow), accessories?.FloatingTubeDye);
+        }
+
         // GapAnalysis Encargo E (25-sep-2026): accessories?.FrontFile (item.frontSlot,
         // Player.cs:37185-37188) NO es una capa unica "encima de todo" - es el MISMO sprite
         // recortado en 2 mitades (PlayerDrawLayers.cs:3908-3993,
@@ -455,7 +477,10 @@ public static class PlayerPreviewRenderer
 
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
+        // ParidadPersonaje Fase5: FloatingTube fila 0, DENTRO del MISMO gate "!hidesTopSkin" que
+        // la piel del torso - fiel a PlayerDrawLayers.cs:2276-2300 real (ver DrawFloatingTube).
         if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
+        if (!hidesTopSkin) DrawFloatingTube(0);
         if (!hidesBottomSkin) Composite(canvas, LoadStripFrame(variant, "legskin", legAnimationFrame), colors.Skin);
 
         // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO. GapAnalysis Encargo C
@@ -564,6 +589,9 @@ public static class PlayerPreviewRenderer
         }
         // GapAnalysis Encargo J: Coat en el torso, SIEMPRE despues (PlayerDrawLayers.cs:2029-2036).
         DrawCoat(torsoCell);
+        // ParidadPersonaje Fase5: FloatingTube fila 1, SIEMPRE despues (sin gate de
+        // hidesTopSkin/hasBody) - fiel a PlayerDrawLayers.cs:3352-3358 real (ver DrawFloatingTube).
+        DrawFloatingTube(1);
 
         // Paso 8b [18/19/20_OffhandAcc/WaistAcc/NeckAcc]: los tres accesorios de torso que van
         // ANTES de la cabeza en el orden real (PlayerDrawLayers.cs, ids de capa 18/19/20 - HandOff

@@ -1,9 +1,10 @@
-// GapAnalysis Encargo J (25-sep-2026): extrae los 2 sprites reales de "TextureAssets.Extra[N]"
-// que hacen falta para los estados especiales de bajo impacto de Player.cs (ver bitacora.md) -
-// hermano puntual de extraer-sprites-armadura-vanilla.js/extraer-sprites-accesorios-vanilla.js,
-// pero para la carpeta Images/Extra_N.xnb (sin agrupar por tipo de accesorio real, solo 2 ids
-// sueltos que no encajan en ningun catalogo existente - "hasUnicornHorn"/"yoraiz0rDarkness" son
-// flags de item.type EXACTO, no un slot de equipo con su propia lista de ids).
+// GapAnalysis Encargo J (25-sep-2026) + ParidadPersonaje Fase5 (26-sep-2026): extrae los 3
+// sprites reales de "TextureAssets.Extra[N]" que hacen falta para los estados especiales de bajo
+// impacto de Player.cs (ver bitacora.md) - hermano puntual de extraer-sprites-armadura-vanilla.js/
+// extraer-sprites-accesorios-vanilla.js, pero para la carpeta Images/Extra_N.xnb (sin agrupar por
+// tipo de accesorio real, solo ids sueltos que no encajan en ningun catalogo existente -
+// "hasUnicornHorn"/"yoraiz0rDarkness"/"hasFloatingTube" son flags de item.type EXACTO, no un slot
+// de equipo con su propia lista de ids).
 //
 // - Unicorn Horn (item.type==4563, Player.cs:37267-37270): TextureAssets.Extra[143],
 //   PlayerDrawLayers.cs:2860-2870 (DrawPlayer_22_FaceAcc, justo despues de FaceFlower) - dibujado
@@ -18,6 +19,15 @@
 //   PlayerPreviewRenderer.cs) - se recorta a un unico frame 40x56 (modo 'frame0'), mismo criterio
 //   que HeadBackFile/BeardFile.
 //
+// - Floating Tube (item.type==4404, Player.cs:36345-36347): TextureAssets.Extra[105], dibujado
+//   DOS VECES en capas reales distintas (PlayerDrawLayers.cs:2294-2300/3352-3358) con la MISMA
+//   posicion "torso" pero DOS FRAMES DISTINTOS de la misma tira 40x112 (2 filas) - split espacial
+//   fijo (frame0 detras/frame1 delante), NO animacion en el tiempo. Investigacion previa lo habia
+//   marcado INCONCLUSIVE ("depende de estar mojado") - CORREGIDO: 0 dependencia real de wet/
+//   lavaWet/honeyWet en todo el pipeline de dibujado (ParidadPersonaje Fase5, ver el comentario
+//   real completo en EquipmentAppearanceResolver.cs). Se guarda la hoja ENTERA de 2 filas (modo
+//   'hoja'), el renderer elige la fila real en cada punto de dibujado (LoadStripFrameAbsolute).
+//
 // Yoraiz0r Eye (item.type==3580) queda FUERA de este script a proposito: no dibuja ningun sprite
 // estatico real (Player.cs:12616-12664, solo particulas de luz/polvo en tiempo real ligadas a la
 // velocidad del jugador) - LIMITE REAL documentado en EquipmentAppearanceResolver.cs, sin sprite
@@ -25,7 +35,8 @@
 //
 // Uso: node scripts/extraer-sprites-estados-especiales.js
 // Salida: Terrakeep.App/Assets/player/extra/143.png (hoja 40x(56*N)),
-//         Terrakeep.App/Assets/player/extra/67.png (frame0 40x56)
+//         Terrakeep.App/Assets/player/extra/67.png (frame0 40x56),
+//         Terrakeep.App/Assets/player/extra/105.png (hoja 40x112, 2 filas)
 
 'use strict';
 const fs = require('fs');
@@ -56,6 +67,7 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 const ITEMS = [
   { id: 143, nombre: 'UnicornHorn', modo: 'hoja' },
   { id: 67, nombre: 'Yoraiz0rDarkness', modo: 'frame0' },
+  { id: 105, nombre: 'FloatingTube', modo: 'hoja' },
 ];
 
 for (const { id, nombre, modo } of ITEMS) {

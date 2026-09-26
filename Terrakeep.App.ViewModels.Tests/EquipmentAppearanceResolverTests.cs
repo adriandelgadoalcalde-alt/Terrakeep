@@ -1969,4 +1969,149 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "1.png", armor.HeadFile);
         Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
     }
+
+    // ParidadPersonaje Fase5 (26-sep-2026): FloatingTube (item.type==4404) - 5º estado especial
+    // del mismo tipo que UnicornHorn/AngelHalo/Yoraiz0rDarkness/Coat (GapAnalysis Encargo J),
+    // simplemente omitido por error de ese encargo original. Investigacion previa lo marcaba
+    // INCONCLUSIVE ("depende de estar mojado") - CORREGIDO contra el decompilado real: ver el
+    // comentario real completo en EquipmentAppearanceResolver.cs (0 dependencia de wet/lavaWet/
+    // honeyWet en todo el pipeline de dibujado, mismo gate exacto que UnicornHorn/AngelHalo).
+    private const int FloatingTube = 4404;
+
+    [Fact]
+    public void ResolveAccessories_ConFloatingTubePuesto_ResuelveElSpriteRealDeExtra105()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, FloatingTube));
+
+        Assert.NotNull(acc.FloatingTubeFile);
+        Assert.True(File.Exists(acc.FloatingTubeFile));
+        Assert.EndsWith("extra" + Path.DirectorySeparatorChar + "105.png", acc.FloatingTubeFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_SinFloatingTube_ElCampoQuedaNull()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.FloatingTubeFile);
+        Assert.Null(acc.FloatingTubeDye);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConYoraiz0rEyePuesto_NoActivaFloatingTubePorError_Defensivo()
+    {
+        // Mismo test defensivo que ya existe para los otros 4 estados especiales - un item que no
+        // es ninguno de los 5 no debe activar ninguno por un typo de id en el resolver.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Yoraiz0rEye));
+
+        Assert.Null(acc.FloatingTubeFile);
+    }
+
+    // ParidadPersonaje Fase5: los otros 2 casos de la misma ronda, CONFIRMADOS NO APLICA (ver el
+    // comentario real completo en EquipmentAppearanceResolver.cs - Leinfors Hair Shampoo es un
+    // sistema de particulas puramente aleatorio sin sprite fijo; Rainbow Cursor solo tiñe
+    // Main.cursorColor, 0 referencias en todo el pipeline de dibujado del jugador). Ninguno de
+    // los dos tiene campo en EquippedAccessories - este test defensivo confirma que Terrakeep no
+    // simula por error ningun estado especial para ellos (regresion real, mismo patron que
+    // ResolveAccessories_ConYoraiz0rEyePuesto...).
+    private const int LeinforsHairShampoo = 3929;
+    private const int RainbowCursor = 5075;
+
+    [Theory]
+    [InlineData(LeinforsHairShampoo)]
+    [InlineData(RainbowCursor)]
+    public void ResolveAccessories_ConLeinforsOrRainbowCursorPuesto_NoActivaNingunEstadoEspecial_Defensivo(int itemId)
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, itemId));
+
+        Assert.Null(acc.UnicornHornFile);
+        Assert.Null(acc.AngelHaloFile);
+        Assert.Null(acc.Yoraiz0rDarknessFile);
+        Assert.Null(acc.CoatFile);
+        Assert.Null(acc.FloatingTubeFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConFloatingTubeOcultoPorHide_NoSeResuelve()
+    {
+        var hide = new bool[10];
+        hide[3] = true;
+        var loadout = LoadoutConAccesorioYHide(3, FloatingTube, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.Null(acc.FloatingTubeFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnFloatingTube_ResuelveElTinteExactoEnSuPropioCanal()
+    {
+        // Player.cs:8149 real: "cFloatingTube = dyeItem.dye;" - canal de dye REAL propio,
+        // independiente de BodyDye, mismo patron que CoatDye.
+        var loadout = LoadoutConAccesorio(3, FloatingTube);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.FloatingTubeDye);
+    }
+
+    [Fact]
+    public void RenderConFloatingTubeReal_CambiaLosPixelesRespectoASinNada()
+    {
+        // Verificacion de extremo a extremo real (mismo patron que RenderConCoatReal...): tiene
+        // que llegar de verdad hasta Composite() en las DOS filas reales (frame0 en Skin_Composite,
+        // frame1 en TorsoComposite), no solo resolverse en el modelo intermedio.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var accSin = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+        var accCon = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, FloatingTube));
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accSin);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accCon);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void RenderConArmaduraDeCuerpoQueOcultaLaPiel_FloatingTubeFrame1SigueDibujandose_FielAlGateHidesTopSkin()
+    {
+        // ParidadPersonaje Fase5: fiel a PlayerDrawLayers.cs:2276 real ("if (!drawinfo.hidesTopSkin
+        // && !drawinfo.drawPlayer.invis)") - frame0 (Skin_Composite) esta DENTRO de ese gate, igual
+        // que la piel del torso; frame1 (TorsoComposite, PlayerDrawLayers.cs:3352) NO tiene ese
+        // gate, se sigue dibujando SIEMPRE que el item este puesto. Cuerpo real con
+        // HidesTopSkin=true (bodySlot=93, "Vestido de la Muerte" - ver
+        // PlayerBodyDrawTablesTests.HidesTopSkin_CoincideConElCodigoReal y VestidoDeLaMuerte de
+        // PlayerPreviewRendererSetMatchTests, mismo sprite real armor_body/93.png ya extraido):
+        // con esa armadura puesta, CON FloatingTube vs SIN el sigue dando pixeles distintos
+        // (frame1 se dibuja igual) - canario de regresion real de que el gate de frame0 no se
+        // aplico de mas por error a frame1.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+        var armaduraQueOcultaPiel = new PlayerPreviewRenderer.EquippedArmor(
+            HeadFile: null,
+            BodyFile: Path.Combine(AppContext.BaseDirectory, "Assets", "player", "armor_body", "93.png"),
+            LegsFile: null, HeadSlot: null, BodySlot: 93, LegsSlot: null);
+
+        var accSinTubo = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+        var accConTubo = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, FloatingTube));
+
+        var renderSinTubo = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armaduraQueOcultaPiel, accessories: accSinTubo);
+        var renderConTubo = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armaduraQueOcultaPiel, accessories: accConTubo);
+
+        var pixelesSinTubo = new byte[renderSinTubo.PixelHeight * renderSinTubo.PixelWidth * 4];
+        renderSinTubo.CopyPixels(pixelesSinTubo, renderSinTubo.PixelWidth * 4, 0);
+        var pixelesConTubo = new byte[renderConTubo.PixelHeight * renderConTubo.PixelWidth * 4];
+        renderConTubo.CopyPixels(pixelesConTubo, renderConTubo.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSinTubo, pixelesConTubo);
+    }
 }

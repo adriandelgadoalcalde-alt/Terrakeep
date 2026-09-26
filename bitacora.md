@@ -26799,3 +26799,147 @@ higiene del lock/coordinación entre agentes, no el arreglo en sí.
 explícito del encargo - una vez cerrada FaseI, despachar `revisor-visual` y `verificador-qa` sobre
 Exploración completa (Fases B-I) antes de dar el rediseño por cerrado, ninguno de los dos roles se
 ha usado todavía en este rediseño.
+
+## ParidadPersonaje Fase5 (26-sep-2026): estados especiales restantes - aplicador-fix, TASK
+## CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del coordinador con 5 conclusiones YA investigadas para confirmar contra el decompilado
+real - 3 se confirmaron tal cual, 1 se CORRIGIÓ (estaba mal marcada INCONCLUSIVE y en realidad sí
+tenía representación estática portable, implementada), 1 (Wings animado) ya estaba cerrada por
+Wings Encargo1 (25-sep-2026) y se reconfirma sin cambios.
+
+**1) Leinfors Hair** - CONFIRMADO "NO APLICA (shader)", va MÁS ALLÁ de lo que decía la conclusión
+previa: leyendo el cuerpo COMPLETO de `DrawPlayer_07_LeinforsHairShampoo`
+(`PlayerDrawLayers.cs:742-846` real, tModLoader 1.4.4.9 decompilado) el método NUNCA dibuja un
+sprite/DrawData propio - únicamente llama `Dust.NewDust(...)` con probabilidad
+`Main.rand.Next(20/40/15)==0`, partículas de purpurina puramente aleatorias tintadas en tiempo
+real con `GameShaders.Armor.GetSecondaryShader(cLeinShampoo, drawPlayer)`. No es solo "un shader
+difícil de portar" - no existe NINGUNA textura base que recortar, es un sistema de partículas
+100% procedural. Documentado en el comentario de cabecera de `EquippedAccessories`
+(`EquipmentAppearanceResolver.cs`), sin campo nuevo, sin cambio de código de producción más allá
+del comentario.
+
+**2) Rainbow Cursor** - CONFIRMADO "NO APLICA (solo cursor de ratón)": grep completo de
+`hasRainbowCursor` sobre `PlayerDrawLayers.cs`/`LegacyPlayerRenderer.cs` = 0 resultados. El único
+uso real es `Main.cs:62543-62544` ("if (!gameMenu && LocalPlayer.hasRainbowCursor) ...") para
+colorear `Main.cursorColor` - el cursor del ratón, una capa de UI completamente aparte del
+pipeline de dibujado del jugador (`item.type==5075`, fijado en el mismo
+`UpdateVisibleAccessory` que Unicorn Horn/Angel Halo, `Player.cs:36357-36359`, pero sin ningún
+consumidor real en el dibujado). Documentado igual que Leinfors, sin cambio de código de
+producción más allá del comentario.
+
+**3) Floating Tube** - la investigación previa lo marcaba INCONCLUSIVE ("depende de estar
+mojado"). **CORREGIDO**: la conclusión previa era errónea, confirmado leyendo el decompilado
+real a fondo. `hasFloatingTube` se fija exactamente igual que `hasUnicornHorn`/`hasAngelHalo`
+(`Player.cs:36345-36347`, dentro del MISMO `UpdateVisibleAccessory`, `item.type==4404`) y
+`drawFloatingTube = drawPlayer.hasFloatingTube && !hideEntirePlayer;` (`PlayerDrawSet.cs:2776`)
+es IDÉNTICO al gate real de `drawUnicornHorn`/`drawAngelHalo` en la línea de arriba - grep
+completo confirma **0 referencias** a `wet`/`lavaWet`/`honeyWet` en todo el pipeline de
+dibujado del Floating Tube. Es sencillamente el 5º estado especial "aislado" del mismo tipo que
+Unicorn Horn/Angel Halo/Coat/Yoraiz0r Darkness, omitido por error del GapAnalysis Encargo J
+original (que solo listó 4).
+
+**Implementado con evidencia real**: `TextureAssets.Extra[105]` (confirmado el único Extra[]
+real usado para FloatingTube), extraído de la instalación de Steam real
+(`scripts/extraer-sprites-estados-especiales.js`, ampliado con el 3er item, modo 'hoja') a
+`Assets/player/extra/105.png` - **40x112 confirmado** (2 filas de 40x56, no 1 frame como
+Unicorn Horn/Yoraiz0r Darkness). Se dibuja DOS VECES en dos capas reales distintas con la MISMA
+posición "torso" (formula idéntica a `torsoskin`/`ArmorBodyComposite[torso]`, sin
+`compositeOffset_BackArm`/`FrontArm`) pero fila DISTINTA cada vez - split espacial fijo, NO
+animación en el tiempo: fila 0 en `DrawPlayer_12_Skin_Composite`
+(`PlayerDrawLayers.cs:2294-2300`, DENTRO del mismo gate `!hidesTopSkin` que la piel del torso) y
+fila 1 en `DrawPlayer_17_TorsoComposite` (`PlayerDrawLayers.cs:3352-3358`, SIEMPRE, tras el
+bloque `hasBody`/`else`, sin gate de `hidesTopSkin` - mismo punto real donde ya se dibuja Coat).
+Dye propio real (`cFloatingTube`, `Player.cs:8149`, independiente de `BodyDye`, mismo patrón que
+`CoatDye`).
+
+**Modelo/renderer** (`EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`): mismo
+mecanismo `item.type` EXACTO ya establecido para los otros 4 estados especiales
+(`VisiblePlayerState.FloatingTube`, `if (item.Id == 4404) FloatingTube = match;`), resuelto vía
+`FixedVanillaPath("extra", 105)`. Nuevo helper `DrawFloatingTube(int frameRow)` (gemelo de
+`DrawCoat`, pero sobre una tira suelta vía `LoadStripFrameAbsolute` con fila FIJA por punto de
+llamada, nunca `legAnimationFrame` como `DrawAccessory` - no es animación de marcha) llamado en
+los 2 puntos reales: `DrawFloatingTube(0)` justo después de la piel del torso (dentro del gate
+`!hidesTopSkin`), `DrawFloatingTube(1)` justo después de `DrawCoat(torsoCell)` (sin gate).
+
+**Tests nuevos** (`EquipmentAppearanceResolverTests.cs`, 8 casos): resolución real del sprite
+(ruta exacta `extra/105.png`), campo `null` sin nada puesto, defensivo (Yoraiz0r Eye no lo
+activa), respeta `hide[]`, dye plano real en su propio canal, píxeles reales antes/después vía
+`Render` (extremo a extremo), y un canario específico de regresión real -
+`RenderConArmaduraDeCuerpoQueOcultaLaPiel_FloatingTubeFrame1SigueDibujandose_FielAlGateHidesTopSkin`
+(cuerpo real `bodySlot=93`, `HidesTopSkin=true`, mismo sprite `armor_body/93.png` ya usado en
+`PlayerPreviewRendererSetMatchTests`) que confirma que el gate de `!hidesTopSkin` de la fila 0
+NO se aplicó de más a la fila 1 (que en el juego real no lleva ese gate). Más 1 `[Theory]` con 2
+casos (`ResolveAccessories_ConLeinforsOrRainbowCursorPuesto_NoActivaNingunEstadoEspecial_Defensivo`,
+items 3929/5075) que confirma que Terrakeep NO simula por error ningún estado especial para
+Leinfors Hair/Rainbow Cursor - cierra el hueco de cobertura pedido para las 2 conclusiones
+"NO APLICA". 9 pruebas nuevas reales en total, las 9 en verde en aislamiento y dentro de la
+suite completa.
+
+**4) Dyes shader (animados)** - CONFIRMADO que la decisión de GapAnalysis Encargo I (25-sep-2026,
+commit `56db2d11`) sigue siendo correcta: 63 dyes animados/shader reales EXCLUIDOS a propósito
+(`DyeShaderCatalog.cs`, "mejor sin tinte que un tinte incorrecto", ninguno tiene un color fijo
+real sin replicar el shader `.fx` completo). Revisado si el renderer ya tiene algún mecanismo de
+animación reutilizable para aproximar 1-2 dyes simples (pedido explícito del encargo): **no lo
+tiene** - `PlayerPreviewRenderer.Render` es una función PURA sin estado ni timer (genera un
+`WriteableBitmap` estático de una sola pasada cada vez que se llama, ver su firma real), y
+Wings Encargo1 documentó explícitamente que este doll es ESTÁTICO por diseño (frame de reposo
+fijo, sin animación en el tiempo en ningún canal ya portado - ni siquiera Wings, que tiene
+aleteo real en el juego, lo anima aquí). Añadir una animación de dye rompería esa invariante de
+diseño para UN SOLO canal sin ningún mecanismo de refresco/timer que lo sostenga en el resto de
+la UI (el doll de Apariencia se recalcula solo cuando cambia el ViewModel, no en un bucle de
+render) - **decisión de ingeniería: NO compensa**, sería la única animación real de toda la app,
+inconsistente con el resto y sin infraestructura de timer que reutilizar. Sin cambio de código,
+decisión ya correcta reconfirmada.
+
+**5) Wings animado** - CONFIRMADO que la decisión de Wings Encargo1 (25-sep-2026) sigue siendo
+coherente: `ShouldDrawWingsThatAreAlwaysAnimated()` (`Player.cs:30967-30978` real) ya está
+documentado como DELIBERATE DIFFERENCE en el comentario de clase de `WingDrawTable.cs`, con cita
+completa de las 6 IDs afectadas (22/28/34/39/45/48) y el motivo (el doll está siempre "en
+reposo", el juego real solo anima esas alas con `velocity.Y != 0f`). Terrakeep es un editor
+offline con doll ESTÁTICO por diseño (mismo motivo que el punto 4) - animar alas en tiempo real
+es una categoría de trabajo completamente distinta (bucle de render, invalidación periódica del
+`WriteableBitmap`, sincronización con el resto de la UI), fuera de alcance salvo pedido explícito
+del usuario, que no se ha dado. Sin cambio de código.
+
+**Build, tests y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release --no-build`: 742/742 (sin cambios, ajeno a este
+encargo). `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build` COMPLETO: 744/744
+(735 baseline + 9 nuevos) en la repetición limpia (6m47s y 3m58s) - una ejecución intermedia bajo
+carga del sistema (5m20s, con otros agentes en paralelo publicando/compilando) mostró 1 fallo
+real pero AJENO (`HomeRefreshAsyncTests.RefreshAsyncCommand_EsAsincronoYIsScanningVuelveAFalseAlTerminar`,
+un test de timing sobre `HomeViewModel`/escaneo de disco que nunca toqué) - confirmado FLAKY bajo
+contención (3/3 en verde en aislamiento, y 744/744 limpio en la repetición completa inmediata),
+no una regresión real de este encargo. `dotnet test Terrakeep.App.Tests -c Release --no-build`:
+exit 0 (sin casos xunit reales descubiertos, ya establecido, ajeno).
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(confirmado `Get-CimInstance Win32_Process`, sin resultados). `DEPLOY_LOCK` adquirido sin
+contención (`deployLock.js adquirir Terrakeep`). Sanidad de `Assets/` ANTES: 13056 ficheros, hash
+registrado - **nota real**: `Assets/player/extra/105.png` YA estaba presente en la copia
+instalada con timestamp/tamaño IDÉNTICOS al fichero fuente recién extraído (374 bytes,
+26/09/2026 1:38:15) antes de ejecutar el `/MIR` de este encargo - indica que el propio publish/
+sync de otro momento de esta misma sesión ya lo había sincronizado; no se investigó más a fondo
+por no ser una discrepancia real (el fichero es idéntico, no hay pérdida ni corrupción). `dotnet
+publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde
+(confirmado `Assets/player/extra/105.png` presente en el publish). `robocopy .../publish
+.../Terrakeep /MIR /XF unins000.exe unins000.dat` (Git Bash: hubo que forzar
+`MSYS_NO_PATHCONV=1` porque MSYS reescribía `/MIR` como una ruta de fichero): 1 archivo copiado
+(el `.exe` autocontenido, 132.78MB), 13061 omitidos, 0 errores, 0 extras. Sanidad de `Assets/`
+DESPUÉS: 13056 ficheros, mismo hash que ANTES - "Assets/ de Terrakeep idéntico antes y después
+del /MIR - deploy seguro". `DEPLOY_LOCK` liberado. `LastWriteTime`/tamaño del `.exe` instalado y
+del publish idénticos (26/09/2026 1:59:53, 139.236.481 bytes). Sanity check real: lanzado con
+`Start-Process`, `PID=428788 Responding=True` a los 5s, cerrado limpio con `Stop-Process`.
+
+**Commit real**: `Terrakeep.App/Services/EquipmentAppearanceResolver.cs` +
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs` +
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` +
+`scripts/extraer-sprites-estados-especiales.js` + `Terrakeep.App/Assets/player/extra/105.png`
+(nuevo) - confirmado con `git diff --stat`/`git diff` completo de cada fichero antes de comitear
+que el contenido es EXCLUSIVAMENTE de este encargo, sin hunks entrelazados de otros agentes en
+paralelo. `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados ni comiteados; no
+se tocó `MainWindow.xaml`/`.xaml.cs`/`ExplorationViewModel.cs`/`MainViewModel.cs` (coordinación
+real con el agente en paralelo de ExploracionRediseno FaseI - numerosos ficheros ajenos
+modificados/sin trackear en el working tree en el momento del staging, ninguno añadido). Sin
+`git push`.
