@@ -27663,3 +27663,82 @@ PetCustomAnimationCodeTests.cs` + `Terrakeep.App/ViewModels/CharacterListEntryVi
 AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, `Terrakeep.App.ViewModels.Tests/
 DataContextLocalTieneLocTests.cs`, `scripts/**`, `Terrasavr-Native.zip`, `ComplementoKeepQA.cs`/
 `KEEPQA-INTEGRACION.md` - ninguno tocado). `doNotTouch` respetado. Sin `git push`.
+
+## Cierre cluster A4-EXPANDIDO + H5-14 (26-sep-2026, aplicador-fix, TASK CONTEXT
+## e5eaea9e-c261-4199-8e7d-060b6054f58d) - arnes desactualizado tras NAV123, no bug de produccion
+
+**Hallazgo recibido (ya investigado, fase 1)**: Nav123 (25-sep-2026, ya cerrado) sustituyo el
+`TabControl`/scroll continuo del selector de Objetos por 3 paginas reales exclusivas
+(`ObjetosPageHost`, `Visibility` ligada en exclusiva a `vm.ObjetosSubTabIndex` 0/1/2 via
+`EnumEqualsToVis`, ver `MainWindow.xaml` ~3006-3603) pero `Terrakeep.App.Tests/Program.cs` (el
+arnes, NUNCA produccion) seguia buscando `TabItem` por nombre ("Equipamiento"/"Inventario"/
+"Almacenes") en varios sitios - un `TabItem` que ya no existe. Solo la pasada COMPLETA sin
+`_SOLO` (nunca corrida hasta ese momento) lo detecto, porque `NAV123_SOLO=1` no pasa por ese
+codigo del arnes.
+
+**Arreglo real aplicado** (solo `Terrakeep.App.Tests/Program.cs`, cero produccion tocada):
+1. **`CaptureAt`** (helper de la 7a pasada de redimensionado, ~6670-6710): sustituida la busqueda
+   de `ControlType.TabItem` por nombre por un mapeo directo `tabName -> vm.ObjetosSubTabIndex`
+   (`"Equipamiento"→0, "Inventario"→1, "Almacenes"→2`), mismo patron ya usado correctamente mas
+   abajo en el propio archivo (`vm.ObjetosSubTabIndex = 1; // Inventario`, linea ~10909, bloque
+   OBJ-10).
+2. **`A4-EXPANDIDO`** (~6732-6756): la aserción original probaba la "coexistencia" de Inventario+
+   Banco fusionados en el bloque de 2 columnas que solo vivia en Amplio (`IsStorageExpanded`) - ese
+   bloque quedo RETIRADO por completo por Nav123 (comentario real "T3 PASO 1" en
+   `MainWindow.xaml` ~3493-3504: "~117 lineas... CODIGO REAL RETIRADO"), asi que esa coexistencia
+   ya no es un concepto real. Se sustituyo por la invariante NUEVA que Nav123 introdujo de verdad
+   (confirmada leyendo el comentario real "T3 PASO 1: seccion Almacenes" en `MainWindow.xaml`
+   ~3508-3512: "antes vivia como pestaña propia SOLO en Compacto/Normal... con NAV123 esta es su
+   pagina permanente, siempre alcanzable... a cualquier tamaño"): en los mismos 2 anchos que ya
+   usaba A-4 (1350 y 1520), con `ObjetosSubTabIndex=2` la pildora real de Almacenes ("Banco...")
+   esta PRESENTE en el arbol visual en AMBOS anchos (antes de Nav123 se ocultaba entera por debajo
+   de 1520); con `ObjetosSubTabIndex=1` la misma pildora esta AUSENTE en ambos anchos (protege la
+   exclusividad real entre paginas, la fusion vieja ya no existe a ningun ancho).
+3. **`H5-14`** (~10828-10852, navegacion real de teclado en slots): sustituida la busqueda muerta
+   de `TabItem "Inventario"` por `vm.ObjetosSubTabIndex = 1; DoEvents(); DoEvents();` - mismo
+   patron.
+4. **Hallazgo adyacente (documentado por el investigador, arreglado tambien, no solo dejado
+   pendiente)**: 4 puntos mas con el mismo `TabItem` muerto generando "NOT-FOUND" o seleccionando
+   nada en cada pasada completa: el bucle `foreach` de la 6a pasada (~5694-5729, ahora
+   `(string name, int sub)[]` con `vm.ObjetosSubTabIndex = sub` directo), y 3 sitios sueltos mas
+   (~5741 "Equipamiento" tras medir la fusion de iconos, ~5835 "Almacenes" antes de cambiar de
+   pildora de banco, ~5870 "Equipamiento" antes de cambiar de pildora de vanidad) - los 3
+   sustituidos por `vm.ObjetosSubTabIndex = 0/2;` directo.
+
+**Verificacion real**:
+- `NAV123_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: **0 FALLO**
+  (mismo canario real que cerro Nav123, sigue en verde, confirma que el rediseño de paginas en si
+  no se toco).
+- Pasada COMPLETA (sin `_SOLO`, la que detecto el problema): lanzada en segundo plano consciente
+  (`KEEPQA_SEGUNDO_PLANO_CONSCIENTE=1`, log real en el scratchpad de sesion) y esperada en primer
+  plano con `controladorEspera.js log`, terminada en ~163s (mucho mas rapido que la estimacion
+  inicial de 60-100min) con `DONE`/`___EXITCODE___:0`. **17 lineas `FALLO:` en total**, ninguna de
+  `A4-EXPANDIDO` ni `H5-14` (confirmado con `grep`): las 17 son exactamente las preexistentes de
+  FaseH/FaseI + `AR-LAY` (bug de layout ya documentado y confirmado NO relacionado con este
+  trabajo, `git show` verifico que ni ChestInspector ni Nav123 tocaron esa zona - NO tocado, tal
+  como pedia el encargo). Lineas reales confirmadas en verde:
+  - `A4-EXPANDIDO: a 1350px, ObjetosSubTabIndex=2 (Almacenes) -> pildora real de Almacenes
+    presente=True` (y lo mismo a 1520px).
+  - `A4-EXPANDIDO: a 1350px, ObjetosSubTabIndex=1 (Inventario) -> pildora real de Almacenes
+    ausente=True` (y lo mismo a 1520px).
+  - `H5-14-FOCO: Border real del slot 20 encontrado en el arbol visual=True`,
+    `H5-14-FLECHA/H5-14-SUPR/H5-14-COPIA-PEGA/H5-14-INTRO/H5-14-CTRL3/H5-14-CTRL1` todos en el
+    valor esperado.
+  - Hallazgo adyacente confirmado arreglado de verdad (no solo "sin FALLO"): `TAB Equipamiento:
+    selected OK, images=49 buttons=45`, `TAB Inventario: selected OK, images=71 buttons=43`,
+    `TAB Almacenes: selected OK, images=61 buttons=46` (antes "NOT-FOUND"), `PILDORA Almacenes ->
+    Current=Fragua del Defensor (0/40)`, `PILDORA Equipamiento -> Current=Loadout 1 - vanidad
+    (0/10) Columns=5` (antes "NO-FOUND").
+- `dotnet build Terrakeep.slnx -c Release`: verde, 0 avisos/0 errores.
+- `dotnet test Terrakeep.Core.Tests -c Release --no-build`: **773/773**, 0 regresion.
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: **744/744**, 0 regresion
+  (mismos numeros que el encargo anterior en esta misma bitacora).
+
+**Sin recompilacion/redespliegue de produccion**: el encargo es exclusivamente sobre
+`Terrakeep.App.Tests/Program.cs` (arnes de test de UI), ninguna linea de produccion se toco -
+no aplica publish/deploy de `Terrakeep.exe`.
+
+**Commit real**: `Terrakeep.App.Tests/Program.cs` + esta entrada de `bitacora.md` - unico fichero
+tocado, `git add` con ruta explicita, nunca `-A` (mismo trabajo en paralelo de otros agentes ya
+descrito arriba, ninguno tocado). `doNotTouch` respetado (`CLAUDE.md`, `Terrasavr-Native.zip`,
+`ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` sin tocar). Sin `git push`.
