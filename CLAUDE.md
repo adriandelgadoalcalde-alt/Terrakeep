@@ -18,6 +18,34 @@ Electron, hasta que tenga paridad real. Nombre propio: **"Terrakeep"**.
 - `PROYECTO-TERRASAVR.md` (en `Downloads\Terrasavr-Win\`) - fuente de verdad
   del formato `.plr`/`.tplr` compartida con el proyecto hermano.
 
+## Descubrimiento, Skills y Codebase Memory en este proyecto
+(Detalle completo del mecanismo en `C:\Users\adrian\.claude\CLAUDE.md` - esto
+es solo la aplicación concreta a Terrakeep, no lo repite.)
+- Skills prioritarias aquí: `csharp-dotnet`, `wpf-xaml`, `tmodloader`,
+  `visual-qa`, `debugging-qa`. Si aparece un stack nuevo dentro de este repo,
+  Project Discovery debe detectarlo y asignar Skill/tooling antes de
+  programar.
+- Antes de exploración estructural, medir impacto o delegar a un subagente,
+  usa la skill `codebase-memory` sobre este proyecto exacto (`list_projects`/
+  `index_status` primero; Tier 2 Verify por defecto, Scout solo para
+  hallazgos positivos rápidos, Auditor para exhaustividad/ausencia/dead-code).
+  El grafo orienta, nunca sustituye al código vivo - confirma con
+  snippet/source y `check_index_coverage`; si el índice está stale/parcial,
+  usa Read/Grep en esas rutas antes de concluir. Un subagente no hereda MCP
+  ni contexto por sí solo - el coordinador le pasa proyecto/tier/frescura/
+  símbolos/cobertura explícitamente.
+- KeepQA complementa el harness nativo (`Terrakeep.App.Tests` +
+  `Terrakeep.Core.Tests` + `Terrakeep.App.ViewModels.Tests`) - nunca lo
+  reemplaza ni duplica sus oráculos; el conocimiento de dominio real de este
+  proyecto vive aquí, no en KeepQA.
+- TASK CONTEXT conserva el objetivo operativo de la tarea en curso;
+  Codebase Memory conserva la estructura técnica del código - no mezclar sus
+  responsabilidades.
+- Ejecuta primero la prueba mínima relevante de este repo, después el gate
+  transversal si aplica. Ausencia de hallazgos no equivale automáticamente a
+  PASS - usar OBSERVED/NOT_OBSERVED/INCONCLUSIVE/NOT_APPLICABLE/BLOCKED/ERROR
+  cuando proceda (regla global).
+
 ## Fuentes decompiladas reales - consultar SIEMPRE antes de suponer nada
 Antes de suponer cómo se comporta Terraria/tModLoader/Calamity Mod (una
 estadística de arma, un campo de guardado, una constante de juego...), mirar
