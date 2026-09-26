@@ -28739,3 +28739,109 @@ DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/*` modificado, `sc
 y ficheros nuevos sin trackear - ninguno tocado). Esta segunda entrada de `bitacora.md` (resultado
 final de test/redespliegue) va en un commit propio separado, tras confirmar el resultado real. Sin
 `git push` en ninguno de los dos.
+
+## BugH (26-sep-2026, aplicador-fix, TASK CONTEXT requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514) -
+## `PlrCharacter.ResolveActiveHide()` leia el Hide[] del sitio equivocado en personajes con Loadouts
+
+Hallazgo YA investigado y confirmado por el coordinador antes de este encargo (no reinvestigado):
+`ResolveActiveHide()` (introducido en el commit `9dbaa741`, "ParidadPersonaje Fase4") tenia
+`if (Loadouts.Length > 0) return Loadouts.ElementAtOrDefault(CurrentLoadout)?.Hide;` - en la
+practica real de `Terrariano.plr`/`Eldelgas.plr` del usuario (version 326, Loadouts.Length=3)
+ese array es SIEMPRE 10x `false` en los 3 loadouts, mientras que `HideVisual1=0xF8`/
+`HideVisual2=0x01` (bits reales 3..8 activos) - el estado activo REAL - nunca se consultaba.
+Confirmado contra el decompilado: `Player.cs` Serialize (55418-55424)/Deserialize (55834-55839)
+demuestran que esos 2 bytes SIEMPRE representan `player.hideVisibleAccessory` sea cual sea el
+formato del personaje, y `EquipmentLoadout.cs:78` (`Utils.Swap(ref hideVisibleAccessory[k], ref
+Hide[k])`) demuestra que `Loadouts[i].Hide` es un INTERCAMBIO, no una copia - tras un cambio de
+loadout contiene el estado ANTERIOR, nunca el suyo propio, asi que jamas es fuente fiable del
+estado activo.
+
+**Arreglo real**: `Terrakeep.Core/PlrFormat/PlrCharacter.cs` - `ResolveActiveHide()` ya no
+distingue Loadouts.Length; SIEMPRE construye el array de 10 bits desde `HideVisual1`/
+`HideVisual2` (antes solo la rama "legacy"). Cambia tambien la firma de `bool[]?` a `bool[]`
+(ya no puede devolver null - no depende de `CurrentLoadout` para nada). `Loadouts[i].Hide` sigue
+existiendo intacto para su otro uso real (estado ALMACENADO de un loadout no activo,
+edicion/inspeccion) - no se toca ni se borra ese campo.
+
+**Auditoria de los 3 consumidores reales** (`grep` confirmo exactamente estos 3 en
+`Terrakeep.App`):
+- `CharacterListEntryViewModel.cs` (doll de "Inicio"): usa `character.ResolveActiveHide()` -
+  ACTIVE PLAYER STATE, ya delegaba correctamente, solo se actualizo el comentario (afirmaba la
+  interpretacion vieja).
+- `MainViewModel.cs` (`RefreshAppearanceEquipment`, preview de "Personaje > Apariencia"): usa
+  `_loaded?.Character.ResolveActiveHide()` - idem, mismo caso, solo comentario.
+- `EquipmentAppearanceResolver.cs`: no lee `.Hide` en ningun sitio (solo recibe el `hide` ya
+  resuelto por parametro) - solo comentario de cabecera actualizado.
+Ningun camino de ESCRITURA nuevo: no hay editor de UI para el toggle "ocultar accesorio" en este
+proyecto todavia (mismo limite ya documentado en Encargo H original), asi que no hay round-trip
+de guardado que romper mas alla del ya existente (`HideVisual1`/`HideVisual2` ya se leian/
+escribian fielmente en `PlrBodySerializer`, sin cambios ahi).
+
+**Tests reescritos, no solo añadidos** (el oracle viejo reproducia la misma lectura incorrecta):
+- `Terrakeep.Core.Tests/PlrFormat/PlrCharacterResolveActiveHideTests.cs`: los 2 casos
+  "FormatoModerno_..._SinRegresion" afirmaban que con Loadouts se debia leer
+  `Loadouts[CurrentLoadout].Hide` (el bug) - reescritos a
+  `FormatoModerno_ConLoadouts_IgnoraLoadoutsDelCurrentLoadout_UsaSiempreHideVisual1Y2` (Loadouts
+  con `Hide` a todo-false + `HideVisual1` con bit real activo -> confirma que se ignora el Hide
+  del loadout) y `FormatoModerno_CurrentLoadoutFueraDeRango_SigueLeyendoHideVisual1Y2_
+  NuncaDevuelveNull` (ya no puede devolver null, no depende de `CurrentLoadout`).
+- `Terrakeep.App.ViewModels.Tests/ParidadPersonajeHideAccesoriosTests.cs`: fabricaba
+  `new PlrLoadout { Hide = hide }` a mano con los bits reales puestos ahi mismo - la MISMA
+  interpretacion incorrecta que el bug de produccion, nunca ejercitaba `HideVisual1/2` en un
+  personaje con Loadouts. Reescrito: `Loadouts[CurrentLoadout].Hide` ahora a todo-false (el caso
+  real observado) y `HideVisual1 = (1<<3)|(1<<4)` con los bits reales - confirma que los 2
+  caminos (Inicio/Apariencia) usan el Hide derivado de HideVisual1/2, ignorando el Hide del
+  loadout.
+
+**Canario nuevo contra los `.plr` REALES del usuario** (solo lectura, nunca modificados) -
+`Terrakeep.App.ViewModels.Tests/ParidadPersonajeHideRealFileCanarioTests.cs`, datos reales
+confirmados con un test de diagnostico temporal (eliminado tras verificar, no en el working set
+final): ambos `.plr` (version 326) tienen `HideVisual1=0xF8`/`HideVisual2=0x01` ->
+`ResolveActiveHide()` correcto = indices 3..8 ocultos, 9 libre; `Loadouts[0..2].Hide` = 10x false
+en los 3 loadouts de los 2 personajes (exactamente el caso que el bug viejo interpretaba como
+"nada oculto").
+- **Terrariano**: `PrimaryLoadout.Items[3..8]` = Terraspark Boots(5000)/Ankh Shield(1613)/Fire
+  Gauntlet(1343)/Celestial Starboard(4954)/Shield of Cthulhu(3097)/Worm Scarf(3224) - los 6
+  deben quedar OCULTOS (`ShoesFile`/`ShieldFile`/`HandOnFile`/`HandOffFile`/`WingFile`/
+  `NeckFile` todos null). `Social[5]` = Bundle of Balloons (1164, `bl:3` != 18 RoyalScepter ->
+  rama `Balloon` normal, no `BalloonFront`) SIGUE visible (`BalloonFile` no null) - confirma que
+  el arreglo no filtra Hide al canal de vanidad. `Social[6]`=PDA(3123)/`Social[7]`=Warrior
+  Emblem(490) no tienen entrada en `vanilla_accessory_slots.json` (sin sprite de equipo real,
+  limite del propio juego, no de este arreglo).
+- **Eldelgas**: `PrimaryLoadout.Items[3..8]` = Berserker's Glove(3992)/Ankh Shield(1613)/Fire
+  Gauntlet(1343)/Celestial Shell(3110, sin slot visual)/Soaring Insignia(4989, sin slot
+  visual)/Celestial Starboard(4954) - todos ocultos, y `Social[3..9]` esta vacio de verdad (sin
+  vanidad de respaldo) -> se afirma que TODOS los 22 campos de sprite de
+  `EquippedAccessories` son null; cualquier valor no-null ahi es el bug viejo coleandose.
+
+Los 5 tests (2 reescritos en `Terrakeep.Core.Tests`, 1 reescrito + 2 nuevos en
+`Terrakeep.App.ViewModels.Tests`) fallan contra el codigo viejo (confirmado con
+`git stash push -- Terrakeep.Core/PlrFormat/PlrCharacter.cs` + `dotnet test`, `git stash pop`
+despues) y pasan con el arreglo.
+
+**Verificacion real**: `dotnet build Terrakeep.slnx -c Release`: **0 Advertencias/0 Errores**.
+`dotnet test Terrakeep.Core.Tests -c Release`: **773/773** (= baseline exacto, sin regresion).
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: **761/761** (759 baseline + 2 tests
+nuevos del canario real) - 0 errores, 0 omitidas, sin regresion.
+
+Commit local `4486ad3c`: `Terrakeep.Core/PlrFormat/PlrCharacter.cs`,
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs`,
+`Terrakeep.Core.Tests/PlrFormat/PlrCharacterResolveActiveHideTests.cs`,
+`Terrakeep.App.ViewModels.Tests/ParidadPersonajeHideAccesoriosTests.cs`,
+`Terrakeep.App.ViewModels.Tests/ParidadPersonajeHideRealFileCanarioTests.cs` (nuevo) - working
+set exacto, nunca `git add -A`; el arbol seguia con decenas de ficheros ajenos modificados por
+otros agentes en paralelo (`CLAUDE.md`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`/
+`AuditoriaMaquetacion.cs`/`ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`,
+`Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/
+Data/*`+`Calamity/*`+`WldFormat/*` modificado, `scripts/*.js`/`*.ps1`, `Terrasavr-Native.zip` sin
+trackear) - ninguno tocado. Sin `git push`.
+
+**Pendiente, por indicacion explicita del coordinador**: NO se despliega el binario todavia (el
+requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514 sigue `IN_PROGRESS`, pendiente de combinar este
+arreglo con el de geometria de Chester que puede seguir en investigacion en paralelo sobre este
+mismo repo - `PlayerPreviewRenderer.cs`/`PetPositionConverters.cs`/`MainWindow.xaml`, ninguno
+tocado aqui). Evidencia registrada en el Task Context con
+`requirement-add-evidence`/`requirement-link-commit`, requirement dejado en `IN_PROGRESS`, no
+`DONE`/`VERIFYING`.
