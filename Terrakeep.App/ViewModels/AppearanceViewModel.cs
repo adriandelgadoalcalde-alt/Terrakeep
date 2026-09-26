@@ -42,18 +42,20 @@ public partial class AppearanceViewModel : ObservableObject
     // Catalogo de ideas Keep, idea 10 ("vista previa animada del personaje", bitacora.md
     // 20-sep-2026 - ver el comentario real de cabecera en PlayerPreviewRenderer.Render para la
     // investigacion que confirmo que el dato SI estaba disponible). WalkCycleRows: filas REALES
-    // (0-based, cada una de 56px) confirmadas leyendo Terraria/Player.cs, PlayerFrame() -
-    // legFrame.Y = legFrame.Height*7 en la primera pasada y sube de uno en uno hasta *19 antes
-    // de volver a *7 (el bucle real: "if (legFrame.Y > legFrame.Height*19) legFrame.Y =
-    // legFrame.Height*7"), 13 fotogramas reales de ciclo de andar. Publico y estatico para que
-    // el arnes de pruebas pueda verificar la secuencia exacta sin duplicarla a mano.
-    public static readonly int[] WalkCycleRows = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    // (0-based, cada una de 56px). CORREGIDO 26-sep-2026 (hallazgo ParidadPersonaje-Fase1,
+    // arquitecto-keep a396f91e): la cita original a Player.PlayerFrame() ("andar en juego") era
+    // el metodo equivocado - la pantalla de seleccion de personaje real usa
+    // UICharacter.UpdateAnim (UICharacter.cs:85-95), que fija bodyFrame.Y=legFrame.Y=headFrame.Y
+    // a la vez con "num = (int)(Main.GlobalTimeWrappedHourly/0.07f) % 14 + 6", rango 6..19, 14
+    // fotogramas (no 13 - faltaba la fila 6). Publico y estatico para que el arnes de pruebas
+    // pueda verificar la secuencia exacta sin duplicarla a mano.
+    public static readonly int[] WalkCycleRows = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
-    // Cadencia fija de la animacion (~90ms/fotograma, ritmo de paseo natural) - la vista previa
-    // no simula velocidad real (no hay Player.velocity aqui), a diferencia del juego real donde
-    // legFrameCounter avanza segun |velocity.X|*1.3. Aproximacion honesta y documentada, no un
-    // dato inventado: el AVANCE de fotograma a fotograma (que filas, en que orden) SI es el real.
-    private readonly DispatcherTimer _walkAnimationTimer = new() { Interval = TimeSpan.FromMilliseconds(90) };
+    // Cadencia real confirmada en UICharacter.UpdateAnim: GlobalTimeWrappedHourly/0.07f, es decir
+    // ~70ms por fotograma (no 90ms - ese valor era una aproximacion "ritmo de paseo natural" sin
+    // respaldo real, corregido en el mismo hallazgo de arriba). El AVANCE de fotograma a
+    // fotograma (que filas, en que orden, y ahora tambien la cadencia) es fiel al juego real.
+    private readonly DispatcherTimer _walkAnimationTimer = new() { Interval = TimeSpan.FromMilliseconds(70) };
     private int _walkCycleIndex;
 
     [ObservableProperty] private bool _isWalkAnimationPlaying;
@@ -671,7 +673,7 @@ public partial class AppearanceViewModel : ObservableObject
     }
 
     // Idea 10, segunda mitad ("...exportable" como GIF real, no solo PNG estatico) - renderiza
-    // los 14 fotogramas reales del ciclo completo (reposo + los 13 de WalkCycleRows, en orden)
+    // los 15 fotogramas reales del ciclo completo (reposo + los 14 de WalkCycleRows, en orden)
     // con el MISMO PlayerPreviewRenderer.Render que ya pinta la pantalla (nunca una imagen
     // aparte), y los codifica con GifBitmapEncoder. WPF NO expone un API de alto nivel para la
     // duracion por fotograma ni el bucle infinito de un GIF animado (confirmado: GifBitmapEncoder
@@ -699,7 +701,7 @@ public partial class AppearanceViewModel : ObservableObject
         {
             var frame = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, fotogramas[i], IsFacingLeft, accessories);
             var metadata = new BitmapMetadata("gif");
-            metadata.SetQuery("/grctlext/Delay", (ushort)9); // 9 centesimas = 90ms, mismo ritmo real que _walkAnimationTimer
+            metadata.SetQuery("/grctlext/Delay", (ushort)7); // 7 centesimas = 70ms, mismo ritmo real que _walkAnimationTimer
             if (i == 0)
             {
                 metadata.SetQuery("/appext/application", new byte[] { 0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30 }); // "NETSCAPE2.0"

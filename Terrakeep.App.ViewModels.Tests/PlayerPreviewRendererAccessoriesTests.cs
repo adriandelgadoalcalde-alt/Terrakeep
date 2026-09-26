@@ -854,4 +854,87 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         encoder.Save(stream);
         return path;
     }
+
+    // ParidadPersonaje Fase2 (26-sep-2026, hallazgo confirmado por arquitecto-keep a396f91e):
+    // acc_beard/*.png mide 40x1120 (20 filas reales ya extraidas) - antes de este arreglo, Render
+    // llamaba a LoadFrame0Absolute(beardFile) (SIEMPRE fila 0, congelada) en vez del mismo canal
+    // `bodyFrame` que ya usan Neck/Waist/Face (PlayerDrawLayers.cs:2441 real, "drawData = new
+    // DrawData(..., drawinfo.drawPlayer.bodyFrame, ...)") - DrawAccessory (closure sobre
+    // legAnimationFrame) es el mismo helper ya usado para esos 3 canales.
+    //
+    // Tira SINTETICA de 20 filas con un color SOLIDO y UNICO por fila (nunca un objeto real, que
+    // no permite distinguir "fila congelada en 0" de "fila real N" a simple vista de pixel) -
+    // mismo criterio de aislamiento ya establecido en esta clase para el contrato de ORDEN
+    // (CrearPngSolido), aplicado aqui al contrato de ANIMACION. Cada fila pinta el lienzo ENTERO
+    // (igual que un accesorio real de este tipo), asi que la esquina (0,0) -confirmada
+    // transparente para toda capa real del cuerpo, ver el comentario de cabecera- basta para leer
+    // que fila se compuso de verdad.
+    private string CrearBarbaSinteticaAnimada(int filas = 20)
+    {
+        Directory.CreateDirectory(_tempDir);
+        string path = Path.Combine(_tempDir, $"barba_animada_{Guid.NewGuid():N}.png");
+        const int w = 40, h = 56;
+        var pixels = new byte[w * h * filas * 4];
+        for (int fila = 0; fila < filas; fila++)
+        {
+            byte r = (byte)(fila * 11 % 256), g = (byte)(fila * 37 % 256), b = (byte)(fila * 53 % 256);
+            int filaOffset = fila * w * h * 4;
+            for (int i = 0; i < w * h * 4; i += 4)
+            {
+                pixels[filaOffset + i + 0] = b; pixels[filaOffset + i + 1] = g;
+                pixels[filaOffset + i + 2] = r; pixels[filaOffset + i + 3] = 255; // Bgra32, opaco
+            }
+        }
+        var bmp = BitmapSource.Create(w, h * filas, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+        return path;
+    }
+
+    private static (byte r, byte g, byte b) ColorEsperadoDeFila(int fila) =>
+        ((byte)(fila * 11 % 256), (byte)(fila * 37 % 256), (byte)(fila * 53 % 256));
+
+    [Theory]
+    [InlineData(6)]
+    [InlineData(12)]
+    [InlineData(19)]
+    public void Beard_UsaLaFilaRealDeLegAnimationFrame_NoLaFila0Congelada(int legAnimationFrame)
+    {
+        string beardPath = CrearBarbaSinteticaAnimada();
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BeardFile: beardPath, BeardSlot: 1);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors,
+            legAnimationFrame: legAnimationFrame, accessories: acc);
+
+        var (r, g, b) = ColorEsperadoDeFila(legAnimationFrame);
+        AssertEsquinaEsColor(bmp, r, g, b); // fila REAL del legAnimationFrame pedido, no la fila 0 congelada
+    }
+
+    [Fact]
+    public void Beard_LasTresFilasRealesDelCicloDeAndarDanColoresDistintosEntreSi()
+    {
+        // Complementa la prueba parametrizada de arriba: confirma ademas que las 3 filas (6, 12,
+        // 19 - los mismos instantes citados en el hallazgo) son de verdad DISTINTAS entre si, no
+        // solo distintas de la fila 0 - descarta que un bug futuro congele la barba en cualquier
+        // OTRA fila fija que no sea la 0.
+        string beardPath = CrearBarbaSinteticaAnimada();
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BeardFile: beardPath, BeardSlot: 1);
+
+        byte[] Pix(WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        var frame6 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 6, accessories: acc));
+        var frame12 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 12, accessories: acc));
+        var frame19 = Pix(PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 19, accessories: acc));
+
+        Assert.NotEqual(frame6, frame12);
+        Assert.NotEqual(frame12, frame19);
+        Assert.NotEqual(frame6, frame19);
+    }
 }

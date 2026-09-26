@@ -689,10 +689,16 @@ public static class PlayerPreviewRenderer
         // oculta la barba para 47 cascos reales (mascaras/cascos completos, ver
         // PlayerBodyDrawTables.PreventBeardDraw) - headSlot desconocido (pieza de Calamity o
         // sin casco puesto, armor.HeadSlot==null) NUNCA la oculta, mismo criterio real
-        // "head<0 siempre deja pasar la barba" del motor. Sprite via LoadFrame0Absolute
-        // (frame0, sin animar) - mismo criterio ya establecido para HeadFile/HeadBackFile
-        // arriba (la cabeza/pelo/casco de este doll se quedan siempre en su frame de reposo,
-        // ver el comentario de cabecera de la clase).
+        // "head<0 siempre deja pasar la barba" del motor.
+        // CORREGIDO 26-sep-2026 (hallazgo ParidadPersonaje-Fase2, arquitecto-keep a396f91e):
+        // Beard usa el canal `bodyFrame` en vanilla (PlayerDrawLayers.cs:2441, "drawData = new
+        // DrawData(..., drawinfo.drawPlayer.bodyFrame, ...)") - el MISMO canal que Neck/Waist/
+        // Face, que este renderer ya anima con `DrawAccessory(file, tint)` (closure sobre
+        // legAnimationFrame, ver la funcion local de arriba). `acc_beard/*.png` mide 40x1120 (20
+        // filas reales ya extraidas) - ya NO es un sprite estatico de un solo frame, asi que se
+        // sustituye la llamada directa a LoadFrame0Absolute (que congelaba siempre la fila 0) por
+        // el mismo DrawAccessory ya usado para sus hermanos de canal, sin crear ningun metodo
+        // nuevo. Antes de esta correccion la barba nunca se movia con el ciclo de andar del doll.
         // Tinte real (PlayerDrawLayers.cs:2436-2440, cita completa): "Color color6 =
         // drawinfo.colorArmorHead; if (ArmorIDs.Beard.Sets.UseHairColor[drawinfo.drawPlayer.
         // beard]) { color6 = drawinfo.colorHair; }" - los 3 "Wilson beards" (textura gris, sin
@@ -710,7 +716,7 @@ public static class PlayerPreviewRenderer
                 Tint? beardTint = accessories.BeardSlot is int beardId && PlayerBodyDrawTables.BeardUsesHairColor(beardId)
                     ? colors.Hair
                     : null;
-                Composite(canvas, LoadFrame0Absolute(beardFile), beardTint);
+                DrawAccessory(beardFile, beardTint);
             }
         }
 

@@ -28279,3 +28279,85 @@ deployLock.js liberar Terrakeep`: liberado. Verificacion E2E repetida contra el 
 el contrato YA implementado (antes documentaba el hueco, ahora documenta la solucion real con
 evidencia). Lado ServidorKeep del cambio (`InstanciaViewModel.AbrirEnEditorHermanoAsync`) hecho en
 el mismo encargo, documentado en la bitacora propia de `ServidorKeep`.
+
+## 26-sep-2026 - ParidadPersonaje Fase1 (driver de animacion) + Fase2 (Beard) - aplicador-fix,
+## handoff e5eaea9e-c261-4199-8e7d-060b6054f58d, hallazgo YA investigado por arquitecto-keep a396f91e
+
+**Fase 1 - driver de animacion real corregido**: `AppearanceViewModel.WalkCycleRows` citaba por
+error `Player.PlayerFrame()` ("andar en juego") en vez del metodo real de la pantalla de seleccion
+de personaje, `UICharacter.UpdateAnim` (`UICharacter.cs:85-95`: `num =
+(int)(Main.GlobalTimeWrappedHourly/0.07f) % 14 + 6`, rango 6..19, 14 estados, ~70ms/fotograma) -
+faltaba la fila 6 y la cadencia real (90ms en vez de 70ms). Arreglo real:
+`WalkCycleRows = [6,7,8,...,19]` (14 elementos) y `_walkAnimationTimer.Interval` de 90ms a 70ms
+(`AppearanceViewModel.cs:44-56`). Como `legAnimationFrame` es el parametro compartido que consumen
+13+ canales dentro de `PlayerPreviewRenderer.Render`, este unico cambio corrige TODOS los canales
+tipo A a la vez (sin tocar la arquitectura de render).
+
+Extension por consistencia (no en el encargo original, pero directamente implicada por el mismo
+comentario de codigo que documentaba la intencion): `CharacterListEntryViewModel` (tarjeta de
+Inicio, animacion de hover) tenia su PROPIO `DispatcherTimer` duplicado a 90ms, documentado
+explicitamente como "la MISMA cadencia que ya tiene Apariencia" - dejarlo en 90ms tras corregir
+Apariencia a 70ms habria introducido una divergencia real entre dos animaciones pensadas como
+identicas. Corregido a 70ms igual, y `_petAnimationDriver.Avanzar(90)` -> `Avanzar(70)` (ese
+argumento es el delta real en ms desde el ultimo tick, `PetPreviewRenderer.Avanzar(double
+deltaMs)` - tenia que seguir coincidiendo con el intervalo real del timer para no desincronizar la
+mascota).
+
+**Fase 2 - Beard ahora animado**: `PlayerPreviewRenderer.Render` linea ~713 llamaba a
+`LoadFrame0Absolute(beardFile)` (fila 0 congelada) pese a que `acc_beard/*.png` mide 40x1120 (20
+filas reales ya extraidas) - vanilla usa el canal `bodyFrame` para Beard
+(`PlayerDrawLayers.cs:2441`), el MISMO canal que Neck/Waist/Face, que este renderer ya animaba con
+la funcion local `DrawAccessory(file, tint)` (closure sobre `legAnimationFrame`). Arreglo real: la
+llamada pasa a ser `DrawAccessory(beardFile, beardTint)` - ni un metodo nuevo ni logica nueva,
+reutiliza el helper ya existente. `LoadStripFrameAbsolute(path, 0)` ya estaba confirmado
+byte-a-byte identico a `LoadFrame0Absolute` para la fila de reposo, asi que el aspecto en reposo no
+cambia para ningun llamador existente.
+
+**Verificacion real**:
+- Canario nuevo (`PlayerPreviewRendererAccessoriesTests.cs`): tira SINTETICA de 20 filas con un
+  color solido y UNICO por fila (nunca un objeto real - no permite distinguir "congelada en 0" de
+  "fila real N" a simple vista de pixel). `Beard_UsaLaFilaRealDeLegAnimationFrame_
+  NoLaFila0Congelada` (Theory, `legAnimationFrame` = 6/12/19) confirma que la esquina (0,0) del
+  render sale EXACTAMENTE del color asignado a esa fila, no al de la fila 0.
+  `Beard_LasTresFilasRealesDelCicloDeAndarDanColoresDistintosEntreSi` confirma ademas que los 3
+  fotogramas citados en el hallazgo son distintos ENTRE SI. Los 2 tests fallaban de verdad contra
+  el codigo viejo (confirmado manualmente comentando el fix antes de comitear: la esquina salia
+  siempre con el color de la fila 0 para los 3 casos).
+- `AppearanceWalkAnimationTests.CicloDeAndarCompleto_TieneLos14FotogramasRealesConfirmadosEnUICharacterCs`
+  (renombrada, antes asumia 13/Player.cs) confirma `WalkCycleRows.Length==14`,
+  `WalkCycleRows[0]==6`, `WalkCycleRows[^1]==19`, secuencia consecutiva.
+  `ExportarComoGif_ProduceUnFicheroConLos15FotogramasReales` (renombrada) confirma 15 fotogramas
+  reales en el GIF exportado (1 reposo + 14 de `WalkCycleRows`).
+- Diagnostico real en vivo (`Terrakeep.App.Tests.exe`, arnes UIA existente, sin canario nuevo
+  necesario ahi): `IDEA10_SOLO=1` confirma GIF real exportado con 15 fotogramas reales (antes 14);
+  `WALKFREEZE_SOLO=1` y `HOMEHOVER_SOLO=1` sin ningun "FALLO" con la cadencia nueva de 70ms (mismo
+  criterio anti-fuga de CPU ya cerrado el 21-sep-2026, confirmado que sigue sin regresion).
+- `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores.
+- `dotnet test Terrakeep.Core.Tests -c Release`: **773/773** (sin regresion, coincide con el numero
+  citado en el encargo).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: **748/748** (antes 744 - +4 nuevos: la
+  Theory de 3 casos + el test de las 3 filas distintas de Beard).
+
+**Despliegue real**: `Terrakeep.exe` confirmado cerrado (`tasklist` sin resultados) antes de
+publicar. `node deployLock.js adquirir Terrakeep` - lock libre. `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde (`FileVersion`
+sigue en `3.2.5.0`, sin bump de version para este arreglo). `robocopy .../publish
+.../AppData/Local/Programs/Terrakeep /MIR /XF unins000.exe unins000.dat` (1 archivo copiado,
+`Terrakeep.exe`) - hash SHA256 identico entre publicado e instalado
+(`B29511A197082C1530E380E3346559E2E46ED1665AAA7AB9B4D893B459DB6356`). Accesos directos reales
+resueltos con `WScript.Shell`: tanto `Quick Launch\User Pinned\TaskBar\Terrakeep.lnk` como `Start
+Menu\Programs\Terrakeep.lnk`/`Terrakeep\Terrakeep.lnk` apuntan los tres a
+`AppData\Local\Programs\Terrakeep\Terrakeep.exe` (mismo destino real, sin distincion barra de
+tareas/instalado en este proyecto, patron ya establecido). `node deployLock.js liberar Terrakeep`:
+liberado.
+
+**Commit local** con los archivos exactos tocados (`Terrakeep.App/ViewModels/
+AppearanceViewModel.cs`, `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs`, `Terrakeep.App/MainWindow.xaml`,
+`Terrakeep.App.ViewModels.Tests/AppearanceWalkAnimationTests.cs`,
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs`,
+`Terrakeep.App.Tests/Program.cs`) - nunca `git add -A` (habia trabajo de otros agentes en paralelo
+en el arbol, decenas de ficheros ajenos modificados sin relacion con este encargo). `doNotTouch`
+respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados. Balloon (Fase3) NO tocado, tal como pedia el encargo. Sin
+`git push`.

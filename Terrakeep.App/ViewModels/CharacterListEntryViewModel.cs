@@ -65,8 +65,9 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // "_playerPanel.SetAnimated(animated: true/false)" - el trigger real es el HOVER de la propia
     // tarjeta (MouseOver/MouseOut de UIPanel), nunca un boton manual (ese es un añadido aparte de
     // Apariencia, AppearanceViewModel.ToggleWalkAnimation, que se queda igual). Reusa el MISMO
-    // ciclo de 13 filas reales (AppearanceViewModel.WalkCycleRows) y la MISMA cadencia (90ms) que
-    // ya tiene Apariencia, para no duplicar ninguna secuencia a mano.
+    // ciclo de 14 filas reales (AppearanceViewModel.WalkCycleRows) y la MISMA cadencia (70ms,
+    // corregida 26-sep-2026 junto con Apariencia - hallazgo ParidadPersonaje-Fase1) que ya tiene
+    // Apariencia, para no duplicar ninguna secuencia a mano.
     //
     // Datos crudos guardados aqui (no solo en el constructor) porque re-renderizar en cada tick
     // necesita los MISMOS argumentos reales que PlayerPreviewRenderer.Render ya recibio una vez -
@@ -176,7 +177,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     private DispatcherTimer EnsureHoverWalkTimer()
     {
         if (_hoverWalkTimer != null) return _hoverWalkTimer;
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };
         timer.Tick += (_, _) =>
         {
             _walkCycleIndex = (_walkCycleIndex + 1) % AppearanceViewModel.WalkCycleRows.Length;
@@ -184,7 +185,9 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
             // con vanilla): avanza su propio ciclo real (PetAnimationDriver, cadencia real de
             // SelDelay, NO generica) en cada tick del mismo timer que ya anima piernas/brazos -
             // un unico DispatcherTimer por tarjeta, sin montar uno aparte solo para la mascota.
-            _petAnimationDriver?.Avanzar(90);
+            // deltaMs tiene que seguir siendo el intervalo REAL del timer de arriba (70ms desde
+            // el 26-sep-2026, hallazgo ParidadPersonaje-Fase1) para que la mascota no se desincronice.
+            _petAnimationDriver?.Avanzar(70);
             RefreshPreview();
             RefreshPetImage();
             RefreshPetOffset();

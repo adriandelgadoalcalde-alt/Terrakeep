@@ -1560,7 +1560,7 @@ internal static partial class Program
                 while (cronometro.ElapsedMilliseconds < 500) { DoEvents(); System.Threading.Thread.Sleep(10); }
                 var andandoPixels = PixelsDe(vm.Appearance.PreviewImage);
                 bool cambioDeVerdad = reposoPixels != null && andandoPixels != null && !reposoPixels.SequenceEqual(andandoPixels);
-                Console.WriteLine($"IDEA10_SOLO: tras ~500ms reproduciendo -> el frame REAL en pantalla cambio de verdad={cambioDeVerdad} (esperado true, ~5-6 fotogramas reales a 90ms/u)");
+                Console.WriteLine($"IDEA10_SOLO: tras ~500ms reproduciendo -> el frame REAL en pantalla cambio de verdad={cambioDeVerdad} (esperado true, ~7 fotogramas reales a 70ms/u)");
                 if (!cambioDeVerdad) Console.WriteLine("FALLO: IDEA10_SOLO - el DispatcherTimer real no esta avanzando el frame de la animacion en pantalla");
 
                 vm.Appearance.ToggleWalkAnimationCommand.Execute(null);
@@ -1748,7 +1748,8 @@ internal static partial class Program
                 if (!reposoVsHoverDistinto) Console.WriteLine("FALLO: HOMEHOVER_SOLO - el hover deberia cambiar el doll de reposo a andando de inmediato");
 
                 // Muestreo en VARIOS puntos (no solo un antes/despues) a lo largo de mas de un
-                // ciclo completo (13 fotogramas x 90ms = ~1170ms) - un unico par de muestras
+                // ciclo completo (14 fotogramas x 70ms = ~980ms, corregido 26-sep-2026 junto con
+                // Apariencia - hallazgo ParidadPersonaje-Fase1) - un unico par de muestras
                 // puede "aliasear" (caer justo en dos fotogramas que dan la MISMA suma de bytes
                 // por coincidencia, medido de verdad en esta misma ronda: un BombeaMsCard(1300)
                 // de una sola tacada aliaseo una vez) sin que eso signifique que el timer no

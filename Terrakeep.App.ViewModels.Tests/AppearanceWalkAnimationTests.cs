@@ -45,7 +45,7 @@ public sealed class AppearanceWalkAnimationTests
     [Fact]
     public void FotogramaDeAndar_ProduceUnLienzoRealmenteDistintoAlDeReposo()
     {
-        // Fila 7 (primera del ciclo de andar real, WalkCycleRows[0]) tiene que mover de verdad
+        // Fila 6 (primera del ciclo de andar real, WalkCycleRows[0]) tiene que mover de verdad
         // las piernas/pantalones/zapatos respecto a la fila 0 (reposo) - si esto fuera igual, la
         // "animacion" seria un adorno vacio que no cambia nada de verdad.
         var reposo = PlayerPreviewRenderer.Render(1, PlayerVariantSets.MaleStarter, Colors, legAnimationFrame: 0);
@@ -55,13 +55,15 @@ public sealed class AppearanceWalkAnimationTests
     }
 
     [Fact]
-    public void CicloDeAndarCompleto_TieneLos13FotogramasRealesConfirmadosEnPlayerCs()
+    public void CicloDeAndarCompleto_TieneLos14FotogramasRealesConfirmadosEnUICharacterCs()
     {
-        // Player.cs real (PlayerFrame()): legFrame.Y arranca en legFrame.Height*7 y sube de uno
-        // en uno hasta *19 antes de volver a *7 - 13 filas reales (7,8,...,19), nunca un numero
-        // inventado.
-        Assert.Equal(13, AppearanceViewModel.WalkCycleRows.Length);
-        Assert.Equal(7, AppearanceViewModel.WalkCycleRows[0]);
+        // CORREGIDO 26-sep-2026 (hallazgo ParidadPersonaje-Fase1): la cita original a Player.cs
+        // (PlayerFrame(), "andar en juego") era el metodo equivocado - la pantalla de seleccion
+        // de personaje real usa UICharacter.UpdateAnim (UICharacter.cs:85-95): "num =
+        // (int)(Main.GlobalTimeWrappedHourly/0.07f) % 14 + 6", rango 6..19, 14 filas reales
+        // (6,7,...,19), nunca un numero inventado - antes faltaba la fila 6.
+        Assert.Equal(14, AppearanceViewModel.WalkCycleRows.Length);
+        Assert.Equal(6, AppearanceViewModel.WalkCycleRows[0]);
         Assert.Equal(19, AppearanceViewModel.WalkCycleRows[^1]);
         for (int i = 1; i < AppearanceViewModel.WalkCycleRows.Length; i++)
             Assert.Equal(AppearanceViewModel.WalkCycleRows[i - 1] + 1, AppearanceViewModel.WalkCycleRows[i]);
@@ -92,7 +94,7 @@ public sealed class AppearanceWalkAnimationTests
     }
 
     [Fact]
-    public void ExportarComoGif_ProduceUnFicheroConLos14FotogramasReales()
+    public void ExportarComoGif_ProduceUnFicheroConLos15FotogramasReales()
     {
         string path = Path.Combine(Path.GetTempPath(), $"appearance-walk-gif-{Guid.NewGuid():N}.gif");
         try
@@ -116,7 +118,7 @@ public sealed class AppearanceWalkAnimationTests
             using var stream = File.OpenRead(path);
             var decoder = new System.Windows.Media.Imaging.GifBitmapDecoder(stream,
                 System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-            // 1 fotograma de reposo + los 13 reales del ciclo de andar (WalkCycleRows).
+            // 1 fotograma de reposo + los 14 reales del ciclo de andar (WalkCycleRows).
             Assert.Equal(1 + AppearanceViewModel.WalkCycleRows.Length, decoder.Frames.Count);
             Assert.Equal(40, decoder.Frames[0].PixelWidth);
             Assert.Equal(56, decoder.Frames[0].PixelHeight);
