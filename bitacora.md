@@ -27234,3 +27234,105 @@ ajenos ya modificados en el arbol de trabajo por otros agentes en paralelo (migr
 *.cs`, cambios de Roslynator/inicializadores en `WldWriterWriteWorldTests.cs`) NO añadidos al
 stage - confirmado con `git diff --stat` por fichero antes de `git add` que cada uno de los 11
 ficheros de mi stage contenia EXCLUSIVAMENTE mis lineas. Sin `git push`.
+
+## ChestInspector slots vacios REABIERTO (26-sep-2026, aplicador-fix) - WrapPanel -> SlotGridPanel,
+## TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del coordinador con la causa YA investigada y confirmada (patron de 2 fases): aplicar
+directamente el arreglo, sin reinvestigar la causa.
+
+**Causa real** (ya confirmada por el investigador, verificada de nuevo aqui contra el codigo vivo):
+`WrapPanel` (`MainWindow.xaml`, `ItemsPanelTemplate` de `Exploration.EditingChestSlots`, entonces en
+la linea ~7751) sin `ItemWidth` fijo hace que `WrapPanel.ArrangeOverride` arregle cada hijo de una
+fila con la ALTURA maxima de la fila (heredada de vecinos con icono) pero el ANCHO propio del hijo
+(casi 0 para un slot vacio, sin `IconPath`/`Count` visibles que le den ancho natural) -> linea
+vertical estrecha en vez de celda cuadrada.
+
+**Arreglo real aplicado**: `Terrakeep.App/MainWindow.xaml` - el `WrapPanel` sustituido por
+`controls:SlotGridPanel`, mismo patron literal que la rejilla de la Libreria (linea ~3890 -
+`MinCell`/`MaxCell` via `CompactCellSizeConverter` single-binding contra `Settings.IsCompactMode`,
+NUNCA el `MultiConverter` de `ContainerCompactTemplate` que depende de un `ContainerViewModel` que
+aqui no existe). **Sin `AvailableHeight`** (se queda en su default `0.0` a proposito): este
+Inspector comparte `ExplorationSidebarScroll` con todo el sidebar, nunca tiene `ScrollViewer` propio
+(comentario ya existente en `MainWindow.xaml`), y `SlotGridPanel.MeasureOverride:114-116` ya maneja
+`availH<=0` creciendo libre en vertical - exactamente lo correcto aqui. El `DataTemplate` interior
+(`Style="ItemSlotCardCompact"`, `PreviewMouseLeftButtonDown="OnChestItemSlotMouseDown"`) NO se tocó,
+tal como pedia el encargo.
+
+**Regresion real encontrada y corregida DURANTE la propia verificacion** (no solo teorica, pedido
+explicito del encargo "elige un numero real razonable... consistente con el ancho tipico del
+sidebar"): el primer intento uso `Columns="10"` (calcado literalmente de la Libreria/Inventario,
+que SI tienen ese ancho). Con `MinCell=40` de suelo (`Math.Clamp` nunca baja de el), 10 columnas
+fuerzan un ancho de contenido de `10*40+9*4=436px` que NUNCA cabe en el ancho real de este sidebar
+mas estrecho (296px por defecto, 279px al minimo real de ventana 1080x700, medido con
+`ContentControl.ActualWidth`/`placeholderSlotsVacios.ActualWidth` reales). `SlotGridPanel.
+ArrangeOverride` sigue colocando esas columnas de mas (`offsetX` se queda en 0 porque
+`contentW>finalSize.Width`), pero `ExplorationSidebarScroll` tiene `HorizontalScrollBarVisibility=
+"Disabled"` (`MainWindow.xaml` ~6766) - el `ScrollContentPresenter` las recorta en silencio, sin
+barra ni `ScrollableWidth>0` que lo delate (mismo riesgo real ya documentado por `AR-EX-HSCROLL` en
+`ExploracionRediseno FaseI`, mas arriba en esta misma bitacora): 12 de los 40 slots de un cofre real
+(las columnas 7-10 de cada fila logica de 10) quedaban invisibles e inalcanzables. Detectado con el
+propio canario nuevo (guarda de posicion real via `TransformToAncestor` contra el ancho del propio
+Inspector, no solo por aritmetica teorica) - `dotnet test`/`build` seguian en verde porque nada de
+eso comprueba geometria real de UI. Arreglo real: `Columns="6"` (el maximo que sigue cabiendo con
+`MinCell=40` incluso al ancho minimo real: `6*40+5*4=260px<=279px`). `ReferenceColumns="10"` se
+mantuvo (mismo techo de escala que el resto de rejillas reales de la app - Inventario/Equipamiento/
+Libreria - para que el icono del slot se vea del mismo tamaño en todas partes); con `Columns=6`
+domina de todos modos el mismo suelo `MinCell=40` real (`cellFromReference` tambien cae por debajo
+del suelo), asi que el tamaño de icono no cambio, solo cuantas columnas caben de verdad por fila.
+
+**Canario nuevo** (mismo fichero `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`, bloque
+`COFRES-INSPECTOR-SLOTSVACIOS`, dentro de `EjecutarClusterCofresInspectorSolo`): abre un cofre real
+con objetos Y huecos vacios (`Items.Count>0 y <40`), mide `ActualWidth`/`ActualHeight` de CADA
+`Border` real de slot (`DataContext is ItemSlotViewModel` Y `VisualTreeHelper.GetParent(b) is
+ContentPresenter` - filtro necesario porque el `DataTemplate` tiene tambien un `Border` interior de
+resaltado de seleccion que hereda el mismo `DataContext` y se contaba por error como un segundo
+slot, confirmado: 80 encontrados para un cofre de 40 antes del filtro), separando vacios/ocupados, a
+1180x860 y 1080x700. Comprueba cuadratura (tolerancia 1px), suelo real (`MinCell-margen propio del
+Border`, 36px) y alcance horizontal real (ningun slot fuera del ancho real del placeholder).
+
+**Verificacion real**:
+- `dotnet build Terrakeep.slnx -c Release`: verde, 0 errores.
+- `COFRES_INSPECTOR_SOLO=1`: **0 FALLO** (antes del ajuste de `Columns`, el propio canario nuevo dio
+  2 `FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{tamaño} - al menos un slot queda fuera del ancho real del
+  Inspector` - confirma que el canario SI detecta el problema real cuando existe). Con `Columns=6`:
+  40/40 slots reales medidos en los 2 tamaños, TODOS cuadrados 36x36px (24 vacios + 16 ocupados),
+  ninguno fuera de ancho, `ExplorationSidebarScroll` `ExtentWidth=260px <= ViewportWidth=279px`
+  (`ScrollableWidth=0px`, cero overflow real).
+- `EXPLORATION_LAYOUT_SOLO=1`: **0 FALLO**, incluye la propia guarda de `AR-EX-HSCROLL` para
+  `ChestInspector` en los 2 tamaños (`ScrollableWidth=0px` en ambos) - confirma que el canario
+  PERMANENTE de FaseI tambien queda en verde con el arreglo.
+- `NAV123_SOLO=1`: **0 FALLO** - ningun canario existente de la familia de Exploracion/Personaje se
+  rompio.
+- `dotnet test Terrakeep.Core.Tests`: **751/751** (baseline documentado en el encargo era 742/742 -
+  subio por trabajo en paralelo de otros agentes el mismo dia, mismo patron ya visto en FaseH/FaseI;
+  0 fallos en cualquier caso). `dotnet test Terrakeep.App.ViewModels.Tests`: **744/744**, coincide
+  exacto con el baseline del encargo, 0 fallos.
+- Captura real (`RenderTargetBitmap`, `cofres-slotsvacios-1180x860.png`/`cofres-slotsvacios-
+  1080x700.png`): un cofre real (`Cofre de champiñón`, 16 objetos + 24 huecos) se ve como una
+  rejilla de 6 columnas de celdas CUADRADAS uniformes (con icono las ocupadas, vacias del mismo
+  tamaño y `BgPrimaryBrush` las libres) - confirma visualmente que ya no aparece ninguna linea
+  vertical estrecha.
+
+**Commit real** (`83b466fc`): `Terrakeep.App/MainWindow.xaml` + `Terrakeep.App.Tests/
+CanarioClusterCofresInspector.cs` - los 2 unicos ficheros del working set real de este encargo,
+`git add` con rutas explicitas, nunca `-A` (numerosos ficheros ajenos de otros agentes en paralelo
+en `git status`: `CLAUDE.md`, `ESPEC-dibujado-sprites.md`, `Terrakeep.App.Tests/
+AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, varios `Terrakeep.Core.Tests/Data/*.cs`,
+`Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs`, `scripts/*`, ninguno tocado ni
+comiteado). `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/
+ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados. Bloqueo `terrakeep-mainwindow-xaml`
+comprobado libre, reservado antes de tocar `MainWindow.xaml` y liberado al terminar. Sin `git push`.
+
+**Despliegue real**: `Terrakeep.exe` confirmado cerrado (`Get-CimInstance Win32_Process` sin
+resultados) antes de publicar. `node deployLock.js adquirir Terrakeep` - lock libre (sin fichero
+`deploy-Terrakeep.lock` previo; el que FaseI dejo reservado a proposito el 26-sep ya habia sido
+resuelto por el coordinador/otro agente antes de este encargo). `antes`: snapshot real
+`...\Programs\Terrakeep\Assets`, 13056 ficheros, hash `9a86278f...` (coincide exacto con el
+`despues` que dejo FaseI). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish .../Terrakeep //MIR //XF unins000.exe
+unins000.dat`: 1 archivo copiado (`Terrakeep.exe`/dll con el arreglo), 1 extra, resto sin cambio, 0
+errores. `node deployLock.js despues Terrakeep ...Assets`: **sin alarma** - "Assets/ de Terrakeep
+identico antes y despues del /MIR (13056 ficheros) - deploy seguro". `Terrakeep.exe` instalado
+confirmado con `LastWriteTime` igual a la hora real del deploy. `node deployLock.js liberar
+Terrakeep`: liberado. Despliegue funcional COMPLETO, no queda pendiente nada de infraestructura.
