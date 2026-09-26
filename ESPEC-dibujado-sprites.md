@@ -16,7 +16,7 @@ mezcle las dos cosas.
 
 | Fuente | Ruta real | Versión |
 |---|---|---|
-| Terraria vanilla decompilado | `C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\` | 1.4.5.8 |
+| Terraria vanilla decompilado | `C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\TerrariaVanilla\` | 1.4.5.8 |
 | Instalación real de Steam | `C:\Program Files (x86)\Steam\steamapps\common\Terraria\` | 1.4.5.8 |
 
 La versión de la instalación de Steam la comprobé yo con
@@ -433,8 +433,11 @@ if (item.shoeSlot > 0) {
 ```
 
 `ArmorIDs.cs:1869`: `MaleToFemaleID = Factory.CreateIntSet(-1, 25, 26);` → un único par real:
-`shoeSlot 25 → 26` en femenino. (Fuera del alcance del doll, que no dibuja accesorios de pie,
-pero lo dejo anotado porque es otra dependencia real del género.)
+`shoeSlot 25 → 26` en femenino. (Cuando se escribió este informe, `shoeSlot` estaba fuera del
+alcance del doll. **Ya NO es así**: implementado en GapAnalysis Encargo D, 25-sep-2026, commit
+real `abc0faeb` sobre el commit combinado `2ef72eb1` - `EquipmentAppearanceResolver` resuelve el
+id masculino/neutro tal cual y `PlayerPreviewRenderer.Render` aplica esta misma regla
+`MaleToFemaleID` después, vía `PlayerBodyDrawTables.ShoeMaleToFemaleID`. Ver `bitacora.md`.)
 
 ### 4.7 Capa trasera de la armadura, también con variante femenina
 
@@ -656,7 +659,9 @@ Traducido literalmente de `LegacyPlayerRenderer.cs:184-239` + el cuerpo de cada 
       perneras: si legs > 0        -> Armor_Legs_{legs} @ frame0, sin tinte
                 si no              -> V(11) @ frame0 tinte pantalones
                                       V(12) @ frame0 tinte zapatos
-      zapatos:  (shoeSlot, fuera del alcance del doll)
+      zapatos:  shoeSlot @ legFrame, sin tinte (implementado desde GapAnalysis Encargo D,
+                25-sep-2026, commit `abc0faeb` sobre `2ef72eb1` - ya NO está fuera de alcance,
+                ver nota de 4.6 y punto 6 de la sección 8 más abajo)
  6. si v ∈ {3,7,8} y !hasBody:      V(14) @ frame0       tinte CAMISA   [15_SkinLongCoat]
  7. si bodyExtension != -1:         Armor_Legs_{bodyExtension} @ frame0 [16_ArmorLongCoat]
                                                                         [17_TorsoComposite]
@@ -818,9 +823,14 @@ Todo lo anterior está citado. Lo que sigue es razonamiento propio y hay que tra
    inferencia. Lo correcto es implementarlo fiel al código real, pero no he medido si con las
    celdas de reposo (donde el hombro delantero de muchas piezas está vacío, como en
    `Armor_1`) la diferencia llega a ser visible.
-6. **Que `wearsRobe` no afecte al doll más allá del orden zapatos/perneras**: el doll no
-   dibuja `shoeSlot`, así que el intercambio de orden del punto 5 de 7.3 no tiene efecto
-   visual hoy. Lo incluyo en la especificación por fidelidad, no porque cambie nada ahora.
+6. **Que `wearsRobe` no afecte al doll más allá del orden zapatos/perneras**: cuando escribí
+   esto, el doll no dibujaba `shoeSlot`, así que el intercambio de orden del punto 5 de 7.3 no
+   tenía efecto visual. **Ya NO es así**: `shoeSlot` se implementó en GapAnalysis Encargo D
+   (25-sep-2026, commit `abc0faeb` sobre `2ef72eb1`) - `DrawShoesAccessory` respeta el orden
+   real invertido por `wearsRobe` (`LegacyPlayerRenderer.cs:195-204`), confirmado con las
+   pruebas `Orden_SinWearsRobe_PernerasAntesQueShoes`/`Orden_ConWearsRobeReal_
+   PernerasCubrenAZapatos` (`PlayerPreviewRendererAccessoriesTests.cs`) - el intercambio de
+   orden SÍ tiene efecto visual real ahora.
 7. **Que el `legSlot` del ítem 2765 (Perneras de fulguración solar) exista de verdad y solo
    falte en `vanilla_armor_slots.json`**: no lo he comprobado. Solo verifiqué que ese id no
    está en el JSON del proyecto, no por qué.
