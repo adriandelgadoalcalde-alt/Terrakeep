@@ -135,6 +135,23 @@ public partial class MainWindow : Window
         // H5-08 (quinta auditoria de Opus): tambien la altura real, ver WindowHeightClass.cs.
         _viewModel.UpdateSizeClass(Width, Height);
         SizeChanged += (_, e) => _viewModel.UpdateSizeClass(e.NewSize.Width, e.NewSize.Height);
+
+        // Bug2 (TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): si Terrakeep se lanzo con
+        // "--abrir-mundo <ruta.wld>" real (ver App.ParsePendingWorldPath/App.OnStartup), se carga
+        // aqui, ANTES de que WPF muestre esta ventana (StartupUri="MainWindow.xaml" en App.xaml
+        // llama a Show() justo despues de que este constructor termine) - reutilizando el MISMO
+        // camino real que ya usan OnLoadWorldClick/OnWindowDrop (LoadWorldAndRestoreView), nunca
+        // uno paralelo. Fire-and-forget porque un constructor no puede ser async - seguro: la
+        // carga real (ExplorationViewModel.LoadFromPathAsync) ya atrapa sus propias excepciones
+        // en su try/catch/finally, nunca deja una excepcion sin capturar escapar de aqui.
+        if (App.PendingWorldPath is string rutaMundoInicial)
+            _ = AbrirMundoInicialAsync(rutaMundoInicial);
+    }
+
+    private async Task AbrirMundoInicialAsync(string path)
+    {
+        await LoadWorldAndRestoreView(path);
+        _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion, privado - mismo criterio que OnWindowDrop
     }
 
     // Auditoria de Opus, N-2: "se pueden editar 40 slots, cambiar de pestaña, cerrar la app y

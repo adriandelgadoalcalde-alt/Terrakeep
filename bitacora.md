@@ -28197,3 +28197,85 @@ permanente y reejecutable.
 `WldWriter.cs` (el `doNotTouch` real de este encargo) sin tocar. `dotnet test Terrakeep.Core.Tests
 --filter FullyQualifiedName~WldReaderLateBossFlagsTests` sigue en verde (9/9) tras el cambio. Sin
 `git push`.
+
+## Bug2 (26-sep-2026, aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): "Abrir en
+## Terrakeep" desde ServidorKeep ahora carga el mundo concreto de la instancia, no solo abre el
+## editor vacio
+
+Hallazgo original (investigador-bug a6b00cdb, CONFIRMADO, no reinvestigado): contrato roto entre
+`ServidorKeep.App\ViewModels\InstanciaViewModel.cs` (`AbrirEnEditorHermanoAsync`, lanzaba
+`Process.Start` SIN `Arguments`) y `Terrakeep.App\App.xaml.cs` (`OnStartup` nunca leia `e.Args`) -
+ver la entrada `servidorkeep-terrakeep-abrir-editor` de `INTEGRACIONES-KEEP.json`. Arreglo aplicado
+en los DOS lados (ServidorKeep documentado en su propia bitacora):
+
+- **`App.xaml.cs`**: nuevo metodo publico `App.ParsePendingWorldPath(string[] args)` (mismo criterio
+  real que `ShouldForceSoftwareRendering` - extraido para poder verificarlo sin pasar por
+  `OnStartup`) - busca el flag `--abrir-mundo <ruta.wld>`, solo acepta la ruta si tiene extension
+  `.wld` Y `File.Exists()` es real (try/catch propio: cualquier caracter invalido en la ruta u otro
+  fallo de E/S hace que devuelva `null`, nunca lanza). El resultado se guarda en la propiedad
+  estatica publica `App.PendingWorldPath`, fijada en `OnStartup` ANTES de `base.OnStartup(e)` (que es
+  quien dispara `StartupUri="MainWindow.xaml"` y por tanto la construccion real de `MainWindow`).
+- **`MainWindow.xaml.cs`**: al final del constructor, si `App.PendingWorldPath` no es null, se llama
+  a un nuevo metodo privado `AbrirMundoInicialAsync(path)` (fire-and-forget, un constructor no puede
+  ser `async`) que reutiliza el MISMO camino real que ya usan `OnLoadWorldClick`/`OnWindowDrop`
+  (`LoadWorldAndRestoreView` -> `ExplorationViewModel.LoadFromPathAsync`, que ya tiene su propio
+  `try/catch/finally` real - confirmado leyendo el cuerpo completo del metodo antes de reutilizarlo,
+  nunca deja escapar una excepcion sin capturar) y deja seleccionada la pestaña Exploracion (indice
+  4), igual que el resto de puntos de entrada de carga de mundo. Si el argumento no es valido/no
+  existe, `App.PendingWorldPath` queda `null` y Terrakeep arranca exactamente igual que sin ningun
+  argumento - sin excepcion, sin dialogo, sin rama especial visible.
+
+**Verificacion real, no solo estatica**:
+- `dotnet build` (Debug) de `Terrakeep.App`: 0 avisos, 0 errores.
+- `dotnet test Terrakeep.Core.Tests`: **773/773** (coincide con el baseline del encargo). `dotnet
+  test Terrakeep.App.ViewModels.Tests`: **744/744** (coincide con el baseline del encargo), 6m30s de
+  duracion real. Sin regresion en ninguno de los dos.
+- `Terrakeep.App.Tests` **no es un proyecto de `dotnet test`** (confirmado investigando su propio
+  `.csproj`: `OutputType=Exe`, sin `Microsoft.NET.Test.Sdk` ni ningun paquete de test - es un `.exe`
+  propio con cientos de modos `_SOLO`, invocado con `dotnet run --project`, ya documentado asi en
+  esta misma bitacora en rondas anteriores) - `dotnet test` contra el simplemente no ejecuta nada
+  (0 avisos, exit 0, sin `.trx`, confirmado tambien contra `Terrakeep.Core.Tests` en paralelo para
+  descartar un problema de entorno). Verificacion dirigida real en su lugar: `ARRANQUE_SOLO=1 dotnet
+  run --project Terrakeep.App.Tests --no-build` (sale justo tras medir `new MainWindow()`, sin
+  `Show()` ni el resto del arnes) - exit 0, `T-G-ARRANQUE: new MainWindow()... tardo 797ms`, sin
+  excepcion: confirma que el nuevo bloque del constructor (con `App.PendingWorldPath` en `null` en
+  este arnes, que nunca pasa por `App.OnStartup`) no rompe la construccion normal de la ventana.
+- **Verificacion dinamica end-to-end real, con el `.exe` de verdad** (no solo el arnes): lanzado
+  `Terrakeep.exe` (build de desarrollo, `bin\Debug\...\Terrakeep.exe`) con
+  `--abrir-mundo "C:\Users\adrian\Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\
+  KeepQAVanilla.wld"` - confirmado con UI Automation (`pywinauto`, backend UIA) que la ventana real
+  muestra `Mundo: KeepQAVanilla` y `'KeepQAVanilla' - 4200x1200 tiles, 2 NPC(s) de pueblo, 38 todavia
+  sin conseguir.` sin ninguna intervencion manual - el mundo pasado por argumento se cargo solo, con
+  la pestaña Exploracion ya seleccionada. Repetido con una ruta inexistente
+  (`MundoDePrueba-e5eaea9e-inexistente.wld`): el proceso arranca normal (`HasExited=False` tras 6s),
+  una unica ventana visible titulada "Terrakeep" (sin dialogo de error superpuesto), y
+  `ultimo-error.log` (bin dir) sigue con fecha del 14-sep-2026 - ninguna excepcion nueva se escribio.
+- Mismas dos pruebas repetidas contra la copia **instalada** (`C:\Users\adrian\AppData\Local\
+  Programs\Terrakeep\Terrakeep.exe`, tras el redespliegue de abajo): mismo resultado real, mundo
+  cargado confirmado via UIA.
+
+**Commit real**: `Terrakeep.App/App.xaml.cs` + `Terrakeep.App/MainWindow.xaml.cs` - los 2 unicos
+ficheros del working set real de este encargo en este repo, `git add` con rutas explicitas, nunca
+`-A` (numerosos ficheros ajenos de otros agentes en paralelo en `git status`, ninguno tocado ni
+comiteado). `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/
+ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados (solo leidos). Sin `git push`.
+
+**Despliegue real**: `Terrakeep.exe` confirmado cerrado (`Get-CimInstance Win32_Process` sin
+resultados) antes de publicar. `node deployLock.js adquirir Terrakeep` - lock libre. `antes`:
+snapshot real `AppData\Local\Programs\Terrakeep\Assets`, 13056 ficheros, hash `068603cc...`.
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy .../publish .../Terrakeep //MIR //XF unins000.exe unins000.dat` (Git Bash, doble barra
+para evitar que traduzca `/MIR` a una ruta): el `.exe` de origen tardo ~5min en poder copiarse
+(`ERROR 32 - El proceso no tiene acceso al archivo`, reintentado automaticamente cada 30s por
+robocopy hasta soltarse solo, sin intervencion), termino con exit code robocopy=1 (exito: 1 archivo
+copiado). `node deployLock.js despues Terrakeep ...Assets`: **sin alarma** - "Assets/ de Terrakeep
+identico antes y despues del /MIR (13056 ficheros) - deploy seguro". `Terrakeep.exe` instalado
+confirmado con `LastWriteTime` 26/09/2026 8:54:53 (coincide con la hora real del `publish`). `node
+deployLock.js liberar Terrakeep`: liberado. Verificacion E2E repetida contra el `.exe` YA INSTALADO
+(ver arriba) - deploy funcional COMPLETO, no queda pendiente nada de infraestructura de este lado.
+
+**Contrato actualizado** en `INTEGRACIONES-KEEP.json` (id `servidorkeep-terrakeep-abrir-editor`):
+`owner`/`contracts`/`versioning`/`failureMode`/`tests.contract`/`tests.e2e` reescritos para reflejar
+el contrato YA implementado (antes documentaba el hueco, ahora documenta la solucion real con
+evidencia). Lado ServidorKeep del cambio (`InstanciaViewModel.AbrirEnEditorHermanoAsync`) hecho en
+el mismo encargo, documentado en la bitacora propia de `ServidorKeep`.

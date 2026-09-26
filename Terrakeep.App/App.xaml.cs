@@ -52,7 +52,45 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
+
+        // Bug2 (TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d, investigador-bug a6b00cdb):
+        // contrato real acordado con ServidorKeep (ver INTEGRACIONES-KEEP.json, id
+        // "servidorkeep-terrakeep-abrir-editor") - "Abrir en Terrakeep" desde una instancia de
+        // servidor lanza este .exe con "--abrir-mundo <ruta.wld>". Se parsea AQUI, antes de que
+        // MainWindow exista, para que quede listo cuando su constructor lo consuma (mismo camino
+        // real que ya usan OnLoadWorldClick/OnWindowDrop, ver MainWindow.xaml.cs). Nunca lanza:
+        // sin argumento, con el flag mal formado o con una ruta que no existe de verdad, se queda
+        // en null y Terrakeep arranca NORMAL, sin mundo cargado - igual que si se hubiera lanzado
+        // a secas.
+        PendingWorldPath = ParsePendingWorldPath(e.Args);
+
         base.OnStartup(e);
+    }
+
+    /// <summary>Ruta real de un <c>.wld</c> ya existente que <see cref="MainWindow"/> debe cargar
+    /// automaticamente al arrancar (Bug2 - ver el comentario real de <see cref="OnStartup"/>), o
+    /// <c>null</c> si no se paso ningun argumento valido. Publica y con setter privado para poder
+    /// leerla desde MainWindow sin exponer un setter externo.</summary>
+    public static string? PendingWorldPath { get; private set; }
+
+    // Extraido como metodo propio (mismo criterio que ShouldForceSoftwareRendering, unas lineas
+    // mas abajo) para poder verificarlo de verdad desde el arnes sin pasar por OnStartup real.
+    // Publico por el mismo motivo (Terrakeep.App.Tests, sin InternalsVisibleTo configurado).
+    public static string? ParsePendingWorldPath(string[] args)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] != "--abrir-mundo") continue;
+            string ruta = args[i + 1];
+            try
+            {
+                if (string.Equals(Path.GetExtension(ruta), ".wld", StringComparison.OrdinalIgnoreCase) && File.Exists(ruta))
+                    return ruta;
+            }
+            catch { /* ruta con caracteres invalidos u otro fallo real de E/S - arranca normal */ }
+            return null;
+        }
+        return null;
     }
 
     // Extraido como metodo propio (en vez de dejarlo inline en OnStartup) para poder
