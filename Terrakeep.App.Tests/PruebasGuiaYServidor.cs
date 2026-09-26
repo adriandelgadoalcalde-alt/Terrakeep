@@ -44,6 +44,57 @@ internal static partial class Program
             DoEvents();
             Console.WriteLine($"GUIA_SOLO: personaje cargado -> HasCalamityData={vm.HasCalamityData} (esperado True, 'adrian' tiene .tplr real)");
 
+            // Guia Fase B (26-sep-2026): aviso global "personaje sin mundo" (MostrarAvisoSinMundo/
+            // TextoAvisoSinMundo, ya expuestos por Fase A) - momento REAL y unico de este flujo en
+            // el que se cumple la condicion (personaje YA cargado, mundo TODAVIA no) antes de que
+            // el bloque de abajo cargue roca_negra.wld. Confirma en el arbol visual REAL de
+            // MainWindow que el banner nuevo (espejo del ya existente "sin personaje") se ve, con
+            // el texto localizado real, y que cambia de verdad al conmutar idioma (ES/EN) - NUNCA
+            // una clave cruda entre corchetes.
+            vm.SelectedTabIndex = 3; // AppTab.Guia
+            DoEvents();
+            vm.Guide.Refresh();
+            DoEvents();
+            Console.WriteLine($"GUIA_SOLO AVISO: MostrarAvisoSinMundo={vm.Guide.MostrarAvisoSinMundo} (esperado True, personaje cargado sin mundo todavia)");
+            if (!vm.Guide.MostrarAvisoSinMundo)
+                Console.WriteLine("FALLO: GUIA_SOLO AVISO - con personaje cargado y sin mundo, MostrarAvisoSinMundo deberia ser True.");
+
+            string textoEs = vm.Guide.TextoAvisoSinMundo;
+            var tbAvisoEs = Descendientes(window).OfType<TextBlock>().FirstOrDefault(t => t.Text == textoEs);
+            Console.WriteLine($"GUIA_SOLO AVISO: texto ES='{textoEs.Substring(0, Math.Min(60, textoEs.Length))}...' encontrado en el arbol visual real={tbAvisoEs != null} (esperado True)");
+            if (tbAvisoEs == null || textoEs.StartsWith('[') || string.IsNullOrWhiteSpace(textoEs))
+                Console.WriteLine("FALLO: GUIA_SOLO AVISO - el banner 'sin mundo' no aparece en el arbol visual con su texto real (¿guide_no_world_notice sin resolver o XAML sin bindear?).");
+            else if (!tbAvisoEs.IsVisible)
+                Console.WriteLine("FALLO: GUIA_SOLO AVISO - el TextBlock del banner 'sin mundo' existe pero no es visible (Visibility/BoolToVis roto).");
+            try
+            {
+                tbAvisoEs?.BringIntoView();
+                DoEvents(); DoEvents();
+                CapturaVentanaKeepQa(window, "guia-aviso-sin-mundo-es");
+                Console.WriteLine("GUIA_SOLO AVISO: captura real del banner 'sin mundo' en español -> keepqa-evidencia\\guia-aviso-sin-mundo-es.png");
+            }
+            catch (Exception ex) { Console.WriteLine("GUIA_SOLO AVISO: captura ES fallo - " + ex.Message); }
+
+            vm.Settings.Language = Terrakeep.App.Services.LocalizationService.English;
+            DoEvents(); DoEvents();
+            string textoEn = vm.Guide.TextoAvisoSinMundo;
+            var tbAvisoEn = Descendientes(window).OfType<TextBlock>().FirstOrDefault(t => t.Text == textoEn);
+            Console.WriteLine($"GUIA_SOLO AVISO: texto EN='{textoEn.Substring(0, Math.Min(60, textoEn.Length))}...' distinto del ES={textoEn != textoEs} encontrado en el arbol visual real={tbAvisoEn != null} (esperado True, True)");
+            if (textoEn == textoEs || textoEn.StartsWith('['))
+                Console.WriteLine("FALLO: GUIA_SOLO AVISO - guide_no_world_notice no cambia de verdad al conmutar a ingles.");
+            if (tbAvisoEn == null)
+                Console.WriteLine("FALLO: GUIA_SOLO AVISO - el banner 'sin mundo' no re-bindea el texto en ingles en el arbol visual real.");
+            try
+            {
+                tbAvisoEn?.BringIntoView();
+                DoEvents(); DoEvents();
+                CapturaVentanaKeepQa(window, "guia-aviso-sin-mundo-en");
+                Console.WriteLine("GUIA_SOLO AVISO: captura real del banner 'sin mundo' en ingles -> keepqa-evidencia\\guia-aviso-sin-mundo-en.png");
+            }
+            catch (Exception ex) { Console.WriteLine("GUIA_SOLO AVISO: captura EN fallo - " + ex.Message); }
+            vm.Settings.Language = Terrakeep.App.Services.LocalizationService.Spanish; // restaura el idioma para el resto del flujo
+            DoEvents(); DoEvents();
+
             if (File.Exists(origenWld))
             {
                 string copiaWld = Path.Combine(tempDir, "guia-harness-roca_negra.wld");
@@ -305,6 +356,158 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del arbol fallo - " + ex.Message); }
 
+            // Guia Fase B (26-sep-2026): antes de este cierre, el arbol completo (a diferencia del
+            // banner "Tu objetivo ahora mismo") NUNCA mostraba Motivo bajo un requisito NoEvaluable
+            // - hueco real cerrado aqui. Busca la PRIMERA fila real (personaje+mundo 'adrian'
+            // cargados de verdad) con un Motivo no vacio en cualquier tramo/paso ya evaluado, y
+            // confirma que el TextBlock real del arbol la enseña.
+            {
+                GuideRequisitoViewModel? filaConMotivo = null;
+                GuideTramoViewModel? tramoDeFilaConMotivo = null;
+                foreach (var t in vm.Guide.Tramos)
+                {
+                    foreach (var p in t.Pasos)
+                    {
+                        var r = p.Requisitos.FirstOrDefault(x => !string.IsNullOrEmpty(x.Motivo));
+                        if (r != null) { filaConMotivo = r; tramoDeFilaConMotivo = t; break; }
+                    }
+                    if (filaConMotivo != null) break;
+                }
+
+                if (filaConMotivo == null)
+                {
+                    Console.WriteLine("GUIA_SOLO MOTIVO-ARBOL: ninguna fila NoEvaluable con Motivo en el arbol real (¿personaje/mundo cubren todos los requisitos?) - omitido.");
+                }
+                else
+                {
+                    var expanderMotivo = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoDeFilaConMotivo));
+                    if (expanderMotivo == null)
+                    {
+                        Console.WriteLine("FALLO: GUIA_SOLO MOTIVO-ARBOL - no se encontro el Expander real del tramo con la fila elegida.");
+                    }
+                    else
+                    {
+                        expanderMotivo.IsExpanded = true;
+                        DoEvents(); DoEvents();
+                        var tbMotivoArbol = Descendientes(window).OfType<TextBlock>()
+                            .FirstOrDefault(tb => ReferenceEquals(tb.DataContext, filaConMotivo) && tb.Text == filaConMotivo.Motivo);
+                        Console.WriteLine($"GUIA_SOLO MOTIVO-ARBOL: Motivo='{filaConMotivo.Motivo}' visible en el arbol real={tbMotivoArbol != null && tbMotivoArbol.IsVisible} (esperado True)");
+                        if (tbMotivoArbol == null)
+                            Console.WriteLine("FALLO: GUIA_SOLO MOTIVO-ARBOL - el arbol completo NO muestra el TextBlock de Motivo bajo el requisito NoEvaluable elegido.");
+                        else if (!tbMotivoArbol.IsVisible)
+                            Console.WriteLine("FALLO: GUIA_SOLO MOTIVO-ARBOL - el TextBlock de Motivo existe pero no es visible (Visibility/EmptyToCollapsed roto).");
+                        else
+                        {
+                            try
+                            {
+                                tbMotivoArbol.BringIntoView();
+                                DoEvents(); DoEvents();
+                                CapturaVentanaKeepQa(window, "guia-arbol-motivo-visible");
+                                Console.WriteLine("GUIA_SOLO MOTIVO-ARBOL: captura real -> keepqa-evidencia\\guia-arbol-motivo-visible.png");
+                            }
+                            catch (Exception ex) { Console.WriteLine("GUIA_SOLO MOTIVO-ARBOL: captura fallo - " + ex.Message); }
+                        }
+                    }
+                }
+            }
+
+            // Guia Fase B (26-sep-2026): tratamiento visual diferenciado EsLimiteEstructural (ej.
+            // NpcActivo) vs NoEvaluable temporal. guia_progresion.json NO tiene hoy ningun
+            // requisito NpcActivo real (ver el comentario de GuiaFaseAReabiertaViewModelTests), asi
+            // que se monta un tramo/paso SINTETICO (GuidePasoViewModel.ParaPruebas/
+            // GuideTramoViewModel.ParaPruebas, nuevos en esta ronda, mismo criterio ya establecido
+            // que GuideRequisitoViewModel.ParaPruebas) con DOS filas reales de
+            // ResultadoRequisitoGuia - una NoEvaluable temporal, otra EsLimiteEstructural=true - y
+            // se añade DE VERDAD a vm.Guide.Tramos (ObservableCollection publica) para que el MISMO
+            // XAML/converters de produccion los pinte en el arbol visual real de MainWindow. Se
+            // retira al final para no contaminar la captura final "guia-real.png".
+            {
+                var reqTemporal = new Terrakeep.Core.Guia.RequisitoGuia { Tipo = Terrakeep.Core.Guia.TipoRequisitoGuia.Objeto, Id = 1 };
+                var resTemporal = new Terrakeep.Core.Guia.ResultadoRequisitoGuia
+                {
+                    Requisito = reqTemporal,
+                    NoEvaluable = true,
+                    EsLimiteEstructural = false,
+                    TextoClave = "Guia.Req.NoEvaluableGenerico",
+                    MotivoClave = "guide_motive_load_character",
+                };
+                var reqEstructural = new Terrakeep.Core.Guia.RequisitoGuia { Tipo = Terrakeep.Core.Guia.TipoRequisitoGuia.NpcActivo, Id = 4 };
+                var resEstructural = new Terrakeep.Core.Guia.ResultadoRequisitoGuia
+                {
+                    Requisito = reqEstructural,
+                    NoEvaluable = true,
+                    EsLimiteEstructural = true,
+                    TextoClave = "Guia.Req.NoEvaluableGenerico",
+                    MotivoClave = "guide_motive_active_npc",
+                };
+
+                string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
+                var textosGuia = Terrakeep.Core.Guia.GuideTextCatalog.LoadFromFiles(
+                    Path.Combine(assetsGuia, "textos.es.json"), Path.Combine(assetsGuia, "textos.en.json"));
+
+                var vmReqTemporal = GuideRequisitoViewModel.ParaPruebas(resTemporal, textosGuia);
+                var vmReqEstructural = GuideRequisitoViewModel.ParaPruebas(resEstructural, textosGuia);
+
+                var pasoSintetico = new Terrakeep.Core.Guia.PasoGuia { Clave = "GuiaFaseBCanarioPaso", Requisitos = [reqTemporal, reqEstructural] };
+                var pasoVmSintetico = GuidePasoViewModel.ParaPruebas(pasoSintetico, textosGuia,
+                    [vmReqTemporal, vmReqEstructural], completado: false, preparacion: 0f, cumplidos: 0, totalObligatorios: 2,
+                    servicio: new Terrakeep.App.Services.CharacterFileService());
+
+                var tramoSintetico = new Terrakeep.Core.Guia.TramoGuia { Clave = "GuiaFaseBCanarioTramo", Implementado = true, Pasos = [pasoSintetico] };
+                var tramoVmSintetico = GuideTramoViewModel.ParaPruebas(tramoSintetico, textosGuia, [pasoVmSintetico], completado: false);
+
+                vm.Guide.Tramos.Add(tramoVmSintetico);
+                DoEvents(); DoEvents();
+
+                var expanderSint = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoVmSintetico));
+                if (expanderSint == null)
+                {
+                    Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - no se encontro el Expander real del tramo sintetico tras Tramos.Add().");
+                }
+                else
+                {
+                    expanderSint.IsExpanded = true;
+                    DoEvents(); DoEvents();
+
+                    var iconoTemporal = Descendientes(window).OfType<TextBlock>()
+                        .FirstOrDefault(t => ReferenceEquals(t.DataContext, vmReqTemporal) && t.IsVisible && (t.Text == "?" || t.Text == "⊘"));
+                    var iconoEstructural = Descendientes(window).OfType<TextBlock>()
+                        .FirstOrDefault(t => ReferenceEquals(t.DataContext, vmReqEstructural) && t.IsVisible && (t.Text == "?" || t.Text == "⊘"));
+                    Console.WriteLine($"GUIA_SOLO ESLIMITE: icono fila temporal='{iconoTemporal?.Text}' (esperado '?'), icono fila estructural='{iconoEstructural?.Text}' (esperado '⊘')");
+                    if (iconoTemporal?.Text != "?")
+                        Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - la fila NoEvaluable temporal no muestra el glifo '?' esperado.");
+                    if (iconoEstructural?.Text != "⊘")
+                        Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - la fila EsLimiteEstructural no muestra el glifo distinto '⊘' esperado.");
+
+                    var lineaTemporal = Descendientes(window).OfType<TextBlock>()
+                        .FirstOrDefault(t => ReferenceEquals(t.DataContext, vmReqTemporal) && t.Text == vmReqTemporal.Linea);
+                    var lineaEstructural = Descendientes(window).OfType<TextBlock>()
+                        .FirstOrDefault(t => ReferenceEquals(t.DataContext, vmReqEstructural) && t.Text == vmReqEstructural.Linea);
+                    Console.WriteLine($"GUIA_SOLO ESLIMITE: opacidad Linea temporal={lineaTemporal?.Opacity} (esperado 1), opacidad Linea estructural={lineaEstructural?.Opacity} (esperado 0.6)");
+                    if (lineaTemporal == null || lineaTemporal.Opacity != 1.0)
+                        Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - la Linea de la fila temporal deberia quedarse en opacidad normal (1.0).");
+                    if (lineaEstructural == null || lineaEstructural.Opacity != 0.6)
+                        Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - la Linea de la fila EsLimiteEstructural deberia atenuarse a opacidad 0.6.");
+
+                    Console.WriteLine($"GUIA_SOLO ESLIMITE: Motivo temporal='{vmReqTemporal.Motivo}' vs Motivo estructural='{vmReqEstructural.Motivo}' (distintos={vmReqTemporal.Motivo != vmReqEstructural.Motivo}, esperado True)");
+                    if (vmReqTemporal.Motivo == vmReqEstructural.Motivo)
+                        Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - el texto de Motivo deberia distinguir el caso temporal del estructural.");
+
+                    try
+                    {
+                        (iconoEstructural ?? lineaEstructural as FrameworkElement)?.BringIntoView();
+                        DoEvents(); DoEvents();
+                        CapturaVentanaKeepQa(window, "guia-arbol-limite-estructural-vs-temporal");
+                        Console.WriteLine("GUIA_SOLO ESLIMITE: captura real comparando ambos casos -> keepqa-evidencia\\guia-arbol-limite-estructural-vs-temporal.png");
+                    }
+                    catch (Exception ex) { Console.WriteLine("GUIA_SOLO ESLIMITE: captura fallo - " + ex.Message); }
+                }
+
+                // Retira el tramo sintetico - no debe contaminar "guia-real.png" ni nada mas abajo.
+                vm.Guide.Tramos.Remove(tramoVmSintetico);
+                DoEvents(); DoEvents();
+            }
+
             // Guia Encargo2 (25-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): requisito real
             // "defensa" (paso "Armadura: mas de 10 de defensa", tramo "Antes del primer jefe",
             // guia_progresion.json ~linea 101, valor pedido=11) - ANTES de este arreglo salia
@@ -388,6 +591,48 @@ internal static partial class Program
                     Console.WriteLine("GUIA_SOLO ICONOS: captura real del banner con icono DE JEFE (Plantera) -> keepqa-evidencia\\guia-banner-con-icono-jefe.png");
                 }
                 catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del banner de jefe fallo - " + ex.Message); }
+            }
+
+            // Guia Fase B (26-sep-2026): evidencia real del CUARTO estado que faltaba (mundo
+            // cargado, personaje NO - el espejo del que acaba de comprobarse arriba). El flujo
+            // principal de este arnes SIEMPRE carga personaje antes que mundo (no hay ningun
+            // "descargar personaje" real en MainViewModel), asi que se abre una SEGUNDA ventana
+            // real independiente (misma `new MainWindow()` real que usa el resto del arnes) solo
+            // para este caso, y se cierra al terminar - no comparte estado con `window`/`vm` de
+            // arriba en ningun momento.
+            if (File.Exists(origenWld))
+            {
+                var windowSoloMundo = new MainWindow();
+                try
+                {
+                    windowSoloMundo.Show();
+                    DoEvents(); DoEvents();
+                    var vmSoloMundo = (MainViewModel)windowSoloMundo.DataContext;
+                    string copiaWldSoloMundo = Path.Combine(tempDir, "guia-harness-roca_negra-solo-mundo.wld");
+                    File.Copy(origenWld, copiaWldSoloMundo, overwrite: true);
+                    var cargaSoloMundo = vmSoloMundo.Exploration.LoadFromPathAsync(copiaWldSoloMundo);
+                    while (!cargaSoloMundo.IsCompleted) DoEvents();
+                    DoEvents();
+                    vmSoloMundo.SelectedTabIndex = 3; // AppTab.Guia
+                    DoEvents();
+                    vmSoloMundo.Guide.Refresh();
+                    DoEvents();
+                    Console.WriteLine($"GUIA_SOLO SOLOMUNDO: IsWorldLoaded={vmSoloMundo.Exploration.IsWorldLoaded}, IsCharacterLoaded={vmSoloMundo.IsCharacterLoaded}, MostrarAvisoSinPersonaje={vmSoloMundo.Guide.MostrarAvisoSinPersonaje} (esperado True, False, True)");
+                    if (!vmSoloMundo.Guide.MostrarAvisoSinPersonaje)
+                        Console.WriteLine("FALLO: GUIA_SOLO SOLOMUNDO - con mundo cargado y sin personaje, MostrarAvisoSinPersonaje deberia ser True.");
+                    try
+                    {
+                        CapturaVentanaKeepQa(windowSoloMundo, "guia-solo-mundo-sin-personaje");
+                        Console.WriteLine("GUIA_SOLO SOLOMUNDO: captura real (mundo cargado, SIN personaje) -> keepqa-evidencia\\guia-solo-mundo-sin-personaje.png");
+                    }
+                    catch (Exception ex) { Console.WriteLine("GUIA_SOLO SOLOMUNDO: captura fallo - " + ex.Message); }
+                    try { File.Delete(copiaWldSoloMundo); } catch { }
+                }
+                finally
+                {
+                    windowSoloMundo.Close();
+                    DoEvents();
+                }
             }
 
             var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(

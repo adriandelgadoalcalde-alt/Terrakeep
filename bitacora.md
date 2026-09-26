@@ -27432,3 +27432,131 @@ respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKe
 `KEEPQA-INTEGRACION.md` no tocados; `MainWindow.xaml` del agente en paralelo (ChestInspector)
 tampoco tocado, ni falta hizo (los bindings de `TranslateTransform` ya existian desde PortSeleccion
 Encargo4). Sin `git push`.
+
+## Guia reabierta Fase B (26-sep-2026, aplicador-fix): `Motivo` en el arbol completo + tratamiento
+## visual EsLimiteEstructural + aviso global "sin mundo" - XAML, TASK CONTEXT
+## e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Fase B de la Guia reabierta (continua Fase A, commit `7efbec5e`, que dejo `EsLimiteEstructural`/
+`MostrarAvisoSinMundo`/`TextoAvisoSinMundo` preparados en `GuideViewModel`/`GuideRequisitoViewModel`
+sin tocar `MainWindow.xaml`). Bloqueo cooperativo `terrakeep-mainwindow-xaml` reservado antes de
+tocar el fichero (`bloqueo.js reservar`, libre en el momento de empezar) y liberado al terminar.
+
+**Arreglo real (3 puntos del encargo)**:
+
+1. **`Motivo` en el arbol completo** (`Terrakeep.App/MainWindow.xaml`, `DataTemplate` de
+   `Requisitos` dentro del `ItemsControl` de `Pasos`): antes solo tenia `Icono`+`Linea` -
+   `Motivo` solo se veia en el banner "Tu objetivo ahora mismo". Añadido un `TextBlock` con el
+   MISMO binding exacto que ya usaba el banner (`Text="{Binding Motivo}"`,
+   `Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}"`), sin duplicar
+   logica ni inventar un converter nuevo.
+2. **Tratamiento visual EsLimiteEstructural vs NoEvaluable temporal** (banner Y arbol): el
+   binding local `Text="{Binding Icono}"` pesa mas en WPF que cualquier `Setter` de
+   `Style`/`DataTrigger` sobre la misma propiedad, asi que pisar el glifo con un trigger de Style
+   no habria funcionado - en su lugar, un `Grid` con DOS `TextBlock` superpuestos
+   (`Icono`/`Visibility=InverseBoolToVis` de `EsLimiteEstructural`, y un `⊘` fijo con
+   `Visibility=BoolToVis`) resuelve el glifo distinto sin tocar el ViewModel. La `Linea` se atenua
+   a `Opacity=0.6` via `DataTrigger` cuando `EsLimiteEstructural=True` (mismo idioma ya usado en
+   el proyecto para "atenuado" - no existe ningun `TextMutedBrush` dedicado, confirmado por grep en
+   `Styles/Theme.xaml`, `TextSecondaryBrush` + opacidad reducida es el patron real ya establecido).
+3. **Aviso global "personaje sin mundo"**: banner hermano del ya existente
+   `Guide.MostrarAvisoSinPersonaje` (misma estructura `Border`+`TextBlock`, mismo `OrangeBrush`),
+   bindeado a `Guide.MostrarAvisoSinMundo`/`Guide.TextoAvisoSinMundo` (Fase A). Mutuamente
+   excluyente por construccion, ya verificado en
+   `GuiaFaseAReabiertaViewModelTests.MostrarAvisoSinMundoYSinPersonaje_SonMutuamenteExcluyentes_
+   NuncaLosDosTrueALaVez`.
+
+**Test seam nuevo** (`Terrakeep.App/ViewModels/GuideViewModel.cs`): `GuidePasoViewModel.ParaPruebas`
++ `GuideTramoViewModel.ParaPruebas`, gemelos publicos-solo-para-pruebas de
+`GuideRequisitoViewModel.ParaPruebas` ya existente (mismo motivo real: constructores `internal`,
+sin `InternalsVisibleTo` hacia `Terrakeep.App.Tests`) - necesarios porque `guia_progresion.json`
+NO tiene hoy ningun requisito `NpcActivo` real (unico limite estructural real del catalogo, ver
+comentario de `GuiaFaseAReabiertaViewModelTests`), asi que no hay forma de capturar el caso D)
+contra el catalogo de produccion sin poder montar un tramo/paso sintetico en el arbol visual REAL.
+
+**Verificacion real** (`Terrakeep.App.Tests/PruebasGuiaYServidor.cs`, arnes `GUIA_SOLO=1`, sin
+`dotnet test` porque no es un proyecto xunit): tres bloques nuevos, todos con captura real:
+- `GUIA_SOLO AVISO`: tras cargar personaje 'adrian' y ANTES de cargar mundo, confirma
+  `MostrarAvisoSinMundo=True`, localiza el `TextBlock` real por contenido (`guide_no_world_notice`)
+  en el arbol visual, confirma `IsVisible`, cambia idioma EN VIVO (`vm.Settings.Language`) y
+  confirma que el texto cambia de verdad (nunca clave cruda) - capturas
+  `guia-aviso-sin-mundo-es.png`/`guia-aviso-sin-mundo-en.png`.
+- `GUIA_SOLO MOTIVO-ARBOL`: busca la primera fila real (personaje+mundo 'adrian' cargados) con
+  `Motivo` no vacio en cualquier tramo/paso ya evaluado (salio una bandera de Calamity sin
+  traducir, `guide_motive_flag_calamity`), expande su `Expander` real, confirma que el `TextBlock`
+  de `Motivo` existe y es visible en el arbol - captura `guia-arbol-motivo-visible.png`. Hueco de
+  cobertura real cerrado: antes de este cierre, ningun canario comprobaba que el arbol completo
+  (a diferencia del banner) mostrase `Motivo`.
+- `GUIA_SOLO ESLIMITE`: monta el tramo/paso sintetico (`GuidePasoViewModel.ParaPruebas`/
+  `GuideTramoViewModel.ParaPruebas`, dos filas `ResultadoRequisitoGuia` reales - una NoEvaluable
+  temporal con `guide_motive_load_character`, otra `EsLimiteEstructural=true` con
+  `guide_motive_active_npc`), lo añade DE VERDAD a `vm.Guide.Tramos` (`ObservableCollection`
+  publica) para que el MISMO XAML/converters de produccion los pinte, expande el `Expander` real,
+  confirma glifo `?` vs `⊘`, opacidad `1.0` vs `0.6`, y `Motivo` distinto entre ambas filas -
+  captura `guia-arbol-limite-estructural-vs-temporal.png` (visualmente confirmado: fila
+  estructural con icono `⊘` atenuado, fila temporal con `?` normal). Retira el tramo sintetico
+  despues para no contaminar `guia-real.png`.
+- `GUIA_SOLO SOLOMUNDO` (nuevo, cuarto estado que faltaba - "mundo cargado, personaje NO"): el
+  flujo principal de este arnes siempre carga personaje antes que mundo (no existe ningun
+  "descargar personaje" en `MainViewModel`), asi que se abre una SEGUNDA `MainWindow` real
+  independiente solo para este caso (misma `new MainWindow()` real del resto del arnes, cerrada
+  al terminar) - confirma `MostrarAvisoSinPersonaje=True` (comportamiento PRE-existente, no
+  tocado por esta Fase, re-verificado para la captura pedida) - captura
+  `guia-solo-mundo-sin-personaje.png`.
+
+Las 4 capturas reales pedidas por el encargo (A: solo personaje, B: solo mundo, C:
+personaje+mundo, D: `EsLimiteEstructural=true`) quedan cubiertas por
+`guia-aviso-sin-mundo-es.png`, `guia-solo-mundo-sin-personaje.png`, `guia-real.png`/
+`guia-arbol-motivo-visible.png`, y `guia-arbol-limite-estructural-vs-temporal.png`
+respectivamente, en `Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-evidencia/`.
+`GUIA_SOLO` completo: **0 lineas `FALLO`** en las dos pasadas reales (la segunda, tras añadir
+`SOLOMUNDO`, incluida).
+
+**Build y regresion**: `dotnet build Terrakeep.App/Terrakeep.App.csproj -c Release` y
+`dotnet build Terrakeep.App.Tests/Terrakeep.App.Tests.csproj -c Release/-c Debug`: verde, 0
+avisos/0 errores en los tres. `dotnet test Terrakeep.Core.Tests -c Release`: 764/764 (sin cambios,
+ajeno a este encargo - Fase A ya lo habia dejado en 764). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release`: 573/573, 0 errores (exactamente el baseline - esta
+Fase no añadio ningun test a `Terrakeep.App.ViewModels.Tests`, los `ParaPruebas` nuevos solo los
+consume `Terrakeep.App.Tests`; el aviso "Proceso de host de pruebas bloqueado" tras el ultimo test
+es la misma flakiness pre-existente ya documentada varias veces en esta bitacora, ajena a este
+cambio).
+
+**Recompilacion y redespliegue real - ALARMA del DEPLOY_LOCK investigada y resuelta**:
+`Terrakeep.exe` instalado NO estaba en ejecucion (`Get-CimInstance Win32_Process`, sin
+resultados). `DEPLOY_LOCK` de Terrakeep aparecio RESERVADO por un PID muerto (agente en paralelo
+de PortSeleccion Encargo5, ver la entrada justo arriba - su sesion termino sin liberar el lock)
+- confirmado de verdad con `Get-Process -Id <pid>` (sin resultado) antes de forzar nada, `liberar
+--forzar` + `adquirir` de nuevo, sin sobreescribir a ciegas. Snapshot `antes`: 13056 ficheros,
+hash `9a86278f...`. Primer `dotnet publish` dejo `Assets/` con **0 ficheros** (el incidente real
+que el propio `DEPLOY_LOCK` documenta en su cabecera, contencion de varios `dotnet`/
+`VBCSCompiler` concurrentes de otros agentes en la misma maquina en ese momento, confirmado con
+`Get-CimInstance Win32_Process` listando 8 procesos `dotnet`/`VBCSCompiler` activos) - **NO se
+ejecuto `robocopy /MIR`** con ese publish roto. `dotnet clean Terrakeep.App -c Release` +
+`dotnet publish` de nuevo: `Assets/` del publish paso a 13056 ficheros (coincide con el snapshot).
+`robocopy .../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat`
+(`MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`, unico cambio real de esta Fase - solo
+XAML/C#, ningun `Assets/`), 13061 omitidos, 0 errores, 0 extras. `node deployLock.js despues
+Terrakeep ...Assets`: **ALARMA** (mismo conteo 13056, hash `9a86278f...`→`068603cc...`) -
+investigada ANTES de liberar (mismo protocolo que PortSeleccion Encargo5, entrada de arriba):
+comparacion `manifiesto()` completa (ruta+tamaño) del `Assets/` publicado contra el instalado en
+los dos sentidos, **0 diferencias**, y tamaño/`LastWriteTime` del `.exe` instalado idénticos al
+publish (139.246.721 bytes, 26/09/2026 3:24:56) - conclusion real: el snapshot `antes` quedo
+obsoleto porque el deploy de PortSeleccion Encargo5 (arriba) actualizo el `Assets/` instalado
+DESPUES de mi snapshot pero ANTES de mi `robocopy` (mismo `Programs/Terrakeep/` compartido, otro
+agente legitimo en paralelo) - no una purga ni perdida de datos, confirmado por la comparacion
+exhaustiva. Lock liberado. Sanity check real: `Start-Process`, `PID=293004 Responding=True` a los
+5s, cerrado limpio con `Stop-Process`.
+
+**Commit real**: `Terrakeep.App/MainWindow.xaml` + `Terrakeep.App/ViewModels/GuideViewModel.cs` +
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` + esta entrada de `bitacora.md` - exactamente los
+ficheros de este encargo, `git add` con rutas explicitas, nunca `-A` (habia trabajo sin comitear
+de otros agentes en paralelo: `CLAUDE.md`, varios `Terrakeep.Core.Tests/**`,
+`Terrakeep.App.Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`,
+`Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs`, `scripts/**`,
+`Terrasavr-Native.zip`, `ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` - ninguno tocado).
+`doNotTouch` respetado. Bloqueo `terrakeep-mainwindow-xaml` liberado tras el commit.
+
+**Pendiente explicito** (no hacerlo yo, pedido del usuario): `revisor-visual` + `verificador-qa`
+sobre este cierre de la Guia antes de darla por completamente cerrada - ninguno de los dos
+despachado todavia para este bloque.

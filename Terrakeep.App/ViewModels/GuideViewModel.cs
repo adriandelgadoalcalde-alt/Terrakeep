@@ -82,6 +82,16 @@ public sealed partial class GuidePasoViewModel : ObservableObject
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
+    // Guia Fase B (26-sep-2026): SOLO para pruebas, mismo motivo/criterio real ya establecido por
+    // GuideRequisitoViewModel.ParaPruebas (sin InternalsVisibleTo hacia Terrakeep.App.Tests) - deja
+    // montar en el arbol visual REAL de MainWindow (via GuideViewModel.Tramos.Add, ObservableCollection
+    // publica) un paso sintetico con requisitos EsLimiteEstructural conocidos, sin depender de que
+    // guia_progresion.json tenga hoy un requisito NpcActivo real (no lo tiene todavia, ver el
+    // comentario de GuiaFaseAReabiertaViewModelTests).
+    public static GuidePasoViewModel ParaPruebas(PasoGuia paso, GuideTextCatalog textos, List<GuideRequisitoViewModel> requisitos,
+        bool completado, float preparacion, int cumplidos, int totalObligatorios, CharacterFileService servicio) =>
+        new(paso, textos, requisitos, completado, preparacion, cumplidos, totalObligatorios, servicio);
+
     public IReadOnlyList<GuideRequisitoViewModel> Requisitos { get; }
     public bool Completado { get; }
     public string Icono => Completado ? "✓" : "○";
@@ -176,6 +186,12 @@ public sealed partial class GuideTramoViewModel : ObservableObject
         Completado = completado;
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
+
+    // Guia Fase B (26-sep-2026): SOLO para pruebas, gemelo de GuidePasoViewModel.ParaPruebas de
+    // arriba - deja envolver el paso sintetico dentro de un tramo real para poder Tramos.Add()lo
+    // al arbol visual de MainWindow.xaml y expandir su Expander como haria un usuario de verdad.
+    public static GuideTramoViewModel ParaPruebas(TramoGuia tramo, GuideTextCatalog textos, List<GuidePasoViewModel> pasos, bool completado) =>
+        new(tramo, textos, pasos, completado);
 
     public IReadOnlyList<GuidePasoViewModel> Pasos { get; }
     public bool Completado { get; }

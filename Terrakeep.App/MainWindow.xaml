@@ -5327,6 +5327,20 @@
                         <TextBlock Text="{Binding Guide.TextoAvisoSinPersonaje, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
                     </Border>
 
+                    <!-- Guia Fase B (26-sep-2026): espejo exacto del aviso de arriba - personaje
+                         cargado, SIN mundo (el .plr no guarda nada del mundo: NPCs del pueblo,
+                         banderas de jefe derrotado, etc. se quedan NoEvaluable hasta cargar un
+                         .wld). Mutuamente excluyente con el aviso de "sin personaje" por
+                         construccion (GuideViewModel.Refresh: uno exige loaded==null, el otro
+                         loaded!=null) - nunca se ven los dos a la vez, ya verificado en
+                         GuiaFaseAReabiertaViewModelTests.MostrarAvisoSinMundoYSinPersonaje_
+                         SonMutuamenteExcluyentes_NuncaLosDosTrueALaVez. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.MostrarAvisoSinMundo, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Guide.TextoAvisoSinMundo, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                    </Border>
+
                     <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
                          "Continuar con..." de Inicio (degradado de acento + sombra). -->
                     <!-- x:Name real (Encargo3, 25-sep-2026) solo para que el arnes pueda
@@ -5369,7 +5383,19 @@
                                         <DataTemplate>
                                             <StackPanel Margin="0,2,0,4">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Icono}" Foreground="White" FontWeight="Bold" Width="18" VerticalAlignment="Top" />
+                                                    <!-- Guia Fase B (26-sep-2026): EsLimiteEstructural (ej. NpcActivo - jamas
+                                                         evaluable desde un editor de ficheros estaticos, a diferencia de un
+                                                         NoEvaluable "temporal" que SI se resuelve cargando datos) cambia el
+                                                         glifo a "no disponible" en vez de "pendiente". Dos TextBlock
+                                                         superpuestos + Visibility (no un Setter de Style/DataTrigger sobre
+                                                         Text: Icono ya llega por Binding LOCAL, que en WPF pesa mas que
+                                                         cualquier Setter de Style/Trigger - pisarlo asi no funcionaria). -->
+                                                    <Grid Width="18" VerticalAlignment="Top">
+                                                        <TextBlock Text="{Binding Icono}" Foreground="White" FontWeight="Bold"
+                                                                   Visibility="{Binding EsLimiteEstructural, Converter={StaticResource InverseBoolToVis}}" />
+                                                        <TextBlock Text="⊘" Foreground="White" FontWeight="Bold" Opacity="0.75"
+                                                                   Visibility="{Binding EsLimiteEstructural, Converter={StaticResource BoolToVis}}" />
+                                                    </Grid>
                                                     <TextBlock Text="{Binding Linea}" Foreground="White" TextWrapping="Wrap" MaxWidth="560">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
@@ -5377,6 +5403,9 @@
                                                                     <DataTrigger Binding="{Binding Recomendado}" Value="True">
                                                                         <Setter Property="Opacity" Value="0.7" />
                                                                         <Setter Property="FontStyle" Value="Italic" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding EsLimiteEstructural}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.6" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
@@ -5448,9 +5477,39 @@
                                                             <ItemsControl ItemsSource="{Binding Requisitos}" Margin="24,2,0,0">
                                                                 <ItemsControl.ItemTemplate>
                                                                     <DataTemplate>
-                                                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,1">
-                                                                            <TextBlock Text="{Binding Icono}" Width="16" />
-                                                                            <TextBlock Text="{Binding Linea}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="480" />
+                                                                        <!-- Guia Fase B (26-sep-2026): antes solo el banner "Tu objetivo
+                                                                             ahora mismo" mostraba Motivo bajo un requisito NoEvaluable -
+                                                                             aqui, en el arbol completo (la vista real para explorar el
+                                                                             resto de tramos, no solo el objetivo actual), se quedaba en
+                                                                             blanco, sin ninguna pista de "por que no se puede comprobar".
+                                                                             Mismo binding EXACTO que ya usa el banner
+                                                                             (GuideRequisitoViewModel.Motivo, resuelto por idioma), sin
+                                                                             duplicar logica ni inventar un converter nuevo - y mismo
+                                                                             tratamiento de icono/opacidad EsLimiteEstructural que el
+                                                                             banner (ver su comentario en el DataTemplate de
+                                                                             ObjetivoPaso.Requisitos, mas arriba en este mismo fichero). -->
+                                                                        <StackPanel Margin="0,1,0,2">
+                                                                            <StackPanel Orientation="Horizontal">
+                                                                                <Grid Width="16" VerticalAlignment="Top">
+                                                                                    <TextBlock Text="{Binding Icono}"
+                                                                                               Visibility="{Binding EsLimiteEstructural, Converter={StaticResource InverseBoolToVis}}" />
+                                                                                    <TextBlock Text="⊘" Foreground="{StaticResource TextSecondaryBrush}"
+                                                                                               Visibility="{Binding EsLimiteEstructural, Converter={StaticResource BoolToVis}}" />
+                                                                                </Grid>
+                                                                                <TextBlock Text="{Binding Linea}" TextWrapping="Wrap" MaxWidth="480">
+                                                                                    <TextBlock.Style>
+                                                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                                                                            <Style.Triggers>
+                                                                                                <DataTrigger Binding="{Binding EsLimiteEstructural}" Value="True">
+                                                                                                    <Setter Property="Opacity" Value="0.6" />
+                                                                                                </DataTrigger>
+                                                                                            </Style.Triggers>
+                                                                                        </Style>
+                                                                                    </TextBlock.Style>
+                                                                                </TextBlock>
+                                                                            </StackPanel>
+                                                                            <TextBlock Text="{Binding Motivo}" Style="{StaticResource CaptionText}" Opacity="0.65" FontSize="9" FontStyle="Italic" TextWrapping="Wrap"
+                                                                                       MaxWidth="460" Margin="20,1,0,0" Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}" />
                                                                         </StackPanel>
                                                                     </DataTemplate>
                                                                 </ItemsControl.ItemTemplate>
