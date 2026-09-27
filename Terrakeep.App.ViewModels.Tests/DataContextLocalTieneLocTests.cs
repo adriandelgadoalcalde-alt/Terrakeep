@@ -27,8 +27,25 @@ namespace Terrakeep.App.ViewModels.Tests;
 // quede sin el y nadie se entere hasta que un usuario reporte "no salen los botones".
 public class DataContextLocalTieneLocTests
 {
-    private const string MainWindowXamlPath =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\MainWindow.xaml";
+    private const string TerrakeepAppDir =
+        @"C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native\Terrakeep.App";
+
+    // ADR-TERRAKEEP-016/031 (27-sep-2026): esta prueba SOLO miraba MainWindow.xaml a pelo - valia
+    // mientras EquipmentGroup/StorageGroup (los dos unicos DataContext locales reales que vigila
+    // hoy, ver TiposPorPropiedad) vivian ahi, pero la extraccion final de Objetos/ObjetosView
+    // (ultima pieza del plan de division de MainWindow.xaml) se los llevo enteros a
+    // Views/ObjetosView.xaml - MainWindow.xaml se quedo sin NINGUN "DataContext=\"{Binding X}\""
+    // real, y Assert.NotEmpty (linea de mas abajo, la propia red de seguridad que este fichero ya
+    // tenia) lo detecto de inmediato como "esta prueba ya no vigila nada" en vez de como un fallo
+    // silencioso. Arreglo real: escanea MainWindow.xaml Y todos los UserControl reales de Views/
+    // (cualquier extraccion futura que mueva un DataContext local sigue cubierta sin tener que
+    // tocar esta lista de rutas cada vez).
+    private static IEnumerable<string> XamlFilesReales()
+    {
+        yield return Path.Combine(TerrakeepAppDir, "MainWindow.xaml");
+        foreach (string archivo in Directory.EnumerateFiles(Path.Combine(TerrakeepAppDir, "Views"), "*.xaml"))
+            yield return archivo;
+    }
 
     // Los ViewModel a los que el XAML redirige el DataContext hoy, por el nombre de la propiedad
     // de MainViewModel que aparece en `DataContext="{Binding X}"`.
@@ -41,9 +58,9 @@ public class DataContextLocalTieneLocTests
     [Fact]
     public void CadaDataContextLocalDelXamlExponeLoc()
     {
-        string xaml = File.ReadAllText(MainWindowXamlPath);
-        var propiedades = Regex.Matches(xaml, @"DataContext=""\{Binding (?<p>[A-Za-z0-9_.]+)\}""")
-            .Select(m => m.Groups["p"].Value)
+        var propiedades = XamlFilesReales()
+            .SelectMany(ruta => Regex.Matches(File.ReadAllText(ruta), @"DataContext=""\{Binding (?<p>[A-Za-z0-9_.]+)\}""")
+                .Select(m => m.Groups["p"].Value))
             .Distinct()
             .ToList();
 

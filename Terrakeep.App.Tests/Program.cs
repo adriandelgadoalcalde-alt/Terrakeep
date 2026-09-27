@@ -5047,8 +5047,15 @@ internal static partial class Program
                     // UI-BLOQUEADA para localizar WhereIsItPopup - popup.Child SI es un Visual real
                     // con su propio ActualWidth/ActualHeight una vez IsOpen=true, y RenderTargetBitmap
                     // acepta cualquier Visual, no solo los de la ventana principal.
-                    var popupField = typeof(MainWindow).GetField("LibraryFiltersPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                    var popup = popupField?.GetValue(window) as System.Windows.Controls.Primitives.Popup;
+                    // ADR-TERRAKEEP-016/031 (27-sep-2026): LibraryFiltersPopup vive ahora dentro
+                    // de ObjetosView (campo generado por SU PROPIO InitializeComponent(), no el
+                    // de MainWindow) - mismo patron de reflexion ya usado por WorldMapView/ADR-030
+                    // para OnMinimapClick: la reflexion pasa a apuntar a la CLASE y la INSTANCIA
+                    // reales (Terrakeep.App.Views.ObjetosView, obtenida por
+                    // window.FindName("ObjetosView")).
+                    var objetosViewHostLibFilt = window.FindName("ObjetosView") as Terrakeep.App.Views.ObjetosView;
+                    var popupField = typeof(Terrakeep.App.Views.ObjetosView).GetField("LibraryFiltersPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    var popup = popupField?.GetValue(objetosViewHostLibFilt) as System.Windows.Controls.Primitives.Popup;
                     var visualACapturar = popup?.Child is System.Windows.FrameworkElement popupChild && popupChild.ActualWidth > 1
                         ? (System.Windows.Media.Visual)popupChild
                         : window;
@@ -7403,7 +7410,11 @@ internal static partial class Program
             DoEvents();
             DoEvents();
             var focused = System.Windows.Input.Keyboard.FocusedElement as FrameworkElement;
-            Console.WriteLine($"N3-CTRL-F: SelectedTabIndex={vm.SelectedTabIndex} (esperado 1), IsLibraryCollapsed={vm.IsLibraryCollapsed} (esperado False), foco real en LibrarySearchBox={ReferenceEquals(focused, window.FindName("LibrarySearchBox"))}");
+            // ADR-TERRAKEEP-016/031 (27-sep-2026): LibrarySearchBox vive ahora dentro de
+            // ObjetosView (NameScope propio) - FindName doble, mismo patron ya usado por el resto
+            // de la familia.
+            var objetosViewHostN3 = window.FindName("ObjetosView") as FrameworkElement;
+            Console.WriteLine($"N3-CTRL-F: SelectedTabIndex={vm.SelectedTabIndex} (esperado 1), IsLibraryCollapsed={vm.IsLibraryCollapsed} (esperado False), foco real en LibrarySearchBox={ReferenceEquals(focused, objetosViewHostN3?.FindName("LibrarySearchBox"))}");
 
             // Esc: pide elegir objeto para un slot real (IsPicking pasa a True, mismo camino
             // real que pulsar "Elegir..." en un slot) y confirma que Esc cancela de verdad.

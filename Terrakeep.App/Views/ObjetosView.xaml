@@ -1,0 +1,1686 @@
+<!-- ADR-TERRAKEEP-016/031 (27-sep-2026): DECIMOQUINTA y ULTIMA extraccion real de MainWindow.xaml
+     a un UserControl - cierra el plan completo de ADR-TERRAKEEP-016. Sub-tab elegido: OBJETOS
+     (911 lineas de encargo, MainWindow.xaml 1880-2791 reales antes de esta extraccion, el ultimo
+     sub-tab de PERSONAJE sin extraer y el mas grande/acoplado de los 8 - dejado deliberadamente
+     para el final por el propio plan original, punto 4.5, por compartir templates con
+     Exploracion/ChestInspector). Contenido movido a Terrakeep.App/Views/ObjetosView.xaml +
+     ObjetosView.xaml.cs, mismo patron Views/+sufijo View.xaml+sin DataContext propio ya fijado
+     por las 14 rondas anteriores. MainWindow.xaml queda con
+     <views:ObjetosView x:Name="ObjetosView" /> dentro del TabItem "Objetos" del TabControl interno
+     de PERSONAJE.
+
+     GREP EXHAUSTIVO REAL DE LAS 3 DEPENDENCIAS CRUZADAS CONOCIDAS (nunca fiarse del plan sin
+     comprobar - precedente ADR-028/029/030):
+       - ItemEditTemplate (MainWindow.xaml:26-250 original, 225 lineas): tras el duplicado local de
+         ChestInspector (ChestInspectorItemEditTemplate, ADR-028), el UNICO consumidor real que
+         quedaba de la definicion ORIGINAL era Objetos (linea ~2473 original) - confirmado por grep
+         exhaustivo (StaticResource ItemEditTemplate: 1 sola coincidencia real en todo
+         MainWindow.xaml). Se MUEVE ENTERO (mismo x:Key, sin duplicar - a diferencia de
+         ChestInspector, aqui no hace falta convivir con ningun otro consumidor).
+       - ContainerCompactTemplate (MainWindow.xaml:557-618 original): confirmado por grep que los 10
+         usos reales en todo el archivo viven TODOS dentro del bloque de Objetos (Equipamiento/
+         Inventario/Almacenes/Monturas/Monedas/Municion) - EXCLUSIVO, se mueve ENTERO junto con su
+         propia dependencia interna SlotCompactTemplate (MainWindow.xaml:333-543, referenciada por
+         StaticResource DENTRO del cuerpo de ContainerCompactTemplate - exclusiva tambien, cero usos
+         fuera de ese unico sitio).
+       - CategoryNodeTemplate (MainWindow.xaml:263-325 original): NO exclusiva - el propio comentario
+         original del recurso ya lo advertia ("una UNICA plantilla real sirve a los 3 arboles:
+         Libreria, Investigacion y Buffs"), confirmado por grep (3 usos reales de
+         StaticResource CategoryNodeTemplate en todo el archivo, solo 1 dentro del rango de Objetos -
+         los otros 2 en Research/Buffs, ninguno de los dos extraido todavia). La definicion ORIGINAL
+         se queda intacta en Window.Resources de MainWindow.xaml para esos dos consumidores; Objetos
+         gana su propio duplicado local (ObjetosCategoryNodeTemplate, self-reference recursiva
+         DynamicResource renombrada igual) - mismo mecanismo exacto ya validado por
+         ChestInspectorItemEditTemplate/ADR-028.
+     Hallazgo adicional no citado por el encargo original: LibraryCardTemplate
+     (MainWindow.xaml:1130-1196 original) es TAMBIEN exclusiva de Objetos (1 solo uso real en todo
+     el archivo) y se mueve entera por el mismo motivo que ContainerCompactTemplate.
+
+     BoolToVis (BooleanToVisibilityConverter, x:Key SOLO en Window.Resources de MainWindow.xaml):
+     usado 24 veces en total dentro de todo lo que se mueve esta ronda (5 en el cuerpo directo de
+     Objetos, 5 dentro de ItemEditTemplate, 13 dentro de SlotCompactTemplate/ContainerCompactTemplate,
+     1 dentro de LibraryCardTemplate) - mismo mecanismo ya validado 8 veces por la familia
+     (GuideBoolToVis/HostingBoolToVis/UnlocksBoolToVis/CompareBoolToVis/HomeBoolToVis/
+     WorldToolsBoolToVis/ChestInspectorBoolToVis/BrowseBoolToVis): UserControl.Resources LOCAL con
+     clave propia ObjetosBoolToVis (promover a Application.Resources revienta
+     MainWindow.InitializeComponent() ENTERO en runtime, tabla BAML OptimizedStaticResource
+     compartida por ensamblado, ADR-019 - no se repitio el experimento, se confio en la evidencia ya
+     documentada). BoolToGridLength/BoolToDouble (fila de la Libreria, IsLibraryVisible) y el resto
+     de converters usados (NullToVis/EmptyToCollapsed/EmptyToVisible/InverseBoolToVis/EnumEquals/
+     EnumEqualsToVis/LocFormat) confirmados por grep en App.xaml, ninguno window-scoped.
+
+     ELEMENTNAME EXHAUSTIVO (leccion CRITICA de ADR-029/030): grep del archivo COMPLETO confirmo 3
+     ElementName reales en todo MainWindow.xaml antes de esta extraccion. 1 cae DENTRO de este
+     bloque (Popup "LibraryFiltersPopup" -> PlacementTarget ElementName=LibraryFiltersButton) - origen
+     y destino viajan JUNTOS al mismo UserControl, mismo NameScope, sin ningun cruce de limite. Los
+     otros 2 (WhereIsItPopup->PersonajeMenuButton, y el ya resuelto de WorldMapView) estan en zonas
+     ajenas sin relacion con este bloque.
+
+     CODE-BEHIND (MainWindow.xaml.cs): los handlers reales exclusivos de Objetos
+     (OnItemSlotMouseDown/MouseMove/DragOver/Drop/KeyDown de SlotCompactTemplate,
+     OnLibraryCardMouseDown/MouseMove/Click+OnLibraryClickTimerTick de LibraryCardTemplate,
+     OnObjetosNavToggleClick, OnSave/Load/AppendInventorySetClick+OnSave/Load/AppendStorageSetClick+
+     SaveItemSetDialog/LoadItemSetDialog) se MOVIERON a ObjetosView.xaml.cs. OnCommitTextOnEnter (2
+     TextBox de ItemEditTemplate) se DUPLICO localmente (MainWindow.xaml.cs conserva su propia copia,
+     la sigue necesitando el TextBox de "nombre del personaje" de la cabecera global - handler
+     trivial sin estado, mismo mecanismo ya usado por ChestInspectorView/ADR-028).
+     HALLAZGO REAL nuevo (el mas relevante de code-behind de esta ronda): StartCardDrag/DragAdorner/
+     GetCursorPos (arrastre real con adorno visual, MainWindow.xaml.cs) NO se pudieron mover ni
+     duplicar sin riesgo - los usan POR IGUAL los handlers de Objetos (OnLibraryCardMouseMove/
+     OnItemSlotMouseMove, que se mueven) Y los gemelos reales de Buffs (OnBuffLibraryCardMouseMove/
+     OnBuffSlotMouseMove, que se QUEDAN en MainWindow.xaml.cs porque Buffs no se extrae esta ronda) -
+     ni exclusivo de un lado ni trivial de duplicar (30+ lineas, una clase Adorner anidada, un
+     P/Invoke). Sin dependencia real de "this"/_viewModel (helper puro de UI), se extrajo a un
+     tercer archivo nuevo compartido por ambas clases: Terrakeep.App/Controls/DragDropSupport.cs
+     (internal static, mismo assembly, visible desde MainWindow.xaml.cs Y desde
+     Terrakeep.App.Views.ObjetosView.xaml.cs sin duplicar una sola linea de logica de arrastre).
+     Ctrl+F (OnWindowKeyDown) referenciaba el campo generado LibrarySearchBox directamente - pasa a
+     ObjetosView.FocusLibrarySearchBox() (gancho publico minimo, mismo patron que
+     BrowseView.FocusWorldSearchBox()/ADR-029) cuando la pestaña interna activa es Objetos;
+     BuffLibrarySearchBox (Buffs, sin extraer) se queda igual.
+
+     x:Name reales de este bloque usados por window.FindName en 3 archivos de test (Program.cs,
+     CanarioNav123YClipCardsLibreria.cs, DiagnosticoPosicionNavToggle.cs) - pasan al patron de
+     FindName DOBLE ya usado por GUIA/ADR-021, Compare/ADR-025, WorldTools/ADR-027,
+     ChestInspector/ADR-028, Browse/ADR-029 y WorldMapView/ADR-030: window.FindName("ObjetosView")
+     seguido de objetosView.FindName("<x:Name real>"). Caso adicional de reflexion (mismo patron ya
+     visto en WorldMapView/ADR-030 con OnMinimapClick): el campo privado LibraryFiltersPopup
+     localizado por typeof(...).GetField(...) en Program.cs pasa de typeof(MainWindow) a
+     typeof(Terrakeep.App.Views.ObjetosView), leido sobre la instancia real de ObjetosView (no de
+     window).
+
+     El UserControl no fija su propio DataContext, hereda el MainViewModel real del Window -
+     EquipmentGroup/InventoryContainer/CoinsContainer/AmmoContainer/StorageGroup/Library siguen
+     resolviendo igual, todos son propiedades reales de MainViewModel. -->
+<UserControl x:Class="Terrakeep.App.Views.ObjetosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:controls="clr-namespace:Terrakeep.App.Controls"
+             xmlns:conv="clr-namespace:Terrakeep.App.Converters"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="ObjetosBoolToVis" />
+        <!-- Panel "Editar" compartido - equivalente real de app.TabEdit: sigue al slot
+             SELECCIONADO (ItemEditViewModel.Slot), no a uno fijo, para poder vivir fuera del
+             TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
+             Boveda/Loadouts por igual (pedido explicito 1-sep-2026). -->
+        <DataTemplate x:Key="ItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
+            <!-- L-d (segunda auditoria de Opus, Fable): "sin ScrollViewer de seguridad - un
+                 objeto con muchos prefijos legales (varios Metas/Groups reales a la vez, ej.
+                 un arma Picaro real de Calamity) puede desbordar la altura real del panel en
+                 una ventana baja, y el contenido de mas arriba (Índice/Cantidad/Prefijo a mano)
+                 quedaria inalcanzable - DockPanel no recorta ni scrollea solo (mismo aviso real
+                 ya documentado en el proyecto para Panel). Mismo criterio ya establecido en el
+                 resto de la app ("ScrollViewer de seguridad" - MountsContainer, Almacenes...). -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[action_edit], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+
+                <TextBlock DockPanel.Dock="Top" Text="{Binding NoPrefixMessage}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Margin="0,0,0,10"
+                           Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
+
+                <!-- Auditoria de Opus, Bloque 5 (T-5): leyenda real de los 3 codigos de color de
+                     un slot (fondo verde/punto rojo/borde morado) - antes habia que
+                     descubrirlos por prueba y error. Solo aqui, en el hueco real que deja "sin
+                     seleccion" (StaticResource nunca compite con el contenido de edicion real). -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10"
+                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="{Binding Loc[legend_title], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Border Width="14" Height="14" CornerRadius="3" Background="{StaticResource EquippedGreenBrush}" Opacity="0.5" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_equipped], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource CalamityBrush}" Margin="2,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_calamity_item], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="14" Height="14" CornerRadius="3" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding Loc[legend_selected_slot], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource ObjetosBoolToVis}}">
+                    <DockPanel Margin="0,0,0,10">
+                        <!-- La tarjeta compacta (Inventario/Almacenes, pregunta a Opus sobre el
+                             diseño 2-sep-2026) ya no tiene sitio para un boton "✕" propio -
+                             este panel, que acompaña a cualquier slot seleccionado sea cual sea
+                             el contenedor, es donde vive ahora tambien para esos casos (la
+                             tarjeta rica conserva el suyo ademas, por comodidad). -->
+                        <Button DockPanel.Dock="Right" Content="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding Slot.ClearCommand}"
+                                ToolTip="{Binding Loc[tt_empty_this_slot], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
+                        <!-- H5-06 (quinta auditoria de Opus): mismo interruptor que el menu
+                             contextual del slot, aqui tambien - el Content cambia de verdad
+                             (★ lleno/vacio) para que el propio boton diga su estado sin tener
+                             que leer un tooltip. -->
+                        <!-- OBJ-05 (oleada de Objetos, 6-sep-2026): la estrella solo se ofrece donde el
+                             .plr puede guardarla de verdad - Banco/Caja fuerte/Fragua/Mascotas/Tintes de
+                             montura NO llevan byte de favorito (Player.cs:55497-55499 del juego real
+                             escribe el banco con type+stack+prefix y nada mas), y los loadouts solo desde
+                             la version 322. Antes se ofrecia en los 4 sitios: el usuario la encendia, la
+                             veia marcada, guardaba, y al recargar habia desaparecido sin ningun aviso.
+                             Ver ItemSlotViewModel.SupportsFavorite. -->
+                        <Button DockPanel.Dock="Right" Command="{Binding Slot.ToggleFavoriteCommand}"
+                                ToolTip="{Binding Loc[tt_toggle_favorite], Mode=OneWay}" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
+                                FontSize="12" VerticalAlignment="Center"
+                                Visibility="{Binding Slot.SupportsFavorite, Converter={StaticResource ObjetosBoolToVis}}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content" Value="&#9734;" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Slot.IsFavorited}" Value="True">
+                                            <Setter Property="Content" Value="&#9733;" />
+                                            <Setter Property="Foreground" Value="{StaticResource MasterGoldBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <!-- Auditoria de Opus, D-3: color real de rareza (null = color de
+                                 texto normal, ver VanillaRarityColorCatalog). -->
+                            <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220"
+                                       Foreground="{Binding Slot.RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
+                            <TextBlock Style="{StaticResource CaptionText}">
+                                <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
+                                <Run Text="{Binding Loc[label_dot_slot], Mode=OneWay}" />
+                                <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
+                            </TextBlock>
+                            <!-- Auditoria de Opus, E-3: "un usuario que no conoce el juego no
+                                 sabe que el slot 3 es 'Accesorio 1'" - respaldado por el
+                                 original real (locClass Helmet/Shirt/Pants/Accessory $1). -->
+                            <TextBlock Text="{Binding Slot.SlotRoleLabel}" Style="{StaticResource CaptionText}"
+                                       FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
+                                       Visibility="{Binding Slot.SlotRoleLabel, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <TextBlock Text="{Binding Loc[label_index_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <!-- Auditoria de Opus (octava pasada, T-17) - BUG REAL encontrado y
+                         arreglado: con PropertyChanged, escribir "100" pasaba de verdad por
+                         Id=1 y Id=10 antes de llegar a 100 - CADA digito colocaba un objeto
+                         real (OnItemIdChanged llama a PlaceItem de inmediato), asi que escribir
+                         un id de 3 cifras colocaba 2 objetos equivocados antes del correcto.
+                         Sin UpdateSourceTrigger explicito, el TextBox usa su valor real por
+                         defecto (LostFocus) - confirma al salir del campo; OnCommitTextOnEnter
+                         (code-behind) fuerza el mismo commit real al pulsar Intro, sin tener
+                         que hacer clic fuera. -->
+                    <TextBox Text="{Binding Slot.ItemId}" Padding="6,4" Margin="0,0,0,8" KeyDown="OnCommitTextOnEnter"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <!-- Restriccion de slot (consulta a Opus, sexta pasada): el unico camino
+                         de los tres (Libreria filtrada/arrastrar y soltar/Indice a mano) donde
+                         el silencio confunde de verdad - aqui SI hace falta una linea real,
+                         nada modal. Collapsed no reserva espacio, no cambia el espaciado
+                         normal cuando no hay mensaje. -->
+                    <TextBlock Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
+                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
+
+                    <TextBlock Text="{Binding Loc[label_quantity], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,6"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <!-- Controles rapidos de stack (encargo Keep 25-sep-2026): "+10"/"+100"/"MAX"
+                         junto a la Cantidad, sin sustituir la edicion manual de arriba. Mismo
+                         lenguaje visual ya usado en los botones de Prefijo (Tag="Ghost", misma
+                         Padding/FontSize que "Quitar" un poco mas abajo) - MaxStack real de cada
+                         objeto (ItemSlotViewModel.MaxStack), nunca un tope fijo. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="{Binding Loc[action_add_ten], Mode=OneWay}" Command="{Binding Slot.AddTenToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_ten_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" FontSize="11" />
+                        <Button Content="{Binding Loc[action_add_hundred], Mode=OneWay}" Command="{Binding Slot.AddHundredToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_hundred_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                        <Button Content="{Binding Loc[action_set_max], Mode=OneWay}" Command="{Binding Slot.SetCountToMaxCommand}"
+                                ToolTip="{Binding Loc[tt_set_max_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Loc[label_prefix_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <!-- Mismo arreglo real que "Índice" de arriba (T-17) - PrefixId tambien
+                             ejecuta una accion inmediata (SetPrefix) en cada cambio. -->
+                        <TextBox Text="{Binding Slot.PrefixId}" Width="50" Padding="6,4" KeyDown="OnCommitTextOnEnter"
+                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                        <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada): el
+                             Background="Transparent" puesto a mano aqui era letra muerta - la
+                             plantilla real de Button (Theme.xaml) ignora esa propiedad, solo
+                             reacciona a Tag. ★ = accion principal (Accent); Quitar = deshacer
+                             (Ghost, ya sustituye ese Background/Foreground a mano). -->
+                        <Button Content="★" Command="{Binding ApplyBestPrefixCommand}" ToolTip="{Binding Loc[tt_apply_best_prefix], Mode=OneWay}"
+                                Tag="Accent" Padding="6,2" Margin="6,0,0,0" FontSize="12"
+                                Visibility="{Binding Slot.HasBestPrefixSuggestion, Converter={StaticResource ObjetosBoolToVis}}" />
+                        <Button Content="{Binding Loc[action_remove], Mode=OneWay}" Command="{Binding ClearPrefixCommand}" ToolTip="{Binding Loc[tt_remove_current_prefix], Mode=OneWay}"
+                                Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"
+                               Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+
+                    <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
+                               Margin="0,4,0,10" Visibility="{Binding CanHavePrefix, Converter={StaticResource ObjetosBoolToVis}}" />
+                </StackPanel>
+
+                <!-- Selector de prefijo real de 3 niveles (equivalente exacto de los botones
+                     btMeta/btGroups/btPrefix reales de app.TabEdit, ya filtrados por lo que es
+                     legal de verdad para este objeto - ver PrefixGroupCatalog/PrefixRulesCatalog). -->
+                <StackPanel Visibility="{Binding CanHavePrefix, Converter={StaticResource ObjetosBoolToVis}}">
+                    <ItemsControl ItemsSource="{Binding Metas}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Prefixes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                    <!-- Auditoria de Opus, D-6: antes una lista de 20 nombres
+                                         opacos - el efecto real ya se sabe calcular
+                                         (PrefixEffectCatalog), solo faltaba mostrarlo aqui. -->
+                                    <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
+                                            Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
+                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </DockPanel>
+            </ScrollViewer>
+        </DataTemplate>
+
+
+        <DataTemplate x:Key="ObjetosCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel>
+                <!-- Auditoria de redimensionado, R-06/H-06: HorizontalAlignment="Stretch" para que
+                     el Button ocupe todo el ancho real disponible de la columna (herencia hasta
+                     el DockPanel de dentro, ver mas abajo) - sin esto el DockPanel interior mide
+                     su propio ancho natural y el TextBlock nunca sabe cuanto sitio tiene de
+                     verdad. -->
+                <Button Command="{Binding SelectCommand}"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch"
+                        Padding="4,3" Margin="0,0,0,1"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                </DataTrigger>
+                                <!-- Modo compacto (17-sep-2026): fila mas baja para el arbol de
+                                     categorias de la Libreria (Settings.IsCompactMode, nunca
+                                     activo por defecto). -->
+                                <DataTrigger Binding="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Padding" Value="4,1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <!-- Auditoria de redimensionado, R-06/H-06: DockPanel en vez de StackPanel
+                         Horizontal. El MaxWidth="165" de abajo (arreglo real de 2-sep-2026, "hay
+                         nombres cortados") solo funcionaba para el PRIMER nivel del arbol - cada
+                         nivel de profundidad añade su propio Margin="16,0,0,0" (ver el
+                         ItemsControl recursivo mas abajo), asi que a partir del 2º nivel 165 ya
+                         no cabia en el hueco real (columna fija de 210px menos sangria menos
+                         icono) y el nombre se recortaba, hasta el 100% en el 3er nivel. Un
+                         DockPanel SI da al ultimo hijo el ancho restante REAL (a diferencia de un
+                         StackPanel horizontal, que mide con infinito), asi que TextWrapping
+                         funciona solo, a cualquier profundidad y cualquier ancho de columna - sin
+                         ninguna constante que mantener. -->
+                    <DockPanel>
+                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
+                             exactamente"): los nombres reales YA llevan su propio "(N)" cuando
+                             el propio Terrasavr lo pone (carpetas calculadas por predicado,
+                             ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
+                             Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
+                             llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </DockPanel>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
+                              ItemTemplate="{DynamicResource ObjetosCategoryNodeTemplate}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource ObjetosBoolToVis}}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Tarjeta compacta de slot (todos los contenedores reales) - pregunta a Opus sobre
+             el diseño 2-sep-2026. Reutiliza los MISMOS handlers de drag&drop que la tarjeta
+             rica (leen sender.DataContext, no dependen de la forma de la tarjeta) y el mismo
+             ItemSlotCommand/triggers reales (equipado en verde, Calamity en rojo, seleccionado
+             con el glow de acento). Sin Width/Height explicitos - los da SlotGridPanel al
+             hacer Arrange. -->
+        <DataTemplate x:Key="SlotCompactTemplate" DataType="{x:Type vm:ItemSlotViewModel}">
+            <!-- H5-14 (quinta auditoria de Opus): "ningun slot se puede alcanzar con tabulador
+                 ni flechas - un Border no es enfocable en WPF". Focusable real (el
+                 FocusVisualStyle del tema, T-H/F2, lo pinta gratis en cuanto lo recibe) +
+                 KeyDown propio (Supr vacia, Intro abre "Elegir...", F alterna favorito, Ctrl+C/
+                 Ctrl+V copian/pegan el objeto entero - ver OnItemSlotKeyDown). -->
+            <Border AllowDrop="True" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
+                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
+                    DragOver="OnItemSlotDragOver" Drop="OnItemSlotDrop" KeyDown="OnItemSlotKeyDown">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
+                </Border.InputBindings>
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                       Foreground="{Binding RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}"
+                                       Visibility="{Binding IsNotEmpty, Converter={StaticResource ObjetosBoolToVis}}" />
+                            <!-- Auditoria de Opus, E-3 -->
+                            <TextBlock Text="{Binding SlotRoleLabel}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       Visibility="{Binding SlotRoleLabel, Converter={StaticResource NullToVis}}" />
+                            <TextBlock Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
+                                <Run Text="{Binding Loc[label_prefix], Mode=OneWay}" />
+                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                            <!-- 6º/7º hueco de accesorio real (consulta a Opus, sexta pasada:
+                                 "la etiqueta de color sola es un codigo que el usuario tiene
+                                 que aprender; el tooltip lo resuelve gratis") - se ve tambien
+                                 con el slot vacio, ver ShowTooltip. -->
+                            <TextBlock Text="{Binding Loc[slot_extra_expert], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource PinkBrush}" TextWrapping="Wrap"
+                                       Visibility="{Binding IsExpertAccessorySlot, Converter={StaticResource ObjetosBoolToVis}}" />
+                            <TextBlock Text="{Binding Loc[slot_extra_master], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource MasterGoldBrush}" TextWrapping="Wrap"
+                                       Visibility="{Binding IsMasterAccessorySlot, Converter={StaticResource ObjetosBoolToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <!-- El menu contextual TAMPOCO hereda el DataContext solo (es un Popup fuera del
+                     arbol visual, igual que el ToolTip de arriba) - mismo remedio real. -->
+                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "el menú de
+                     clic derecho... sale un recuadro rectangular super pequeño que no sirve de
+                     nada"). Antes "Vaciar slot" desaparecia por completo si el slot ya estaba
+                     vacio (Visibility) - un slot vacio con un unico item real ("Aplicar mejor
+                     prefijo", tambien oculto ahi) podia acabar con el menu con 0 filas
+                     visibles. IsEnabled en vez de Visibility: la fila SIEMPRE esta, solo se
+                     apaga cuando no aplica - comunica el porque en vez de cambiar de forma. -->
+                <Border.ContextMenu>
+                    <ContextMenu DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="{Binding Loc[action_choose_item], Mode=OneWay}" Command="{Binding ChooseFromLibraryCommand}" />
+                        <MenuItem Header="{Binding Loc[action_apply_best_prefix], Mode=OneWay}" Command="{Binding ApplyBestPrefixCommand}"
+                                  Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource ObjetosBoolToVis}}" />
+                        <!-- H5-06 (quinta auditoria de Opus): el dato ya viajaba de punta a
+                             punta (PlrBodySerializer) sin ningun camino para tocarlo desde la
+                             App - IsCheckable refleja el estado real, IsEnabled=IsNotEmpty
+                             porque un slot vacio no tiene nada que favoritar. -->
+                        <!-- OBJ-05: mismo criterio que el boton del panel Editar - donde el formato real
+                             no guarda favoritos, la opcion no se ofrece (ver ItemSlotViewModel.
+                             SupportsFavorite). -->
+                        <MenuItem Header="{Binding Loc[label_favorite], Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"
+                                  IsCheckable="True" IsChecked="{Binding IsFavorited, Mode=OneWay}"
+                                  IsEnabled="{Binding IsNotEmpty}"
+                                  Visibility="{Binding SupportsFavorite, Converter={StaticResource ObjetosBoolToVis}}" />
+                        <MenuItem Header="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
+                        <Style.Triggers>
+                            <!-- El fondo de "hueco vacio" ya lo pone el estilo BASE
+                                 (ItemSlotCardCompact en Theme.xaml, pregunta a Opus sobre el
+                                 diseño 2-sep-2026 - segunda consulta). Antes había aquí
+                                 un DataTrigger de Opacity 0.35 que lavaba ese color contra el
+                                 fondo del panel (los triggers del estilo derivado se evalúan
+                                 DESPUÉS que los del base) - quitado a propósito, la opacidad ya
+                                 no debe tocar el fondo del slot vacío. -->
+                            <!-- Auditoria de Opus (octava pasada, T-4/E-1) - BUG REAL encontrado
+                                 y arreglado: aqui vivian TAMBIEN los triggers de "es de
+                                 Calamity" (borde rojo) y "esta equipado" (borde verde), y en
+                                 WPF el ULTIMO trigger activo declarado gana - un objeto de
+                                 Calamity equipado (el caso real mas comun, EquipmentGroupViewModel
+                                 construye SIEMPRE isEquipped:true) se pintaba SIEMPRE verde,
+                                 nunca rojo. Se perdia la señal central "esto es de Calamity" en
+                                 la propia pantalla de Equipamiento. Arreglo real (no un parche
+                                 de orden): el borde pasa a significar UNA sola cosa
+                                 (seleccionado, unico trigger que queda aqui) - "equipado" se
+                                 mueve al FONDO (mancha verde suave, ver el Border de relleno de
+                                 mas abajo) y "Calamity" a un punto real en la esquina (ver el
+                                 Ellipse de mas abajo) - los 3 estados se leen SIEMPRE a la vez,
+                                 ninguno tapa a otro. -->
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                                <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
+                            </DataTrigger>
+                            <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - mismo
+                                 patron real ya validado por X-c para los NPCs del mapa (resaltar
+                                 los que coinciden en vez de ocultar los que no, opacidad real,
+                                 nunca Visibility). Canal propio (Opacity del Border entero, no
+                                 compite con seleccionado/equipado/Calamity - mismo criterio real
+                                 de T-4/E-1 de arriba). -->
+                            <DataTrigger Binding="{Binding IsSearchMatch}" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <!-- Canal real de "equipado" (antes competia por el borde con Calamity/
+                         seleccionado, ver el comentario de arriba) - mancha de fondo suave,
+                         nunca tapa nada, se lee a la vez que el resto. -->
+                    <Border Background="{StaticResource EquippedGreenBrush}" Opacity="0.16" CornerRadius="4">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsEquipped}" Value="True" />
+                                            <Condition Binding="{Binding IsEmpty}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <!-- Auditoria de Opus, Bloque 3 (T-14): "el usuario no tiene ninguna
+                         confirmacion visual de que su edicion se aplico" - flash real de un
+                         instante, IsHitTestVisible=False (nunca roba el clic/arrastre real del
+                         slot) y en su propio canal independiente (Opacity de este Border
+                         suyo, no comparte trigger con seleccionado/equipado/Calamity - mismo
+                         criterio anti-conflicto del comentario de arriba, T-4/E-1). Disparado
+                         SOLO en una edicion real de usuario, ver ItemSlotViewModel.JustEdited/
+                         MainViewModel.HookSlotEditing. -->
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="4" Opacity="0" IsHitTestVisible="False">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding JustEdited}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="0.45" Duration="0:0:0.22" AutoReverse="True" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <!-- Icono fantasma real (extraido del propio juego, ver
+                         SlotGhostIconResolver.cs/scripts/extraer-iconos-fantasma-slot.js) -
+                         solo visible con el slot vacio, igual que en Terraria real
+                         (Color.White*0.35f alli; aqui retintado a TextSecondaryBrush en el
+                         propio PNG, ver el script de extraccion). -->
+                    <Image Source="{Binding GhostIconPath}" Stretch="Uniform" Margin="6" Opacity="0.35"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource ObjetosBoolToVis}}" />
+                    <!-- Margin=9,12,9,12 simetrico (no solo Derecha/Abajo): con Stretch=Uniform el icono nunca sale de la caja que le deja el margen, asi que un margen simetrico >= al tamano de los indicadores de las 4 esquinas (contador, punto Calamity, estrella de prefijo) elimina el solape por construccion en todo el rango de tamanos de ventana. Historial completo (el arreglo asimetrico insuficiente y el 5o solape encontrado por juego libre de KeepQA): ADR-TERRAKEEP-004. -->
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="9,12,9,12"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <!-- Canal real de "es de Calamity" - punto en la esquina, siempre visible,
+                         nunca tapado por el borde de seleccion ni por la mancha de equipado. -->
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource CalamityBrush}"
+                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
+                             Visibility="{Binding IsCalamity, Converter={StaticResource ObjetosBoolToVis}}"
+                             ToolTip="{Binding Loc[label_calamity_item], Mode=OneWay}" />
+                    <TextBlock Text="{Binding Count}" FontSize="9.5" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
+                               Visibility="{Binding ShowCount, Converter={StaticResource ObjetosBoolToVis}}">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Black" Direction="0" ShadowDepth="0" BlurRadius="3" Opacity="0.9" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource AccentBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0"
+                               Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource ObjetosBoolToVis}}" />
+                    <!-- H5-06 (quinta auditoria de Opus): "Favorito" se guardaba/leia de punta
+                         a punta pero no se veia en ningun sitio - esquina inferior izquierda,
+                         el UNICO canal todavia libre (superior-derecha=Calamity, inferior-
+                         derecha=Cantidad, superior-izquierda=sugerencia de prefijo, borde=
+                         seleccionado, fondo=equipado - mismo criterio anti-conflicto de T-4/E-1,
+                         cada señal en su propio sitio, ninguna tapa a otra). -->
+                    <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource MasterGoldBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,1"
+                               ToolTip="{Binding Loc[label_favorite], Mode=OneWay}"
+                               Visibility="{Binding IsFavorited, Converter={StaticResource ObjetosBoolToVis}}" />
+                    <!-- 6º/7º hueco de accesorio real (consulta a Opus, sexta pasada): una
+                         franja vertical en el borde interior izquierdo en vez del contorno (el
+                         contorno ya carga 3 significados mutuamente excluyentes - Calamity/
+                         Equipado/Seleccionado - y esto es identidad PERMANENTE del hueco, debe
+                         leerse a la vez que esos tres, no competir con ellos). Rosa para el 6º
+                         (Experto, Corazón de Demonio), oro para el 7º (Modo Maestro) - paleta
+                         propia de Terrakeep, no el arcoíris/pulso real del juego (ver el
+                         comentario de EquipmentGroupViewModel para el porque). -->
+                    <Rectangle Width="3" HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="2"
+                               Fill="{StaticResource PinkBrush}"
+                               Visibility="{Binding IsExpertAccessorySlot, Converter={StaticResource ObjetosBoolToVis}}" />
+                    <Rectangle Width="3" HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="2"
+                               Fill="{StaticResource MasterGoldBrush}"
+                               Visibility="{Binding IsMasterAccessorySlot, Converter={StaticResource ObjetosBoolToVis}}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Rejilla compacta de UN contenedor entero - pregunta a Opus sobre el diseño
+             2-sep-2026, unificada tras el feedback del usuario ("equipamiento no tiene el mismo
+             formato que inventario y el resto de las 9 pestañas"): usada ahora por los 9
+             contenedores reales (Equipamiento/Inventario/Almacenes/Monturas/Monedas), no solo
+             los de >10 slots. SlotGridPanel (Terrakeep.App/Controls) calcula un tamaño de
+             celda real entre 44 y 96px que crece/encoge con la ventana; si no cabria ni a 44px,
+             aparece scroll (nunca se sacrifica la legibilidad). Columns viene de
+             ContainerViewModel.Columns (10 por defecto, 5 para los contenedores de Equipamiento
+             - ver EquipmentGroupViewModel.AddSlotSet) para que cada uno mantenga su forma real
+             en vez de una unica fila larga. AvailableHeight se enlaza al ActualHeight del propio
+             ScrollViewer via RelativeSource AncestorType (recorrido real del arbol visual - un
+             ElementName aqui seria fragil, ver SlotGridPanel.cs). -->
+        <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <DockPanel>
+                <!-- H4-05 (cuarta auditoria de Opus, Fable): "Vaciar contenedor" no tenia
+                     confirmacion NI vuelta atras - banner temporal real (ContainerViewModel.
+                     CanUndoClear/UndoClearCommand), visible unos segundos tras vaciar. Editado
+                     UNA sola vez aqui (plantilla compartida por los 4 contenedores reales) en
+                     vez de en cada cabecera copiada - no repite la duplicacion que H4-10 ya
+                     señala en esas 4 cabeceras. -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                        Visibility="{Binding CanUndoClear, Converter={StaticResource ObjetosBoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="{Binding Loc[action_undo], Mode=OneWay}" Command="{Binding UndoClearCommand}"
+                                Tag="Accent" Padding="8,3" FontSize="10.5" />
+                        <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                    <Binding Path="Loc[status_cleared_items]" Mode="OneWay" />
+                                    <Binding Path="LastClearedCount" Mode="OneWay" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </DockPanel>
+                </Border>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- ReferenceWidth (pregunta a Opus sobre el diseño, quinta pasada -
+                                 fusion de Equipamiento con laterales): sin ancestro
+                                 SlotRowHost real (el caso de siempre, Inventario/Almacenes/
+                                 Equipamiento en solitario) este binding no encuentra nada y
+                                 ReferenceWidth se queda en su default 0 = desactivado,
+                                 comportamiento identico a como estaba. Solo tiene efecto real
+                                 dentro de la fila fusionada de Equipamiento. -->
+            <!-- Modo compacto (17-sep-2026): Gap/MinCell/MaxCell dependen de Settings.IsCompactMode
+                 ademas del valor real de ContainerViewModel (MinCell/MaxCell YA varian por
+                 contenedor - Mascota/Montura/Tinte bajan a 32/56, ver ContainerViewModel.cs) -
+                 MultiBinding real, no un numero absoluto, para respetar esa variacion. -->
+            <controls:SlotGridPanel Columns="{Binding Columns}"
+                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                                     ReferenceColumns="10"
+                                                     ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
+                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                <controls:SlotGridPanel.MinCell>
+                    <MultiBinding Converter="{x:Static conv:CompactCellSizeMultiConverter.Instance}">
+                        <Binding Path="MinCell" />
+                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                    </MultiBinding>
+                </controls:SlotGridPanel.MinCell>
+                <controls:SlotGridPanel.MaxCell>
+                    <MultiBinding Converter="{x:Static conv:CompactCellSizeMultiConverter.Instance}">
+                        <Binding Path="MaxCell" />
+                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                    </MultiBinding>
+                </controls:SlotGridPanel.MaxCell>
+            </controls:SlotGridPanel>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+            </DockPanel>
+        </DataTemplate>
+
+
+        <!-- Tarjeta de un objeto del catalogo completo en la Libreria (quinta pasada, pregunta a
+             Opus sobre el diseño: "la libreria sigue sin tener las rejillas como en
+             inventario"). Sustituye la tarjeta fija 80x86 con caption de nombre - obligatorio
+             quitar Width/Height fijos porque SlotGridPanel.ArrangeOverride hace
+             Arrange(new Rect(x,y,_cell,_cell)), un tamaño fijo se saldria de una celda pequeña
+             y se solaparia con la vecina. El nombre se quita de la tarjeta (vivia recortado en
+             silencio sin puntos suspensivos en categorias con muchos resultados) y se compone
+             solo en el tooltip, que ya lo hacia - mismo patron ya validado en
+             BuffLibraryCardTemplate. Arrastre igual que siempre (OnLibraryCardMouseDown/Move,
+             no dependen de la forma de la tarjeta). -->
+        <DataTemplate x:Key="LibraryCardTemplate" DataType="{x:Type vm:LibraryItemViewModel}">
+            <!-- H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
+                 absolutamente nada... la unica via real es arrastrar". MouseLeftButtonUp real
+                 (OnLibraryCardClick, MainWindow.xaml.cs) - clic simple coloca en el slot
+                 seleccionado en Editar, doble clic al primer hueco libre del Inventario. -->
+            <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
+                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove" MouseLeftButtonUp="OnLibraryCardClick">
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                       Foreground="{Binding RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
+                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                            <!-- H5-12: "si no hay ninguno seleccionado, la tarjeta lo dice al pasar
+                                 el raton" - pedido explicito del informe. -->
+                            <TextBlock Text="{Binding Loc[tt_library_click_place], Mode=OneWay}"
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.ItemEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVis}}" />
+                            <TextBlock Text="{Binding Loc[tt_library_no_slot_selected], Mode=OneWay}"
+                                       Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.ItemEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToCollapsed}}" />
+                            <!-- C-11 (informe de pulido final, cierra L4): "arrastrar es el UNICO
+                                 gesto que existia hasta H5-12, y no lo anuncia nada" - tercera linea
+                                 real, siempre visible (el arrastre funciona haya o no hueco elegido
+                                 en Editar), cierra la queja tal como el usuario la vivio. -->
+                            <TextBlock Text="{Binding Loc[tt_or_drag_card], Mode=OneWay}"
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <!-- Auditoria de Opus (octava pasada, L-6) - BUG REAL encontrado y
+                                 arreglado: el hover ponia TAMBIEN el borde en acento, declarado
+                                 ANTES que el DataTrigger de Calamity - sobre una tarjeta de
+                                 Calamity, el borde de hover nunca se veia (gana el rojo,
+                                 declarado despues). El hover ya se lee de sobra solo con el
+                                 fondo (mismo criterio que BuffLibraryCardTemplate, que nunca
+                                 tuvo este bug); el borde queda libre para significar solo
+                                 "es de Calamity", visible siempre. -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <!-- Auditoria de Opus, T-10: suelo real de legibilidad - 8px era mas pequeño
+                         que cualquier otro texto real de la app (el resto usa 9px o mas para
+                         palabras reales), aqui subido a 9. -->
+                    <Button Content="{Binding Loc[action_place], Mode=OneWay}" Tag="Accent" FontSize="9" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"
+                            Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ObjetosBoolToVis}}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
+                        <!-- Layout real de Terrasavr (pedido explicito 1-sep-2026): el inventario/equipo
+                             arriba, la Libreria (arbol + buscador) siempre visible debajo, a la derecha
+                             del arbol - nunca una pestaña aparte a la que hay que ir, para que arrastrar
+                             una tarjeta de la Libreria hasta un slot visible sea posible de verdad. -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <!-- Las 2 filas compiten de verdad por el alto ("*" ambas cuando la Libreria esta desplegada): Objetos con MinHeight=216 (suelo real, 5 filas de Inventario) y Libreria con Height/MinHeight ligados a IsLibraryVisible (colapsada = Auto/0, desplegada = 2*/200) para que plegarla devuelva espacio de verdad. Limitacion conocida y aceptada: a 1080x700 con Libreria desplegada la 5a fila de Inventario ya no cabe entera sin el ScrollViewer de seguridad (accesible igualmente). Historial completo: ADR-TERRAKEEP-003. -->
+                                <RowDefinition Height="3*" MinHeight="216" />
+                                <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
+                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
+                                               MaxHeight="{Binding LibraryRowMaxHeight}" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
+                                 de app.TabInventory.initSide: sideCtr con las pestañas Edit/Library reales -
+                                 aqui Library ya vive fijo abajo, ver Grid.Row=1, y Editar sigue al slot
+                                 SELECCIONADO sea cual sea el contenedor activo). -->
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="300" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Antes: 21 pestañas planas en una sola fila (9 contenedores + 12 de
+                                     loadout puesto/1/2/3 x armadura/vanidad/tintes) - se amontonaba
+                                     al reducir la ventana (pedido explicito 2-sep-2026). Ahora: solo 2
+                                     pestañas externas, "Equipamiento" consolida los 12 sub-contenedores
+                                     con su propio selector (equivalente real de app.TabEquips/Sb, ver
+                                     bitacora.md "Fase D"). -->
+                                <!-- H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego
+                                     oculta en Amplio deja un contenido huérfano sin pestaña activa" - esta
+                                     pestaña interna (Equipamiento=0/Inventario=1/Almacenes=2) no tenia
+                                     SelectedIndex enlazado - MainViewModel.OnSizeClassChanged mueve la
+                                     seleccion a Inventario si Almacenes (ahora oculta) era la activa. -->
+                                <!-- T3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" -
+                                     bitacora.md 20-sep-2026): reabierto por instruccion explicita del
+                                     coordinador/usuario tras documentarlo como LIMITE-por-riesgo-historico (no
+                                     tecnico real) - "8 rondas de arreglo real en esta zona" seguia siendo un
+                                     motivo generico de cautela, no evidencia de que fusionar las 3 pestañas sea
+                                     imposible. PASO 1 (estructural, cambio pequeño y verificado antes de seguir,
+                                     mismo ciclo real de la zona): TabControl (3 pestañas EXCLUYENTES, una
+                                     medida/pintada a la vez con SelectedIndex) -> Grid+ScrollViewer con las 3
+                                     secciones SEGUIDAS en un StackPanel - tablero de scroll continuo real, no
+                                     una simulacion. Contenido INTERNO de cada seccion sin tocar ni un pixel (los
+                                     Border/Grid/SlotRowHost ya calibrados en las 8 rondas siguen exactamente
+                                     igual) - solo cambia el CONTENEDOR exterior que las alojaba. -->
+                                <!-- NAV123 (25-sep-2026, aplicador-fix, TASK CONTEXT
+                                     e5eaea9e-c261-4199-8e7d-060b6054f58d): T3 PASO 2 (barra pegajosa + scroll
+                                     continuo, comentario historico de arriba) REABIERTO y sustituido - el
+                                     usuario exigio PAGINAS REALES, no un offset que ScrollViewer puede clampar
+                                     (bug real "toggle 3 desincronizado" con Almacenes con pocos objetos, ver
+                                     bitacora.md). ObjetosPageHost es un Grid de una sola celda con 3
+                                     ScrollViewer SUPERPUESTOS (uno por seccion, cada uno con su propio scroll
+                                     interno - Inventario y Almacenes lo necesitan igual que Equipamiento, ver
+                                     H3-18 mas arriba) cuya Visibility depende en EXCLUSIVA de
+                                     MainViewModel.ObjetosSubTabIndex via EnumEqualsToVis (converter ya
+                                     existente, mismo patron que ExplorationSidebarBrowseInspectorHost) -
+                                     exactamente 1 de las 3 paginas Visible en todo momento, cero estados
+                                     intermedios alcanzables (ni por scroll libre: cada pagina solo desplaza su
+                                     propio contenido, nunca "empuja" a la siguiente seccion). -->
+                                <!-- NAV123 centrado real (26-sep-2026, patron de 2 fases - investigador-bug
+                                     confirmo con DiagnosticoPosicionNavToggle.cs que el centro del RadioButton
+                                     "1" caia 7px por debajo del centro real del titulo "Equipamiento": el
+                                     margen superior fijo de ObjetosNavToggle (era Margin="0,4,4,0") mas la
+                                     diferencia de alto entre ViewSelector (Padding 10,4 -> ~24,6px) y
+                                     SectionText (~18,6px) no se compensaban entre si. IsSharedSizeScope+
+                                     SharedSizeGroup="ObjetosHeaderRow" (abajo, titulo de cada pagina y
+                                     ObjetosNavToggle) sincroniza el alto real de ambas filas SIN ningun numero
+                                     magico - si SectionText o ViewSelector cambian de tamaño en el futuro el
+                                     centrado sigue siendo exacto, mismo principio ya aplicado hoy a la
+                                     geometria de Chester (preferir centrado declarativo real sobre un offset
+                                     ajustado a ojo). -->
+                                <Grid Grid.Column="0" Margin="0,0,10,0" Grid.IsSharedSizeScope="True">
+                                <Grid x:Name="ObjetosPageHost">
+                                <ScrollViewer x:Name="ObjetosPaginaEquipamiento" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=0}">
+                                    <Border x:Name="ObjetosSeccionEquipamiento">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
+                                             sobre el diseño, quinta pasada: "yo juntaría la página de
+                                             munición mascotas gancho... y dinero en equipamiento en una
+                                             sola ventana pero a los lados... mascotas etc mejor en
+                                             vertical"). UN solo marco naranja para todo el bloque (3
+                                             marcos compitiendo en ~672px seria el mismo amontonamiento
+                                             que ya se resolvio en la tercera pasada) - los laterales se
+                                             distinguen "hundiendose" (BgPrimaryBrush, mismo idioma que
+                                             el arbol de la Libreria y los huecos vacios de
+                                             ItemSlotCardCompact) en vez de con su propio contorno.
+                                             SlotRowHost (no un Grid a secas) para que ReferenceWidth de
+                                             los 3 SlotGridPanel de esta fila se enlace de forma fiable
+                                             (ver SlotGridPanel.cs) contra el ancho de TODA la fila
+                                             fusionada, no el de cada columna estrecha por separado -
+                                             sin esto los 3 colapsarian a MinCell=44, mas pequeños que
+                                             Inventario, el problema inverso de la cuarta pasada. -->
+                                        <!-- AR-LAY (14-sep-2026): a 1080x700 [es] la cabecera Loadout/Vista/Defensa/
+                                             bono (fila 0, "Auto" - ver el RowDefinitions de SlotRowHost mas abajo)
+                                             mide 82,2px de verdad con la app en español (textos mas largos que en
+                                             ingles) y eso, sumado al suelo real de la rejilla de Armadura/Accesorios
+                                             (fila "*" MinHeight=84, ver comentario de esa fila), pide 166,2px -
+                                             8,1px mas de los 158,1px que este Border le estaba dejando de verdad a
+                                             SlotRowHost (ClipToBounds="True": ese sobrante se recortaba en
+                                             silencio, detectado por el barrido AR-LAY del arnes real, cero pixeles
+                                             a ojo). Padding vertical 10->6 y Margin superior 6->2 recuperan 12px
+                                             sin tocar el ancho (las columnas siguen midiendo igual) ni ninguno de
+                                             los MinHeight/MaxHeight ya afinados en pasadas anteriores (AR-14/AR-14c/
+                                             AR-14d) - simplemente le deja a SlotRowHost el sitio que de verdad
+                                             necesita. Verificado con el propio AR-LAY tras el cambio: 0 elementos
+                                             perdidos en las 416 combinaciones. -->
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,6" Margin="0,2,0,0">
+                                            <!-- Columna central "*" con MinWidth=216 (5 slots MinCell=40 + gaps, el minimo real de SlotGridPanel cuando no le cabe mas): red de seguridad para que WPF recorte antes las columnas Auto de los laterales que el MinWidth de esta estrella, nunca al reves. Laterales van a Auto+MinWidth propio (su contenido ya se autolimita). Historial completo (por que "2*/5*/4*" no bastaba, el bug real de solape AR-14): ADR-TERRAKEEP-007. -->
+                                            <!-- ScrollViewer envuelve el SlotRowHost ENTERO (nunca dentro de una fila suya): mide con alto infinito y le da su DesiredSize real completo, y es el propio ScrollViewer (viewport mas pequeno que ese contenido cuando el Border ancestro no tiene sitio) el que ofrece scroll vertical real - antes el recorte lo hacia ClipToBounds del ANCESTRO, invisible al ScrollViewer interno de una fila. Horizontal Disabled: el ancho de columnas no cambia. Historial completo (caso real Social/Dyes + Libreria desplegada): ADR-TERRAKEEP-011. -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                              <controls:SlotRowHost ClipToBounds="True">
+                                                  <Grid.ColumnDefinitions>
+                                                      <ColumnDefinition Width="Auto" MinWidth="140" />
+                                                      <ColumnDefinition Width="*" MinWidth="216" />
+                                                      <ColumnDefinition Width="Auto" MinWidth="200" />
+                                                  </Grid.ColumnDefinitions>
+                                                  <Grid.RowDefinitions>
+                                                      <RowDefinition Height="Auto" />
+                                                      <!-- MinHeight=84 (13-sep-2026, auditoria de solapes/cajas: AR-14d real, no solo
+                                                           "limite conocido"): 2 filas de MinCell 40 + Gap 4, el suelo real de la
+                                                           rejilla de Armadura/Accesorios (5 columnas x 2 filas, EquipmentGroup.
+                                                           AddSlotSet). Sin esto, cuando la fila 0 crece (conjunto con bono real
+                                                           activo, ver el ScrollViewer de la fila 0 mas abajo) la fila "*" cede
+                                                           TODO lo que la 0 le pida y la rejilla se corta por abajo sin ningun
+                                                           scroll vertical que la alcance de verdad para el usuario a primera
+                                                           vista (medido: 5 slots, 32,6px cortados a 1080x700 con bono activo,
+                                                           detectado por AR-14d del arnes real, no a ojo). -->
+                                                      <RowDefinition Height="*" MinHeight="84" />
+                                                  </Grid.RowDefinitions>
+
+                                                  <!-- Lateral izquierdo: Mascota/Montura/Gancho + Tinte, en
+                                                       vertical (Columns=1, ver MainViewModel.AddContainer).
+                                                       RowSpan=2 para aprovechar tambien la franja del
+                                                       selector Loadout/Vista (que no la necesita, es solo
+                                                       texto+pildoras) - propio ScrollViewer de seguridad:
+                                                       10 slots reales en 1 columna no siempre caben sin
+                                                       scroll en ventanas pequeñas, y NO sacrificar
+                                                       legibilidad (MinCell=44) es mas importante que nunca
+                                                       scrollear aqui. -->
+                                                  <Border x:Name="CajaMascotasTintes" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
+                                                          CornerRadius="8" Padding="6" Margin="0,0,8,0">
+                                                      <!-- Mascota/Montura y Tinte UNO AL LADO DEL OTRO, no apilados
+                                                           (consulta a Opus, septima pasada, corregido con medicion
+                                                           real tras implementar su recomendacion original): apilados
+                                                           verticalmente son 2 rejillas de 5 filas = 10 filas reales
+                                                           que compartir en la misma columna - medido con el arnes de
+                                                           UI Automation, a la altura minima real de la ventana
+                                                           necesitan ~412px y solo hay ~278px, un desfase real de
+                                                           ~134px que NINGUN ajuste de MinCell/MaxCell puede cerrar
+                                                           sin bajar de 30px (el suelo real de "mancha de color" de
+                                                           Opus) - hay mas ancho de sobra que alto en este lateral
+                                                           (confirmado, Auto ya no tiene techo que perseguir gracias
+                                                           al MaxCell propio de arriba), asi que la solucion real es
+                                                           usar ESE ancho: en horizontal, cada rejilla solo necesita
+                                                           5 filas de alto, no 10 - el ScrollViewer de seguridad se
+                                                           queda (para ventanas aun mas pequeñas que esta), solo
+                                                           VERTICAL - HorizontalScrollBarVisibility="Disabled" sigue
+                                                           siendo correcto, la columna Auto ya crece si hace falta. -->
+                                                      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                          <StackPanel Orientation="Horizontal">
+                                                              <StackPanel Margin="0,0,10,0">
+                                                                  <!-- TextWrapping="Wrap" + MaxWidth (consulta a Opus,
+                                                                       septima pasada): un TextBlock sin envolver
+                                                                       RECORTA en seco cuando la columna es mas
+                                                                       estrecha que el texto ("Mascota /" sin
+                                                                       "Montura", capturado real a la resolucion
+                                                                       minima) - el MaxWidth es real, no decorativo:
+                                                                       esta columna es "Auto" y WPF mide sus hijos con
+                                                                       ancho INFINITO en la primera pasada, asi que sin
+                                                                       este tope el texto sin envolver (~100px) seria
+                                                                       mas ancho que la propia rejilla de iconos y
+                                                                       terminaria fijando el ancho real de la columna
+                                                                       entera. -->
+                                                                  <TextBlock Text="{Binding Loc[char_pet_mount_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                                  <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                              </StackPanel>
+                                                              <StackPanel>
+                                                                  <TextBlock Text="{Binding Loc[char_dye_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                                  <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                              </StackPanel>
+                                                          </StackPanel>
+                                                      </ScrollViewer>
+                                                  </Border>
+
+                                                  <!-- Selector Loadout/Vista, SOLO sobre la columna central -
+                                                       DataContext local a EquipmentGroup, sin heredarlo al
+                                                       resto de la fila fusionada (los laterales necesitan
+                                                       el MainViewModel directamente).
+                                                       AR-14c (6-sep-2026): antes llevaba ColumnSpan="2" y se
+                                                       estiraba tambien por encima de Monedas/Municion, que era
+                                                       justo lo que impedia a esa caja usar el alto de esta
+                                                       franja (ver el comentario de la propia caja mas abajo).
+                                                       Quitarlo no le quita nada al selector: medido a 1080x700,
+                                                       la fila 0 sigue midiendo 82,2px exactos con 241px de
+                                                       ancho en vez de 449 - ya envolvia igual, el ancho de mas
+                                                       no lo estaba usando nadie. -->
+                                                  <!-- ScrollViewer + MaxHeight=112 (13-sep-2026, auditoria de solapes/cajas):
+                                                       esta cabecera (Loadout + Vista + Defensa total + bono de set, las dos
+                                                       ultimas de la auditoria E-4) es Grid.Row="0"="Auto", y un "Auto" se
+                                                       lleva TODO lo que pida antes de que la fila "*" de abajo (la rejilla de
+                                                       Armadura/Accesorios) vea un solo pixel. Con un conjunto real que
+                                                       concede bono (ActiveSetBonusText visible, caso normal de juego, no un
+                                                       borde raro) esta cabecera pasa de 2 a 4 lineas y crece lo suficiente
+                                                       para que la rejilla de abajo se quede corta y pida scroll para ver su
+                                                       segunda fila - AR-14d del arnes real lo cazo con 32,6px cortados a
+                                                       1080x700. 112px cubre las 4 lineas sin bono largo (caso normal, sin
+                                                       scroll) y dan margen para que la fila "*" (MinHeight=84, ver arriba)
+                                                       siempre reciba su suelo real; solo un bono de set con texto MUY largo
+                                                       (varias lineas envueltas) llegaria a necesitar scroll aqui, y es
+                                                       preferible perder de vista un texto informativo unos pixeles que
+                                                       media rejilla de slots reales. -->
+                                                  <ScrollViewer Grid.Column="1" Grid.Row="0" Margin="0,0,0,6" MaxHeight="112"
+                                                                VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                  <StackPanel DataContext="{Binding EquipmentGroup}">
+                                                      <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                          <TextBlock Text="{Binding Loc[char_loadout_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                          <ItemsControl ItemsSource="{Binding LoadoutOptions}">
+                                                              <ItemsControl.ItemsPanel>
+                                                                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                              </ItemsControl.ItemsPanel>
+                                                              <ItemsControl.ItemTemplate>
+                                                                  <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                      <!-- DisplayLabel (no Label): marca con un punto el conjunto
+                                                                           que el personaje llevaba PUESTO al guardar. Antes esa
+                                                                           informacion la daba una 4ª pildora "Puesto" que no existe
+                                                                           en el juego real - ver EquipmentGroupViewModel. -->
+                                                                      <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                              ToolTip="{Binding ToolTipText}"
+                                                                              Command="{Binding DataContext.EquipmentGroup.SelectLoadoutCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                              CommandParameter="{Binding}" />
+                                                                  </DataTemplate>
+                                                              </ItemsControl.ItemTemplate>
+                                                          </ItemsControl>
+                                                      </StackPanel>
+                                                      <!-- Auditoria de Opus, E-2: con sitio real para las 3 vistas a
+                                                           la vez (SizeClass.Amplio) no hay nada que "elegir" -
+                                                           este selector solo tiene sentido cuando hay que
+                                                           turnarse un unico hueco entre las 3. -->
+                                                      <StackPanel Orientation="Horizontal"
+                                                                  Visibility="{Binding DataContext.IsEquipmentExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
+                                                          <TextBlock Text="{Binding Loc[char_view_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                          <ItemsControl ItemsSource="{Binding KindOptions}">
+                                                              <ItemsControl.ItemsPanel>
+                                                                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                              </ItemsControl.ItemsPanel>
+                                                              <ItemsControl.ItemTemplate>
+                                                                  <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                      <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                                                              Command="{Binding DataContext.EquipmentGroup.SelectKindCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                              CommandParameter="{Binding}" />
+                                                                  </DataTemplate>
+                                                              </ItemsControl.ItemTemplate>
+                                                          </ItemsControl>
+                                                      </StackPanel>
+                                                      <!-- Auditoria de Opus, E-4: "el dato ya esta, solo falta
+                                                           enseñarlo" - defensa real sumada de este loadout
+                                                           (Armadura+Accesorios) y el bono de set REALMENTE
+                                                           activo (VanillaArmorSetCatalog.BonusForEquipped, ya
+                                                           existia sin usar), en vez del hipotetico del tooltip. -->
+                                                      <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
+                                                          <Run Text="{Binding Loc[char_total_defense], Mode=OneWay}" />
+                                                          <Run Text="{Binding TotalDefense, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                      </TextBlock>
+                                                      <TextBlock Text="{Binding ActiveSetBonusText}" Style="{StaticResource CaptionText}"
+                                                                 Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                                 Visibility="{Binding ActiveSetBonusText, Converter={StaticResource NullToVis}}" />
+                                                  </StackPanel>
+                                                  </ScrollViewer>
+
+                                                  <!-- ScrollViewer propio en el centro (mismo patron que el lateral Mascotas/Tintes): la fila "*" MinHeight=84 de este SlotRowHost se queda hambrienta cuando la Libreria esta desplegada a la vez (147,4px reales en vez de 190,1px), y sin scroll perdia 18,9px de Armadura/Accesorios por abajo. Nunca perder contenido de verdad: un scroll vertical silencioso es preferible a un recorte sin salida. Historial completo (medicion real del barrido AR-LAY): ADR-TERRAKEEP-015. -->
+                                                  <ScrollViewer Grid.Column="1" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                                Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}">
+                                                      <ContentControl Content="{Binding EquipmentGroup.Current}"
+                                                                      ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                  </ScrollViewer>
+
+                                                  <!-- Auditoria de Opus, E-2: "las 3 vistas se podrian ver a la
+                                                       vez con sitio real" - en SizeClass.Amplio, Armadura/
+                                                       Vanidad/Tintes del loadout actual, lado a lado, cada una
+                                                       con su propia etiqueta (sin pildoras que elegir, ver el
+                                                       StackPanel de arriba). Mismo ContainerCompactTemplate de
+                                                       siempre - ninguna plantilla nueva, solo mas sitio para
+                                                       mostrar lo mismo de golpe (P3). -->
+                                                  <Grid Grid.Column="1" Grid.Row="1"
+                                                        Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource ObjetosBoolToVis}}">
+                                                      <Grid.ColumnDefinitions>
+                                                          <ColumnDefinition Width="*" />
+                                                          <ColumnDefinition Width="*" />
+                                                          <ColumnDefinition Width="*" />
+                                                      </Grid.ColumnDefinitions>
+                                                      <!-- E-b (segunda auditoria de Opus, Fable): "la etiqueta de
+                                                           cada columna usa el DisplayName largo pensado para el
+                                                           panel Editar, repitiendo 'Equipo puesto -' tres veces -
+                                                           ya existen literalmente en KindOptions, solo hay que
+                                                           reutilizarlos" - EquipmentKind.Items=0/Social=1/Dyes=2,
+                                                           mismo orden real que KindOptions ya declara. -->
+                                                      <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[0].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                      </StackPanel>
+                                                      <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[1].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                      </StackPanel>
+                                                      <StackPanel Grid.Column="2">
+                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[2].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                      </StackPanel>
+                                                  </Grid>
+
+                                                  <!-- Grid.RowSpan=2: esta caja ocupa las 2 filas de su columna (igual que el lateral izquierdo) para aprovechar el alto de la franja del selector Loadout/Vista que no necesita - el corte real que arreglaba era de ALTO a 1080x700, no de ancho, por eso ScrollViewer propio/MaxWidth/apilar debajo (probados y descartados) empeoraban otras columnas. Historial completo con los 3 intentos descartados y medidas reales: ADR-TERRAKEEP-005. -->
+                                                  <Border x:Name="CajaMonedasMunicion" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
+                                                          CornerRadius="8" Padding="6" Margin="8,0,0,0">
+                                                      <!-- VerticalAlignment="Top" (13-sep-2026, auditoria de solapes/cajas): sin
+                                                           esto el StackPanel se ESTIRA (Stretch, el valor por defecto) a rellenar
+                                                           TODO el alto que el RowSpan="2" de arriba le da al Border, y el
+                                                           SlotGridPanel de Monedas/Municion recalcula su reparto de columnas
+                                                           contra ESE alto estirado (AvailableHeight, ver ContainerCompactTemplate) -
+                                                           asi que cuando la fila 1 crece por el MinHeight=84 de la rejilla de
+                                                           Armadura/Accesorios (ver el comentario de las RowDefinitions de este
+                                                           mismo SlotRowHost), este bloque, que NO necesitaba nada de ese alto de
+                                                           mas, se recalculaba a un reparto que dejaba 1,9px cortados sin scroll
+                                                           (AR-14c real). Con Top el StackPanel se queda en su alto natural
+                                                           (182,1px medidos) pase lo que pase con el resto de la fila - mismo
+                                                           Border de fondo, mismo tamaño, solo un poco de aire debajo en vez de
+                                                           un recalculo que no hacia falta. -->
+                                                      <StackPanel x:Name="PilaMonedasMunicion" VerticalAlignment="Top">
+                                                          <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                          <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                          <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />
+                                                          <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                      </StackPanel>
+                                                  </Border>
+                                              </controls:SlotRowHost>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </StackPanel>
+                                    </Border>
+                                </ScrollViewer>
+                                <!-- Antes: 9 pestañas planas aqui dentro, luego 5 (pregunta a Opus
+                                     sobre el diseño, 2-sep-2026 y quinta pasada) - Monturas/Monedas
+                                     se fusionaron dentro de Equipamiento (arriba) como laterales,
+                                     asi que solo quedan Inventario/Almacenes aqui. Los 9
+                                     ContainerViewModel siguen siendo los MISMOS de siempre
+                                     (MainViewModel.Containers) - riesgo cero para guardar/cargar,
+                                     ver StorageGroupViewModel.cs. -->
+                                <!-- T3 PASO 1: seccion Inventario - se retira el bloque de dos columnas
+                                     "Inventario + Almacen seleccionado" (IsStorageExpanded=True, vivia aqui
+                                     duplicando la cabecera y los 3 botones de conjunto) porque Almacenes YA
+                                     tiene su propia pagina propia (NAV123) - ya no hace falta fusionarlo aqui
+                                     para verlo "a la vez". Border SIN Visibility condicionada propia (la
+                                     Visibility real de la pagina completa vive en el ScrollViewer que la
+                                     envuelve, ver arriba). -->
+                                <ScrollViewer x:Name="ObjetosPaginaInventario" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=1}">
+                                    <!-- NAV123 centrado real (26-sep-2026): Margin="0,14,0,0" retirado - no
+                                         tenia ninguna justificacion documentada y era distinto del Margin de
+                                         ObjetosSeccionEquipamiento (sin margen), lo que desplazaba el titulo de
+                                         esta pagina 14px por debajo del StackPanel flotante ObjetosNavToggle
+                                         (fijo, no se mueve entre paginas). Unificado a sin margen, igual que
+                                         Equipamiento/Almacenes - ver comentario completo en el Grid de mas
+                                         arriba (SharedSizeGroup="ObjetosHeaderRow"). -->
+                                    <Border x:Name="ObjetosSeccionInventario">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
+                                                 igual de util y no existe en ningun sitio" - la vista Amplia (mas
+                                                 abajo) ya tenia esta cabecera, la normal/compacta no tenia
+                                                 ninguna. -->
+                                            <DockPanel>
+                                                <!-- A-d (segunda auditoria de Opus, Fable): "operaciones en bloque -
+                                                     ordenar, vaciar contenedor, mover todo al banco" - ver los 3
+                                                     comandos reales en ContainerViewModel/MainViewModel. -->
+                                                <!-- AR-LAY (6-sep-2026): Grid con MinWidth, no DockPanel. R-01/H-08 (abajo)
+                                                     cambio el StackPanel de botones por un WrapPanel para que pudiera
+                                                     partirse en dos filas, pero dejo el reparto en manos de un DockPanel
+                                                     - y un DockPanel sirve a su hijo Dock PRIMERO y con su DesiredSize
+                                                     ENTERO: el WrapPanel decide cuantas filas necesita ANTES de que el
+                                                     titulo pida nada, y solo despues le deja el resto. Eso abre una
+                                                     franja intermedia de anchos en la que los 6 botones caben JUSTO en
+                                                     una fila y se llevan la anchura entera. Medido px a px entre 1500 y
+                                                     1620: falla en 20 anchos, y a 1545x860 el titulo se queda en 0,3px
+                                                     visibles de los 8,8 que pide, o sea desaparece del todo. Es el mismo
+                                                     mecanismo (franja estrecha e invisible en el minimo y en maximizada)
+                                                     que AR-14 con los accesorios, y se arregla igual: una columna con
+                                                     MinWidth propio para el titulo y una Auto para los botones, que es
+                                                     la unica forma de que sea el WRAPPANEL quien ceda y envuelva.
+                                                     El reparto tiene que ser titulo=Auto y botones=*, NO al reves: una
+                                                     columna Auto se queda con su DesiredSize entero aunque no quepa (el
+                                                     Grid solo recorta a las estrella), asi que con los botones en Auto
+                                                     el problema se movia, no se arreglaba - medido: el Grid pedia 607px
+                                                     dentro de 581 y se cortaba "Vaciar contenedor". Con el titulo en
+                                                     Auto (su ancho natural, ~90px, nunca se recorta) y el WrapPanel en
+                                                     la estrella, el WrapPanel recibe el resto REAL y envuelve solo. -->
+                                                <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- Auditoria de redimensionado, R-01/H-08: WrapPanel en vez de
+                                                         StackPanel - a 1080px de ancho, 6 botones en una sola fila
+                                                         recortaban el titulo "Inventario (N/M)" que viene detras
+                                                         (DockPanel corta el ultimo hijo cuando no le queda sitio). Con
+                                                         WrapPanel los botones pasan a 2 filas si hace falta, el titulo
+                                                         nunca se pierde. -->
+                                                    <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                        <!-- H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de
+                                                             objetos, funcion de primera clase en el Terrasavr original" -
+                                                             el dialogo real de fichero vive en la View (MainViewModel es
+                                                             headless), ver OnSaveInventorySetClick/OnLoadInventorySetClick/
+                                                             OnAppendInventorySetClick. -->
+                                                        <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveInventorySetClick"
+                                                                ToolTip="{Binding Loc[tt_save_inventory_json], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_load_ellipsis], Mode=OneWay}" Click="OnLoadInventorySetClick"
+                                                                ToolTip="{Binding Loc[tt_load_inventory_replace], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_add_ellipsis], Mode=OneWay}" Click="OnAppendInventorySetClick"
+                                                                ToolTip="{Binding Loc[tt_add_inventory_fill], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_move_all_to_storage], Mode=OneWay}" Command="{Binding MoveInventoryToStorageCommand}"
+                                                                ToolTip="{Binding Loc[tt_move_all_storage_tab], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_sort], Mode=OneWay}" Command="{Binding InventoryContainer.SortCommand}"
+                                                                ToolTip="{Binding Loc[tt_sort_by_id], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding InventoryContainer.ClearAllCommand}"
+                                                                ToolTip="{Binding Loc[tt_empty_inventory], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                    </WrapPanel>
+                                                    <!-- Auditoria de redimensionado, AR-08/H-08: el WrapPanel de R-01 ya reduce
+                                                         mucho el recorte (de ~660px de una fila sin envolver a un residual real
+                                                         de 14px a 1080px, medido - el hueco restante entre los 6 botones ya en 2
+                                                         filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
+                                                         ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
+                                                         parche previsto explicitamente en el propio informe para este residual. -->
+                                                    <TextBlock Grid.Column="0" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                                </Grid>
+                                                <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                            </DockPanel>
+                                        </Border>
+
+                                        <!-- T3 PASO 1: el bloque real "Inventario + Almacen seleccionado lado a
+                                             lado" (Auditoria de Opus, A-4, IsStorageExpanded) se retira aqui -
+                                             Almacenes ya tiene su propia seccion permanente en este mismo scroll
+                                             (justo debajo), asi que fusionarlo A LA FUERZA dentro de Inventario
+                                             para "verlo a la vez" ya no aporta nada que el tablero no de gratis.
+                                             CODIGO REAL RETIRADO (nunca comentado a medias - el bloque completo,
+                                             ~117 lineas, vivia aqui: Grid de 2 columnas con una copia MANUAL de
+                                             la cabecera+botones de Inventario a la izquierda y el selector de
+                                             Almacen a la derecha, historial real: A-4 lo creo, R-01/H-01 tuvo que
+                                             restaurarle 3 botones que se habian quedado fuera en la copia manual -
+                                             ver el commit real de esta pieza para el texto integro si hiciera
+                                             falta recuperarlo). -->
+                                    </StackPanel>
+                                    </Border>
+                                </ScrollViewer>
+                                <!-- T3 PASO 1: seccion Almacenes - antes vivia como pestaña propia SOLO en
+                                     Compacto/Normal (se ocultaba entera en Amplio, donde el bloque de dos
+                                     columnas ahora retirado la duplicaba dentro de Inventario). Con NAV123
+                                     esta es su propia pagina permanente, siempre alcanzable con el selector
+                                     3, a cualquier tamaño de ventana. -->
+                                <ScrollViewer x:Name="ObjetosPaginaAlmacenes" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=2}">
+                                    <!-- NAV123 centrado real (26-sep-2026): mismo motivo que ObjetosSeccionInventario
+                                         arriba - Margin="0,14,0,0" retirado, sin margen igual que las otras 2
+                                         paginas. -->
+                                    <Border x:Name="ObjetosSeccionAlmacenes">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <DockPanel DataContext="{Binding StorageGroup}">
+                                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <!-- Auditoria de redimensionado, R-01: WrapPanel por el mismo motivo
+                                                         que la cabecera de Inventario (H-08) - 5 botones en una fila no
+                                                         debe poder recortar la fila de pildoras de almacen que va detras. -->
+                                                    <WrapPanel DockPanel.Dock="Right">
+                                                        <!-- H5-03: mismos 3 botones reales que Inventario, operando sobre
+                                                             el almacen SELECCIONADO ahora mismo (Current) - igual que
+                                                             Ordenar/Vaciar contenedor ya hacen aqui al lado. -->
+                                                        <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveStorageSetClick"
+                                                                ToolTip="{Binding Loc[tt_save_storage_json], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_load_ellipsis], Mode=OneWay}" Click="OnLoadStorageSetClick"
+                                                                ToolTip="{Binding Loc[tt_load_storage_replace], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_add_ellipsis], Mode=OneWay}" Click="OnAppendStorageSetClick"
+                                                                ToolTip="{Binding Loc[tt_add_storage_fill], Mode=OneWay}"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_sort], Mode=OneWay}" Command="{Binding Current.SortCommand}"
+                                                                ToolTip="{Binding Loc[tt_sort_by_id], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding Current.ClearAllCommand}"
+                                                                ToolTip="{Binding Loc[tt_empty_storage], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                    </WrapPanel>
+                                                    <ItemsControl ItemsSource="{Binding Options}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
+                                                                 que pulsar su pildora y contar" - DisplayLabel ya trae el
+                                                                 recuento real en vivo ("Banco (38/40)"). -->
+                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </DockPanel>
+                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                            </DockPanel>
+                                        </Border>
+                                    </StackPanel>
+                                    </Border>
+                                </ScrollViewer>
+                                </Grid>
+                                <!-- NAV123: selector directo Equipamiento/Inventario/Almacenes - reemplaza el
+                                     scroll libre + barra pegajosa (T3 PASO 2/3/4, retirados) que podia dejar el
+                                     tablero a medio camino entre dos secciones o desincronizar el indicador
+                                     cuando ScrollViewer clampaba el offset (bug real "toggle 3 desincronizado",
+                                     Almacenes con pocos objetos - ver bitacora.md). 3 pastillas numeradas
+                                     ("1"/"2"/"3", pedido explicito del usuario: "visualmente muy sencillo"),
+                                     Style ViewSelector (Theme.xaml, TargetType=ToggleButton, MISMO mecanismo
+                                     real ya usado por los selectores de "vista" de Cofres/Objetos en
+                                     Exploracion). RadioButton (deriva de ToggleButton) con GroupName para mutua
+                                     exclusion real sin logica manual. Flotante sobre ObjetosPageHost, ZIndex por
+                                     encima de las 3 paginas, SIEMPRE visible sin necesidad de scroll. Click
+                                     llama directo a MainViewModel.RequestObjetosSection (MainWindow.xaml.cs) -
+                                     que solo escribe ObjetosSubTabIndex; la Visibility de cada pagina reacciona
+                                     sola al binding, sin ningun calculo de offset/scroll de por medio. Ya no
+                                     existe sincronizacion inversa por scroll (cada pagina tiene su scroll
+                                     interno propio, nunca "avanza" a la seccion siguiente). -->
+                                <!-- NAV123 centrado real (26-sep-2026): x:Name="ObjetosNavToggle" pasa del
+                                     StackPanel al Grid que lo envuelve para conservar el mismo padre
+                                     compartido con ObjetosPageHost (Grid sin nombre de mas arriba). Este Grid
+                                     define la fila Auto con el mismo SharedSizeGroup="ObjetosHeaderRow" que el
+                                     titulo de cada pagina - su alto queda sincronizado al maximo real entre
+                                     ViewSelector y SectionText, y el StackPanel interior se centra en esa fila
+                                     con VerticalAlignment="Center" (ya no hay Margin superior fijo). -->
+                                <Grid x:Name="ObjetosNavToggle" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Margin="0,0,4,0" Panel.ZIndex="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- IsChecked ligado (TwoWay por defecto) a ObjetosSubTabIndex via EnumEquals
+                                             (mismo converter/patron ya usado por Exploration.ChestViewMode arriba en
+                                             este mismo fichero) - asi el selector refleja SIEMPRE la pagina real
+                                             incluso cuando quien la cambia no es un clic aqui (WhereIsIt/busqueda
+                                             global, via RequestObjetosSection). El Click sigue llamando a
+                                             RequestObjetosSection para no depender solo de ConvertBack. -->
+                                        <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="1" Tag="0" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
+                                                     ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
+                                        <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
+                                                     ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
+                                        <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                     Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
+                                                     IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
+                                                     ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
+                                    </StackPanel>
+                                </Grid>
+                                </Grid>
+
+                                <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
+                                    <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
+                                </Border>
+                            </Grid>
+
+                            <!-- Libreria: arbol de carpetas real (vanilla + Calamity, ver
+                                 LibraryViewModel.BuildCategoryTree) + buscador, SIEMPRE visible aqui abajo. -->
+                            <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
+                                <DockPanel>
+                                    <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño,
+                                         2-sep-2026: plegar la Libreria es la mayor ganancia de
+                                         espacio real de toda la pantalla, mas que optimizar las
+                                         pestañas) - se puede plegar/desplegar a mano, y se
+                                         auto-despliega sola al elegir "Elegir..."/"Cambiar" en
+                                         cualquier slot (MainViewModel.RequestPickForSlot), para que
+                                         nunca quede escondida justo cuando hace falta. -->
+                                    <!-- T-H/F1: Ctrl+F ya salta aqui Y despliega esta Libreria (OnWindowKeyDown) -
+                                         no se anunciaba en ningun sitio. -->
+                                    <Button DockPanel.Dock="Top" Command="{Binding ToggleLibraryCollapsedCommand}"
+                                            Style="{StaticResource BarButton}" ToolTip="{Binding Loc[tt_ctrlf_library], Mode=OneWay}"
+                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                                <TextBlock.Style>
+                                                    <!-- Ronda de Libreria/Builds del 6-sep-2026: los dos rotulos eran
+                                                         texto ESPAÑOL FIJO ("▲ Plegar"/"▼ Desplegar") desde que se
+                                                         creo la cabecera plegable - con la app en ingles se quedaban
+                                                         en español para siempre. No lo cazo A10-IDIOMA-BARRIDO
+                                                         porque su heuristica busca palabras funcionales españolas
+                                                         ("la", "de", "versión"...) y estos dos rotulos son una sola
+                                                         palabra sin ninguna. Un Binding SI vale dentro de un
+                                                         Setter.Value (se evalua contra el DataContext heredado, aqui
+                                                         MainViewModel, que ya expone Loc). -->
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
+                                                                <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Loc[library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" />
+                                        </DockPanel>
+                                    </Button>
+
+                                    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                                            Visibility="{Binding Library.IsPicking, Converter={StaticResource ObjetosBoolToVis}}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="{Binding Loc[action_cancel], Mode=OneWay}" Command="{Binding Library.CancelPickCommand}"
+                                                    Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" ToolTip="{Binding Loc[shortcut_esc], Mode=OneWay}" />
+                                            <TextBlock Text="{Binding Loc[library_pick_item_placeholder], Mode=OneWay}"
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
+                                        </DockPanel>
+                                    </Border>
+
+                                    <Grid Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="210" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
+                                                Padding="5" Margin="0,0,8,0">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Top" Content="{Binding Loc[action_view_all], Mode=OneWay}" HorizontalAlignment="Left"
+                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                        Command="{Binding Library.ClearCategoryCommand}" />
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding Library.RootCategories}"
+                                                                  ItemTemplate="{StaticResource ObjetosCategoryNodeTemplate}" />
+                                                </ScrollViewer>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <DockPanel Grid.Column="1">
+                                            <!-- H4-01 (cuarta auditoria de Opus, Fable): MaxWidth CON
+                                                 HorizontalAlignment="Left" mide al contenido (colapsaba a
+                                                 ~30px vacio, crecia letra a letra al escribir) - quitado
+                                                 Left, el DockPanel ya estira este hijo a lo ancho por
+                                                 omision (igual que el TextBlock de resumen de debajo),
+                                                 MaxWidth solo pone un techo en ventanas grandes. Marcador
+                                                 de posicion real (Grid con TextBlock superpuesto,
+                                                 IsHitTestVisible=False) para que se reconozca como
+                                                 buscador de un vistazo, sin esperar a escribir. -->
+                                            <!-- Fila de busqueda + boton "Filtros" (encargo del usuario, 13-sep-2026:
+                                                 "amplia la busqueda con filtros combinables"). DockPanel en vez de
+                                                 agrandar el Grid de abajo: el boton (ancho fijo, a la derecha) y el
+                                                 buscador (el resto, MISMO MaxWidth=360 de siempre, ver H4-01) tienen
+                                                 que repartirse el ancho, no superponerse - un Grid con columnas fijas
+                                                 hubiera exigido medir el boton a mano. -->
+                                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                                <Button x:Name="LibraryFiltersButton" DockPanel.Dock="Right" Margin="6,0,0,0" Padding="9,5" FontSize="11"
+                                                        Command="{Binding Library.ToggleFiltersOpenCommand}"
+                                                        ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                    <Setter Property="Tag" Value="AccentSoft" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                        <Setter Property="Text">
+                                                                            <Setter.Value>
+                                                                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                                                                    <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
+                                                                                    <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
+                                                                                </MultiBinding>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Button>
+                                                <Grid MaxWidth="360">
+                                                    <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                             FontSize="12"
+                                                             ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
+                                                    <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                               Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                                </Grid>
+                                            </DockPanel>
+
+                                            <!-- Popup real de filtros (mismo mecanismo que WhereIsItPopup: anclado
+                                                 al boton, StaysOpen=False lo cierra con un clic fuera). Tres grupos
+                                                 de pastillas (Rareza/Tipo de daño/Ranura de equipo) en WrapPanel -
+                                                 ver LibraryFilterChipViewModel y LibraryViewModel.ApplyFilter. -->
+                                            <Popup DockPanel.Dock="Top" x:Name="LibraryFiltersPopup" IsOpen="{Binding Library.IsFiltersOpen}"
+                                                   PlacementTarget="{Binding ElementName=LibraryFiltersButton}"
+                                                   Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                                                <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                                        BorderThickness="1" CornerRadius="8" Padding="14" Width="420" Effect="{StaticResource CardShadow}">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,0,0,8">
+                                                            <TextBlock Text="{Binding Loc[library_filter_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                                                            <Button DockPanel.Dock="Right" Content="{Binding Loc[library_filter_clear], Mode=OneWay}"
+                                                                    Command="{Binding Library.ClearFiltersCommand}" Tag="Ghost" Padding="6,2" FontSize="10.5"
+                                                                    Visibility="{Binding Library.HasActiveFilters, Converter={StaticResource ObjetosBoolToVis}}" />
+                                                        </DockPanel>
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_rarity_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,4,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.RarityChips}" Margin="0,0,0,4">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleRarityChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <Ellipse Width="8" Height="8" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                                                     Fill="{Binding SwatchBrush}"
+                                                                                     Visibility="{Binding SwatchBrush, Converter={StaticResource NullToVis}}" />
+                                                                            <TextBlock Text="{Binding Label}" />
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <TextBlock Text="{Binding Loc[library_filter_rarity_hint], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                                   FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_damage_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.DamageKindChips}" Margin="0,0,0,10">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleDamageKindChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_equip_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.EquipSlotChips}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleEquipSlotChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Popup>
+                                            <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
+                                                 para el slot seleccionado' es un texto mas, facil de pasar por
+                                                 alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
+                                                 el rol real del slot (Cabeza/Accesorio 3/Tinte...). -->
+                                            <!-- Familia "StateTagNeutral" (rediseno de badges, 25-sep-2026): el
+                                                 violeta-acento queda reservado a la familia Metrica (recuento
+                                                 real) - esto es una restriccion informativa, no una metrica. -->
+                                            <Border DockPanel.Dock="Top" Style="{StaticResource StateTagNeutral}"
+                                                    Margin="0,0,0,6" HorizontalAlignment="Left"
+                                                    Visibility="{Binding Library.SlotRestrictionLabel, Converter={StaticResource NullToVis}}">
+                                                <TextBlock Style="{StaticResource CaptionText}">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                                            <Binding Path="Loc[library_only_valid_for]" Mode="OneWay" />
+                                                            <Binding Path="Library.SlotRestrictionLabel" Mode="OneWay" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </Border>
+                                            <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
+                                                 sigue sin tener las rejillas como en inventario... no debe tener scroll a
+                                                 menos que sea una categoria que logicamente tiene muchos ítems"). Misma
+                                                 SlotGridPanel que el resto de la app - con estos parametros reales
+                                                 (medidos contra la franja real de ~772x186px) no aparece scroll hasta
+                                                 ~48 resultados (4 filas x 12 columnas a MinCell=40), y con pocos
+                                                 resultados la celda crece hasta MaxCell=96 topada por ReferenceColumns=10
+                                                 (~73px aqui) - ni vacio ni deforme. MinCell=40 en vez de 44 a proposito:
+                                                 con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
+                                                 contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
+                                                 infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
+                                            <!-- H5-13 (quinta auditoria de Opus): "el estado vacio de la Libreria...
+                                                 es un rectangulo en blanco - sin busqueda/carpeta/restriccion de
+                                                 slot, la mitad derecha del panel es superficie muerta". Mismo
+                                                 mecanismo real ya en produccion en Investigacion (H4-07 punto 3,
+                                                 ShowRootCategoryCards - subido a la base compartida por H5-15) -
+                                                 tarjetas grandes (NavCardButton) a las carpetas RAIZ reales, un
+                                                 atajo mas grande al mismo arbol de la izquierda. -->
+                                            <!-- imagen2/LIBCARD_CLIP_SOLO (24/25-sep-2026, revision-correccion-integral-
+                                                 familia-Keep): sin clearance real la fila 1 quedaba pegada a Y=0 del
+                                                 ScrollViewer, y el TranslateTransform "BdLift" de NavCardButton
+                                                 (Theme.xaml, Trigger IsMouseOver, -3px) caia fuera del area que el
+                                                 ScrollViewer recorta - 3,00px de recorte real medidos por el canario.
+                                                 IMPORTANTE: el Padding va en el CONTENIDO (este ItemsControl), NUNCA en
+                                                 el propio ScrollViewer - Padding ahi se traduce en Margin del
+                                                 ScrollContentPresenter (plantilla por defecto de WPF), que desplaza a
+                                                 la vez la CAJA que recorta Y el contenido que lleva dentro (medido:
+                                                 mismo 3px de recorte, solo trasladado en bloque, cero mejora real).
+                                                 Con el Margin en el ItemsControl la caja de recorte NO se mueve y el
+                                                 contenido si queda mas abajo dentro de ella - clearance real. Arreglo
+                                                 estructural (NO bajar el lift a 0 ni tapar con Clip/Effect). -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource ObjetosBoolToVis}}">
+                                                <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Library.RootCategories}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
+                                                            <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
+                                                                    Command="{Binding SelectCommand}" CommandParameter="{Binding}">
+                                                                <StackPanel>
+                                                                    <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - el
+                                                                         MISMO bug que CategoryNodeTemplate ya documenta arriba
+                                                                         (R-06/H-06), que se quedo sin arreglar en las tarjetas de
+                                                                         carpeta raiz. Un StackPanel horizontal mide a sus hijos con
+                                                                         ancho INFINITO, asi que el TextWrapping del nombre no se
+                                                                         aplicaba NUNCA: el texto tomaba su ancho natural y se salia
+                                                                         de la tarjeta (Width=200 fija), cortado en seco contra el
+                                                                         borde del Button y sin ningun scroll horizontal con el que
+                                                                         alcanzarlo. Medido a 1080x700: "Mascotas, Monturas,
+                                                                         Herramientas" pedia 221px en una tarjeta de 200 y perdia
+                                                                         89px. Un DockPanel SI da al ultimo hijo el ancho restante
+                                                                         real, y el Wrap funciona solo a cualquier ancho. -->
+                                                                    <DockPanel Margin="0,0,0,6">
+                                                                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
+                                                                                   VerticalAlignment="Center" />
+                                                                    </DockPanel>
+                                                                    <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
+                                                                               Style="{StaticResource CaptionText}" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                            <!-- Auditoria de Opus, L-7: x:Name muerto, sin ningun uso real en el
+                                                 codigo-behind - limpieza real, no cambio de comportamiento. -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">
+                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de
+                                                                 SlotGridPanel (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
+                                                            <controls:SlotGridPanel Columns="12"
+                                                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                                                                     ReferenceColumns="10"
+                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+</UserControl>

@@ -63,12 +63,18 @@ internal static partial class Program
             // Visibility del Border daria siempre "Visible" (su valor local nunca cambia, solo el
             // de su ScrollViewer ancestro se colapsa), un falso negativo de medicion, no un bug de
             // produccion - confirmado comparando ambos durante el desarrollo de este canario.
-            var pagEquip = window.FindName("ObjetosPaginaEquipamiento") as FrameworkElement;
-            var pagInv = window.FindName("ObjetosPaginaInventario") as FrameworkElement;
-            var pagAlm = window.FindName("ObjetosPaginaAlmacenes") as FrameworkElement;
-            var t1 = window.FindName("ObjetosNavToggle1") as RadioButton;
-            var t2 = window.FindName("ObjetosNavToggle2") as RadioButton;
-            var t3 = window.FindName("ObjetosNavToggle3") as RadioButton;
+            // ADR-TERRAKEEP-016/031 (27-sep-2026): Objetos vive ahora dentro de ObjetosView
+            // (NameScope propio) - patron de FindName DOBLE ya usado por GUIA/ADR-021,
+            // Compare/ADR-025, WorldTools/ADR-027, ChestInspector/ADR-028, Browse/ADR-029 y
+            // WorldMapView/ADR-030: window.FindName("ObjetosView") seguido de
+            // objetosView.FindName("<x:Name real>").
+            var objetosViewHost = window.FindName("ObjetosView") as FrameworkElement;
+            var pagEquip = objetosViewHost?.FindName("ObjetosPaginaEquipamiento") as FrameworkElement;
+            var pagInv = objetosViewHost?.FindName("ObjetosPaginaInventario") as FrameworkElement;
+            var pagAlm = objetosViewHost?.FindName("ObjetosPaginaAlmacenes") as FrameworkElement;
+            var t1 = objetosViewHost?.FindName("ObjetosNavToggle1") as RadioButton;
+            var t2 = objetosViewHost?.FindName("ObjetosNavToggle2") as RadioButton;
+            var t3 = objetosViewHost?.FindName("ObjetosNavToggle3") as RadioButton;
             if (pagEquip == null || pagInv == null || pagAlm == null || t1 == null || t2 == null || t3 == null)
             {
                 Console.WriteLine("FALLO: NAV123_SOLO - no se encuentran las 3 paginas/RadioButton reales del tablero de Objetos (ObjetosPagina*/ObjetosNavToggle1-3)");

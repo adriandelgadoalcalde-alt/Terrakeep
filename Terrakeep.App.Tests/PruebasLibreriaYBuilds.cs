@@ -277,11 +277,23 @@ internal static partial class Program
                 // reales de Calamity ("Colocables - Muebles de Navystone - Antiguos (N)") es el
                 // sitio natural donde esperar contenido cortado. Se mide con el recorte real
                 // acumulado de TODOS los ancestros (RectVisible), no a ojo.
-                var plantillaArbol = window.TryFindResource("CategoryNodeTemplate") as DataTemplate;
+                // ADR-TERRAKEEP-016/031 (27-sep-2026): la comprobacion original tambien exigia
+                // ReferenceEquals(ic.ItemTemplate, window.TryFindResource("CategoryNodeTemplate"))
+                // - valida mientras Objetos vivia en MainWindow.xaml y usaba DIRECTAMENTE ese
+                // recurso window-scoped. Tras la extraccion final de Objetos/ObjetosView, el arbol
+                // de Library.RootCategories usa su propio duplicado local
+                // (ObjetosCategoryNodeTemplate, UserControl.Resources de ObjetosView - mismo
+                // mecanismo ya usado por ChestInspectorItemEditTemplate/ADR-028, necesario porque
+                // Research/Buffs siguen usando la definicion ORIGINAL de CategoryNodeTemplate) -
+                // dos instancias de DataTemplate DISTINTAS a proposito, asi que la comparacion por
+                // referencia contra la plantilla vieja fallaba siempre (falso NEGATIVO, no un bug
+                // real de produccion). ItemsSource ya identifica el ItemsControl real sin
+                // ambiguedad (es la MISMA instancia de LibraryViewModel.RootCategories en toda la
+                // app) - no hace falta enganchar la comprobacion a un x:Key de recurso concreto que
+                // pueda volver a moverse/renombrarse en el futuro.
                 var arbolIC = Descendientes<ItemsControl>(window)
-                    .FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Library.RootCategories)
-                                          && ReferenceEquals(ic.ItemTemplate, plantillaArbol));
-                if (arbolIC == null) Console.WriteLine("FALLO: LIB-05-ARBOL - no se encontro el ItemsControl real del arbol de la Libreria (¿cambio CategoryNodeTemplate?)");
+                    .FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Library.RootCategories));
+                if (arbolIC == null) Console.WriteLine("FALLO: LIB-05-ARBOL - no se encontro el ItemsControl real del arbol de la Libreria (¿cambio Library.RootCategories?)");
                 else if (raizCalamity != null)
                 {
                     // Despliega la rama de Calamity (raiz + primer nivel) - el peor caso real de

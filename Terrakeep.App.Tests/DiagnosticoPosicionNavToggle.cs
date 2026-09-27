@@ -41,10 +41,13 @@ internal static partial class Program
             vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; // Personaje > Objetos
             DoEvents(); DoEvents();
 
-            var toggle = window.FindName("ObjetosNavToggle") as FrameworkElement;
-            var pageHost = window.FindName("ObjetosPageHost") as FrameworkElement;
-            var seccionEquip = window.FindName("ObjetosSeccionEquipamiento") as FrameworkElement;
-            var t1 = window.FindName("ObjetosNavToggle1") as FrameworkElement;
+            // ADR-TERRAKEEP-016/031 (27-sep-2026): Objetos vive ahora dentro de ObjetosView
+            // (NameScope propio) - patron de FindName DOBLE ya usado por el resto de la familia.
+            var objetosViewHost = window.FindName("ObjetosView") as FrameworkElement;
+            var toggle = objetosViewHost?.FindName("ObjetosNavToggle") as FrameworkElement;
+            var pageHost = objetosViewHost?.FindName("ObjetosPageHost") as FrameworkElement;
+            var seccionEquip = objetosViewHost?.FindName("ObjetosSeccionEquipamiento") as FrameworkElement;
+            var t1 = objetosViewHost?.FindName("ObjetosNavToggle1") as FrameworkElement;
             if (toggle == null || pageHost == null || seccionEquip == null || t1 == null)
             {
                 Console.WriteLine($"FALLO: DIAG-NAVTOGGLE-POS - elementos no encontrados (toggle={toggle != null}, pageHost={pageHost != null}, seccionEquip={seccionEquip != null}, t1={t1 != null})");
@@ -123,8 +126,8 @@ internal static partial class Program
             // mueve al cambiar de pagina) - comprobar si esa asimetria de margen hace que el titulo de
             // Inventario/Almacenes quede VISUALMENTE por DEBAJO del selector flotante (justo lo
             // contrario de "mas abajo", pero un desajuste real de todas formas si aparece).
-            var seccionInv = window.FindName("ObjetosSeccionInventario") as FrameworkElement;
-            var seccionAlm = window.FindName("ObjetosSeccionAlmacenes") as FrameworkElement;
+            var seccionInv = objetosViewHost?.FindName("ObjetosSeccionInventario") as FrameworkElement;
+            var seccionAlm = objetosViewHost?.FindName("ObjetosSeccionAlmacenes") as FrameworkElement;
             void MedirPagina(int indice, string nombre, FrameworkElement seccion)
             {
                 vm.RequestObjetosSection(indice);

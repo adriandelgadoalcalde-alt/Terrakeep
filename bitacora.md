@@ -30652,3 +30652,151 @@ completas - EXPLORACION, la seccion mas grande de `MainWindow.xaml` (2532 lineas
 grande y con mas code-behind real de todo el plan ADR-016), termina de extraerse por completo. Unica
 extraccion top-level que queda pendiente de todo el plan original: Objetos (911 lineas, sub-tab de
 PERSONAJE, dejado deliberadamente para el final por el propio plan original en su punto 4.5).
+
+## ADR-TERRAKEEP-031 - decimoquinta y ULTIMA extraccion de MainWindow.xaml: Objetos (cierra el plan ADR-016), 27-sep-2026
+
+Ultima pieza del plan de division de `MainWindow.xaml` (`requirement
+b108d4bf-f1a7-4466-b2f6-69fdb54bf603`, proyecto `Terrakeep`). Objetos (911 lineas de encargo,
+`MainWindow.xaml` 1880-2791 reales antes de esta extraccion - el sub-tab de PERSONAJE mas grande y
+mas acoplado de los 8, dejado deliberadamente para el final desde el propio plan original) movido a
+`Terrakeep.App/Views/ObjetosView.xaml` + `.xaml.cs`, mismo patron `Views/`+sufijo `View.xaml`+sin
+`DataContext` propio ya fijado por las 14 rondas anteriores. `MainWindow.xaml` queda con
+`<views:ObjetosView x:Name="ObjetosView" />` dentro del `TabItem` "Objetos".
+
+**Las 3 dependencias cruzadas conocidas, confirmadas con grep exhaustivo antes de mover nada**
+(precedente ADR-028/029/030, nunca fiarse del plan sin comprobar):
+- `ItemEditTemplate` (225 lineas): tras el duplicado local de ChestInspector
+  (`ChestInspectorItemEditTemplate`, ADR-028), el UNICO consumidor real que quedaba de la
+  definicion ORIGINAL era Objetos - se movio ENTERO, mismo `x:Key`.
+- `ContainerCompactTemplate`: los 10 usos reales en todo el archivo vivian TODOS dentro de Objetos
+  (Equipamiento/Inventario/Almacenes/Monturas/Monedas/Municion) - EXCLUSIVO, se movio ENTERO junto
+  con su dependencia interna `SlotCompactTemplate` (tambien exclusiva).
+- `CategoryNodeTemplate`: NO exclusiva - el propio comentario original ya avisaba "una UNICA
+  plantilla real sirve a los 3 arboles: Libreria, Investigacion y Buffs" (confirmado: 3 usos
+  reales, solo 1 dentro de Objetos). La definicion ORIGINAL se queda en `Window.Resources` para
+  Research/Buffs (fuera de alcance de este plan); Objetos gana su propio duplicado local
+  (`ObjetosCategoryNodeTemplate`, self-reference recursiva `DynamicResource` renombrada igual) -
+  mismo mecanismo ya validado por ChestInspectorItemEditTemplate/ADR-028.
+
+Hallazgo adicional no citado por el plan original: `LibraryCardTemplate` TAMBIEN exclusiva de
+Objetos (1 solo uso real) - se movio entera por el mismo motivo que `ContainerCompactTemplate`.
+`BoolToVis` (24 usos totales en todo lo movido) -> `UserControl.Resources` local
+`ObjetosBoolToVis`, mismo mecanismo ya validado 8 veces por la familia. Descuido real detectado
+antes de compilar: el duplicado de `CategoryNodeTemplate` tenia TAMBIEN un uso interno de
+`BoolToVis` (la `Visibility` de `IsExpanded`) que la primera sustitucion automatica no capturo -
+corregido con un grep de verificacion (`\bBoolToVis\b`) antes de dar la ronda por cerrada.
+
+**Code-behind**: handlers exclusivos de Objetos (`OnItemSlotMouseDown/MouseMove/DragOver/Drop/
+KeyDown`, `OnLibraryCardMouseDown/MouseMove/Click`+`OnLibraryClickTimerTick`,
+`OnObjetosNavToggleClick`, `OnSave/Load/AppendInventorySetClick`+`OnSave/Load/AppendStorageSetClick`
++`SaveItemSetDialog`/`LoadItemSetDialog`) movidos a `ObjetosView.xaml.cs`. `OnCommitTextOnEnter` y
+`GetDoubleClickTime` se DUPLICARON (triviales, sin estado, `MainWindow.xaml.cs` los sigue
+necesitando para la cabecera global/Buffs). **Hallazgo mas relevante de esta ronda**:
+`StartCardDrag`/`DragAdorner`/`GetCursorPos` (arrastre con adorno visual) los usan por igual los
+handlers de Objetos (que se mueven) Y los gemelos reales de Buffs (`OnBuffLibraryCardMouseMove`/
+`OnBuffSlotMouseMove`, que se QUEDAN porque Buffs no se extrae en este plan) - ni exclusivo de un
+lado ni trivial de duplicar (30+ lineas, una clase `Adorner` anidada, un P/Invoke). Sin ninguna
+dependencia real de `this`/`_viewModel`, se extrajo a `Terrakeep.App/Controls/DragDropSupport.cs`
+(`internal static` - `internal` es de AMBITO DE ENSAMBLADO, no de namespace, visible desde
+`MainWindow.xaml.cs` Y desde `Terrakeep.App.Views.ObjetosView.xaml.cs` sin duplicar logica).
+Ctrl+F referenciaba `LibrarySearchBox` directamente -> `ObjetosView.FocusLibrarySearchBox()`
+(gancho publico minimo, mismo patron que `BrowseView.FocusWorldSearchBox()`/ADR-029).
+
+**DOS regresiones REALES de test** encontradas por la propia verificacion exhaustiva (ninguna era
+un bug de produccion - las dos eran suposiciones de los tests sobre DONDE vivia el markup):
+1. `Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.CadaDataContextLocalDelXamlExponeLoc`:
+   leia el XAML de un UNICO fichero fijo (`MainWindow.xaml` a pelo) buscando
+   `DataContext="{Binding X}"` - los dos unicos casos reales que vigilaba (`EquipmentGroup`/
+   `StorageGroup`) vivian dentro de Objetos, que se acaba de mover - `MainWindow.xaml` se quedo con
+   CERO coincidencias y `Assert.NotEmpty` (la propia red de seguridad ya presente en el test) lo
+   caza de inmediato. Arreglo: el test ahora escanea `MainWindow.xaml` Y todos los `*.xaml` de
+   `Views/` (`Directory.EnumerateFiles`) - cualquier extraccion futura sigue cubierta sin tocar
+   rutas.
+2. `Terrakeep.App.Tests/PruebasLibreriaYBuilds.cs` (`LIB-05-ARBOL`, parte del recorrido
+   INCONDICIONAL): localizaba el `ItemsControl` real del arbol de la Libreria exigiendo ADEMAS
+   `ReferenceEquals(ic.ItemTemplate, window.TryFindResource("CategoryNodeTemplate"))` - valido
+   mientras Objetos usaba DIRECTAMENTE ese recurso window-scoped, pero tras la extraccion usa su
+   propio duplicado local (`ObjetosCategoryNodeTemplate`, instancia DISTINTA a proposito) - la
+   comparacion por referencia fallaba SIEMPRE (falso NEGATIVO, arbol renderizado perfectamente,
+   confirmado visualmente). Arreglo: la comprobacion de `ItemTemplate` se quito - `ItemsSource` ya
+   identifica el `ItemsControl` real sin ambiguedad (misma instancia de
+   `LibraryViewModel.RootCategories` en toda la app).
+
+**VERIFICACION REAL COMPLETA**:
+- `dotnet clean` + `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores en la
+  PRIMERA pasada (a diferencia de ADR-030, sin ningun CS1061 esta vez).
+- `dotnet test Terrakeep.Core.Tests -c Release --no-build`: 782/782, identico al baseline.
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: 756/756 tras el arreglo de
+  `DataContextLocalTieneLocTests` (1 FALLO real antes, 0 despues).
+- Suite COMPLETA de `Terrakeep.App.Tests` (sin `_SOLO`): primera pasada tras la extraccion, 17
+  FALLO (16 del baseline historico + 1 nuevo real, `LIB-05-ARBOL`) - investigado y arreglado. Tras
+  el arreglo, DOS pasadas consecutivas: 16 FALLO EXACTAMENTE IDENTICOS en ambas (H5-05x1, A8-06x1,
+  AR-14x4, A8-01x1, AR-11fx1, AR-MRK-CLICx1, AR-MRK-OTROSx5, A10-IDIOMA-BARRIDOx1, AR-LAYx1 - las
+  mismas 9 categorias ya documentadas como baseline preexistente desde ADR-020..030), CERO
+  EXCEPTION, CERO mencion de Objetos/ObjetosView/LIB-05-ARBOL en las dos pasadas finales.
+- Canarios gated especificos, todos en 0 FALLO: `NAV123_SOLO` (ciclo completo de interaccion real -
+  `RadioButton.RaiseEvent(ClickEvent)` real disparando `OnObjetosNavToggleClick` a traves de
+  `ObjetosView.xaml.cs`, exclusividad de `Visibility` por pagina, `RequestObjetosSection` llamado
+  directo en el ViewModel), `LIBCARD_CLIP_SOLO` (recorte superior real=0px en las 3 superficies -
+  bug B ya CERRADO en una ronda anterior, el header del canario que decia "CANARIO ROJO A
+  PROPOSITO" habia quedado desactualizado, no es regresion de esta ronda), `KEEPQA_EQUIPINV_SOLO`
+  (710+778 elementos de geometria real de Equipamiento/Inventario), `FALLO3_SOLO` (re-verificacion
+  AR-EX1 en 3 combos), `KEEPQA_SOLO` (barrido completo de 17 pantallas x 2 tamaños x 2 idiomas = 68
+  capturas + 1112 elementos de geometria, 0 FALLO). `DIAG_NAVTOGGLE_POS_SOLO` (diagnostico
+  desechable) confirma que el padre real de `ObjetosNavToggle` sigue siendo la MISMA celda `Grid`
+  que `ObjetosPageHost` tras la extraccion.
+- Verificacion visual real: 3 capturas revisadas a mano (`nav123-pagina-equipamiento.png`,
+  `libcard-clip-libreria-objetos.png`, `pantalla-Personaje-Inventario-normal1180x860-es.png`) -
+  confirman que `ItemEditTemplate`/`ContainerCompactTemplate`/`SlotCompactTemplate`/
+  `LibraryCardTemplate`/`ObjetosCategoryNodeTemplate` resuelven sin ningun recurso roto.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. `Terrakeep.exe` instalado NO estaba en ejecucion antes del
+despliegue. `DEPLOY_LOCK` adquirido antes de tocar `Assets/`/publish (snapshot antes=13056
+ficheros/hash `068603cc...`, identico al baseline de ADR-020..030, sin drift). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish "%LocalAppData%\Programs\Terrakeep" /MIR /XF unins000.exe unins000.dat`: 1 archivo
+copiado (`Terrakeep.exe`), 0 errores, 0 extras. `Assets/` identico antes/despues (13056 ficheros).
+Hash SHA256 identico entre el `.exe` publicado y el instalado
+(`7DEF6203ED5FAEF3C7CC04E1C5BC4F1D3871C04347F2295D48C80E217E248ECB` en ambos). Sanity check real:
+`Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio sin proceso
+residual. `DEPLOY_LOCK` liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido de 4780 a 3285
+lineas), `Terrakeep.App/MainWindow.xaml.cs` (reducido de 1442 a 1086 lineas),
+`Terrakeep.App/Views/ObjetosView.xaml` + `.xaml.cs` (nuevos), `Terrakeep.App/Controls/
+DragDropSupport.cs` (nuevo), `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` +
+`DiagnosticoPosicionNavToggle.cs` + `Program.cs` + `PruebasLibreriaYBuilds.cs` (`FindName` doble +
+arreglo `LIB-05-ARBOL`), `Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs` (arreglo
+del escaneo multi-archivo) - nunca `git add -A`, seguia habiendo ficheros ajenos modificados en el
+arbol por otros agentes en paralelo (varios `Terrakeep.Core.Tests/*`, `scripts/*`,
+`ComplementoKeepQA.cs`, `KEEPQA-INTEGRACION.md` - ninguno tocado). Registrado contra `requirement
+b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA (`ADR-TERRAKEEP-031`). Sin
+`git push`.
+
+## ADR-TERRAKEEP-032 - cierre del plan ADR-TERRAKEEP-016 completo, 27-sep-2026
+
+Marcador de cierre explicito. Las 15 extracciones reales del plan de division de `MainWindow.xaml`
+quedan COMPLETAS: NOVEDADES(017), BUILDS(018), SERVIDOR(019), ACERCA DE(020), GUIA(021),
+Spawnpoints(022), Version(023), Unlocks(024), Compare(025), INICIO(026), WorldTools(027),
+ChestInspector(028), Browse(029), Mapa+minimapa(030), Objetos(031). `MainWindow.xaml`: 9315 lineas
+originales (antes del Punto 9 del plan) -> 3285 lineas reales tras esta ultima ronda (-65%). 15
+`UserControl` reales nuevos en `Terrakeep.App/Views/`, patron uniforme mantenido sin excepcion en
+las 15 rondas.
+
+No queda ninguna extraccion pendiente de este plan. Contenido que se queda DELIBERADAMENTE en
+`MainWindow.xaml`: sub-tabs Buffs/Research/Appearance de PERSONAJE (nunca estuvieron en el orden de
+extraccion del plan, punto 4.5 solo listaba Spawnpoints/Unlocks/Version/Compare/Objetos); contenido
+FUERA del `TabControl` (historial de versiones BK + overlays, punto 4.8); `CategoryNodeTemplate`
+(Research/Buffs, fuera de alcance, siguen usando la definicion ORIGINAL).
+
+**Leccion transversal final**, valida para cualquier plan de extraccion futuro similar en cualquier
+proyecto Keep: el riesgo real de cada ronda nunca estuvo en el movimiento mecanico del XAML (grep
+exhaustivo + `dotnet build` ya lo cazan casi siempre), sino en las suposiciones que TESTS y
+comentarios ya existentes hacian sobre DONDE vivia cada pieza (`window.FindName` sin FindName
+doble, `ElementName` cruzando `NameScope`, `ReferenceEquals` contra un recurso que cambia de
+identidad al duplicarse, `DataContext` local que un test grep-eaba de un unico fichero fijo) -
+ninguna de las 15 rondas tuvo una regresion real de PRODUCCION, pero varias (ADR-019/028/029/030/
+031) encontraron y arreglaron regresiones reales de COBERTURA DE TEST causadas por esas mismas
+suposiciones. El patron que mas veces evito problemas: grep exhaustivo de TODO el archivo (nunca
+solo el rango que se va a mover) antes de tocar una sola linea.
