@@ -44,11 +44,12 @@ public class BuffTreeBuilderTests
         Assert.Equal(
             ["Utilidad", "Offensivo", "Defensivo", "Special", "Mascota", "Negativo", "Indice", "Calamity"],
             roots.Select(n => n.FullPath).ToArray());
-        // Los nombres visibles llevan el recuento real, y "Offensivo"/"Special" son typos REALES
-        // de Terrasavr que no se corrigen.
+        // Los nombres visibles llevan el recuento real. "Offensivo"/"Special" son typos REALES de
+        // Terrasavr: se conservan en la CLAVE (FullPath, arriba) y desde la FASE D del responsive global
+        // (revisor visual, 28-sep-2026) el nombre que se enseña va corregido.
         Assert.Equal("Utilidad (17)", roots[0].Name);
-        Assert.Equal("Offensivo (18)", roots[1].Name);
-        Assert.Equal("Special (10)", roots[3].Name);
+        Assert.Equal("Ofensivo (18)", roots[1].Name);
+        Assert.Equal("Especial (10)", roots[3].Name);
         Assert.Equal("Calamity (mod)", roots[7].Name);
     }
 

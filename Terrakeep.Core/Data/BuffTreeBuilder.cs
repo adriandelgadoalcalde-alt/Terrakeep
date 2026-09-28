@@ -21,9 +21,11 @@ public static class BuffTreeBuilder
 {
     private const int IndexPageSize = 33;
 
-    // Etiquetas reales de lib.buffs (Terrasavr.es-ES.json) - los nombres "Offensivo"/"Special"
-    // son typos/anglicismos REALES de Terrasavr, no se corrigen (mismo criterio que
-    // "Extremandamente" en ItemStatsFormatter).
+    // Etiquetas reales de lib.buffs (Terrasavr.es-ES.json). "Offensivo"/"Special" son typos/anglicismos
+    // REALES de Terrasavr: se conservan como CLAVE (FullPath, estable, ya persistida y usada por los tests)
+    // pero desde la FASE D del responsive global (28-sep-2026, revisor visual - "Offensivo" y "Special" se
+    // veian tal cual en las pastillas de la Libreria de buffs, que ya no esconde el arbol) el NOMBRE que se
+    // enseña va corregido: "Ofensivo" y "Especial". Son textos de la interfaz, no datos del juego.
     private static readonly int[] Utility = [1, 4, 8, 9, 10, 11, 12, 15, 18, 19, 27, 34, 57, 3, 63, 101, 102];
     private static readonly int[] Offensive = [7, 13, 86, 16, 25, 17, 71, 73, 74, 75, 76, 77, 78, 79, 93, 98, 99, 100];
     private static readonly int[] Defensive = [5, 14, 26, 43, 48, 58, 59, 62, 87, 89, 95, 96, 97];
@@ -50,9 +52,9 @@ public static class BuffTreeBuilder
             // "Offensivo" son el mismo caso ya documentado arriba (el español de Terrasavr trae
             // ese anglicismo tal cual, el ingles original es "Special"/"Offensive").
             BuildNamed("Utilidad", "Utility", Utility, buffIconResolver),
-            BuildNamed("Offensivo", "Offensive", Offensive, buffIconResolver),
+            BuildNamed("Offensivo", "Offensive", Offensive, buffIconResolver, "Ofensivo"),
             BuildNamed("Defensivo", "Defensive", Defensive, buffIconResolver),
-            BuildNamed("Special", "Special", Special, buffIconResolver),
+            BuildNamed("Special", "Special", Special, buffIconResolver, "Especial"),
             BuildNamed("Mascota", "Pet", Pets, buffIconResolver),
             BuildNamed("Negativo", "Negative", Negative, buffIconResolver),
             BuildIndex(vanillaBuffs, buffIconResolver),
@@ -62,13 +64,13 @@ public static class BuffTreeBuilder
         return roots;
     }
 
-    private static CategoryTreeNodeData BuildNamed(string name, string nameEn, int[] ids, Func<int, string?> buffIconResolver)
+    private static CategoryTreeNodeData BuildNamed(string name, string nameEn, int[] ids, Func<int, string?> buffIconResolver, string? nombreVisible = null)
     {
         var ordered = ids.ToList();
         // FullPath sigue siendo el nombre ESPAÑOL (clave estable ya persistida en preferencias y
-        // usada por los tests) - solo cambia lo que se muestra.
+        // usada por los tests) - solo cambia lo que se muestra (nombreVisible, si la clave trae una errata).
         return new CategoryTreeNodeData(
-            $"{name} ({ids.Length})", name, buffIconResolver(ids[0]),
+            $"{nombreVisible ?? name} ({ids.Length})", name, buffIconResolver(ids[0]),
             ordered, new HashSet<int>(ordered), [], $"{nameEn} ({ids.Length})");
     }
 

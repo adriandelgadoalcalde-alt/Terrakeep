@@ -6777,7 +6777,7 @@ internal static partial class Program
             DoEvents();
 
             Console.WriteLine($"BuffLibrary.RootCategories: {string.Join(", ", vm.BuffLibrary.RootCategories.Select(c => c.Name))}");
-            Console.WriteLine($"(esperado: Utilidad/Offensivo/Defensivo/Special/Mascota/Negativo/Indice/Calamity (mod), 8 raices reales)");
+            Console.WriteLine($"(esperado: Utilidad/Ofensivo/Defensivo/Especial/Mascota/Negativo/Indice/Calamity (mod), 8 raices reales)");
 
             var toggleButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),

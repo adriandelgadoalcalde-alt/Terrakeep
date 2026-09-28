@@ -61,6 +61,34 @@ try {
   }
   console.log(`+${nuevas} etiquetas de las carpetas nuevas por subtipo (total ${Object.keys(libItem).length}).`);
 
+  // Correccion ortografica (FASE D del responsive global, 28-sep-2026): el es-ES de Terrasavr trae las
+  // etiquetas SIN tildes y con alguna errata ("Pre-Modo Dificil", "Pagina $1", "Objectos por ID",
+  // "Accessorios", "Librera"...). Con el arbol lateral retirado, NavegadorCategorias las enseña a la
+  // vista (desplegable de subcategorias, migas de la ruta, subpastillas de "Ver todo") y el barrido
+  // T-E-TILDES del arnes las marca como FALLO. Son textos de la interfaz (etiquetas de carpeta), no
+  // nombres de objeto del juego: se corrigen aqui, en la unica fuente del JSON, para que una
+  // regeneracion futura no las devuelva a su forma sin tildes. Solo tildes/eñes y erratas evidentes, sin
+  // retraducir nada.
+  const correcciones = {
+    "Pre-Hardmode": "Pre-Modo Difícil", "Hardmode": "Modo Difícil",
+    "Page $1": "Página $1", "Pages $1+": "Páginas $1+",
+    "Items by ID": "Objetos por ID", "Categories": "Categorías",
+    "Quest fish": "Misión de Pez", "Potions (regeneration)": "Pociones (regeneración)",
+    "Accessories ($1)": "Accesorios ($1)", "Magic damage ($1)": "Daño Mágico ($1)",
+    "Summon damage ($1)": "Daño de Invocación ($1)", "Summoner whips ($1)": "Látigos de Invocador ($1)",
+    "Fishing poles ($1)": "Cañas de Pesca ($1)", "Bookcase": "Librerías", "Bathtub": "Bañeras",
+    "Lamp": "Lámparas", "Chandelier": "Lámparas de Araña", "Sofa": "Sofás",
+    "Ebonwood": "Madera de Ébano", "Shadewood": "Madera Sombría", "Dynasty": "Dinástica",
+    "Spooky wood": "Madera Tétrica", "Plants & Organic": "Plantas & Orgánico",
+    "Marble": "Mármol", "Vortex": "Vórtice", "Lesion": "Lesión",
+  };
+  let corregidas = 0;
+  for (const [clave, texto] of Object.entries(correcciones)) {
+    if (!(clave in libItem)) throw new Error(`Correccion ortografica: la clave "${clave}" ya no existe en lib.item.`);
+    if (libItem[clave] !== texto) { libItem[clave] = texto; corregidas++; }
+  }
+  console.log(`${corregidas} etiqueta(s) corregida(s) (tildes/erratas).`);
+
   fs.writeFileSync(outPath, JSON.stringify(libItem));
   console.log(`Guardado: ${outPath}`);
 } finally {
