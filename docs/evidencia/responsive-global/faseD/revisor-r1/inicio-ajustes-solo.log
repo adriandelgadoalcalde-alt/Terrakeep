@@ -1,0 +1,91 @@
+SESION-ESTADO: sesion 1 WTSConnectState=WTSActive SM_REMOTESESSION=0 SM_CMONITORS=1 UserInteractive=True; Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable=True
+RENDER-SONDA: OK - 64/64 pixeles pintados
+AISLAMIENTO: 12 .plr/.tplr y 11 .wld/.twld reales COPIADOS a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-393624; carpetas reales de personajes y mundos sustituidas; carpeta de estado redirigida a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-393624\estado-app (5 fichero(s) de estado copiados como siembra; los reales no se escriben).
+T12-RENDER: local sin RDP -> ShouldForceSoftwareRendering()=True (esperado False en esta maquina)
+T12-RENDER: con TERRAKEEP_FORCE_SOFTWARE_RENDER=1 -> ShouldForceSoftwareRendering()=True (esperado True)
+T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo 658ms
+T-G-ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)=True (esperado True - el escaneo real corre en segundo plano, no bloquea la construccion de la ventana)
+T3-RESTAURADO: Left=674 Top=243 Width=1476 Height=1081
+ARNES-TAMA¥O-BASE: Width=1180 Height=860 (fijado aqui para que el resto del arnes no dependa del tama¤o heredado de window.json)
+HOME-SCAN: 6 personaje(s) encontrado(s) en la carpeta AISLADA del arnes (copias de los .plr reales en C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-393624, nunca los originales)
+  - Eldelgas | N£cleo medio | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la £ltima vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 28/09/2026 12:22
+  - Zenith | Cl sico | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la £ltima vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 26/09/2026 11:19
+  - Terrariano | Cl sico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 22/09/2026 02:26
+  - Eldelgas | Cl sico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 20/09/2026 16:44
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la £ltima vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 16/09/2026 08:01
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la £ltima vez: CalamityModMusic, CalamityMod, CalamityModEsp' | 29/08/2026 00:21
+INSIGNIAS-TMOD-SIN-CALAMITY: Vanilla=False tModLoader=True Calamity=False tooltip='Mods usados la £ltima vez: HEROsMod' (esperado False/True/False)
+  Captura -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native\Terrakeep.App.Tests\bin\Release\net10.0-windows\inicio-lanzador.png
+HOME-OPEN: click en 'Eldelgas' -> SelectedTabIndex=1 (esperado 1), CharacterName=Eldelgas, IsCharacterLoaded=True
+I-a IsCurrent tras abrir 'Eldelgas'=True (esperado True)
+A9-13-IDIOMA: Inicio en espa¤ol -> TextBlock encontrado=True, contiene 'Aplicaci¢n nativa de Windows'=True (esperado True en los dos)
+A9-13-IDIOMA: tras cambiar a ingles EN VIVO (mismo TextBlock, sin reiniciar) -> contiene 'Native Windows app'=True (esperado True)
+A9-13-IDIOMA: vuelta a espa¤ol -> contiene 'Aplicaci¢n nativa de Windows'=True (esperado True)
+I-b: 4 item(s) de menu, comandos sin resolver= (esperado ninguno)
+H5-04-HISTORIAL: MenuItem 'Historial de versiones' presente=True, comando resuelto=True (esperado True, True)
+H6-01-DOLL: copia aislada del personaje real 'Eldelgas' (C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-393624\tModLoader\Players\Eldelgas.plr), IsMale=True, HairStyle=20, pixeles opacos=1480/2240 (esperado > 700)
+Captura doll con brazos, copia aislada del personaje real -> h6-doll-personaje-real.png
+MEDICION-PERSONAJE: 21ms
+LOAD: OK - Cargado 'UIA-Test' - personaje 100% vanilla (sin .tplr).
+BUILDCODE-CANEXECUTE: tras cargar personaje (sin ningun evento de entrada real de por medio) -> BuildCodeButton.IsEnabled=True (esperado True, IsCharacterLoaded=True)
+BUILDCODE-CANEXECUTE: captura real -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native\Terrakeep.App.Tests\bin\Release\net10.0-windows\buildcode-boton-activado-tras-cargar.png
+INI-01-ESCANEO: 6 personaje(s) reales -> rutas duplicadas=0 (esperado 0), sin fichero en disco=0 (esperado 0), sin doll renderizado=0 (esperado 0), insignias que se contradicen=0 (esperado 0), orden por fecha descendente=True (esperado True)
+INI-02-CONTINUAR: ofrece 'Continuar con AvisoDeFecha'=True (esperado True), sin aviso cuando la fecha cuadra=True (esperado True), con aviso cuando el fichero cambio por fuera=True (esperado True)
+INI-02-AVISO-IDIOMA: aviso con la app en ingles="This file changed since last time (did you edit it in Terraria or elsewhere?) - check it is still the one you want." (esperado "This file changed since last time (did you edit it in Terraria or elsewhere?) - check it is still the one you want.") -> True
+INI-02-BORRADO: 'Continuar con...' oculto cuando el .plr de la sesion ya no existe=True (esperado True)
+INI-03-DUPLICAR: '(copia).plr' creado en espa¤ol=True (esperado True), '(copy).plr' creado con la app en ingles=True (esperado True), original intacto=True (esperado True)
+INI-03-RESTAURAR: sin .bak avisa con el nombre real=True (esperado True, mensaje="'AvisoDeFecha' no tiene ninguna copia de seguridad real que restaurar."), con .bak el .plr real pasa a ser 'VueltaDelBak' (esperado 'VueltaDelBak')
+INI-03-HISTORIAL: puntos de guardado de un personaje recien creado=0 (esperado 0)
+INI-04-MENSAJE-IDIOMA: mensaje de Inicio en espa¤ol="'AvisoDeFecha' no tiene ninguna copia de seguridad real que restaurar.", con la app en ingles="'AvisoDeFecha' has no real backup to restore." -> cambia=True (esperado True)
+INI-05-INSIGNIA-TMOD: insignia tModLoader=True (esperado True), tooltip en espa¤ol="Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado", en ingles="tModLoader character: it has a .tplr file with mod data alongside it" -> siempre hay tooltip=True (esperado True), cambia de idioma=True (esperado True)
+INI-06-TARJETA: "Librer¡a" -> pesta¤a 1 (esperada 1, Personaje > Objetos, con la Libreria DESPLEGADA (H4-03)), sub-pesta¤a=0 (esperada 0), Libreria plegada=False (esperado False) -> True
+INI-06-TARJETA: "Builds" -> pesta¤a 2 (esperada 2, Builds) -> True
+INI-06-TARJETA: "Exploraci¢n" -> pesta¤a 4 (esperada 4, Exploracion) -> True
+INI-06-TARJETAS: 3 de 3 tarjetas encontradas, 3 llevan a la pesta¤a correcta (esperado 3 y 3)
+INI-07-ERROR-DE-ACCION: con 7 personaje(s) en la lista y un error real de accion -> mensaje a la vista=True (esperado True), reclamo "Empezar: cargar un personaje" visible=False (esperado False: no es una invitacion a empezar de cero, es un error)
+INI-08-COPIA-CORRUPTA: .plr bueno de 3680 bytes + un .bak ilegible de 3 -> el .plr sigue legible=True (esperado True), sigue en la lista de Inicio=True (esperado True), avisa de algo="La copia de seguridad de 'CopiaRota' est  da¤ada y no se puede leer: NO se ha restaurado nada, tu personaje sigue intacto." -> True (esperado True)
+INI-09-CARPETA-REFLEJA: tras a¤adir la carpeta en Ajustes (sin pulsar 'Actualizar') el personaje aparece en Inicio=True (esperado True)
+INI-09-CARPETA-REFLEJA: tras quitarla, el personaje desaparece de Inicio=True (esperado True)
+AJU-01-TICK-AUTOMATICO: tama¤o fijado tras marcar el tick DESDE EL CODIGO (lo que hace LoadFromDisk en cada arranque) = 1444x902 (esperado 1444x902, el que el usuario habia fijado; la ventana mide ahora 1180x860) -> True
+AJU-01-TICK-USUARIO: tras un clic real en el tick -> Pinned=True (esperado True), tama¤o fijado=1180x860 (esperado el de la ventana, 1180x860) -> True
+AJU-01-TICK-USUARIO: tras desmarcarlo con otro clic real -> IsPinned()=False (esperado False) -> True
+AJU-02-CUPO: escribiendo '7' -> 7 (esperado 7), '0' -> 1 (esperado 1, el suelo real), 'abc' -> 1 (esperado >= 1, sin excepcion)
+AJU-02-CUPO-LIMPIEZA: cupo real del usuario restaurado a 20 (esperado 20)
+AJU-03-BARRA: 0 -> 0 (esperado 0, plegada), 120 -> 260 (esperado 260, el suelo), 900 -> 520 (esperado 520, el techo), 340 -> 340 (esperado 340)
+AJU-03-PERSISTE: settings.json real -> ancho de la barra=340 (esperado 340) -> True, minimapa visible=False (esperado False) -> True
+AJU-03-MUNDOS: carpeta adicional -> llega a CharacterFileService=True (esperado True), entra en la busqueda real de mundos=True (esperado True), veces en la lista tras a¤adirla dos veces=1 (esperado 1), fuera tras quitarla=True (esperado True)
+DISPATCHER-EXCEPTION: System.IO.DirectoryNotFoundException: Could not find a part of the path 'C:\Users\adrian\AppData\Local\Temp\terrakeep-mundos-7f0a36bb3d0c43fd98f16d91399274ea'.
+   at System.IO.Enumeration.FileSystemEnumerator`1.CreateDirectoryHandle(String path, Boolean ignoreNotFound)
+   at System.IO.Enumeration.FileSystemEnumerator`1.Init()
+   at System.IO.Enumeration.FileSystemEnumerator`1..ctor(String directory, Boolean isNormalized, EnumerationOptions options, String expression)
+   at System.IO.Enumeration.FileSystemEnumerable`1..ctor(String directory, FindTransform transform, EnumerationOptions options, Boolean isNormalized, String expression)
+   at System.IO.Enumeration.FileSystemEnumerableFactory.UserFiles(String directory, String expression, EnumerationOptions options)
+   at System.IO.Directory.InternalEnumeratePaths(String path, String searchPattern, SearchTarget searchTarget, EnumerationOptions enumerationOptions)
+   at System.IO.Directory.GetFiles(String path, String searchPattern, EnumerationOptions enumerationOptions)
+   at Terrakeep.App.ViewModels.ExplorationViewModel.<>c.<ScanWorlds>b__347_0(String dir)
+   at System.Linq.Enumerable.SelectManySingleSelectorIterator`2.ToArray()
+   at System.Linq.Enumerable.OrderedIterator`2.MoveNext()
+   at Terrakeep.App.ViewModels.ExplorationViewModel.ScanWorlds(IEnumerable`1 dirs)
+   at Terrakeep.App.ViewModels.ExplorationViewModel.<>c__DisplayClass345_0.<RefreshWorldsAsync>b__0()
+   at System.Threading.Tasks.Task`1.InnerInvoke()
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+--- End of stack trace from previous location ---
+   at Terrakeep.App.ViewModels.ExplorationViewModel.RefreshWorldsAsync()
+   at CommunityToolkit.Mvvm.Input.AsyncRelayCommand.AwaitAndThrowIfFailed(Task executionTask) in /_/src/CommunityToolkit.Mvvm/Input/AsyncRelayCommand.cs:line 351
+   at System.Threading.Tasks.Task.<>c.<ThrowAsync>b__124_0(Object state)
+   at System.Windows.Threading.ExceptionWrapper.InternalRealCall(Delegate callback, Object args, Int32 numArgs)
+   at System.Windows.Threading.ExceptionWrapper.TryCatchWhen(Object source, Delegate callback, Object args, Int32 numArgs, Delegate catchHandler)
+AJU-04-IDIOMA: pulsado el chip de 'en' -> Settings.Language=en, LocalizationService=en (esperado en los dos) -> True; el titulo YA pintado dice "Language" (esperado "Language") -> True
+AJU-04-IDIOMA: pulsado el chip de 'es' -> Settings.Language=es, LocalizationService=es (esperado es los dos) -> True; el titulo YA pintado dice "Idioma" (esperado "Idioma") -> True
+NOV-01-CONTENIDO: Terraria=2 version(es) con 40 objeto(s) (40 con sprite real), tModLoader/Calamity=5 version(es) con 4 objeto(s) (4 con sprite real); entradas sin numero de version=0 (esperado 0), sin fecha=0 (esperado 0), sin nada que ense¤ar=0 (esperado 0)
+NOV-01-IDIOMA: 58 linea(s) de texto, identicas en los dos idiomas=0 (esperado muy pocas); 7 fecha(s), identicas=0 (informativo: una fecha puede coincidir)
+ACE-01 [es]: 'IncrediBad' literal a la vista=True (esperado True), variante deformada=ninguna (esperado ninguna), version '3.2.5' a la vista=True (esperado True), claves sin resolver=0 (esperado 0)
+ACE-01 [en]: 'IncrediBad' literal a la vista=True (esperado True), variante deformada=ninguna (esperado ninguna), version '3.2.5' a la vista=True (esperado True), claves sin resolver=0 (esperado 0)
+ACE-02-REGISTRO: 20 version(es) del editor -> sin numero=0 (esperado 0), sin fecha=0 (esperado 0), sin resumen=0 (esperado 0), sin nada a¤adido ni arreglado=0 (esperado 0), resumenes identicos en los dos idiomas=0 (esperado 0)
+ACE-01-DATO: About.AuthorName='IncrediBad' (esperado exactamente 'IncrediBad'), About.AppName='Terrakeep' (esperado 'Terrakeep'), About.Version='3.2.5'
+DONE (INICIO_AJUSTES_SOLO)
+CAPTURAS-VALIDACION: 4 captura(s) de esta ejecucion revisadas, 4 con contenido real, 0 INCONCLUSIVE (en blanco)
+AISLAMIENTO-ESTADO: los 4 JSON reales de C:\Users\adrian\AppData\Local\Terrakeep siguen con el MISMO SHA256 que al arrancar (ProcessExit); escrituras bloqueadas por la guarda=0

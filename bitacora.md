@@ -32185,3 +32185,98 @@ Publicado desde un `git worktree` limpio en `9c3df863` (`Keep\Terrasavr-Win\TKfd
 publicado = instalado = `edfa7612d2e4fe71c647edd7c4f434996bfc75e2946cf4ad9265a8c431c6ed7c`; el exe contiene
 `NavegadorCategorias`, `TarjetasCategoriasRaiz`, `PreferirCeldaGrande`, `MigasCategoria` y NO `LibraryRowMaxHeight`.
 Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 a las 17:31 con el cambio.
+
+## 28-sep-2026 - FASE D del responsive global: correccion del FAIL del revisor visual (D-01..D-08) + blindaje de los JSON del arnes
+
+Agente: aplicador-fix-responsive-faseD-28sep2026 (patron de dos fases; requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`).
+Base: `e4a29473`. Evidencia del revisor: `scratchpad\revisor-faseD-r1\`. Evidencia de esta ronda:
+`docs/evidencia/responsive-global/faseD/revisor-r1/` (capturas `lib-rojo-fae1461a-revisor-*` / `lib-despues-revisor-revisor-*`
+y los logs `lib-rojo-fae1461a.log`, `lib-despues-revisor.log`, `lib-antes-regla-amplio-1320x700.log`,
+`invalm-rojo-clic-parcial-fae1461a.log`, `invalm-despues.log`, `equip-despues.log`, `inicio-ajustes-solo.log`).
+
+### Como se resolvio D-01 (y por que asi)
+El presupuesto de alto a 1080x700 es fijo: la fila de Objetos necesita ~300px para el Inventario en MinCell y la Libreria
+se queda con ~200. Con la Libreria a su lado, Editar (barra de alto completo) le robaba 310px de ancho: categorias en 3
+lineas + ruta en 2 = viewport de 37,5px. Tres piezas, medidas una a una:
+1. **Composicion de Editar por SizeClass, una sola regla para Objetos y Buffs** (`MainViewModel.IsEditarBarraCompleta`,
+   estilos `EditarTarjetaComposicion`/`LibreriaComposicion` en Theme.xaml, D-05): Compacto/Normal -> Editar solo en la
+   fila de contenido y la Libreria a ANCHO COMPLETO; el selector de prefijo pasa a un desplegable "Elegir prefijo"
+   (`SelectorPrefijoTemplate`, una definicion; comandos resueltos contra su ItemsControl porque en un Popup no hay Window).
+   Amplio/Extra -> barra lateral de alto completo, alta segun su contenido (D-07), selector en linea. Primero lo aplique
+   desde Normal; el canario ampliado a 1320x700 (Normal en su alto minimo) dio 9 FALLO (62,8px, 1 fila; 0/3 tarjetas)
+   y lo subi a Amplio, que es literalmente lo que pide s7.
+2. **Cabecera en el mismo flujo que las categorias principales** (`NavegadorCategorias.Cabecera`, D-04): plegar +
+   buscador + Filtros ocupan el hueco que les sobraba a su derecha a las primeras pastillas. Orden identico en las 3
+   superficies; en Investigacion las acciones de carpeta pasan a la linea de ruta (`AccionesRuta`).
+3. **Linea de ruta que nunca envuelve** (`Controls/LineaRutaPanel.cs`): pliega migas intermedias en "..." (tooltip con
+   la ruta completa) y, si aun no cabe, recorta el resumen (tooltip completo). Plegadas = `Visibility.Hidden` (siguen
+   midiendose; Hidden/Visible no invalida la medida del padre: sin bucle).
+Resultado (1080x700, ES/EN, rutas de 2.o/3.er nivel, la mas profunda y la carpeta con mas hijos): viewport 37,5-39,1 ->
+89,8px (0 -> 2 filas enteras), ruta 40,6 -> 27px. 1320x700: 62,8 -> 89,8px. 1366x768: 93,3 -> 120,3px. El objetivo del
+revisor era ~100px: con el D-08 (abajo) la Libreria cede 3,3px y se queda en 89,8 (2 filas de 40 + hueco = 84 caben).
+
+### Resto de hallazgos (antes -> despues, medidas del mismo canario)
+- **D-02** tarjetas raiz: subpastillas solo si la primera fila COMPLETA cabe entera (`TarjetasCategoriasRaiz.EvaluarModo`,
+  sin oscilar: la primera fila con N+1 tarjetas contiene a la de N). Libreria "Ver todo": 0/2 enteras (1080x700,
+  viewport 60,5px, tarjetas de 149,5) -> 3/3 (tarjetas compactas de 93,9 en 99,2); 1366x768 0/3 -> 4/4; 1520x860 0/3 -> 3/3.
+- **D-03** desplegable de subcategorias: 476x708 DIP (mas alto que la ventana de 700) -> 699x369 (hasta 720 de ancho; alto
+  maximo ligado a ventana y area de trabajo con un unico ScrollViewer local de ultimo recurso). Hijas sin el prefijo de su
+  madre (`CategoryNodeViewModel.NombreEnRuta`: "Colocables - Paredes - ..." -> "Paredes - ..."), tambien en migas y
+  subpastillas; `Name` completo sigue en resumen/tooltips.
+- **D-06** pastillas: 18,6/20px -> 24/24px (`PastillaCategoriaBase.MinHeight`).
+- **D-07** Editar sin seleccion a 2560x1440: 300x1241 -> 300x162.
+- **Info**: comentario obsoleto de `MainWindow.xaml:72` corregido; "Offensivo"/"Special" -> "Ofensivo"/"Especial" (la
+  clave FullPath se conserva); 26 etiquetas del arbol de objetos con tildes/erratas corregidas en el JSON Y en su generador
+  (`scripts/extraer-etiquetas-libreria-es.js`), incluidas "Pre-Modo Difícil", "Modo Difícil", "Página N" y "Objetos por ID"
+  (regresion T-E x8 de la pasada con raton real: el arbol retirado las escondia).
+- **D-08** INVALM PAGINA-SCROLL 2,3px (ext 296 en vp 293,6): se reproduce aqui al 100% de escala, asi que NO es redondeo
+  de DPI: el reparto 3*/2* depende del alto de cliente real y dejaba la fila de Objetos en 301,6 cuando el Inventario en
+  MinCell necesita 304. `SlotGridPanel.AltoEnMinCell` + `AjusteAlViewport.AltoMinimo` (exacto en cada medida) dan a la
+  fila su suelo real; la Libreria (con su scroll owner) cede: suelo 200 -> 190. INVALM 4 -> 0 FALLO (pagina 297/297).
+
+### Pedidos del coordinador tras la pasada completa con raton real
+1. Tildes (arriba). 2. `Program.cs` "MaxHeight==460": la prueba de B-1 localiza la fila por `ObjetosView.FilaLibreria`.
+3. Carpetas extra de prueba: con `CarpetasPersonajesDePrueba` las extra que caen en las raices permitidas del arnes
+   (%TEMP%) vuelven a escanearse; las reales del usuario nunca. Modo nuevo `INICIO_AJUSTES_SOLO`: INI-03/05/07/08/09 en
+   0 FALLO (la pasada completa usa entrada real y no se podia lanzar).
+4. Salto al pulsar: `OnItemSlotMouseLeftButtonDown` marca como atendido el `RequestBringIntoView` de ese Focus(). Caso
+   nuevo en INVALM (celda medio tapada, sin clic ni Focus previos, 1366x700 y 1366x520 con el suelo bajado solo ahi):
+   rojo en fae1461a (Equipamiento -19,5px, Almacenes -18,6px) -> delta 0 y foco en el slot. `CanarioDragCursorMano`:
+   fuera el Focus()+clic real previos que lo enmascaraban (no ejecutado: usa entrada real).
+
+### Blindaje de los JSON (incidente real)
+`Services/CarpetaEstadoApp.cs`: ruta base de %LOCALAPPDATA%\Terrakeep centralizada; con `App.ModoDiagnostico` el arnes la
+redirige a `<temp>\estado-app` (sembrada con una COPIA de lectura de los 4 JSON y la cache). Session/Settings/Window/
+WorldViewState, cache del catalogo y Backups la usan, con guarda `PermiteEscribir` (escribir en la carpeta real con el
+arnes aislado se bloquea y da "FALLO: AISLAMIENTO-ESTADO"). Retirado el guardar/restaurar session.json. Probado:
+~15 ejecuciones del arnes (LIBRARY con cambio de idioma ES/EN, INVALM, EQUIP, INICIO_AJUSTES con idioma y carpetas
+extra): los 4 JSON reales y las 23 partidas con el MISMO SHA256 que antes de empezar, comparado desde fuera >10 s despues
+de la ultima ejecucion; guarda con 0 escrituras bloqueadas (nadie intento escribir fuera).
+
+### Canario LIBRARY_RESPONSIVE_SOLO
+`Terrakeep.App.Tests/CanarioResponsiveLibreriasRevisor.cs` (solo FindName/reflexion: compila contra fae1461a). Codigos
+nuevos RESULTADOS-2FILAS, RUTA-UNA-LINEA, TARJETAS-RAIZ, POPUP-SUBCAT, POPUP-PREFIJO-REPETIDO, ORDEN, EDITAR-COMPOSICION,
+PASTILLAS-ALTO, EDITAR-VACIO-ALTO, PREFIJO-DESPLEGABLE, CABECERA-TEXTO y la comprobacion directa del peor Editar en barra
+lateral (granadas Picaro, 17 prefijos). Rojo en worktree limpio de fae1461a (junction a ServidorKeep, solo el blindaje de
+estado aplicado por seguridad): 37 FALLO. Verde en HEAD: 0 FALLO (ejecucion completa ~10 min). Editar localizado por
+NOMBRE en LIBRARY/EQUIP/INVALM (la busqueda por Style lo perdia en silencio). Modo `LIBRARY_RESPONSIVE_RAPIDO=1` solo para
+iterar. Hallazgo propio durante la ronda: tras mover la cabecera, un DataContext por RelativeSource AncestorType=Window no
+se resolvia y los botones salian SIN texto con el canario en verde - arreglado (Binding con Source explicito en
+`AdoptarCabecera`) y cubierto por CABECERA-TEXTO.
+
+### Tests, build, despliegue
+- `dotnet build Terrakeep.slnx -c Debug` 0/0 (Debug de herramientas.json recompilado). Core.Tests 782/782.
+  ViewModels.Tests 809/809 (793 + 16 de `CorreccionesRevisorFaseDTests`).
+- LIBRARY 0, EQUIP 0, INVALM 0 FALLO en HEAD.
+- Despliegue desde worktree limpio en `2723059a` (`Keep\Terrasavr-Win\TKrv`, retirado): `dotnet publish -c Release
+  -p:PublishProfile=win-x64` + `robocopy /MIR` (sin unins000.*) a `%LocalAppData%\Programs\Terrakeep\`, Terrakeep cerrado.
+  SHA256 publicado = instalado = `6892e2f5749db99810a8e2e879d0e1db6fd3c01d0be16973c7a4d003ffb8da53`. El exe contiene
+  `LineaRutaPanel`, `CarpetaEstadoApp`, `IsEditarBarraCompleta`, `NombreEnRuta`, `AltoEnMinCell` y no `LibraryRowMaxHeight`.
+  Los accesos directos (barra de tareas e Inicio) apuntan a esa copia.
+
+### Obstaculos y limites
+- WPF no deja poner x:Name en el contenido que se le da a un UserControl con nombres propios (MC3093): la cabecera se
+  declara en un Decorator del host y `NavegadorCategorias.AdoptarCabecera` la mueve (los nombres siguen en el ambito del host).
+- La pasada completa del arnes (H5-07, LIB-05, T-E...) no se ha lanzado: usa entrada real de raton, prohibida en esta
+  ronda. H5-07 usa el mismo mecanismo de carpeta extra que INI-09 (verde). Pendiente para quien tenga el escritorio.
+- ServidorKeep.Core (referenciado) escribe en %LOCALAPPDATA%\ServidorKeep: fuera del alcance de este blindaje.
