@@ -151,6 +151,13 @@ public partial class MainWindow : Window
         // en su try/catch/finally, nunca deja una excepcion sin capturar escapar de aqui.
         if (App.PendingWorldPath is string rutaMundoInicial)
             _ = AbrirMundoInicialAsync(rutaMundoInicial);
+
+        // Bug real arreglado 28-sep-2026 (reporte del usuario, ver comentario completo en
+        // OnPersonajeMenuClick/OnPersonajeMenuOutsideClick mas abajo): se registra UNA sola vez,
+        // aqui, para toda la vida de la ventana - el mismo ContextMenu (PersonajeMenuButton.
+        // ContextMenu, instancia unica declarada en XAML) se abre/cierra muchas veces, pero el
+        // registro de este manejador no depende de si esta abierto o cerrado en cada momento.
+        Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(PersonajeMenuButton.ContextMenu, OnPersonajeMenuOutsideClick);
     }
 
     private async Task AbrirMundoInicialAsync(string path)
@@ -439,8 +446,70 @@ public partial class MainWindow : Window
     // clic DERECHO por omision - este es el truco real ya conocido para que un Button lo abra con
     // clic IZQUIERDO normal, igual que cualquier boton de menu desplegable (Ctrl+O/el resto de la
     // cabecera siguen intactos, este es solo el disparador del menu "⋯ Personaje").
+    //
+    // Bug real arreglado 28-sep-2026 (reporte del usuario: "un clic lo despliega, otro clic no
+    // acaba de volver a plegar bien"). Causa raiz confirmada con un arnes real de clic de SISTEMA
+    // OPERATIVO (down+up de mouse_event, no un RoutedEventArgs sintetico) contra
+    // PersonajeMenuButton con el menu ya abierto: mientras el ContextMenu tiene la captura del
+    // raton (CaptureMode.SubTree), un segundo mouse-down FISICO sobre el boton cuenta como "fuera"
+    // del ContextMenu (el boton no es descendiente suyo) - WPF lo cierra por su cuenta ANTES de
+    // que el propio down-event empiece siquiera a recorrer el arbol visual con los eventos
+    // normales (Preview/Tunnel): medido con el arnes, ContextMenu.IsOpen ya vale False incluso en
+    // el PreviewMouseDown mas temprano posible (a nivel de Window), y el evento Closed del
+    // ContextMenu NUNCA llega a dispararse para este camino de cierre en absoluto (confirmado
+    // suscribiendo un handler externo directo: jamas se invoca, aunque IsOpen si cambia) - asi que
+    // cualquier intento de detectar el cierre desde Closed (probado con IsMouseOver y tambien con
+    // Mouse.GetPosition, los dos descartados con evidencia real) llega sistematicamente tarde o
+    // nunca, y el Click que sigue en el MouseUp de ese mismo clic (OnPersonajeMenuClick, sin
+    // condicion ninguna) volvia a abrirlo de inmediato - un "cierra y reabre" instantaneo que el
+    // usuario percibe como que el toggle nunca cierra.
+    //
+    // La señal fiable es Mouse.AddPreviewMouseDownOutsideCapturedElementHandler: la MISMA API
+    // publica de WPF que usa su propio mecanismo interno de cierre para detectar "mouse-down fuera
+    // del elemento con captura" - registrando NUESTRO PROPIO handler para ese mismo evento (una
+    // vez, en el constructor) se nos avisa TAMBIEN, de forma sincrona, durante el procesado de ese
+    // mismo down-event (antes de que el Click del boton llegue en el MouseUp) - a diferencia de
+    // Closed, este SI se dispara siempre, confirmado con el arnes real. Los argumentos del evento
+    // traen la posicion real del clic (MouseButtonEventArgs.GetPosition, una transformacion
+    // geometrica de la posicion fisica del cursor, NO basada en hit-testing con ruteo de eventos -
+    // por eso no le afecta el mismo sesgo que rompia IsMouseOver/DirectlyOver bajo captura) -
+    // comprobar si esa posicion cae dentro del rectangulo real del boton (0..ActualWidth,
+    // 0..ActualHeight) SI detecta correctamente "el cierre lo causo un clic sobre este mismo
+    // boton", confirmado con el mismo arnes real tras el cambio (los 3 clics reales consecutivos
+    // abren/cierran/reabren correctamente, ver PERSONAJEMENU_TOGGLE_SOLO en
+    // Terrakeep.App.Tests/Program.cs). Un cierre por Escape/clic en otra parte de la
+    // ventana/eleccion de un item deja el cursor fuera del rectangulo del boton (o no dispara este
+    // evento en absoluto, al no tratarse de un "clic fuera con captura") y no activa esta supresion.
+    //
+    // Efecto secundario real, tambien medido con el arnes y corregido aqui de paso: como Closed
+    // NUNCA se dispara para este camino de cierre (ver arriba), IsPersonajeMenuOpen (el booleano
+    // que pinta la flecha ▾/▲ y el Tag="Open" de Theme.xaml) se quedaba en True tras este cierre -
+    // el ContextMenu ya estaba cerrado de verdad pero el boton seguia con el aspecto "abierto"
+    // hasta la siguiente apertura real. Este handler SI sabe con certeza que el menu se acaba de
+    // cerrar (es el unico motivo por el que se le ha llamado), asi que actualiza el ViewModel el
+    // mismo, sin esperar a un Closed que en este camino no va a llegar.
+    private bool _suprimirProximaAperturaPersonajeMenu;
+
+    private void OnPersonajeMenuOutsideClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not ContextMenu { PlacementTarget: FrameworkElement boton }) return;
+
+        _viewModel.IsPersonajeMenuOpen = false;
+
+        Point posRelativa = e.GetPosition(boton);
+        bool sobreBoton = posRelativa.X >= 0 && posRelativa.X <= boton.ActualWidth
+            && posRelativa.Y >= 0 && posRelativa.Y <= boton.ActualHeight;
+        if (sobreBoton) _suprimirProximaAperturaPersonajeMenu = true;
+    }
+
     private void OnPersonajeMenuClick(object sender, RoutedEventArgs e)
     {
+        if (_suprimirProximaAperturaPersonajeMenu)
+        {
+            _suprimirProximaAperturaPersonajeMenu = false;
+            return;
+        }
+
         if (sender is FrameworkElement fe && fe.ContextMenu != null)
         {
             fe.ContextMenu.PlacementTarget = fe;

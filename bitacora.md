@@ -31268,3 +31268,86 @@ instalado confirmado con `"jefe": 13` real en disco.
   bastantes otros ficheros modificados/nuevos de rondas en paralelo de otros agentes (p.ej.
   `MainWindow.xaml`, `ExplorationViewModel.cs`, varios `Terrakeep.Core.Tests/Data/*`) - ninguno se
   tocó ni se incluyó en este commit, solo los 3 ficheros reales de este arreglo.
+
+## 28-sep-2026: botón "Personaje" de la cabecera - segundo clic no cerraba el desplegable (doble-toggle)
+
+Encargo del usuario: "volver a dar el botón de personaje en la cabecera no acaba de volver a
+plegar bien el desplegable - un clic lo despliega otro clic lo pliega" (se esperaba toggle real,
+el segundo clic no cerraba). Alcance estricto: solo `PersonajeMenuButton` y su `ContextMenu`
+(`MainWindow.xaml`/`MainWindow.xaml.cs`), ningún otro control de la cabecera.
+
+**Causa raíz real, confirmada con un arnés propio de clic de SISTEMA OPERATIVO** (no
+`RoutedEventArgs` sintético - `mouse_event` down+up real, igual que AR-13e): mientras el
+`ContextMenu` de `PersonajeMenuButton` tiene la captura del ratón (`CaptureMode.SubTree`), un
+segundo mouse-down físico sobre el propio botón cuenta como "fuera" del `ContextMenu` (el botón
+no es descendiente suyo) - WPF lo cierra por su cuenta ANTES de que el propio down-event empiece
+siquiera a recorrer el árbol visual con los eventos normales (medido: `ContextMenu.IsOpen` ya
+vale `False` incluso en el `PreviewMouseDown` más temprano posible, a nivel de `Window`). El
+`Click` que sigue en el `MouseUp` de ese mismo clic (`OnPersonajeMenuClick`, sin condición
+ninguna) volvía a abrirlo de inmediato - un "cierra y reabre" instantáneo que el usuario percibía
+como que el toggle nunca cerraba.
+
+**Dos intentos de arreglo descartados con evidencia real antes de dar con el bueno** (documentado
+también en el comentario del código, para que no se reintenten): detectar el cierre desde el
+evento `Closed` del `ContextMenu` comprobando `Button.IsMouseOver` (falla: bajo captura, WPF
+resuelve `IsMouseOver`/`Mouse.DirectlyOver` del botón subyacente como `False` pase lo que pase
+con la posición física real del cursor - `Mouse.DirectlyOver` devolvía el propio `ContextMenu`);
+lo mismo con `Mouse.GetPosition(boton)` dentro de `Closed` (falla por un motivo más de fondo:
+suscribiendo un handler externo directo a `Closed` se confirmó que **ese evento NUNCA llega a
+dispararse en absoluto** para este camino concreto de cierre, aunque `IsOpen` sí cambia).
+
+**Arreglo real aplicado**: `Mouse.AddPreviewMouseDownOutsideCapturedElementHandler` - la MISMA
+API pública de WPF que usa su propio mecanismo interno de cierre para detectar "mouse-down fuera
+del elemento con captura". Registrando nuestro propio handler para ese mismo evento (una vez, en
+el constructor de `MainWindow`) se nos avisa también, de forma síncrona, durante el procesado de
+ese mismo down-event - a diferencia de `Closed`, este SÍ se dispara siempre (confirmado con el
+arnés). Sus argumentos traen la posición real del clic
+(`MouseButtonEventArgs.GetPosition`, transformación geométrica pura, no basada en hit-testing con
+ruteo de eventos - por eso no le afecta el sesgo de la captura); comprobar si esa posición cae
+dentro del rectángulo real del botón detecta correctamente "el cierre lo causó un clic sobre este
+mismo botón", y en ese caso se marca una bandera (`_suprimirProximaAperturaPersonajeMenu`) que
+`OnPersonajeMenuClick` consume para NO reabrir. Efecto secundario corregido de paso: como
+`Closed` no se dispara en este camino, `IsPersonajeMenuOpen` (el booleano que pinta la flecha
+▾/▲ y el `Tag="Open"` de `Theme.xaml`, arreglo del 25-sep-2026) se quedaba en `True` tras este
+cierre - el nuevo handler lo pone a `False` él mismo, con certeza (es el único motivo por el que
+se le llama).
+
+Archivo real: `Terrakeep.App/MainWindow.xaml.cs` - `OnPersonajeMenuOutsideClick` (nuevo),
+`OnPersonajeMenuClick`, registro en el constructor.
+
+**Canario real nuevo** (`Terrakeep.App.Tests/Program.cs`, `PERSONAJEMENU_TOGGLE_SOLO=1`): 4 clics
+REALES de sistema operativo (down+up, mismo mecanismo real de AR-13e) seguidos sobre el mismo
+punto de pantalla de `PersonajeMenuButton` - abre/cierra/abre/cierra, verificando `ContextMenu.
+IsOpen` Y `vm.IsPersonajeMenuOpen` en cada paso. Antes del arreglo reproducía el bug real (clic 2
+no cerraba). Tras el arreglo: **0 `FALLO-REAL`**, los 4 clics alternan correctamente. Verificado
+también con un arnés AISLADO extra en el scratchpad de la sesión (referencia directa a
+`Terrakeep.App.csproj`, sin depender de `Terrakeep.App.Tests` - hizo falta porque otro agente en
+paralelo tenía un `.cs` temporal roto bloqueando ESE proyecto un rato) - 3 ejecuciones
+independientes, 4 clics reales cada una, **100% consistentes, 0 fallos**. El canario hermano
+`PERSONAJEMENU_ESTADOS_SOLO` (24/25-sep-2026, indicador visual abierto/cerrado) se re-ejecutó
+también: sin regresión, `0 FALLO-REAL`.
+
+**Gates**: `dotnet build Terrakeep.slnx -c Release`: 0/0. `Terrakeep.Core.Tests`: 782/782.
+`Terrakeep.App.ViewModels.Tests`: 528/528 pasados con 0 fallos antes de que `vstest` abortara la
+serie por "Proceso de host de pruebas bloqueado" - la máquina tenía **decenas de procesos
+`dotnet.exe`/`testhost.exe` de otros agentes en paralelo** compitiendo por CPU/disco durante toda
+esta ronda (confirmado con `tasklist` real, que en un momento dado llegó a tardar más de 2
+minutos en responder) - mismo patrón de intermitencia por contención ya documentado repetidas
+veces en esta bitácora, no una regresión de este cambio (ninguno de los 528 tests que sí llegaron
+a correr falló). No se reintentó una pasada completa dado el estado de la máquina en ese momento.
+
+### Recompilación/redespliegue real
+
+`Terrakeep.exe` NO estaba en ejecución (verificado antes de copiar). `dotnet build Terrakeep.App/
+Terrakeep.App.csproj -c Release` 0/0 + `dotnet publish ... -p:PublishProfile=win-x64` en verde,
+generó `Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe`. Copiado con
+`robocopy /MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\
+Programs\Terrakeep\` (único destino real, barra de tareas y Menú Inicio apuntan los dos ahí) -
+hash SHA256 idéntico entre publicado e instalado
+(`BF0A77D680C8522E945588C8CF1F5144B399A3820B2B02F9D8474369F5F8404E`).
+
+**Commit real** (Terrasavr-Native, sin `git push`): `Terrakeep.App/MainWindow.xaml.cs` (el
+arreglo) + `Terrakeep.App.Tests/Program.cs` (canario nuevo, staging quirúrgico con
+`git hash-object`/`git update-index` porque OTRO agente en paralelo tenía ya en el working tree
+un bloque suyo distinto sin relación, en el mismo fichero, a medio terminar - nunca `git add -A`,
+solo mi propio contenido llegó al índice). No se tocó ningún otro control de la cabecera.

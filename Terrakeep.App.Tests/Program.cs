@@ -4490,6 +4490,88 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA-GAP: PERSONAJEMENU_TOGGLE_SOLO=1 (28-sep-2026, reporte real del usuario: "volver
+        // a dar el boton de personaje en la cabecera no acaba de volver a plegar bien el
+        // desplegable - un clic lo despliega, otro clic no lo pliega"). PERSONAJEMENU_ESTADOS_SOLO
+        // (arriba) solo abre/cierra el ContextMenu A MANO (IsOpen=true/false directo), nunca con un
+        // clic real de raton de SISTEMA OPERATIVO sobre el propio PersonajeMenuButton - por eso no
+        // detectaba esta carrera real entre el cierre automatico del ContextMenu por "mouse-down
+        // fuera" y el Click del boton que lo reabria de inmediato (ver comentario real en
+        // MainWindow.xaml.cs, OnPersonajeMenuClick/OnPersonajeMenuClosed). Este bloque cierra ese
+        // hueco: dos clics REALES (mouse_event down+up, mismo mecanismo ya usado en AR-13e) en el
+        // mismo punto de pantalla sobre PersonajeMenuButton deben abrir y despues cerrar el menu de
+        // verdad, y un tercer clic debe poder volver a abrirlo (no queda atascado en "cerrado para
+        // siempre").
+        if (Environment.GetEnvironmentVariable("PERSONAJEMENU_TOGGLE_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1;
+                FijarTamaño(window, 1180, 860);
+                DoEvents(); DoEvents();
+
+                var botonMenu = window.FindName("PersonajeMenuButton") as System.Windows.Controls.Button;
+                Console.WriteLine($"PERSONAJEMENU_TOGGLE: PersonajeMenuButton encontrado={botonMenu != null}");
+                if (botonMenu == null || botonMenu.ContextMenu == null)
+                {
+                    Console.WriteLine("FALLO: PERSONAJEMENU_TOGGLE - no se encuentra el boton o su ContextMenu");
+                }
+                else
+                {
+                    botonMenu.UpdateLayout();
+                    var centroVentana = botonMenu.TranslatePoint(
+                        new Point(botonMenu.ActualWidth / 2, botonMenu.ActualHeight / 2), window);
+                    var centroPantalla = window.PointToScreen(centroVentana);
+
+                    ForzarPrimerPlano(hwnd);
+                    DoEvents();
+
+                    void ClicRealSobreBoton()
+                    {
+                        SetCursorPos((int)centroPantalla.X, (int)centroPantalla.Y);
+                        Thread.Sleep(60);
+                        System.Windows.Input.Mouse.Synchronize();
+                        DoEvents();
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                        Thread.Sleep(50); DoEvents(); DoEvents();
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+                        Thread.Sleep(80); DoEvents(); DoEvents(); DoEvents(); DoEvents();
+                    }
+
+                    // 1) Primer clic real: debe abrir.
+                    ClicRealSobreBoton();
+                    bool abiertoTras1 = botonMenu.ContextMenu.IsOpen;
+                    Console.WriteLine($"PERSONAJEMENU_TOGGLE: tras clic 1 -> ContextMenu.IsOpen={abiertoTras1}, vm.IsPersonajeMenuOpen={vm.IsPersonajeMenuOpen} (esperado True los dos)");
+                    if (!abiertoTras1 || !vm.IsPersonajeMenuOpen) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_TOGGLE - el primer clic real no abrio el menu");
+
+                    // 2) Segundo clic real, MISMO punto: debe cerrar (el bug real: se reabria solo).
+                    ClicRealSobreBoton();
+                    bool abiertoTras2 = botonMenu.ContextMenu.IsOpen;
+                    Console.WriteLine($"PERSONAJEMENU_TOGGLE: tras clic 2 -> ContextMenu.IsOpen={abiertoTras2}, vm.IsPersonajeMenuOpen={vm.IsPersonajeMenuOpen} (esperado False los dos)");
+                    if (abiertoTras2 || vm.IsPersonajeMenuOpen) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_TOGGLE - el segundo clic real NO cerro el menu (bug de doble-toggle)");
+
+                    // 3) Tercer clic real: debe poder volver a abrir (no atascado en cerrado).
+                    ClicRealSobreBoton();
+                    bool abiertoTras3 = botonMenu.ContextMenu.IsOpen;
+                    Console.WriteLine($"PERSONAJEMENU_TOGGLE: tras clic 3 -> ContextMenu.IsOpen={abiertoTras3}, vm.IsPersonajeMenuOpen={vm.IsPersonajeMenuOpen} (esperado True los dos)");
+                    if (!abiertoTras3 || !vm.IsPersonajeMenuOpen) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_TOGGLE - el tercer clic real no reabrio el menu (quedo atascado)");
+
+                    // 4) Cuarto clic real: debe volver a cerrar (confirma que el toggle se mantiene
+                    // estable en rondas sucesivas, no solo la primera vez).
+                    ClicRealSobreBoton();
+                    bool abiertoTras4 = botonMenu.ContextMenu.IsOpen;
+                    Console.WriteLine($"PERSONAJEMENU_TOGGLE: tras clic 4 -> ContextMenu.IsOpen={abiertoTras4}, vm.IsPersonajeMenuOpen={vm.IsPersonajeMenuOpen} (esperado False los dos)");
+                    if (abiertoTras4 || vm.IsPersonajeMenuOpen) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_TOGGLE - el cuarto clic real NO cerro el menu");
+
+                    botonMenu.ContextMenu.IsOpen = false;
+                    DoEvents(); DoEvents();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("PERSONAJEMENU_TOGGLE-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (PERSONAJEMENU_TOGGLE_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T4_SOLO=1 (20-sep-2026, catalogo de rediseño visual T4 "Inicio como escritorio de
         // partida"): verifica en frio, con la ventana real, el parrafo de "solo primer arranque",
         // la tarjeta hero (doll 2x + KPIs Vida maxima/Tiempo jugado) y que solo quedan 3 tarjetas
