@@ -32,8 +32,9 @@ public sealed class WindowPlacementInfo
 
 public static class WindowPlacementService
 {
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "window.json");
+    // Carpeta de estado centralizada (CarpetaEstadoApp): el arnes la redirige a su carpeta temporal
+    // en modo diagnostico - propiedad, no static readonly, para que la redireccion se respete siempre.
+    private static string FilePath => CarpetaEstadoApp.Ruta("window.json");
 
     public static void Apply(Window window)
     {
@@ -126,6 +127,7 @@ public static class WindowPlacementService
     {
         try
         {
+            if (!CarpetaEstadoApp.PermiteEscribir(FilePath)) return; // guarda del arnes (ver CarpetaEstadoApp)
             string? dir = Path.GetDirectoryName(FilePath);
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(info));

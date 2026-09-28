@@ -154,8 +154,8 @@ public sealed class BackupHistoryService
     // temporal distinta estrenaba una carpeta en el %LOCALAPPDATA% REAL de esta maquina que no
     // retiraba nadie - de ahi buena parte de las 2.765 carpetas de BK-4. Ahora una prueba puede
     // apuntar a su propio directorio y no tocar nada del usuario.
-    public string BackupsRoot { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "Backups");
+    // Carpeta de estado centralizada (CarpetaEstadoApp): en el arnes, dentro de su carpeta temporal.
+    public string BackupsRoot { get; set; } = CarpetaEstadoApp.Ruta("Backups");
 
     // Sello con MILISEGUNDOS (BK-2) - el formato antiguo, de segundo, se sigue leyendo tal cual
     // (ver TimestampFormatLegacy) pero ya no se escribe.
@@ -185,6 +185,7 @@ public sealed class BackupHistoryService
         byte[]? tplrBytes = File.Exists(tplrReal) ? File.ReadAllBytes(tplrReal) : null;
 
         string charDir = DirectoryFor(plrPath);
+        if (!CarpetaEstadoApp.PermiteEscribir(charDir)) return null; // guarda del arnes (ver CarpetaEstadoApp)
         Directory.CreateDirectory(charDir);
 
         var now = DateTime.Now;

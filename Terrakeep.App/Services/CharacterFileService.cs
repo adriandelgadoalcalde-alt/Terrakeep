@@ -119,8 +119,8 @@ public sealed class CharacterFileService
     // de este alcance concreto - CalamityCatalog+VanillaItemCatalog+el arbol ya construido, no
     // los otros ~44 JSON del resto de catalogos, cuyo coste medido no lo justificaba). Mismo
     // sitio real que el resto de datos de usuario (WindowPlacementService, SettingsService...).
-    private static readonly string LibraryCachePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "library-catalog-cache-v1.bin");
+    // Carpeta de estado centralizada (CarpetaEstadoApp, redirigible por el arnes en modo diagnostico).
+    private static string LibraryCachePath => CarpetaEstadoApp.Ruta("library-catalog-cache-v1.bin");
 
     private readonly string[] _librarySourceFiles;
     // Si hubo un acierto real de cache al arrancar, SaveLibraryDiskCacheIfNeeded no vuelve a
@@ -230,6 +230,7 @@ public sealed class CharacterFileService
     internal void SaveLibraryDiskCacheIfNeeded(IReadOnlyList<CategoryTreeNodeData> tree)
     {
         if (_libraryDiskCacheHit) return;
+        if (!CarpetaEstadoApp.PermiteEscribir(LibraryCachePath)) return; // guarda del arnes (ver CarpetaEstadoApp)
         string[] sources = _librarySourceFiles;
         var vanilla = VanillaCatalog;
         var calamity = CalamityCatalog;
@@ -363,7 +364,17 @@ public sealed class CharacterFileService
     public static IReadOnlyList<string> GetAllPlayersDirectories()
     {
         if (CarpetasPersonajesDePrueba != null)
-            return CarpetasPersonajesDePrueba.Where(Directory.Exists).ToList();
+        {
+            // Pasada completa con raton real (28-sep-2026, FASE D): SUSTITUIR todas las carpetas dejaba sin
+            // su personaje a las pruebas que AÑADEN una carpeta extra propia desde Ajustes (H5-07, INI-03,
+            // INI-05, INI-07/08, INI-09 - fixtures en %TEMP%). Mismo criterio que los mundos (FASE C): de las
+            // carpetas extra solo quedan las que caen dentro de las raices permitidas del arnes (su carpeta
+            // aislada y %TEMP%); una carpeta extra real del usuario sigue sin escanearse jamas.
+            var prueba = CarpetasPersonajesDePrueba.Where(Directory.Exists).ToList();
+            if (RaicesMundosPermitidasDePrueba != null)
+                AppendExtraFolders(prueba, ExtraPlayerFolders.Where(EsRutaMundoPermitidaDePrueba).ToList());
+            return prueba;
+        }
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string tModLoader = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
         string vanilla = Path.Combine(documents, "My Games", "Terraria", "Players");

@@ -13,8 +13,9 @@ public sealed record WorldViewState(double Zoom, double OffsetH, double OffsetV)
 
 public static class WorldViewStateService
 {
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "world_view_state.json");
+    // Carpeta de estado centralizada (CarpetaEstadoApp): el arnes la redirige a su carpeta temporal
+    // en modo diagnostico - propiedad, no static readonly, para que la redireccion se respete siempre.
+    private static string FilePath => CarpetaEstadoApp.Ruta("world_view_state.json");
 
     public static Dictionary<string, WorldViewState> Load()
     {
@@ -39,6 +40,7 @@ public static class WorldViewStateService
     {
         try
         {
+            if (!CarpetaEstadoApp.PermiteEscribir(FilePath)) return; // guarda del arnes (ver CarpetaEstadoApp)
             string? dir = Path.GetDirectoryName(FilePath);
             if (dir != null) Directory.CreateDirectory(dir);
             string tmpPath = FilePath + ".tmp";

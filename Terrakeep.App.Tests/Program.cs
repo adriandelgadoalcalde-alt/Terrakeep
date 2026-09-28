@@ -890,7 +890,7 @@ internal static partial class Program
                 // de verdad (LoadFromDisk ya corrio en el arranque real de este arnes).
                 try
                 {
-                    string settingsPathIdioma = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "settings.json");
+                    string settingsPathIdioma = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("settings.json");
                     string? settingsBackupIdioma = File.Exists(settingsPathIdioma) ? File.ReadAllText(settingsPathIdioma) : null;
                     try
                     {
@@ -2614,9 +2614,9 @@ internal static partial class Program
         // abortar el proceso con "FALLO: AISLAMIENTO-MUNDO" y codigo 5 ANTES de leer un solo byte. Si
         // se llega a la linea siguiente, la guarda no funciona.
         // AISLAMIENTO_EXCEPCION_SOLO=1 (28-sep-2026, R2-L2 b): carga la COPIA de un personaje (MainWindow
-        // reescribe session.json con la ruta temporal) y lanza una excepcion SIN capturar desde Main.
-        // ProcessExit no corre en ese caso; session.json tiene que volver igualmente a sus bytes
-        // originales via AppDomain.UnhandledException (comprobar el SHA256 desde fuera).
+        // escribe session.json con la ruta temporal) y lanza una excepcion SIN capturar desde Main.
+        // Desde el blindaje de la FASE D (CarpetaEstadoApp) ese session.json es el de la carpeta de
+        // estado REDIRIGIDA del arnes: el real no se escribe nunca (comprobar su SHA256 desde fuera).
         if (Environment.GetEnvironmentVariable("AISLAMIENTO_EXCEPCION_SOLO") == "1")
         {
             int espera = 0;
@@ -2627,7 +2627,7 @@ internal static partial class Program
             DoEvents(); DoEvents();
             ComprobarPersonajeAislado(vm, "AISLAMIENTO_EXCEPCION_SOLO");
             vm.IsDirty = false;
-            string sj = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
+            string sj = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("session.json");
             string hashTrasCargar = File.Exists(sj) ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sj))) : "(no existe)";
             Console.WriteLine($"AISLAMIENTO_EXCEPCION_SOLO: session.json tras cargar la copia SHA256={hashTrasCargar}; se lanza una excepcion sin capturar");
             throw new InvalidOperationException("AISLAMIENTO_EXCEPCION_SOLO: excepcion provocada a proposito");
@@ -6678,7 +6678,7 @@ internal static partial class Program
             // A estas alturas ya se cargo un personaje real (H5-05, mas arriba) - CharacterLoaded
             // ya debio dispararse una vez, y MainWindow.xaml.cs ya debio escribir un session.json
             // REAL (el mismo fichero que usaria la proxima sesion real de este usuario).
-            string sessionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
+            string sessionPath = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("session.json");
             bool existeReal = File.Exists(sessionPath);
             string contenido = existeReal ? File.ReadAllText(sessionPath) : "";
             bool contieneRutaReal = existeReal && contenido.Contains("uia-harness-test.plr");
@@ -11730,7 +11730,7 @@ internal static partial class Program
                 // se limpian tambien, no deben quedar como basura de una ejecucion de arnes.
                 try
                 {
-                    string raizBackups = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "Backups");
+                    string raizBackups = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("Backups");
                     foreach (string d in Directory.Exists(raizBackups) ? Directory.GetDirectories(raizBackups, "Homonimo-*") : [])
                         Directory.Delete(d, recursive: true);
                 }
@@ -12091,7 +12091,7 @@ internal static partial class Program
         // finally), igual de estricto que A9-11-DIFICULTAD con el mundo real: si el usuario ya
         // habia activado el tick de verdad en esta misma maquina, su preferencia real vuelve
         // intacta, nunca se pisa con datos de prueba.
-        string placementPathParaFijar = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "window.json");
+        string placementPathParaFijar = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("window.json");
         string? placementBackup = File.Exists(placementPathParaFijar) ? File.ReadAllText(placementPathParaFijar) : null;
         try
         {
@@ -12179,7 +12179,7 @@ internal static partial class Program
         vm.IsDirty = false;
         window.Close();
         DoEvents();
-        string placementPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "window.json");
+        string placementPath = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("window.json");
         Console.WriteLine($"T3-GUARDADO: {placementPath} existe={File.Exists(placementPath)}, contenido={(File.Exists(placementPath) ? File.ReadAllText(placementPath) : "(nada)")}");
         app.Shutdown();
         Console.WriteLine("DONE");

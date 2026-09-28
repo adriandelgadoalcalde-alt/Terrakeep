@@ -42,8 +42,9 @@ public sealed class TerrakeepSettings
 
 public static class SettingsService
 {
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "settings.json");
+    // Carpeta de estado centralizada (CarpetaEstadoApp): el arnes la redirige a su carpeta temporal
+    // en modo diagnostico - propiedad, no static readonly, para que la redireccion se respete siempre.
+    private static string FilePath => CarpetaEstadoApp.Ruta("settings.json");
 
     public static TerrakeepSettings Load()
     {
@@ -62,6 +63,7 @@ public static class SettingsService
     {
         try
         {
+            if (!CarpetaEstadoApp.PermiteEscribir(FilePath)) return; // guarda del arnes (ver CarpetaEstadoApp)
             string? dir = Path.GetDirectoryName(FilePath);
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(settings));

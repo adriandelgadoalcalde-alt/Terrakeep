@@ -467,7 +467,7 @@ internal static partial class Program
         // real de la app (SettingsViewModel.LoadFromDisk pone la propiedad a true al leer el
         // fichero, ver MainWindow.xaml.cs). El efecto es que la app re-fija el tamaño ella sola
         // con el que tenga la ventana en ese instante, pisando el que el usuario habia fijado.
-        string placement = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "window.json");
+        string placement = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("window.json");
         string? backup = File.Exists(placement) ? File.ReadAllText(placement) : null;
         int tabPrevio = vm.SelectedTabIndex;
         try
@@ -598,7 +598,7 @@ internal static partial class Program
     // window.json).
     private static void PruebasAjustesPersistidos(MainViewModel vm)
     {
-        string ruta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "settings.json");
+        string ruta = Terrakeep.App.Services.CarpetaEstadoApp.Ruta("settings.json");
         string? backup = File.Exists(ruta) ? File.ReadAllText(ruta) : null;
         try
         {
