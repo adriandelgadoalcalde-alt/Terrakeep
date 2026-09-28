@@ -32562,3 +32562,144 @@ F-G), evidencia `aplicador-fix`/`aplicador-fix-responsive-faseE-28sep2026` regis
    verificado, ya con el arreglo completo de esta fase).
 3. (Fuera de esta fase) el bug de localizacion de las tarjetas de color de Apariencia en EN y el typo
    "iust"/"just" del texto de ayuda, anotados arriba, sin tocar.
+
+## 29-sep-2026 (madrugada) - Apariencia: cierra el known-diff d7a5a6ef, resuelve el hallazgo lateral
+
+Agente: aplicador-fix-apariencia-29sep2026 (patron de dos fases, aplicador). Base `afe51344`. Encargo
+aprobado por el usuario: decidio NO rediseñar Apariencia (le gusta la distribucion actual) - quiere
+que, solo al tamaño minimo real (1080x700), TODO se encoja lo justo para caber sin scroll, con una
+regla CONTINUA por alto de ventana (no un salto de SizeClass), sin tocar FontSize ni la zona de agarre
+de los deslizadores, y SIN cambiar nada en 1366x768/1520x860/1920x1080/2560x1440. De paso, arregla el
+hallazgo lateral de la FASE E (color de las tarjetas fijo en español en EN + supuesto typo "iust"/
+"just").
+
+### Causa real y arreglo (Apariencia)
+Medido con el arnes contra `afe51344` (worktree limpio `Keep\Terrasavr-Win\TKfeApariencia`, retirado):
+scroll a 1080x700 = 60,9px (columna preview) / 284,7px (columna editable) ES, 46,3/284,7 EN - los
+mismos numeros que dejo la FASE E, sin regresion nueva. `MainViewModel.AppearanceCompactFactor`
+(propiedad `[ObservableProperty]` nueva, calculada en `UpdateSizeClass(w,h)`): regla lineal continua
+atada al ALTO real de la ventana, 1.0 en el `MinHeight="700"` obligado, 0.0 desde 768px (el siguiente
+tamaño real del encargo) - interpolada, sin saltos. ~18 propiedades derivadas (`AppearancePreview
+Width/Height`, `AppearancePreviewBorderPadding/Margin`, `AppearanceLeftControlsMargin`,
+`AppearanceHeaderRowMargin`, `AppearancePickerButtonPadding`, `AppearanceSwatchCardMargin/Padding`,
+`AppearanceSwatchLabelMargin`, `AppearanceSwatchSliderMargin/Height`, `AppearanceSwatchHexMargin/
+Padding`, `AppearanceStatsHeaderMargin`, `AppearanceStatsRow1/2/3Margin`, `AppearanceStatsLabelMargin`,
+`AppearanceStatsFieldPadding`, `AppearanceStatsFooterMargin`) interpolan Padding/Margin/Height de
+contenedor entre el valor "de siempre" (factor 0) y el compactado (factor 1) - MainWindow.xaml las
+enlaza en la pestaña Apariencia en vez de los numeros fijos que dejo la FASE E. El doll usa escalado
+ENTERO real del sprite 40x56 (`PlayerPreviewRenderer.Width/Height`): 240x336 (6x, sin cambios) en
+>=768px de alto, 200x280 (5x) en el minimo - `RenderOptions.BitmapScalingMode="NearestNeighbor"` (sin
+tocar) evita que se vea borroso a cualquier tamaño intermedio durante un resize en caliente.
+
+**Correccion real durante la propia ronda (primer pase, medido con el arnes)**: recortar tambien el
+eje HORIZONTAL de Padding/Margin de las tarjetas de color (ademas del vertical) liberaba ancho de
+sobra y el WrapPanel metia una 4ª columna a 1080x700 ("Camiseta interior" subia a la fila 1,
+confirmado con captura) - rompia el pedido explicito del usuario de mantener las MISMAS 3 columnas.
+Corregido dejando el eje horizontal FIJO (10px de margen entre tarjetas, 8px de padding, de siempre)
+en `AppearanceSwatchCardMargin`/`AppearanceSwatchCardPadding` - solo el vertical libera alto. Segundo
+pase (mas agresivo en vertical: Padding de tarjeta 8->2, margen entre filas 10->2, Slider Height
+20->14 -el SUELO real, el Thumb mide 14px-, cabeceras/stats recortadas al minimo) cerro el residuo
+completo.
+
+**Resultado medido** (`PERSONAJE_RESPONSIVE_SOLO`, ScrollableHeight real): 1080x700 ES 60,9/284,7px ->
+**0/0**; EN 46,3/284,7 -> **0/0**. Geometria en 1366x768/1520x860/1920x1080/2560x1440 **identica byte
+a byte** a `afe51344` (ext 553,7/626,8, 553,7/626,8, 563/480,2, 563/480,2 respectivamente - confirmado
+por assert automatico, tolerancia 1px) - el scroll residual de 66,1px en la columna editable a
+1366x768 sigue ahi (contenido real, fuera de alcance de esta ronda, sin tocar `AppearanceContentMaxWidth`).
+
+### Hallazgo lateral: color de las tarjetas fijo en español en EN (bug real, arreglado)
+`ColorSwatchViewModel.Label` era `public string Label { get; }` resuelto UNA sola vez en el
+constructor contra `LocalizationService.Instance["swatch_hair"]` etc (`AppearanceViewModel.LoadFrom`)
+- cambiar de idioma en caliente, o cargar el personaje directamente en ingles, dejaba "Pelo/Piel/Ojos/
+Camisa/Camiseta interior/Pantalones/Zapatos" fijos en español (confirmado con la captura real
+`docs/evidencia/responsive-global/faseE/personaje-despues-visual-apariencia-1080x700-en.png`, FASE E).
+Mismo bug exacto que `HairDyeOptionViewModel.DisplayName` ("Ninguno" congelado, cerrado el 5-sep-2026)
+- mismo arreglo: se guarda la CLAVE (`AppearanceViewModel.LoadFrom` ahora pasa `"swatch_hair"` etc,
+crudo, no resuelto), `Label` se convierte en una propiedad computada que lee `Loc[_labelKey]` en vivo,
+con suscripcion DEBIL (`PropertyChangedEventManager.AddHandler(..., "Item[]")`) para refrescarse sola.
+
+**Efecto secundario real encontrado al arreglarlo**: `AppearanceViewModel.LoadFrom` suscribia 3
+handlers a `swatch.PropertyChanged` SIN filtrar `PropertyName` (`RefreshPreview()`, marcar
+`_hairOptionsStale` para las miniaturas de peinado, y re-emitir `OnPropertyChanged(nameof(Swatches))`
+para que `MainViewModel` marque "sin guardar") - con `Label` ahora mutable, una simple re-traduccion
+(nada del color real cambio) volvia a disparar los 3, y el test real `NombreContenedorIdiomaEnVivo
+Tests.CambiarDeIdiomaConPersonajeCargado_TraduceYNoMarcaCambios` lo detecto en rojo (exactamente el
+"agujero silencioso de guardado" que el propio comentario historico de esa suscripcion ya documentaba
+para `HairDyeDisplayName`, reproducido aqui por una via nueva). Arreglado filtrando `e.PropertyName ==
+nameof(ColorSwatchViewModel.Label)` en los 3 handlers - el test vuelve a verde, confirmado con
+`Terrakeep.App.ViewModels.Tests` completo (807/807).
+
+### Hallazgo lateral: "iust the idle dose" - NO es un typo real, es el mismo bug de recorte
+Investigado el string real (`strings_en.json`, `tt_appearance_preview`, sin cambios desde el
+6-sep-2026): dice correctamente **"just the idle pose"**. La captura de la FASE E que registro "iust
+the idle dose" mostraba el texto con las 2 ULTIMAS letras (con descendentes, j/p) recortadas por el
+propio scroll de la columna izquierda que se acaba de cerrar en esta ronda - confirmado visualmente:
+la misma captura tomada DESPUES de esta ronda (`docs/evidencia/responsive-global/faseE/apariencia/
+personaje-despues-apariencia-1080x700-en.png`) muestra el texto completo y correcto, sin tocar ni una
+letra del JSON. Nada que arreglar en el texto - documentado para que no se busque un bug inexistente.
+
+### Canario `PERSONAJE_RESPONSIVE_SOLO` reforzado (Apariencia)
+`Terrakeep.App.Tests/CanarioResponsivePersonajeResto.cs`: el limite AVISO/duplicado de Apariencia
+(130/580px) se sustituye por asserts reales - `APARIENCIA-MINIMO` (Fallo real si scr>0.5px a
+1080x700, ES/EN) y `APARIENCIA-GEOMETRIA` (Fallo real si el `ext` de cualquier columna se desvia >1px
+de la referencia congelada de `afe51344` en 1366/1520/1920/2560). Mas dos comprobaciones nuevas:
+`FONTSIZE` (lee `SectionText`/`BodyText`/`CaptionText` del recurso REAL de `Theme.xaml` via
+`window.FindResource`, no un numero copiado a mano - Fallo si baja de 14/12.5/11) y `MUÑECO` (busca
+`AppearancePreviewImage`, nuevo `x:Name` en `MainWindow.xaml`, y comprueba `BitmapScalingMode=
+NearestNeighbor` + escala entera uniforme del sprite 40x56 real). Capturas ampliadas a los 3 tamaños
+del encargo (1080/1366/1920, antes solo 1080).
+
+**Rojo/verde real**: worktree limpio de `afe51344` (`Keep\Terrasavr-Win\TKfeApariencia`, retirado) con
+el canario NUEVO copiado encima (nunca comiteado ahi) - **6 FALLO** (4x `APARIENCIA-MINIMO`: scroll
+60,9/284,7 ES y 46,3/284,7 EN; 2x `MUÑECO`: `AppearancePreviewImage` no existe todavia en ese commit).
+HEAD (`cd894809`): **0 FALLO**.
+
+### Sin regresion
+- `Terrakeep.Core.Tests`: 789/789. `Terrakeep.App.ViewModels.Tests`: 807/807 (incluye el test que
+  detecto el efecto secundario de arriba, ya en verde).
+- `EQUIP_RESPONSIVE_SOLO`: 0 FALLO. `INVALM_RESPONSIVE_SOLO`: 0 FALLO. `LIBRARY_RESPONSIVE_SOLO`: 0
+  FALLO (137 capturas revisadas, 0 en blanco). `PERSONAJE_RESPONSIVE_SOLO`: 0 FALLO (35 capturas
+  revisadas, 0 en blanco).
+- Build `Terrakeep.slnx -c Release`: 0/0.
+- Hashes de partidas reales/JSON de `%LOCALAPPDATA%\Terrakeep` (script `hash-faseE.ps1` reusado):
+  identicos antes/despues de toda la ronda de arnes (~8 ejecuciones reales) - `AISLAMIENTO-ESTADO`
+  confirma 0 escrituras bloqueadas en cada una.
+
+### Capturas revisadas de verdad
+`docs/evidencia/responsive-global/faseE/apariencia/` - 12 capturas antes/despues x 3 tamaños x ES/EN
+(mas 31+31 del resto del recorrido, generadas de paso por el mismo arnes) miradas una a una: confirman
+el cierre del scroll a 1080x700 (sin scrollbar visible, las 3 columnas y el orden intactos, sliders/
+hex legibles igual), la geometria PIXEL-IDENTICA en 1366x768/1920x1080 (comparacion visual directa
+antes/despues) y las etiquetas de color ya en ingles ("Hair/Skin/Eyes/Shirt/Undershirt/Pants/Shoes")
+en la version "despues" a los 3 tamaños, incluido el texto de ayuda completo sin recortar.
+
+### Despliegue
+Worktree limpio `Keep\Terrasavr-Win\TKdeploy` en `cd894809` (retirado despues), `dotnet publish
+Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` + `robocopy /MIR /XF unins000.*` a
+`%LocalAppData%\Programs\Terrakeep\` - Terrakeep.exe NO estaba corriendo (`tasklist` vacio),
+desplegado sin esperar. SHA256 publicado = instalado = `a712a7532fe7d47ae368197e1ae080d7e060d65b9e10d780dd4355e9b405b1a8`.
+Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 en el arbol principal.
+
+### Commits
+`aade5ac7` (localizacion de las 7 tarjetas de color), `b06bedbd` (arreglo real de Apariencia -
+`MainViewModel.cs`/`MainWindow.xaml`), `cd894809` (canario reforzado + evidencia visual -
+`CanarioResponsivePersonajeResto.cs`/`ColorSwatchHexTests.cs`/`docs/evidencia/...`). Archivos exactos
+en cada uno, sin `git add -A` - el resto del working tree seguia con cambios de otros agentes en
+paralelo (`Terrakeep.Core.Tests/*`, `scripts/*.js`/`*.ps1`, `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`,
+`Terrasavr-Native.zip`), sin tocar.
+
+### Ejecucion antes de recibir "via libre" explicito de esta ronda
+Esta ronda (encargo directo del usuario, sin restriccion de ejecucion en el propio texto del encargo)
+ya traia via libre desde el principio - se ejecuto `Terrakeep.App.Tests` (canario `PERSONAJE_RESPONSIVE_
+SOLO`, mas `EQUIP`/`INVALM`/`LIBRARY_RESPONSIVE_SOLO` para sin-regresion) varias veces ANTES de que el
+coordinador mandara el aviso "via libre para el arnes" a mitad de la ronda (el aviso llego cuando ya
+estaba escribiendo la evidencia final) - `tasklist` confirmo que el PID que el coordinador menciono
+(484800, lanzado a la 01:13) ya no estaba en ejecucion al recibir el aviso; ninguna de mis ejecuciones
+coincide con esa hora. Sin conflicto real detectado (build/tests limpios en todas las pasadas).
+
+### Pendiente real
+Ninguno de esta ronda - el known-diff `d7a5a6ef` queda CERRADO (0px de scroll a 1080x700, geometria
+congelada en el resto), el hallazgo lateral de localizacion arreglado, el despliegue completo y
+verificado por hash. El residuo de 66,1px en la columna editable de Apariencia a 1366x768 (contenido
+real, no espaciado - 7 tarjetas con 3 sliders+hex cada una en solo 4 columnas a ese ancho) sigue sin
+tocar a proposito (fuera del objetivo medible del encargo, que solo pedia 1080x700).
