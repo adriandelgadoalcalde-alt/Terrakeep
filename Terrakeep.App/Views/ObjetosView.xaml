@@ -853,8 +853,9 @@
                                      (AjustarRepartoObjetosLibreria) y el resto es de la Libreria - el tope ya solo
                                      dejaba bandas vacias (medido: 130px a 1920x1080 y 346px a 2560x1440 bajo
                                      Equipamiento). -->
+                                <!-- D-08: suelo de 190 (antes 200) - ver AjustarRepartoObjetosLibreria. -->
                                 <RowDefinition x:Name="FilaLibreria" Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
-                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}" />
+                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=190}" />
                             </Grid.RowDefinitions>
                             <!-- FASE D (s7): dos columnas en la rejilla EXTERIOR - Objetos y Libreria a la izquierda,
                                  el panel Editar a la derecha ocupando el alto COMPLETO de las dos filas (antes vivia

@@ -153,6 +153,10 @@ public sealed class SlotGridPanel : Panel
     // owner de la pagina lo absorba (s14 paso 8), en vez de recortar las ultimas filas.
     public double DeficitAlto { get; private set; }
 
+    // D-08 (correccion de la FASE D, 28-sep-2026): alto que ocuparia la rejilla con la celda en MinCell (con
+    // las columnas que caben a MinCell en este ancho). Lo usa AjusteAlViewport.AltoMinimo.
+    public double AltoEnMinCell { get; private set; }
+
     // Correccion H-C1 del revisor de la FASE C: aviso a AjusteAlViewport en CADA medida con alto
     // finito (evento enrutado que burbujea, sin recorrer el arbol a mano). Antes solo se avisaba si
     // cambiaba DeficitAlto, y eso no bastaba: en la primera entrada a Inventario el MinCell enlazado
@@ -171,6 +175,7 @@ public sealed class SlotGridPanel : Panel
         DeficitAlto = 0;
         if (n == 0)
         {
+            AltoEnMinCell = 0;
             if (!double.IsInfinity(availableSize.Height)) RaiseEvent(new RoutedEventArgs(MedidaConAltoFinitoEvent, this));
             return new Size(0, 0);
         }
@@ -195,6 +200,8 @@ public sealed class SlotGridPanel : Panel
         }
 
         double availH = double.IsInfinity(availableSize.Height) ? AvailableHeight : availableSize.Height;
+        int filasEnMinCell = (int)Math.Ceiling(n / (double)cols);
+        AltoEnMinCell = filasEnMinCell * MinCell + Gap * (filasEnMinCell - 1);
 
         if (AdaptiveColumns && PreferirCeldaGrande && !double.IsInfinity(availableSize.Width) && availH > 0)
         {

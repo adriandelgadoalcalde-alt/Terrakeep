@@ -36,6 +36,12 @@ public sealed class AjusteAlViewport : Decorator
     // mas alta que esto, el sobrante no sirve de nada aqui - ObjetosView se lo da a la Libreria.
     public double AltoUtilMaximo { get; private set; }
 
+    // D-08 (FASE C, cerrado en la correccion de la FASE D, 28-sep-2026): alto MINIMO que necesita la pagina
+    // para caber sin desplazar con sus rejillas en MinCell (lo que mide ahora menos lo que las rejillas
+    // podrian encoger hasta MinCell). Exacto en cada medida, sin medidas extra: no depende del alto que
+    // tenga ahora el viewport (no oscila cuando ObjetosView le da ese alto a la fila). 0 = sin dato.
+    public double AltoMinimo { get; private set; }
+
     public AjusteAlViewport()
     {
         // Correccion H-C1 (ver SlotGridPanel.MedidaConAltoFinitoEvent): una rejilla que se mide por su
@@ -76,6 +82,7 @@ public sealed class AjusteAlViewport : Decorator
             hijo.Measure(new Size(constraint.Width, alto));
             double deficit = DeficitDeRejillas(hijo);
             if (deficit > 0.5) hijo.Measure(new Size(constraint.Width, alto + deficit));
+            AltoMinimo = Math.Max(0, hijo.DesiredSize.Height - HolguraDeRejillas(hijo));
             return hijo.DesiredSize;
         }
         finally { Midiendo = false; }
@@ -90,6 +97,21 @@ public sealed class AjusteAlViewport : Decorator
     // Suma del alto que les falta a las rejillas visibles del contenido (en estas paginas hay una sola
     // a la vez; sumar es lo conservador si algun dia se apilan varias). No entra dentro de cada
     // SlotGridPanel: sus hijos son celdas, no pueden contener otra rejilla.
+    // Cuanto podrian encoger las rejillas visibles hasta MinCell (su alto medido menos AltoEnMinCell).
+    private static double HolguraDeRejillas(DependencyObject raiz)
+    {
+        double total = 0;
+        int n = VisualTreeHelper.GetChildrenCount(raiz);
+        for (int i = 0; i < n; i++)
+        {
+            var hijo = VisualTreeHelper.GetChild(raiz, i);
+            if (hijo is UIElement { Visibility: not Visibility.Visible }) continue;
+            if (hijo is SlotGridPanel rejilla) { total += Math.Max(0, rejilla.DesiredSize.Height - rejilla.AltoEnMinCell); continue; }
+            total += HolguraDeRejillas(hijo);
+        }
+        return total;
+    }
+
     private static double DeficitDeRejillas(DependencyObject raiz)
     {
         double total = 0;

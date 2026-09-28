@@ -70,6 +70,21 @@ public partial class ObjetosView : UserControl
     private void AjustarRepartoObjetosLibreria()
     {
         if (DataContext is not MainViewModel vm) return;
+        // D-08 (INVALM PAGINA-SCROLL de 2,3px, ext 296 en vp 293,6): a 1080x700 con la Libreria desplegada el
+        // reparto 3*/2* le daba a la fila de Objetos ~301,6px y el Inventario en MinCell (40px) necesita 304
+        // (296 + el Margin de 8): la pagina finita desplazaba 2,3px. Dependia del alto de cliente real de la
+        // ventana (marco/DPI de cada entorno), por eso salia "en algunos entornos". Causa real de reparto, no
+        // de redondeo: la fila de Objetos tiene ahora como suelo lo que su pagina necesita en MinCell
+        // (AjusteAlViewport.AltoMinimo) y es la Libreria - coleccion con su propio scroll owner - la que cede
+        // esos pocos px (su suelo baja de 200 a 190 en ObjetosView.xaml; a 1080x700 sigue enseñando 2 filas
+        // enteras de resultados).
+        double suelo = 216;
+        if (vm.IsLibraryVisible && vm.ObjetosSubTabIndex is 1 or 2)
+        {
+            var ajusteMin = vm.ObjetosSubTabIndex == 1 ? AjusteInventario : AjusteAlmacenes;
+            if (ajusteMin.IsVisible && ajusteMin.AltoMinimo > 0) suelo = Math.Max(suelo, ajusteMin.AltoMinimo + 9);
+        }
+        if (Math.Abs(FilaObjetos.MinHeight - suelo) > 0.5) FilaObjetos.MinHeight = suelo;
         double tope = double.PositiveInfinity;
         if (vm.IsLibraryVisible)
         {
