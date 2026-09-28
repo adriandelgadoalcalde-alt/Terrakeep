@@ -46,19 +46,24 @@
      compartido por AMBOS UserControl, sin tocar Application.Resources - no probado todavia, pendiente
      de verificacion empirica real en la ronda de Objetos, no asumido aqui).
 
-     HALLAZGO SECUNDARIO (fuera de alcance de esta ronda, solo documentado, NO corregido - "no
-     amplíes alcance sin escalar"): dentro de ItemEditTemplate/ChestInspectorItemEditTemplate, los
-     3 niveles del selector de prefijo (Metas/Groups/Prefixes) enlazan su Command via
-     `RelativeSource AncestorType=Window` a `DataContext.ItemEdit.SelectMetaCommand/
-     SelectGroupCommand/ApplyPrefixCommand` - SIEMPRE el ItemEditViewModel RAIZ (vm.ItemEdit, de
-     Personaje), NUNCA vm.Exploration.ChestItemEdit (instancia DISTINTA, confirmado en
-     MainViewModel.cs:1194 vs ExplorationViewModel.cs:2513, dos "new ItemEditViewModel(...)"
-     separados). Este binding es preexistente a esta extraccion (ya estaba asi en MainWindow.xaml
-     antes de mover nada) y es dinamico (RelativeSource, no StaticResource) - sigue resolviendo
-     igual tras la extraccion porque ChestInspectorView vive parented dentro de la MISMA Window en
-     runtime. Posible bug real de produccion (pulsar un boton de Meta/Grupo/Prefijo dentro del
-     Inspector de cofre podria estar operando sobre el editor de Personaje en vez del propio cofre)
-     - recomendado investigarlo en una ronda propia, nunca mezclado con esta extraccion estructural.
+     HALLAZGO SECUNDARIO, CORREGIDO (28-sep-2026, encargo maestro Familia Keep - bug reportado por
+     el usuario: cambiar un prefijo en el Inspector de cofre no activaba Guardar, y clicar
+     cualquier prefijo de biblioteca/sugeridos no hacia nada): dentro de
+     ChestInspectorItemEditTemplate, los 3 niveles del selector de prefijo (Metas/Groups/Prefixes)
+     enlazaban su Command via `RelativeSource AncestorType=Window` a
+     `DataContext.ItemEdit.SelectMetaCommand/SelectGroupCommand/ApplyPrefixCommand` - SIEMPRE el
+     ItemEditViewModel RAIZ (vm.ItemEdit, de Personaje), NUNCA vm.Exploration.ChestItemEdit
+     (instancia DISTINTA, confirmado en MainViewModel.cs:1194 vs ExplorationViewModel.cs:2513, dos
+     "new ItemEditViewModel(...)" separados) - exactamente el bug reportado, confirmado por
+     lectura de codigo antes de tocar nada. Arreglo real: los 3 Command ahora usan
+     `RelativeSource AncestorType=ItemsControl` (el ItemsControl inmediato que envuelve cada
+     ItemTemplate SIGUE teniendo como DataContext heredado el ItemEditViewModel correcto de esta
+     instancia - solo los ITEMS individuales dentro del ItemTemplate resetean su DataContext al
+     PrefixMetaButtonViewModel/PrefixGroupButtonViewModel/PrefixCatalogEntryViewModel) en vez de
+     `AncestorType=Window` + un path fijo a una propiedad concreta del ViewModel raiz - correcto
+     sea cual sea el consumidor real de esta plantilla, sin acoplarse a "Exploration.ChestItemEdit"
+     a proposito (la plantilla ya es local/duplicada por ADR-TERRAKEEP-028, pero el binding en si
+     no necesita saber el nombre de la propiedad que lo hospeda).
 
      x:Name reales dentro del bloque (ExplorationSidebarChestInspectorPlaceholder) usados por
      window.FindName en 3 archivos de test (CanarioClusterCofresInspector.cs x3,
@@ -201,7 +206,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
                                 <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
-                                        Command="{Binding DataContext.ItemEdit.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        Command="{Binding DataContext.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -214,7 +219,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
                                 <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
-                                        Command="{Binding DataContext.ItemEdit.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -228,7 +233,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
                                     <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
-                                            Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Command="{Binding DataContext.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
                                             Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
                                         <Button.Style>
