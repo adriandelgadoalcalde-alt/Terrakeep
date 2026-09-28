@@ -11,7 +11,7 @@ public sealed class ColorSwatchHexTests
     public void CambiarRGBActualizaElHexReal()
     {
         var target = new byte[3];
-        var swatch = new ColorSwatchViewModel("Pelo", target);
+        var swatch = new ColorSwatchViewModel("swatch_hair", target);
 
         swatch.R = 255;
         swatch.G = 0;
@@ -24,7 +24,7 @@ public sealed class ColorSwatchHexTests
     public void EscribirUnHexValidoActualizaRGBYElArrayReal()
     {
         var target = new byte[3];
-        var swatch = new ColorSwatchViewModel("Pelo", target);
+        var swatch = new ColorSwatchViewModel("swatch_hair", target);
 
         swatch.Hex = "#1A2B3C";
 
@@ -40,7 +40,7 @@ public sealed class ColorSwatchHexTests
     public void EscribirUnHexValidoSinAlmohadillaTambienFunciona()
     {
         var target = new byte[3];
-        var swatch = new ColorSwatchViewModel("Pelo", target);
+        var swatch = new ColorSwatchViewModel("swatch_hair", target);
 
         swatch.Hex = "00FF00";
 
@@ -53,7 +53,7 @@ public sealed class ColorSwatchHexTests
     public void UnHexAMedioEscribirSeIgnoraSinTocarRGB()
     {
         var target = new byte[3];
-        var swatch = new ColorSwatchViewModel("Pelo", target);
+        var swatch = new ColorSwatchViewModel("swatch_hair", target);
         swatch.R = 10; swatch.G = 20; swatch.B = 30;
 
         swatch.Hex = "#1A2"; // todavia incompleto, el usuario sigue escribiendo

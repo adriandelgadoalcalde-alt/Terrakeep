@@ -341,13 +341,16 @@ public partial class AppearanceViewModel : ObservableObject
         _pendingUndoGroups.Clear();
         _swatchBaseline.Clear();
         Swatches.Clear();
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_hair"], character.HairColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_skin"], character.SkinColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_eyes"], character.EyeColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_shirt"], character.ShirtColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_undershirt"], character.UnderColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_pants"], character.PantsColor));
-        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_shoes"], character.ShoesColor));
+        // FASE E del responsive global (29-sep-2026, hallazgo lateral): la clave se pasa CRUDA, no
+        // resuelta - ver el comentario real de ColorSwatchViewModel.Label (mismo bug/arreglo que
+        // HairDyeOptionViewModel.DisplayName, "Ninguno" congelado en español el 5-sep-2026).
+        Swatches.Add(new ColorSwatchViewModel("swatch_hair", character.HairColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_skin", character.SkinColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_eyes", character.EyeColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_shirt", character.ShirtColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_undershirt", character.UnderColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_pants", character.PantsColor));
+        Swatches.Add(new ColorSwatchViewModel("swatch_shoes", character.ShoesColor));
 
         _suppressWriteback = true;
         HairStyle = character.HairStyle;
@@ -372,7 +375,14 @@ public partial class AppearanceViewModel : ObservableObject
         {
             var swatch = Swatches[i];
             int swatchIndex = i; // captura real por valor - "i" es la variable de bucle compartida
-            swatch.PropertyChanged += (_, _) => RefreshPreview();
+            // FASE E del responsive global (29-sep-2026, hallazgo lateral): Label ahora SI puede
+            // cambiar (se resuelve en vivo contra el idioma, ver ColorSwatchViewModel.Label) - los
+            // 4 subscriptores de abajo reaccionaban a CUALQUIER PropertyChanged del swatch sin
+            // filtrar, asi que una simple re-traduccion (nada del color real cambio) volvia a
+            // disparar preview/staleness/Swatches - MISMO bug de fondo que el comentario real de
+            // mas abajo (B-4/B-5, "agujero silencioso de guardado") documenta para HairDyeDisplayName,
+            // reproducido aqui por una via nueva. Todos filtran Label explicitamente.
+            swatch.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ColorSwatchViewModel.Label)) RefreshPreview(); };
             // C-15 (informe de pulido final, gotcha real #2): los 7 colores NO pasan por
             // AppearanceViewModel - los edita ColorSwatchViewModel directamente sobre el byte[]
             // real del personaje, sin ningun "oldValue" propio que capturar (a diferencia de
@@ -403,8 +413,9 @@ public partial class AppearanceViewModel : ObservableObject
             // (_hairOptionsStale) en vez de limpiar/regenerar aqui mismo; si el selector esta
             // abierto AHORA, ademas reinicia el debounce real (180ms) para refrescarlas de
             // verdad sin regenerar en cada tick individual del slider.
-            if (i == HairIdx) swatch.PropertyChanged += (_, _) =>
+            if (i == HairIdx) swatch.PropertyChanged += (_, e) =>
             {
+                if (e.PropertyName == nameof(ColorSwatchViewModel.Label)) return;
                 _hairOptionsStale = true;
                 if (IsHairPickerOpen)
                 {
@@ -419,7 +430,7 @@ public partial class AppearanceViewModel : ObservableObject
             // reasignar el bitmap en cada tick, este seria el tercer agujero silencioso de
             // guardado (mismo tipo que B-4/B-5). Señal EXPLICITA, no accidental - misma
             // propiedad publica real (Swatches), sin inventar un evento nuevo solo para esto.
-            swatch.PropertyChanged += (_, _) => OnPropertyChanged(nameof(Swatches));
+            swatch.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ColorSwatchViewModel.Label)) OnPropertyChanged(nameof(Swatches)); };
         }
         HairOptions.Clear();
         _hairOptionsStale = true;

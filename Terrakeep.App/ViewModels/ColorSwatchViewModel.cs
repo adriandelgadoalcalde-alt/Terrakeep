@@ -14,9 +14,20 @@ public partial class ColorSwatchViewModel : ObservableObject
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
     private readonly byte[] _target;
+    private readonly string _labelKey;
     private bool _suppressWriteback;
 
-    public string Label { get; }
+    // Hallazgo lateral de la FASE E del responsive global (29-sep-2026): a diferencia de
+    // HairDyeOptionViewModel.DisplayName (mismo bug ya cerrado el 5-sep-2026, "Ninguno" congelado
+    // en español), Label se resolvia UNA SOLA VEZ en el constructor y se guardaba como texto fijo -
+    // cambiar de idioma en caliente (o cargar el personaje en ingles) nunca lo refrescaba, asi que
+    // las 7 tarjetas de color ("Pelo/Piel/Ojos/Camisa/Camiseta interior/Pantalones/Zapatos") se
+    // quedaban en español aunque el resto de la pestaña ya estuviera en ingles - confirmado en la
+    // captura real docs/evidencia/responsive-global/faseE/personaje-despues-visual-apariencia-1080x700-en.png.
+    // Mismo arreglo real que HairDyeOptionViewModel.DisplayName: se guarda la CLAVE, no el texto
+    // resuelto, y se resuelve al leerla con suscripcion DEBIL (PropertyChangedEventManager) al
+    // "Item[]" de LocalizationService - ver el comentario real de LocalizedContentViewModel.
+    public string Label => Services.LocalizationService.Instance[_labelKey];
 
     [ObservableProperty] private int _r;
     [ObservableProperty] private int _g;
@@ -32,12 +43,17 @@ public partial class ColorSwatchViewModel : ObservableObject
     // no representaria nada del juego real.
     [ObservableProperty] private string _hex = "#000000";
 
-    public ColorSwatchViewModel(string label, byte[] target)
+    public ColorSwatchViewModel(string labelKey, byte[] target)
     {
-        Label = label;
+        _labelKey = labelKey;
         _target = target;
         LoadFromTarget();
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => OnPropertyChanged(nameof(Label));
 
     // Vuelve a leer del array real - usado al cargar/recargar un personaje (el array
     // subyacente es uno nuevo tras un Load, este ViewModel se reconstruye igualmente en ese
