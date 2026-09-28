@@ -95,11 +95,27 @@
              de MainWindow.xaml, consumido tambien por Objetos sin extraer todavia) - ver el
              comentario largo de arriba (ADR-TERRAKEEP-028) para la justificacion completa de por
              que esta duplicacion, aunque indeseable, es la unica solucion segura ya probada por la
-             familia. Contenido IDENTICO a ItemEditTemplate salvo el x:Key y las 5 referencias
-             internas a BoolToVis, renombradas a ChestInspectorBoolToVis (mismo motivo: BoolToVis
-             tambien es exclusivo de Window.Resources de MainWindow.xaml). -->
+             familia. Contenido IDENTICO a ItemEditTemplate (estructura de campos) salvo el x:Key y
+             las 5 referencias internas a BoolToVis, renombradas a ChestInspectorBoolToVis (mismo
+             motivo: BoolToVis tambien es exclusivo de Window.Resources de MainWindow.xaml).
+
+             FASE F del responsive global (29-sep-2026, s13/s14/s26-A/s26-H): RETIRADOS los dos
+             ScrollViewer propios que tenia este duplicado (el "de seguridad" que envolvia el
+             DockPanel entero y el anidado alrededor de la lista de Prefixes, mismo eje) - la
+             duplicacion de ADR-028 (26-sep-2026) se hizo ANTES de que la FASE D (28-sep-2026)
+             retirase el mismo par de ScrollViewer del ItemEditTemplate original de Objetos
+             (ObjetosView.xaml:207-209, "RETIRADOS los dos ScrollViewer propios de este panel"),
+             asi que el duplicado se quedo con el patron OLD MODEL (nested same-axis scroll,
+             negative acceptance A/H) mientras el original ya lo tenia resuelto. A diferencia de
+             Objetos (donde Editar comparte FILA de alto acotado con la Libreria y hizo falta el
+             selector de prefijo en desplegable, D-01), este ContentControl vive dentro del
+             StackPanel raiz de ExplorationSidebarChestInspectorPlaceholder, que YA comparte
+             ExplorationSidebarScroll (el scroll owner UNICO de todo el sidebar, ver comentario mas
+             abajo en el ContentControl real) - basta con dejar crecer el contenido (s14 paso 8,
+             mismo criterio que Loadout/Vista/Defensa en Personaje, s6/s34): sin necesidad de portar
+             el mecanismo de desplegable de Objetos, que resuelve un problema de ALTO ACOTADO que
+             aqui no existe. -->
         <DataTemplate x:Key="ChestInspectorItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[action_edit], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
 
@@ -225,39 +241,39 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Prefixes}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
-                                    <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
-                                            Command="{Binding DataContext.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
-                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <!-- FASE F del responsive global: lista de prefijos SIN ScrollViewer propio (era el
+                         segundo scroll vertical anidado del panel, mismo hallazgo que arriba) - envuelve
+                         y crece en alto, igual que ItemEditTemplate (ObjetosView.xaml:147-149). -->
+                    <ItemsControl ItemsSource="{Binding Prefixes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
+                                        Command="{Binding DataContext.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
+                                        Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </DockPanel>
-            </ScrollViewer>
         </DataTemplate>
     </UserControl.Resources>
     <!-- ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): relleno real del
@@ -340,19 +356,27 @@
             <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <!-- Columns se recalcula en vivo (ChestInspectorColumnsConverter) contra el ANCHO REAL del Grid ancestro, nunca contra Settings.ExplorationSidebarWidth crudo (eje independiente ajustable 260-520px, sin el overhead real de padding/margen/scrollbar, ~41px). ReferenceColumns=10, mismo techo que el resto de rejillas de la app. Historial completo (por que Columns=6 literal se rompia con sidebar estrecho, canario FLUJOCOFRES-SIDEBARWIDTH): ADR-TERRAKEEP-010. -->
+                        <!-- FASE F del responsive global (29-sep-2026): sustituye ChestInspectorColumnsConverter
+                             (MultiBinding contra ActualWidth del Grid ancestro) por
+                             SlotGridPanel.AdaptiveColumns - era el pendiente explicito dejado por la FASE A
+                             ("migrarlo es trabajo de una fase posterior", SlotGridPanel.cs:113). Misma formula
+                             exacta (columnas=clamp(floor((anchoDisponible+Gap)/(MinCell+Gap)),1,maximumColumns),
+                             ver SlotGridPanel.MeasureOverride) pero calculada DENTRO del propio panel contra el
+                             availableSize.Width real del paso de Measure de WPF - este SlotGridPanel es el
+                             ItemsPanel de un ItemsControl dentro de un StackPanel sin margen horizontal
+                             (Margin="0,0,0,8") que a su vez cuelga de ExplorationSidebarChestInspectorPlaceholder:
+                             el mismo ancho que antes se leia por fuera via ActualWidth del Grid llega ahora
+                             directo por el Measure normal, sin necesitar releer nada por fuera del panel.
+                             Columns se deja en su default (10) = maximumColumns, mismo techo que tenia el clamo
+                             1-10 del converter retirado y que ReferenceColumns="10" de abajo. Historial completo
+                             de por que Columns="6" literal se rompia con sidebar estrecho (FLUJOCOFRES-SIDEBARWIDTH):
+                             bitacora.md 26-sep-2026 "ChestInspector Columns dinamico segun ExplorationSidebarWidth". -->
                         <controls:SlotGridPanel
+                            AdaptiveColumns="True"
                             MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
                             MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
                             Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
-                            ReferenceColumns="10">
-                            <controls:SlotGridPanel.Columns>
-                                <MultiBinding Converter="{x:Static conv:ChestInspectorColumnsConverter.Instance}">
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Grid}" />
-                                    <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
-                                </MultiBinding>
-                            </controls:SlotGridPanel.Columns>
-                        </controls:SlotGridPanel>
+                            ReferenceColumns="10" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -391,10 +415,12 @@
                  de Personaje) y usa ChestInspectorItemEditTemplate, el duplicado
                  local NECESARIO de ItemEditTemplate (ver ADR-TERRAKEEP-028 arriba -
                  esta extraccion rompe la instancia compartida original, unica
-                 solucion segura ya probada por la familia). Sin MaxHeight (mismo
-                 criterio ya fijado en Fase C: el ScrollViewer "de seguridad" que ya
-                 trae la plantilla basta, y ahora vive dentro del ScrollViewer
-                 exterior de todo el sidebar). -->
+                 solucion segura ya probada por la familia). Sin MaxHeight y, desde la
+                 FASE F del responsive global, sin ningun ScrollViewer propio (retirado
+                 arriba, ver el comentario de ChestInspectorItemEditTemplate): el
+                 contenido crece con naturalidad y el ScrollViewer EXTERIOR de todo el
+                 sidebar (ExplorationSidebarScroll, en MainWindow.xaml) es el unico
+                 scroll owner real de este contexto. -->
             <ContentControl Content="{Binding Exploration.ChestItemEdit}"
                             ContentTemplate="{StaticResource ChestInspectorItemEditTemplate}" Margin="0,10,0,0" />
 

@@ -32703,3 +32703,133 @@ congelada en el resto), el hallazgo lateral de localizacion arreglado, el despli
 verificado por hash. El residuo de 66,1px en la columna editable de Apariencia a 1366x768 (contenido
 real, no espaciado - 7 tarjetas con 3 sliders+hex cada una en solo 4 columnas a ese ancho) sigue sin
 tocar a proposito (fuera del objetivo medible del encargo, que solo pedia 1080x700).
+
+## 29-sep-2026 - FASE F del responsive global: inventario por codigo + 2 arreglos claros (parcial -
+## RESTRICCION DE EJECUCION)
+
+Agente: aplicador-fix-responsive-faseF-29sep2026 (patron de dos fases; requirement
+`6b59710e-e57b-4677-89a1-2c4c58c29b5a`). Base `181db87d`.
+
+**Restriccion de ejecucion del encargo**: el escritorio lo usan otros agentes por turnos -
+prohibido `Terrakeep.App.Tests`, abrir ventanas o `SendInput` hasta recibir "via libre para el
+arnes". Permitido: leer/programar, `dotnet build`, `dotnet test` de Core.Tests/ViewModels.Tests.
+Esta entrada documenta el inventario por codigo de las 7 vistas de la fase y los 2 arreglos que
+quedaron CLAROS solo con lectura de codigo - medicion real con el arnes, capturas y despliegue
+quedan pendientes de la siguiente ronda con "via libre".
+
+### Inventario por codigo (34 secciones del encargo, sobre todo s13/s14/s18-s19/s22-s26/s28-s29/s32-s34)
+`MainViewModel.AppTab`: `Inicio=0 Personaje=1 Builds=2 Guia=3 Exploracion=4 Hosting=5 Novedades=6
+AcercaDe=7` - Personaje ya cerrado (Fases B-E). Las 7 pestañas de esta fase:
+- **Inicio** (`HomeView.xaml`): UN `ScrollViewer` (page owner) envuelve toda la pagina; tarjetas de
+  navegacion (`NavCardButton`, `MinHeight` nunca `Height` fijo) dentro de un `WrapPanel` (reflow real
+  con la ventana, s17 se cumple: mas ancho = mas columnas, no una tira estrecha). STRUCTURAL_FINITE +
+  FINITE_PAGEABLE (tarjetas de acceso). Sin cambios - ya cumple el contrato.
+- **Builds** (`BuildsView.xaml`): filtro de clase (`WrapPanel` de pills) FUERA de un `TabControl` con
+  2 `TabItem` (Vanilla/Calamity), cada uno con SU PROPIO `ScrollViewer` - no es scroll anidado (WPF
+  solo mantiene el contenido del `TabItem` SELECCIONADO en el arbol visual, nunca compiten a la vez);
+  patron FINITE_PAGEABLE correcto (subpagina real, s3B). Sin cambios.
+- **Guia** (`GuideView.xaml`), **Hosting** (`HostingView.xaml`), **Acerca de** (`AboutView.xaml`): UN
+  `ScrollViewer` por pagina, contenido de texto/tarjetas en columna `MaxWidth=680` (convencion ya
+  establecida en toda la app para texto largo legible, no una "columna estrecha con la mitad de fondo
+  vacio" - s17 habla de composicion funcional, no de forzar parrafos a 2560px de ancho). Sin cambios.
+- **Novedades** (`WhatsNewView.xaml`): mismo patron que Builds - 2 `TabItem` (Terraria/tModLoader),
+  cada uno con su propio `ScrollViewer` de resultados (`UniformGrid Columns={Binding DetailCardColumns}`
+  ya adaptativo, H5-09). Sin cambios.
+- **Exploracion - WorldTools** (`WorldToolsView.xaml`): YA REDISEÑADO por "ExploracionRediseno" (previo
+  a este requirement, 26-sep-2026) - los 3 Expander simultaneos con `ScrollViewer` propio se sustituyeron
+  por 3 subvistas EXCLUSIVAS (`WorldToolsSection`, pill selector `CategorySelector`) que comparten el
+  UNICO `ExplorationSidebarScroll` exterior, ninguna con scroll propio - cumple s14/s3B literalmente. Sin
+  cambios.
+- **Exploracion - Browse** (`BrowseView.xaml`, 1117 lineas): categorias ya son `RadioButton`
+  `CategorySelector` (pills, no un arbol `Width=210`), scroll de resultados (`NpcResultsList`) y de
+  faltantes (`MissingNpcsScroll`) son HERMANOS en filas de `Grid` distintas, no anidados. El
+  `MaxHeight="240"` fijo que recortaba la lista de resultados por debajo de lo que su propia fila `*`
+  ya cedia (comentario `FALLO-3`) y el scroll horizontal por `HorizontalScrollBarVisibility` sin
+  declarar (`AR-EX-HSCROLL`) ya estan corregidos de rondas anteriores (confirmado leyendo el codigo, no
+  quedan restos). Sin cambios.
+- **Exploracion - WorldMap** (`WorldMapView.xaml`): mapa dentro de `ScrollViewer x:Name="WorldMapScroll"`
+  con scroll horizontal+vertical - UNBOUNDED_COLLECTION/map-specific owner explicito segun el propio
+  encargo (s13, "Exploration.Results: results/map-specific owner"). Sin cambios.
+
+### Hallazgo real y arreglo 1: `ChestInspectorItemEditTemplate` con 2 `ScrollViewer` anidados (OLD MODEL
+### sin migrar)
+Confirmado comparando linea a linea `ChestInspectorView.xaml` (duplicado local de `ItemEditTemplate`,
+ADR-TERRAKEEP-028, creado el 26-sep-2026 "Contenido IDENTICO a ItemEditTemplate") contra
+`ObjetosView.xaml:206-220` ("FASE D del responsive global... RETIRADOS los dos ScrollViewer propios de
+este panel"): la FASE D (28-sep-2026, DOS DIAS DESPUES del duplicado) retiro el `ScrollViewer` "de
+seguridad" que envolvia el `DockPanel` entero Y el anidado alrededor de la lista de `Prefixes` del
+`ItemEditTemplate` ORIGINAL de Objetos - el duplicado de ChestInspector, por haberse creado ANTES, se
+quedo con el patron viejo (nested same-axis scroll, negative acceptance A/H del encargo) sin que nadie
+lo migrara despues. Confirmado ademas por lectura de `MainWindow.xaml:2289-2394` que el `ContentControl`
+que consume esta plantilla vive dentro del `StackPanel` raiz de
+`ExplorationSidebarChestInspectorPlaceholder`, que a su vez cuelga DIRECTO de `ExplorationSidebarScroll`
+(el unico scroll owner real de todo el sidebar, confirmado por el propio comentario ya existente junto al
+`ContentControl`: "Sin MaxHeight... el ScrollViewer 'de seguridad' que ya trae la plantilla basta, y
+ahora vive dentro del ScrollViewer exterior de todo el sidebar" - documentaba el propio bug sin saberlo).
+**Arreglo real** (`Terrakeep.App/Views/ChestInspectorView.xaml`): retirados los 2 `ScrollViewer`, el
+`DockPanel`/`ItemsControl` crecen con naturalidad - unico scroll owner real: `ExplorationSidebarScroll`
+(s14 paso 8, mismo criterio que Loadout/Vista/Defensa de Personaje, s6/s34). A diferencia de Objetos (que
+en la FASE D necesito ademas un selector de prefijo en desplegable, D-01, porque Editar comparte una FILA
+de alto acotado con la Libreria), aqui NO hacia falta portar esa pieza: el Editar del ChestInspector vive
+dentro de un scroll de PAGINA libre, no de una fila con techo - el WrapPanel de `Prefixes` simplemente
+crece en filas cuando no cabe, sin necesitar paginacion adicional.
+
+### Hallazgo/objetivo real y arreglo 2: `ChestInspectorColumnsConverter` migrado a
+### `SlotGridPanel.AdaptiveColumns` (pendiente explicito de la FASE A)
+`SlotGridPanel.cs:113` decia literalmente "NO conectado (a proposito, todavia) a
+ChestInspectorColumnsConverter - migrarlo es trabajo de una fase posterior" - exactamente el pendiente
+que este encargo señalaba. Confirmado por lectura que `AdaptiveColumns` (FASE A) y
+`ChestInspectorColumnsConverter` calculan la MISMA formula exacta
+(`clamp(floor((anchoDisponible+Gap)/(MinCell+Gap)),1,maximumColumns)`) - la unica diferencia era DE DONDE
+sacaban `anchoDisponible`: el converter leia `ActualWidth` de un `Grid` ancestro por fuera (necesario
+porque `AdaptiveColumns` no existia todavia cuando se escribio, 26-sep-2026, dos dias antes de la FASE A);
+`AdaptiveColumns` usa el `availableSize.Width` real del propio `MeasureOverride` de WPF. Confirmado que
+el `SlotGridPanel` del ChestInspector recibe ese ancho de forma finita por el camino normal de layout
+(`StackPanel` sin margen horizontal -> `ItemsControl` sin `Padding` -> `ItemsPanelTemplate`, ScrollViewer
+exterior con `HorizontalScrollBarVisibility="Disabled"`, finito) - los dos mecanismos deberian dar el
+MISMO numero de columnas byte a byte. **Arreglo real** (`Terrakeep.App/Views/ChestInspectorView.xaml`):
+`AdaptiveColumns="True"` sustituye el `MultiBinding` con el converter; `Columns` se deja en su default
+(10) = `maximumColumns`, mismo techo que el `clamp(1,10)` retirado. `ChestInspectorColumnsConverter`
+retirado de `Terrakeep.App/Converters/DensityConverters.cs` (sin ningun otro consumidor real, confirmado
+por grep - solo quedaban comentarios historicos, actualizados). Comentarios de `SlotGridPanel.cs`
+actualizados para reflejar que la migracion ya esta hecha.
+
+### Canario (compilado, NO ejecutado esta ronda)
+Añadido `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO` a `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`
+(canario `COFRES_INSPECTOR_SOLO`, ya existente y ya ejercita el caso real mas exigente - objeto Picaro de
+Calamity con 17 prefijos legales): cuenta los `ScrollViewer` DESCENDIENTES del propio `ContentControl` de
+Editar (nunca `ExplorationSidebarScroll`, que es ANCESTRO) - `Fallo()` si > 0, negative acceptance real
+del arreglo 1. El arreglo 2 (AdaptiveColumns) ya queda cubierto por el canario geometrico EXISTENTE
+`COFRES-INSPECTOR-SLOTSVACIOS-*` (mide posicion REAL de cada slot por `TransformToAncestor` contra el
+ancho real del placeholder, agnostico al mecanismo que calcula `Columns` - exactamente el mismo riesgo
+que motivo crear el converter originalmente). No se creo un `RESTO_RESPONSIVE_SOLO` nuevo porque las
+otras 6 vistas no tuvieron ningun cambio de codigo que canarizar esta ronda (ya cumplian el contrato) -
+si la siguiente ronda, con el arnes libre, encuentra algo real al medir de verdad, se canariza entonces.
+
+### Verificacion (dentro del limite permitido)
+- `dotnet build Terrakeep.slnx -c Debug`: 0/0 (3 pasadas, una por cada grupo de cambios).
+- `Terrakeep.Core.Tests`: 789/789, sin regresion (no se toco Terrakeep.Core).
+- `Terrakeep.App.ViewModels.Tests`: 807/807, sin regresion (ningun ViewModel tocado esta ronda).
+- `Terrakeep.App.Tests` (COFRES_INSPECTOR_SOLO y el resto): **NO ejecutados** - restriccion de
+  ejecucion explicita del encargo. Pendiente de "via libre para el arnes".
+- Despliegue a `%LocalAppData%\Programs\Terrakeep\` y recompilar el Debug de `herramientas.json`:
+  **pendiente**, mismo motivo.
+
+### Commits
+Pendiente de esta misma entrada (ver mensaje de commit siguiente) - archivos exactos: `Terrakeep.App/
+Views/ChestInspectorView.xaml`, `Terrakeep.App/Converters/DensityConverters.cs`,
+`Terrakeep.App/Controls/SlotGridPanel.cs`, `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`, esta
+entrada de `bitacora.md`. Sin `git add -A` (el resto del working tree tenia cambios de otros agentes en
+paralelo, sin tocar). Sin `git push`.
+
+### Pendiente para la siguiente ronda (con el arnes libre)
+1. Ejecutar `COFRES_INSPECTOR_SOLO`: confirmar que `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO` esta en 0
+   ScrollViewer anidados y que `COFRES-INSPECTOR-SLOTSVACIOS-*` sigue en 0 slots fuera de ancho (confirma
+   la migracion a `AdaptiveColumns` sin regresion).
+2. Medir con el arnes de verdad (no solo lectura) las 7 vistas en los 5 tamaños x ES/EN del encargo -
+   la lectura de codigo de esta ronda es solida pero el encargo exige geometria runtime, no solo
+   inspeccion estatica (s27 "no basta que no crashee, capturar geometria real").
+3. Sin regresion: `EQUIP`/`INVALM`/`LIBRARY`/`PERSONAJE_RESPONSIVE_SOLO` en 0 FALLO.
+4. Capturas antes/despues en `docs/evidencia/responsive-global/faseF/`.
+5. Desplegar desde worktree limpio a `%LocalAppData%\Programs\Terrakeep\` (Terrakeep cerrado, verificar
+   hash) y recompilar el Debug de `herramientas.json`.

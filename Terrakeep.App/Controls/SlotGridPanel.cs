@@ -107,12 +107,11 @@ public sealed class SlotGridPanel : Panel
     //
     // Opt-in, por defecto false: con AdaptiveColumns=false el calculo de `cols` es LITERAL el
     // mismo `Math.Max(1, Math.Min(Columns, n))` de siempre - comportamiento identico byte a byte
-    // al que tenia el panel antes de esta pasada, nada cambia para ninguna pantalla real (ninguna
-    // usa todavia esta propiedad, ver bitacora.md).
+    // al que tenia el panel antes de esta pasada para el resto de pantallas.
     //
-    // NO conectado (a proposito, todavia) a ChestInspectorColumnsConverter - migrarlo es trabajo
-    // de una fase posterior, coordinada aparte, para no arriesgar una regresion visual en una
-    // pantalla que ya funciona hoy.
+    // FASE F del responsive global (29-sep-2026): ChestInspectorColumnsConverter ya esta migrado
+    // (retirado) - Views/ChestInspectorView.xaml usa AdaptiveColumns="True" directamente, misma
+    // formula, calculada dentro del panel contra el availableSize.Width real del Measure.
     public static readonly DependencyProperty AdaptiveColumnsProperty = DependencyProperty.Register(
         nameof(AdaptiveColumns), typeof(bool), typeof(SlotGridPanel),
         new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));

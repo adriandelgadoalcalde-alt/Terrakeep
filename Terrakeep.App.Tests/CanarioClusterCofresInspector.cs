@@ -719,6 +719,24 @@ internal static partial class Program
                                         }
                                     }
 
+                                    // FASE F del responsive global (29-sep-2026, s13/s26-A/s26-H): negative acceptance real
+                                    // de que ChestInspectorItemEditTemplate ya NO tiene ningun ScrollViewer propio -
+                                    // el duplicado local de ADR-028 (26-sep-2026) se habia quedado con el patron
+                                    // OLD MODEL (ScrollViewer "de seguridad" envolviendo el DockPanel entero + otro
+                                    // anidado alrededor de la lista de Prefixes) que la FASE D (28-sep-2026) ya
+                                    // habia retirado del ItemEditTemplate original de Objetos (ObjetosView.xaml,
+                                    // "RETIRADOS los dos ScrollViewer propios de este panel") sin que el duplicado
+                                    // se migrara. Cuenta los ScrollViewer DESCENDIENTES del propio ContentControl
+                                    // (nunca ExplorationSidebarScroll, que es un ANCESTRO, no un descendiente) con
+                                    // el caso real mas exigente ya colocado (Picaro, 17 prefijos).
+                                    if (contentControlPicaroFaseD != null)
+                                    {
+                                        int scrollViewersAnidadosFaseF = Descendientes<ScrollViewer>(contentControlPicaroFaseD).Count();
+                                        Console.WriteLine($"COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO: ScrollViewer descendientes de ChestInspectorItemEditTemplate (Picaro, 17 prefijos)={scrollViewersAnidadosFaseF} (esperado 0 - unico scroll owner real es ExplorationSidebarScroll exterior)");
+                                        if (scrollViewersAnidadosFaseF > 0)
+                                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO - ChestInspectorItemEditTemplate volvio a tener un ScrollViewer propio, scroll anidado del mismo eje dentro de ExplorationSidebarScroll (s13/s26-A/s26-H)");
+                                    }
+
                                     // ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): el punto 5
                                     // del encargo pide repetir esta MISMA comprobacion a la ventana MINIMA
                                     // real (1080x700, Window.MinWidth/MinHeight de MainWindow.xaml:12) -
