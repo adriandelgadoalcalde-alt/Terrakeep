@@ -50,15 +50,21 @@ public sealed class EquipamientoUmbralAmplioTests
         Assert.True(ClaseA(ancho) >= WindowSizeClass.Amplio);
     }
 
-    // Extra es un superconjunto de espacio de Amplio (R-10): nunca debe desactivar lo que Amplio
-    // activaba - se comprueba por el booleano real que consume Equipamiento, no por el enum.
+    // FASE B del responsive global (28-sep-2026, changeMode REPLACE): el modo "3 vistas a la vez
+    // desde Amplio" (MainViewModel.IsEquipmentExpanded) queda RETIRADO - Equipamiento ya no cambia
+    // de arquitectura con el tamaño (s4/s16 del encargo: una subvista a la vez con su selector
+    // Armadura/Vanidad/Tintes SIEMPRE visible). Este test sustituye a "ExtraSigueMostrandoLasTres
+    // Vistas" (que fijaba el comportamiento viejo) por la negative acceptance del mecanismo viejo:
+    // si alguien reintroduce la propiedad, falla aqui ademas de en EQUIP_RESPONSIVE_SOLO. Los
+    // umbrales de SizeClass de arriba se conservan: AmplioMinWidth sigue alimentando a otros
+    // consumidores reales (IsStorageExpanded, auto-revelado de la Libreria, InicioContentMaxWidth...).
     [Fact]
-    public void ExtraSigueMostrandoLasTresVistas()
+    public void EquipamientoYaNoCambiaDeArquitecturaConElTamano()
     {
+        Assert.Null(typeof(MainViewModel).GetProperty("IsEquipmentExpanded"));
         var vm = new MainViewModel();
         vm.UpdateSizeClass(1920);
         Assert.Equal(WindowSizeClass.Extra, vm.SizeClass);
-        Assert.True(vm.IsEquipmentExpanded);
     }
 
     // La cuenta real de la que sale el umbral, escrita como test para que no se pierda: las 3

@@ -2560,6 +2560,15 @@ internal static partial class Program
             Console.WriteLine("DONE (NAV123_SOLO)");
             Environment.Exit(0);
         }
+        // EQUIP_RESPONSIVE_SOLO=1 (28-sep-2026, FASE B del responsive global): geometria real de
+        // Personaje > Objetos > Equipamiento en varios tamaños, ES/EN, resize en caliente y
+        // negative acceptance del mecanismo viejo - ver CanarioResponsiveEquipamiento.cs.
+        if (Environment.GetEnvironmentVariable("EQUIP_RESPONSIVE_SOLO") == "1")
+        {
+            EjecutarEquipResponsiveSolo(window, vm);
+            Console.WriteLine("DONE (EQUIP_RESPONSIVE_SOLO)");
+            Environment.Exit(0);
+        }
         // DIAG_NAVTOGGLE_POS_SOLO=1 (26-sep-2026, investigador-bug, mismo TASK CONTEXT de arriba):
         // diagnostico desechable, mide con UI real la posicion Y del StackPanel "ObjetosNavToggle"
         // (RadioButton 1/2/3) contra su celda Grid compartida con ObjetosPageHost - ver
@@ -6934,9 +6943,9 @@ internal static partial class Program
             // "SizeClass.Amplio" (provisional: 1700px) - justo debajo debe seguir en pildoras,
             // justo encima debe pasar a las 3 vistas lado a lado.
             CaptureAt(1450, 860, "Equipamiento", "e2-justo-debajo-1450.png");
-            Console.WriteLine($"E2-UMBRAL: en 1450px, SizeClass={vm.SizeClass} IsEquipmentExpanded={vm.IsEquipmentExpanded} (esperado Compacto/Normal, False - probado a mano que 1450 recorta la 3a vista, ver bitacora.md)");
+            Console.WriteLine($"E2-UMBRAL: en 1450px, SizeClass={vm.SizeClass} (esperado Normal - FASE B del responsive global retiro IsEquipmentExpanded: Equipamiento ya no cambia de arquitectura con el tamaño, ver EQUIP_RESPONSIVE_SOLO)");
             CaptureAt(1550, 860, "Equipamiento", "e2-justo-encima-1550.png");
-            Console.WriteLine($"E2-UMBRAL: en 1550px, SizeClass={vm.SizeClass} IsEquipmentExpanded={vm.IsEquipmentExpanded} (esperado Amplio, True)");
+            Console.WriteLine($"E2-UMBRAL: en 1550px, SizeClass={vm.SizeClass} (esperado Amplio - misma subvista+selector que en 1450, ver EQUIP_RESPONSIVE_SOLO)");
 
             // Diagnostico whitebox real: anchos reales de las 3 columnas del SlotRowHost y de
             // cada SlotGridPanel dentro, a la resolucion minima real - para saber si el centro

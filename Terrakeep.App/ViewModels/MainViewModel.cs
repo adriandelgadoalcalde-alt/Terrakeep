@@ -563,13 +563,13 @@ public partial class MainViewModel : ObservableObject
         HeightClass = actualHeight >= AltoMinHeight ? WindowHeightClass.Alto : WindowHeightClass.Bajo;
     }
 
-    // Auditoria de Opus, E-2: umbral real medido con el arnes (ver bitacora.md) - a partir de
-    // aqui hay sitio de sobra para las 3 vistas de Equipamiento (Armadura/Vanidad/Tintes) a la
-    // vez, sin apretar ninguna. Por debajo, se queda el selector de pildoras de siempre (un
-    // panel a la vez).
-    // Auditoria de redimensionado, R-10: >= en vez de == - Extra es un superconjunto de espacio
-    // de Amplio (ver WindowSizeClass.Extra), nunca debe DESACTIVAR algo que Amplio ya activaba.
-    public bool IsEquipmentExpanded => SizeClass >= WindowSizeClass.Amplio;
+    // FASE B del responsive global (28-sep-2026, changeMode REPLACE): IsEquipmentExpanded
+    // (Auditoria de Opus E-2, "SizeClass >= Amplio" -> las 3 vistas de Equipamiento a la vez y SIN
+    // selector) queda RETIRADO, no desactivado. Hacia que la arquitectura visual de Equipamiento
+    // cambiara con el tamaño (Vanidad/Tintes con navegacion propia solo por debajo de 1520px) -
+    // justo lo que el encargo prohibe (s4/s16). Equipamiento muestra ahora SIEMPRE una subvista
+    // con su selector Armadura/Vanidad/Tintes visible, en todos los tamaños (ObjetosView.xaml,
+    // EquipamientoSelectorVista). El canario EQUIP_RESPONSIVE_SOLO falla si la propiedad vuelve.
 
     // H5-10 (quinta auditoria de Opus): "la franja se pliega por prioridad al encoger (vida/
     // maná primero, el resto después) - el mismo mecanismo de clase de tamaño de H5-08, no una
@@ -647,7 +647,7 @@ public partial class MainViewModel : ObservableObject
     // ya mide E-2 para sus 3 vistas) ambas rejillas se ven limpias y completas - se reutiliza
     // el mismo umbral compartido en vez de inventar uno propio (ese es justo el punto de T-2:
     // un unico breakpoint real, no uno por pantalla).
-    // Auditoria de redimensionado, R-10: >= por el mismo motivo que IsEquipmentExpanded arriba.
+    // Auditoria de redimensionado, R-10: >= (Extra es un superconjunto de espacio de Amplio, nunca debe DESACTIVAR algo que Amplio ya activaba).
     public bool IsStorageExpanded => SizeClass >= WindowSizeClass.Amplio;
 
     // H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego oculta en Amplio
@@ -736,7 +736,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
-        OnPropertyChanged(nameof(IsEquipmentExpanded));
         OnPropertyChanged(nameof(IsVitalsStripExpanded));
         OnPropertyChanged(nameof(VitalsStripMaxWidth));
         OnPropertyChanged(nameof(IsStorageExpanded));
@@ -994,7 +993,7 @@ public partial class MainViewModel : ObservableObject
     // H5-08: se revela sola tambien con HeightClass.Alto, no solo con SizeClass.Amplio - una
     // ventana alta pero no ancha (Compacto/Normal) ya tiene el sitio VERTICAL real que este
     // auto-revelado necesita, ver el comentario de OnHeightClassChanged arriba.
-    // Auditoria de redimensionado, R-10: >= en vez de == - mismo motivo que IsEquipmentExpanded.
+    // Auditoria de redimensionado, R-10: >= en vez de == (Extra es un superconjunto de espacio de Amplio).
     public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass >= WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
     public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass >= WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
     partial void OnIsLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsLibraryVisible));
@@ -1908,8 +1907,17 @@ public partial class MainViewModel : ObservableObject
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege). Sin
         // ghost real (el propio juego tampoco dibuja uno en estos dos contextos, ver
         // ItemSlot.cs real - no se inventa ninguno).
-        CoinsContainer = AddContainer("coins", LocalizationService.Instance["storage_coins"], _loaded.Character.Coins.ToGameItems(),
-            slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin]);
+        // FASE B del responsive global (28-sep-2026): Monedas y Municion pasan a UNA columna de 4
+        // (columns: 1) con el mismo suelo/techo de celda que Mascota/Montura/Tinte (32/56), y se
+        // colocan lado a lado en su caja (ObjetosView.xaml, PilaMonedasMunicion) - igual que en el
+        // propio inventario del juego (dos columnas verticales de 4). Motivo medido con
+        // EQUIP_RESPONSIVE_SOLO: en fila de 4 la columna "Auto" de Monedas pedia 267px a 1080x700
+        // con la Libreria desplegada y, sumada al MinWidth=216 del centro, se salia 11,4-17,7px del
+        // ancho real de la fila (recortada contra ClipToBounds, 6 elementos, ES y EN) mientras la
+        // rejilla de Armadura se quedaba en 40px. En columna, 4 filas caben dentro del alto que ya
+        // marcan las 5 filas del lateral de Mascotas: la fila no crece y el centro recupera ancho.
+        CoinsContainer = AddContainer("coins", LocalizationService.Instance["storage_coins"], _loaded.Character.Coins.ToGameItems(), columns: 1,
+            slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin], minCell: 32, maxCell: 56);
         // H5-10 (quinta auditoria de Opus): "Dinero total - hoy hay que hacer la cuenta a
         // mano". Por ID real (71/72/73/74 = cobre/plata/oro/platino, IsACoin real ya
         // establecido), no por posicion en el array - un slot vacio o con el objeto
@@ -1917,8 +1925,8 @@ public partial class MainViewModel : ObservableObject
         foreach (var slot in CoinsContainer.Slots)
             slot.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(ItemSlotViewModel.ItemId) or nameof(ItemSlotViewModel.Count)) RefreshMoneyText(); };
         RefreshMoneyText();
-        AmmoContainer = AddContainer("ammo", LocalizationService.Instance["storage_ammo"], _loaded.Character.Ammo.ToGameItems(),
-            slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo]);
+        AmmoContainer = AddContainer("ammo", LocalizationService.Instance["storage_ammo"], _loaded.Character.Ammo.ToGameItems(), columns: 1,
+            slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo], minCell: 32, maxCell: 56);
 
         StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);
 

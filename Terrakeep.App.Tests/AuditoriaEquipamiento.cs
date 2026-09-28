@@ -119,7 +119,7 @@ internal static partial class Program
                     if (!hijo.IsVisible) continue;
                     if (hijo.Name == "CajaMonedasMunicion") cajaMonedas = hijo;
                     else if (hijo.Name == "CajaMascotasTintes") cajaMascotas = hijo;
-                    else if (col == 1 && Grid.GetRow(hijo) == 1)
+                    else if (col == 1) // FASE B: cabecera + subvista viven juntas en EquipamientoCentro (una sola fila)
                     {
                         foreach (var sgp in Descendientes<SlotGridPanel>(hijo))
                         {
@@ -202,7 +202,7 @@ internal static partial class Program
                     if (saleY > 0.5) { celdasCortadasVert++; corteVertPeor = Math.Max(corteVertPeor, saleY); }
                 }
 
-                Console.WriteLine($"AR-14 {w:0}x{h:0} SizeClass={vm.SizeClass} Amplio={vm.IsEquipmentExpanded} | host={host.ActualWidth:0.#} cols={columnas} celda={cell:0.#} " +
+                Console.WriteLine($"AR-14 {w:0}x{h:0} SizeClass={vm.SizeClass} | host={host.ActualWidth:0.#} cols={columnas} celda={cell:0.#} " +
                                   $"centro=[{izquierdaCentro:0.#}..{derechaCentro:0.#}] monedas.Left={rMonedas.Left:0.#} | invadeDerecha={invadeDerecha:0.#}px invadeIzquierda={invadeIzquierda:0.#}px " +
                                   $"corteMax={cortePeor:0.#}px celdasCortadas={celdasCortadas} celdasFuera={celdasFuera} mismaFranja={compartenFranja} " +
                                   $"| corteVert={corteVertPeor:0.#}px celdasCortadasVert={celdasCortadasVert}");
@@ -382,14 +382,13 @@ internal static partial class Program
                 var hostE = Descendientes<SlotRowHost>(window).FirstOrDefault();
                 if (hostE == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no hay SlotRowHost en el arbol visual"); continue; }
 
-                // Mismo filtro que AR-14 de arriba (col==1/row==1, IsVisible): en Compacto es el
-                // ScrollViewer con EquipmentGroup.Current (la vista Social ya seleccionada); en
-                // Amplio (IsEquipmentExpanded) es el Grid de 3 columnas Items/Social/Dyes - las
-                // DOS viven en la misma celda, mutuamente exclusivas por Visibility, asi que este
-                // filtro vale para las dos sin distinguir el SizeClass a mano.
+                // Mismo filtro que AR-14 de arriba (col==1/row==1, IsVisible): la subvista activa
+                // (EquipmentGroup.Current, la vista Social ya seleccionada). FASE B del responsive
+                // global (28-sep-2026): ya no existe la rejilla "Amplio" de 3 columnas
+                // (IsEquipmentExpanded retirado) - una sola subvista en todos los tamaños.
                 var celdaCentral = hostE.Children.OfType<FrameworkElement>()
-                    .FirstOrDefault(hijo => hijo.IsVisible && Grid.GetColumn(hijo) == 1 && Grid.GetRow(hijo) == 1);
-                if (celdaCentral == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no se encuentra la celda central (col1/fila1) de SlotRowHost"); continue; }
+                    .FirstOrDefault(hijo => hijo.IsVisible && Grid.GetColumn(hijo) == 1);
+                if (celdaCentral == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no se encuentra la columna central (col1) de SlotRowHost"); continue; }
 
                 int cortados = 0; double peor = 0;
                 foreach (var sgp in Descendientes<SlotGridPanel>(celdaCentral))
@@ -401,7 +400,7 @@ internal static partial class Program
                         if (faltaY > 1 && AlcanzableConScroll(celda, window, horizontal: false)) faltaY = 0;
                         if (faltaY > 1) { cortados++; peor = Math.Max(peor, faltaY); }
                     }
-                Console.WriteLine($"AR-14e {w:0}x{h:0} Kind=Social Amplio={vm.IsEquipmentExpanded} LibreriaDesplegada=True: celdas cortadas={cortados} peor={peor:0.#}px");
+                Console.WriteLine($"AR-14e {w:0}x{h:0} Kind=Social SizeClass={vm.SizeClass} LibreriaDesplegada=True: celdas cortadas={cortados} peor={peor:0.#}px");
                 if (cortados > 0)
                     Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} con Social/Libreria desplegada, {cortados} celda(s) de la rejilla central pierden hasta {peor:0.#}px de alto sin scroll que las alcance (el hueco de cobertura que dejo pasar AR-LAY, ver bitacora 18-sep-2026)");
             }

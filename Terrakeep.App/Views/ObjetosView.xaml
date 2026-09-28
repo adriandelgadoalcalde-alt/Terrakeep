@@ -618,61 +618,34 @@
             </Border>
         </DataTemplate>
 
-        <!-- Rejilla compacta de UN contenedor entero - pregunta a Opus sobre el diseño
-             2-sep-2026, unificada tras el feedback del usuario ("equipamiento no tiene el mismo
-             formato que inventario y el resto de las 9 pestañas"): usada ahora por los 9
-             contenedores reales (Equipamiento/Inventario/Almacenes/Monturas/Monedas), no solo
-             los de >10 slots. SlotGridPanel (Terrakeep.App/Controls) calcula un tamaño de
-             celda real entre 44 y 96px que crece/encoge con la ventana; si no cabria ni a 44px,
-             aparece scroll (nunca se sacrifica la legibilidad). Columns viene de
-             ContainerViewModel.Columns (10 por defecto, 5 para los contenedores de Equipamiento
-             - ver EquipmentGroupViewModel.AddSlotSet) para que cada uno mantenga su forma real
-             en vez de una unica fila larga. AvailableHeight se enlaza al ActualHeight del propio
-             ScrollViewer via RelativeSource AncestorType (recorrido real del arbol visual - un
-             ElementName aqui seria fragil, ver SlotGridPanel.cs). -->
-        <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
-            <DockPanel>
-                <!-- H4-05 (cuarta auditoria de Opus, Fable): "Vaciar contenedor" no tenia
-                     confirmacion NI vuelta atras - banner temporal real (ContainerViewModel.
-                     CanUndoClear/UndoClearCommand), visible unos segundos tras vaciar. Editado
-                     UNA sola vez aqui (plantilla compartida por los 4 contenedores reales) en
-                     vez de en cada cabecera copiada - no repite la duplicacion que H4-10 ya
-                     señala en esas 4 cabeceras. -->
-                <Border DockPanel.Dock="Top" Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
-                        Visibility="{Binding CanUndoClear, Converter={StaticResource ObjetosBoolToVis}}">
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="{Binding Loc[action_undo], Mode=OneWay}" Command="{Binding UndoClearCommand}"
-                                Tag="Accent" Padding="8,3" FontSize="10.5" />
-                        <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
-                            <TextBlock.Text>
-                                <MultiBinding Converter="{StaticResource LocFormat}">
-                                    <Binding Path="Loc[status_cleared_items]" Mode="OneWay" />
-                                    <Binding Path="LastClearedCount" Mode="OneWay" />
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </DockPanel>
-                </Border>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <!-- ReferenceWidth (pregunta a Opus sobre el diseño, quinta pasada -
-                                 fusion de Equipamiento con laterales): sin ancestro
-                                 SlotRowHost real (el caso de siempre, Inventario/Almacenes/
-                                 Equipamiento en solitario) este binding no encuentra nada y
-                                 ReferenceWidth se queda en su default 0 = desactivado,
-                                 comportamiento identico a como estaba. Solo tiene efecto real
-                                 dentro de la fila fusionada de Equipamiento. -->
-            <!-- Modo compacto (17-sep-2026): Gap/MinCell/MaxCell dependen de Settings.IsCompactMode
-                 ademas del valor real de ContainerViewModel (MinCell/MaxCell YA varian por
-                 contenedor - Mascota/Montura/Tinte bajan a 32/56, ver ContainerViewModel.cs) -
-                 MultiBinding real, no un numero absoluto, para respetar esa variacion. -->
+        <!-- FASE B del responsive global (28-sep-2026): la plantilla de contenedor se parte en
+             piezas reutilizables para ofrecer DOS variantes sin duplicar nada:
+               - SlotGridItemsPanel: la rejilla real (SlotGridPanel + sus bindings de siempre).
+               - ContainerUndoBannerTemplate: el banner "Deshacer" de H4-05.
+               - ContainerCompactTemplate: banner + ScrollViewer propio + rejilla - la de SIEMPRE,
+                 que siguen usando Inventario/Almacenes (su revision es la FASE C, no se toca aqui).
+               - ContainerFlowTemplate: banner + rejilla SIN ScrollViewer propio - para regiones que
+                 ya viven dentro de un scroll owner exterior (Equipamiento: la pagina
+                 ObjetosPaginaEquipamiento es el UNICO dueño del scroll vertical, s13 del encargo).
+             AvailableHeight sigue enlazado al ScrollViewer ancestro mas cercano (recorrido real del
+             arbol visual - un ElementName aqui seria fragil, ver SlotGridPanel.cs): en la variante
+             Flow ese ancestro es el propio scroll owner de la pagina, asi que una rejilla nunca
+             pide celdas mas altas que el viewport real de la pagina (mismo criterio de siempre,
+             ahora contra el dueño correcto). -->
+        <ItemsPanelTemplate x:Key="SlotGridItemsPanel">
+            <!-- ReferenceWidth (pregunta a Opus sobre el diseño, quinta pasada - fusion de
+                 Equipamiento con laterales): sin ancestro SlotRowHost real (Inventario/Almacenes)
+                 este binding no encuentra nada y ReferenceWidth se queda en su default 0 =
+                 desactivado. Solo tiene efecto real dentro de la fila fusionada de Equipamiento.
+                 Modo compacto (17-sep-2026): Gap/MinCell/MaxCell dependen de
+                 Settings.IsCompactMode ademas del valor real de ContainerViewModel (MinCell/MaxCell
+                 YA varian por contenedor - Mascota/Montura/Tinte bajan a 32/56, ver
+                 ContainerViewModel.cs) - MultiBinding real, no un numero absoluto. -->
             <controls:SlotGridPanel Columns="{Binding Columns}"
-                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
-                                                     ReferenceColumns="10"
-                                                     ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
-                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                    Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                    ReferenceColumns="10"
+                                    ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
+                                    AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                 <controls:SlotGridPanel.MinCell>
                     <MultiBinding Converter="{x:Static conv:CompactCellSizeMultiConverter.Instance}">
                         <Binding Path="MinCell" />
@@ -686,10 +659,57 @@
                     </MultiBinding>
                 </controls:SlotGridPanel.MaxCell>
             </controls:SlotGridPanel>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </ScrollViewer>
+        </ItemsPanelTemplate>
+
+        <!-- H4-05 (cuarta auditoria de Opus, Fable): "Vaciar contenedor" no tenia confirmacion NI
+             vuelta atras - banner temporal real (ContainerViewModel.CanUndoClear/UndoClearCommand),
+             visible unos segundos tras vaciar. Definido UNA sola vez aqui y compartido por las dos
+             variantes de contenedor de abajo. -->
+        <DataTemplate x:Key="ContainerUndoBannerTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                    Visibility="{Binding CanUndoClear, Converter={StaticResource ObjetosBoolToVis}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="{Binding Loc[action_undo], Mode=OneWay}" Command="{Binding UndoClearCommand}"
+                            Tag="Accent" Padding="8,3" FontSize="10.5" />
+                    <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource LocFormat}">
+                                <Binding Path="Loc[status_cleared_items]" Mode="OneWay" />
+                                <Binding Path="LastClearedCount" Mode="OneWay" />
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Rejilla compacta de UN contenedor entero - pregunta a Opus sobre el diseño
+             2-sep-2026, unificada tras el feedback del usuario ("equipamiento no tiene el mismo
+             formato que inventario y el resto de las 9 pestañas"). SlotGridPanel
+             (Terrakeep.App/Controls) calcula un tamaño de celda real que crece/encoge con la
+             ventana; si no cabria ni a MinCell, aparece scroll (nunca se sacrifica la
+             legibilidad). Columns viene de ContainerViewModel.Columns. Variante CON ScrollViewer
+             propio: Inventario/Almacenes (la FASE C del responsive global decidira su forma). -->
+        <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <DockPanel>
+                <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource ContainerUndoBannerTemplate}"
+                                Focusable="False" IsTabStop="False" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}"
+                                  ItemsPanel="{StaticResource SlotGridItemsPanel}" />
+                </ScrollViewer>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- FASE B del responsive global: misma rejilla y mismo banner, SIN ScrollViewer propio -
+             la region crece en alto con naturalidad y el scroll owner EXTERIOR (la pagina) absorbe
+             el alto si de verdad hace falta (s8/s13/s14 del encargo). Usada por Equipamiento. -->
+        <DataTemplate x:Key="ContainerFlowTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <DockPanel>
+                <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource ContainerUndoBannerTemplate}"
+                                Focusable="False" IsTabStop="False" />
+                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}"
+                              ItemsPanel="{StaticResource SlotGridItemsPanel}" />
             </DockPanel>
         </DataTemplate>
 
@@ -873,132 +893,80 @@
                                              fusionada, no el de cada columna estrecha por separado -
                                              sin esto los 3 colapsarian a MinCell=44, mas pequeños que
                                              Inventario, el problema inverso de la cuarta pasada. -->
-                                        <!-- AR-LAY (14-sep-2026): a 1080x700 [es] la cabecera Loadout/Vista/Defensa/
-                                             bono (fila 0, "Auto" - ver el RowDefinitions de SlotRowHost mas abajo)
-                                             mide 82,2px de verdad con la app en español (textos mas largos que en
-                                             ingles) y eso, sumado al suelo real de la rejilla de Armadura/Accesorios
-                                             (fila "*" MinHeight=84, ver comentario de esa fila), pide 166,2px -
-                                             8,1px mas de los 158,1px que este Border le estaba dejando de verdad a
-                                             SlotRowHost (ClipToBounds="True": ese sobrante se recortaba en
-                                             silencio, detectado por el barrido AR-LAY del arnes real, cero pixeles
-                                             a ojo). Padding vertical 10->6 y Margin superior 6->2 recuperan 12px
-                                             sin tocar el ancho (las columnas siguen midiendo igual) ni ninguno de
-                                             los MinHeight/MaxHeight ya afinados en pasadas anteriores (AR-14/AR-14c/
-                                             AR-14d) - simplemente le deja a SlotRowHost el sitio que de verdad
-                                             necesita. Verificado con el propio AR-LAY tras el cambio: 0 elementos
-                                             perdidos en las 416 combinaciones. -->
+                                        <!-- FASE B del responsive global (28-sep-2026, PDF "Arreglo familia keep",
+                                             bloque 2, s4-s7/s13/s14/s34 - changeMode REPLACE). MODELO VIEJO retirado
+                                             entero, no parcheado: hasta hoy esta fila fusionada sobrevivia a las
+                                             ventanas pequeñas a base de safety-scrolls locales ANIDADOS dentro del
+                                             scroll owner de la pagina (medido con EQUIP_RESPONSIVE_SOLO: 9-10
+                                             ScrollViewer verticales dentro de ObjetosPaginaEquipamiento) - uno
+                                             alrededor de toda la fila (ADR-TERRAKEEP-011), otro en el lateral
+                                             Mascotas/Tintes, otro con MaxHeight=112 en la cabecera Loadout/Vista/
+                                             Defensa/bono (AR-14d), otro en la rejilla central (ADR-TERRAKEEP-015) y uno
+                                             mas por cada contenedor (ContainerCompactTemplate) - mas la fila "*"
+                                             MinHeight=84 que compensaba la cabecera, y ademas un modelo visual que
+                                             cambiaba de arquitectura con el tamaño (IsEquipmentExpanded: desde
+                                             Amplio desaparecia el selector Armadura/Vanidad/Tintes y salian las 3
+                                             rejillas a la vez, a 40-44px de celda).
+                                             MODELO NUEVO: la pagina ObjetosPaginaEquipamiento es el UNICO scroll owner
+                                             vertical de este contexto. Todo lo de dentro es STRUCTURAL_FINITE (cabecera,
+                                             selectores) o FINITE_PAGEABLE (Armadura/Vanidad/Tintes, una subvista a la vez
+                                             con su selector SIEMPRE visible, en todos los tamaños) y crece en alto con
+                                             naturalidad (ContainerFlowTemplate, filas Auto, TextWrapping en el bono de
+                                             set) - si al final la pagina entera no cabe, la desplaza su owner, nunca una
+                                             caja local. Las 3 columnas (Mascotas | Equipamiento | Monedas) se conservan
+                                             porque la geometria real lo pide asi: el eje escaso en el minimo es el ALTO
+                                             (medido: 140/259/208px de columnas caben de sobra a 1080px), apilarlas
+                                             costaria alto justo donde falta. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10,6" Margin="0,2,0,0">
                                             <!-- Columna central "*" con MinWidth=216 (5 slots MinCell=40 + gaps, el minimo real de SlotGridPanel cuando no le cabe mas): red de seguridad para que WPF recorte antes las columnas Auto de los laterales que el MinWidth de esta estrella, nunca al reves. Laterales van a Auto+MinWidth propio (su contenido ya se autolimita). Historial completo (por que "2*/5*/4*" no bastaba, el bug real de solape AR-14): ADR-TERRAKEEP-007. -->
-                                            <!-- ScrollViewer envuelve el SlotRowHost ENTERO (nunca dentro de una fila suya): mide con alto infinito y le da su DesiredSize real completo, y es el propio ScrollViewer (viewport mas pequeno que ese contenido cuando el Border ancestro no tiene sitio) el que ofrece scroll vertical real - antes el recorte lo hacia ClipToBounds del ANCESTRO, invisible al ScrollViewer interno de una fila. Horizontal Disabled: el ancho de columnas no cambia. Historial completo (caso real Social/Dyes + Libreria desplegada): ADR-TERRAKEEP-011. -->
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                              <controls:SlotRowHost ClipToBounds="True">
+                                              <controls:SlotRowHost x:Name="EquipamientoFila" ClipToBounds="True">
                                                   <Grid.ColumnDefinitions>
                                                       <ColumnDefinition Width="Auto" MinWidth="140" />
                                                       <ColumnDefinition Width="*" MinWidth="216" />
-                                                      <ColumnDefinition Width="Auto" MinWidth="200" />
+                                                      <ColumnDefinition Width="Auto" MinWidth="140" />
                                                   </Grid.ColumnDefinitions>
-                                                  <Grid.RowDefinitions>
-                                                      <RowDefinition Height="Auto" />
-                                                      <!-- MinHeight=84 (13-sep-2026, auditoria de solapes/cajas: AR-14d real, no solo
-                                                           "limite conocido"): 2 filas de MinCell 40 + Gap 4, el suelo real de la
-                                                           rejilla de Armadura/Accesorios (5 columnas x 2 filas, EquipmentGroup.
-                                                           AddSlotSet). Sin esto, cuando la fila 0 crece (conjunto con bono real
-                                                           activo, ver el ScrollViewer de la fila 0 mas abajo) la fila "*" cede
-                                                           TODO lo que la 0 le pida y la rejilla se corta por abajo sin ningun
-                                                           scroll vertical que la alcance de verdad para el usuario a primera
-                                                           vista (medido: 5 slots, 32,6px cortados a 1080x700 con bono activo,
-                                                           detectado por AR-14d del arnes real, no a ojo). -->
-                                                      <RowDefinition Height="*" MinHeight="84" />
-                                                  </Grid.RowDefinitions>
+                                                  <!-- UNA sola fila (FASE B): retirado el "*" MinHeight=84 de AR-14d, que solo
+                                                       existia para defender la rejilla de una cabecera encerrada en su propia
+                                                       caja de scroll. Cabecera y subvista viven apiladas en la columna central
+                                                       (EquipamientoCentro) y los laterales ocupan la misma fila - asi el alto
+                                                       de un lateral nunca se reparte entre filas Auto empujando la rejilla
+                                                       hacia abajo (medido en la primera version de esta fase con 2 filas Auto:
+                                                       la rejilla bajaba ~70px separada de su cabecera). -->
 
-                                                  <!-- Lateral izquierdo: Mascota/Montura/Gancho + Tinte, en
-                                                       vertical (Columns=1, ver MainViewModel.AddContainer).
-                                                       RowSpan=2 para aprovechar tambien la franja del
-                                                       selector Loadout/Vista (que no la necesita, es solo
-                                                       texto+pildoras) - propio ScrollViewer de seguridad:
-                                                       10 slots reales en 1 columna no siempre caben sin
-                                                       scroll en ventanas pequeñas, y NO sacrificar
-                                                       legibilidad (MinCell=44) es mas importante que nunca
-                                                       scrollear aqui. -->
-                                                  <Border x:Name="CajaMascotasTintes" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
-                                                          CornerRadius="8" Padding="6" Margin="0,0,8,0">
-                                                      <!-- Mascota/Montura y Tinte UNO AL LADO DEL OTRO, no apilados
-                                                           (consulta a Opus, septima pasada, corregido con medicion
-                                                           real tras implementar su recomendacion original): apilados
-                                                           verticalmente son 2 rejillas de 5 filas = 10 filas reales
-                                                           que compartir en la misma columna - medido con el arnes de
-                                                           UI Automation, a la altura minima real de la ventana
-                                                           necesitan ~412px y solo hay ~278px, un desfase real de
-                                                           ~134px que NINGUN ajuste de MinCell/MaxCell puede cerrar
-                                                           sin bajar de 30px (el suelo real de "mancha de color" de
-                                                           Opus) - hay mas ancho de sobra que alto en este lateral
-                                                           (confirmado, Auto ya no tiene techo que perseguir gracias
-                                                           al MaxCell propio de arriba), asi que la solucion real es
-                                                           usar ESE ancho: en horizontal, cada rejilla solo necesita
-                                                           5 filas de alto, no 10 - el ScrollViewer de seguridad se
-                                                           queda (para ventanas aun mas pequeñas que esta), solo
-                                                           VERTICAL - HorizontalScrollBarVisibility="Disabled" sigue
-                                                           siendo correcto, la columna Auto ya crece si hace falta. -->
-                                                      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                                          <StackPanel Orientation="Horizontal">
-                                                              <StackPanel Margin="0,0,10,0">
-                                                                  <!-- TextWrapping="Wrap" + MaxWidth (consulta a Opus,
-                                                                       septima pasada): un TextBlock sin envolver
-                                                                       RECORTA en seco cuando la columna es mas
-                                                                       estrecha que el texto ("Mascota /" sin
-                                                                       "Montura", capturado real a la resolucion
-                                                                       minima) - el MaxWidth es real, no decorativo:
-                                                                       esta columna es "Auto" y WPF mide sus hijos con
-                                                                       ancho INFINITO en la primera pasada, asi que sin
-                                                                       este tope el texto sin envolver (~100px) seria
-                                                                       mas ancho que la propia rejilla de iconos y
-                                                                       terminaria fijando el ancho real de la columna
-                                                                       entera. -->
-                                                                  <TextBlock Text="{Binding Loc[char_pet_mount_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
-                                                                  <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                              </StackPanel>
-                                                              <StackPanel>
-                                                                  <TextBlock Text="{Binding Loc[char_dye_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
-                                                                  <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                              </StackPanel>
+                                                  <!-- Lateral izquierdo: Mascota/Montura/Gancho + Tinte, UNO AL LADO DEL
+                                                       OTRO (consulta a Opus, septima pasada: apilados serian 10 filas en la
+                                                       misma columna, hay mas ancho que alto de sobra aqui). FASE B: sin ScrollViewer
+                                                       de seguridad propio - el owner de la pagina absorbe el alto. -->
+                                                  <Border x:Name="CajaMascotasTintes" Grid.Column="0" Background="{StaticResource BgPrimaryBrush}"
+                                                          CornerRadius="8" Padding="6" Margin="0,0,8,0" VerticalAlignment="Top">
+                                                      <StackPanel Orientation="Horizontal">
+                                                          <StackPanel Margin="0,0,10,0">
+                                                              <!-- TextWrapping="Wrap" + MaxWidth (consulta a Opus, septima
+                                                                   pasada): columna "Auto" medida con ancho infinito - sin
+                                                                   este tope el texto sin envolver fijaria el ancho real de
+                                                                   la columna entera. -->
+                                                              <TextBlock Text="{Binding Loc[char_pet_mount_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                              <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                                           </StackPanel>
-                                                      </ScrollViewer>
+                                                          <StackPanel>
+                                                              <TextBlock Text="{Binding Loc[char_dye_label], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                              <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
+                                                      </StackPanel>
                                                   </Border>
 
-                                                  <!-- Selector Loadout/Vista, SOLO sobre la columna central -
-                                                       DataContext local a EquipmentGroup, sin heredarlo al
-                                                       resto de la fila fusionada (los laterales necesitan
-                                                       el MainViewModel directamente).
-                                                       AR-14c (6-sep-2026): antes llevaba ColumnSpan="2" y se
-                                                       estiraba tambien por encima de Monedas/Municion, que era
-                                                       justo lo que impedia a esa caja usar el alto de esta
-                                                       franja (ver el comentario de la propia caja mas abajo).
-                                                       Quitarlo no le quita nada al selector: medido a 1080x700,
-                                                       la fila 0 sigue midiendo 82,2px exactos con 241px de
-                                                       ancho en vez de 449 - ya envolvia igual, el ancho de mas
-                                                       no lo estaba usando nadie. -->
-                                                  <!-- ScrollViewer + MaxHeight=112 (13-sep-2026, auditoria de solapes/cajas):
-                                                       esta cabecera (Loadout + Vista + Defensa total + bono de set, las dos
-                                                       ultimas de la auditoria E-4) es Grid.Row="0"="Auto", y un "Auto" se
-                                                       lleva TODO lo que pida antes de que la fila "*" de abajo (la rejilla de
-                                                       Armadura/Accesorios) vea un solo pixel. Con un conjunto real que
-                                                       concede bono (ActiveSetBonusText visible, caso normal de juego, no un
-                                                       borde raro) esta cabecera pasa de 2 a 4 lineas y crece lo suficiente
-                                                       para que la rejilla de abajo se quede corta y pida scroll para ver su
-                                                       segunda fila - AR-14d del arnes real lo cazo con 32,6px cortados a
-                                                       1080x700. 112px cubre las 4 lineas sin bono largo (caso normal, sin
-                                                       scroll) y dan margen para que la fila "*" (MinHeight=84, ver arriba)
-                                                       siempre reciba su suelo real; solo un bono de set con texto MUY largo
-                                                       (varias lineas envueltas) llegaria a necesitar scroll aqui, y es
-                                                       preferible perder de vista un texto informativo unos pixeles que
-                                                       media rejilla de slots reales. -->
-                                                  <ScrollViewer Grid.Column="1" Grid.Row="0" Margin="0,0,0,6" MaxHeight="112"
-                                                                VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                                  <StackPanel DataContext="{Binding EquipmentGroup}">
-                                                      <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                  <!-- Cabecera STRUCTURAL_FINITE (s6/s34): Loadout + selector de subvista
+                                                       Armadura/Vanidad/Tintes + Defensa total + bono de set. Sin
+                                                       ScrollViewer ni MaxHeight: el bono largo envuelve (TextWrapping) y la
+                                                       fila Auto crece, empujando la subvista hacia abajo. DataContext local
+                                                       a EquipmentGroup (los laterales necesitan el MainViewModel). -->
+                                                  <StackPanel x:Name="EquipamientoCentro" Grid.Column="1" VerticalAlignment="Top">
+                                                  <StackPanel x:Name="EquipamientoCabecera" Margin="0,0,0,6"
+                                                              DataContext="{Binding EquipmentGroup}">
+                                                      <WrapPanel Margin="0,0,0,3">
                                                           <TextBlock Text="{Binding Loc[char_loadout_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
-                                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                                     VerticalAlignment="Center" Margin="0,0,8,5" />
                                                           <ItemsControl ItemsSource="{Binding LoadoutOptions}">
                                                               <ItemsControl.ItemsPanel>
                                                                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -1006,9 +974,8 @@
                                                               <ItemsControl.ItemTemplate>
                                                                   <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
                                                                       <!-- DisplayLabel (no Label): marca con un punto el conjunto
-                                                                           que el personaje llevaba PUESTO al guardar. Antes esa
-                                                                           informacion la daba una 4ª pildora "Puesto" que no existe
-                                                                           en el juego real - ver EquipmentGroupViewModel. -->
+                                                                           que el personaje llevaba PUESTO al guardar - ver
+                                                                           EquipmentGroupViewModel. -->
                                                                       <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
                                                                               ToolTip="{Binding ToolTipText}"
                                                                               Command="{Binding DataContext.EquipmentGroup.SelectLoadoutCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -1016,15 +983,15 @@
                                                                   </DataTemplate>
                                                               </ItemsControl.ItemTemplate>
                                                           </ItemsControl>
-                                                      </StackPanel>
-                                                      <!-- Auditoria de Opus, E-2: con sitio real para las 3 vistas a
-                                                           la vez (SizeClass.Amplio) no hay nada que "elegir" -
-                                                           este selector solo tiene sentido cuando hay que
-                                                           turnarse un unico hueco entre las 3. -->
-                                                      <StackPanel Orientation="Horizontal"
-                                                                  Visibility="{Binding DataContext.IsEquipmentExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
+                                                      </WrapPanel>
+                                                      <!-- Selector de subvista (s4): SIEMPRE visible, en todos los tamaños -
+                                                           "Vanidad solo parece existir cuando hago la ventana mas grande" no
+                                                           puede volver a pasar (ni al reves: antes, desde Amplio, era el
+                                                           selector el que desaparecia). x:Name para el canario
+                                                           EQUIP_RESPONSIVE_SOLO. -->
+                                                      <WrapPanel x:Name="EquipamientoSelectorVista">
                                                           <TextBlock Text="{Binding Loc[char_view_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
-                                                                     VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                                     VerticalAlignment="Center" Margin="0,0,8,5" />
                                                           <ItemsControl ItemsSource="{Binding KindOptions}">
                                                               <ItemsControl.ItemsPanel>
                                                                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -1037,13 +1004,10 @@
                                                                   </DataTemplate>
                                                               </ItemsControl.ItemTemplate>
                                                           </ItemsControl>
-                                                      </StackPanel>
-                                                      <!-- Auditoria de Opus, E-4: "el dato ya esta, solo falta
-                                                           enseñarlo" - defensa real sumada de este loadout
-                                                           (Armadura+Accesorios) y el bono de set REALMENTE
-                                                           activo (VanillaArmorSetCatalog.BonusForEquipped, ya
-                                                           existia sin usar), en vez del hipotetico del tooltip. -->
-                                                      <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
+                                                      </WrapPanel>
+                                                      <!-- Auditoria de Opus, E-4: defensa real sumada de este loadout y el
+                                                           bono de set REALMENTE activo (VanillaArmorSetCatalog.BonusForEquipped). -->
+                                                      <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap">
                                                           <Run Text="{Binding Loc[char_total_defense], Mode=OneWay}" />
                                                           <Run Text="{Binding TotalDefense, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                                                       </TextBlock>
@@ -1051,74 +1015,35 @@
                                                                  Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
                                                                  Visibility="{Binding ActiveSetBonusText, Converter={StaticResource NullToVis}}" />
                                                   </StackPanel>
-                                                  </ScrollViewer>
 
-                                                  <!-- ScrollViewer propio en el centro (mismo patron que el lateral Mascotas/Tintes): la fila "*" MinHeight=84 de este SlotRowHost se queda hambrienta cuando la Libreria esta desplegada a la vez (147,4px reales en vez de 190,1px), y sin scroll perdia 18,9px de Armadura/Accesorios por abajo. Nunca perder contenido de verdad: un scroll vertical silencioso es preferible a un recorte sin salida. Historial completo (medicion real del barrido AR-LAY): ADR-TERRAKEEP-015. -->
-                                                  <ScrollViewer Grid.Column="1" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                                                Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}">
-                                                      <ContentControl Content="{Binding EquipmentGroup.Current}"
-                                                                      ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                  </ScrollViewer>
+                                                  <!-- Subvista activa (FINITE_PAGEABLE): UNA de Armadura/Vanidad/Tintes, la
+                                                       que diga el selector de arriba - misma navegacion en todos los tamaños
+                                                       (s4/s16). En ventanas grandes aprovecha el espacio creciendo la celda
+                                                       (hasta MaxCell, mismo tamaño de icono que Inventario via
+                                                       ReferenceColumns), no cambiando de arquitectura. -->
+                                                  <ContentControl x:Name="EquipamientoSubvistaActual"
+                                                                  Content="{Binding EquipmentGroup.Current}"
+                                                                  ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                  </StackPanel>
 
-                                                  <!-- Auditoria de Opus, E-2: "las 3 vistas se podrian ver a la
-                                                       vez con sitio real" - en SizeClass.Amplio, Armadura/
-                                                       Vanidad/Tintes del loadout actual, lado a lado, cada una
-                                                       con su propia etiqueta (sin pildoras que elegir, ver el
-                                                       StackPanel de arriba). Mismo ContainerCompactTemplate de
-                                                       siempre - ninguna plantilla nueva, solo mas sitio para
-                                                       mostrar lo mismo de golpe (P3). -->
-                                                  <Grid Grid.Column="1" Grid.Row="1"
-                                                        Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource ObjetosBoolToVis}}">
-                                                      <Grid.ColumnDefinitions>
-                                                          <ColumnDefinition Width="*" />
-                                                          <ColumnDefinition Width="*" />
-                                                          <ColumnDefinition Width="*" />
-                                                      </Grid.ColumnDefinitions>
-                                                      <!-- E-b (segunda auditoria de Opus, Fable): "la etiqueta de
-                                                           cada columna usa el DisplayName largo pensado para el
-                                                           panel Editar, repitiendo 'Equipo puesto -' tres veces -
-                                                           ya existen literalmente en KindOptions, solo hay que
-                                                           reutilizarlos" - EquipmentKind.Items=0/Social=1/Dyes=2,
-                                                           mismo orden real que KindOptions ya declara. -->
-                                                      <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[0].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                      </StackPanel>
-                                                      <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[1].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                      </StackPanel>
-                                                      <StackPanel Grid.Column="2">
-                                                          <TextBlock Text="{Binding EquipmentGroup.KindOptions[2].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                          <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                      </StackPanel>
-                                                  </Grid>
-
-                                                  <!-- Grid.RowSpan=2: esta caja ocupa las 2 filas de su columna (igual que el lateral izquierdo) para aprovechar el alto de la franja del selector Loadout/Vista que no necesita - el corte real que arreglaba era de ALTO a 1080x700, no de ancho, por eso ScrollViewer propio/MaxWidth/apilar debajo (probados y descartados) empeoraban otras columnas. Historial completo con los 3 intentos descartados y medidas reales: ADR-TERRAKEEP-005. -->
-                                                  <Border x:Name="CajaMonedasMunicion" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
-                                                          CornerRadius="8" Padding="6" Margin="8,0,0,0">
-                                                      <!-- VerticalAlignment="Top" (13-sep-2026, auditoria de solapes/cajas): sin
-                                                           esto el StackPanel se ESTIRA (Stretch, el valor por defecto) a rellenar
-                                                           TODO el alto que el RowSpan="2" de arriba le da al Border, y el
-                                                           SlotGridPanel de Monedas/Municion recalcula su reparto de columnas
-                                                           contra ESE alto estirado (AvailableHeight, ver ContainerCompactTemplate) -
-                                                           asi que cuando la fila 1 crece por el MinHeight=84 de la rejilla de
-                                                           Armadura/Accesorios (ver el comentario de las RowDefinitions de este
-                                                           mismo SlotRowHost), este bloque, que NO necesitaba nada de ese alto de
-                                                           mas, se recalculaba a un reparto que dejaba 1,9px cortados sin scroll
-                                                           (AR-14c real). Con Top el StackPanel se queda en su alto natural
-                                                           (182,1px medidos) pase lo que pase con el resto de la fila - mismo
-                                                           Border de fondo, mismo tamaño, solo un poco de aire debajo en vez de
-                                                           un recalculo que no hacia falta. -->
-                                                      <StackPanel x:Name="PilaMonedasMunicion" VerticalAlignment="Top">
-                                                          <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                          <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                          <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />
-                                                          <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                  <!-- Lateral derecho Monedas/Municion. Historial completo: ADR-TERRAKEEP-005. -->
+                                                  <Border x:Name="CajaMonedasMunicion" Grid.Column="2" Background="{StaticResource BgPrimaryBrush}"
+                                                          CornerRadius="8" Padding="6" Margin="8,0,0,0" VerticalAlignment="Top">
+                                                      <!-- FASE B: Monedas | Municion lado a lado, una columna de 4 cada una
+                                                           (como el inventario del juego y como el lateral de Mascotas) - ver
+                                                           el comentario de CoinsContainer en MainViewModel para la medida. -->
+                                                      <StackPanel x:Name="PilaMonedasMunicion" Orientation="Horizontal" VerticalAlignment="Top">
+                                                          <StackPanel Margin="0,0,10,0">
+                                                              <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                              <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
+                                                          <StackPanel>
+                                                              <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                              <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
                                                       </StackPanel>
                                                   </Border>
                                               </controls:SlotRowHost>
-                                            </ScrollViewer>
                                         </Border>
                                     </StackPanel>
                                     </Border>
