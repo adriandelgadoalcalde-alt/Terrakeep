@@ -30947,3 +30947,79 @@ arreglo sobrevivio intacto a la reestructuracion de `MainWindow.xaml` en `UserCo
 `KeepQA/src/regresion/casos/terrakeep-libreria-cards-hover-borde-superior-cortado.json`
 (actualizacion de metadatos, mismo caso, sin crear uno nuevo) - ningun `.cs`/`.xaml` de
 `Terrakeep.App`/`Terrakeep.Core` tocado. Sin `git push`.
+
+## 28-sep-2026 - FASE A del responsive global: columnas adaptativas dentro de SlotGridPanel (encargo, PDF "Arreglo familia keep", segundo bloque)
+
+Encargo real: "TERRAKEEP - RESPONSIVE GLOBAL, PAGINACION Y SCROLL COMO ULTIMO RECURSO", por fases
+(`changeMode=REPLACE`). Esta ronda es SOLO la FASE A: infraestructura generica necesaria (adaptive
+SlotGrid / responsive contracts) - generalizar DENTRO del propio `SlotGridPanel`
+(`Terrakeep.App/Controls/SlotGridPanel.cs`) el mismo patron que hasta ahora vivia SOLO fuera, en
+`ChestInspectorColumnsConverter` (`Terrakeep.App/Converters/DensityConverters.cs`, usado hoy SOLO
+por `ChestInspectorView.xaml`) - en vez de que cada pantalla nueva reinvente su propio converter
+equivalente. **Ninguna pantalla real usa todavia la funcion nueva** (Objetos/Biblioteca/
+BuffLibrary/Investigacion siguen exactamente igual que antes) - migrarlas es trabajo de fases
+posteriores (B en adelante), coordinado aparte. `ChestInspectorColumnsConverter` NO se toco, sigue
+exactamente igual, para no arriesgar una regresion visual en una pantalla que ya funciona.
+
+**Diseño real aplicado**: nueva `DependencyProperty AdaptiveColumns` (bool, `AffectsMeasure`,
+default `false`) en `SlotGridPanel`. Semantica exacta pedida por el encargo:
+`maximumColumns = Math.Max(1, Math.Min(Columns, n))` (el `Columns` de siempre, techo real, NUNCA
+se ignora - identico al `cols` que ya calculaba `MeasureOverride` antes de esta pasada);
+`actualColumns` (variable local `cols` dentro de `MeasureOverride`) es el maximo numero de
+columnas que caben de verdad con una celda de al menos `MinCell` legible en el ancho REAL
+disponible (`(int)Math.Floor((availableSize.Width + Gap) / (MinCell + Gap))`, la misma formula -
+inversa de `cellFromWidth` - que ya usaba `ChestInspectorColumnsConverter` desde fuera), sin
+superar `maximumColumns`. Con menos columnas, `rows = ceil(n/cols)` crece: la rejilla se hace mas
+ALTA, nunca depende de un converter externo y nunca crea su propio scroll interno (eso sigue
+siendo responsabilidad del scroll owner EXTERIOR que hospede el panel - sin cambios ahi).
+`AdaptiveColumns=false` (valor por defecto, opt-in real) deja la formula de `cols` IDENTICA byte a
+byte a la que habia antes (`Math.Max(1, Math.Min(Columns, n))`), preservando fixed-columns donde
+ya tiene significado semantico real (pedido explicito del encargo). Casos de borde cubiertos sin
+romper el modo por defecto: ancho de entrada infinito (se comporta igual que el modo fijo, no hay
+ancho real contra el que adaptar) y `MinCell+Gap<=0` (configuracion degenerada, se queda tambien
+en `maximumColumns` en vez de dividir por cero/negativo).
+
+**Tests nuevos** (`Terrakeep.App.ViewModels.Tests/SlotGridPanelAdaptiveColumnsTests.cs`, xunit
+headless, mismo principio ya documentado en el arnes visual T24-SLOTGRID de
+`Terrakeep.App.Tests/Program.cs`: `Panel.Measure()` funciona standalone porque `MeasureOverride`
+es matematica pura sobre `InternalChildren`/las `DependencyProperty` del propio panel, sin arbol
+visual real ni `Window`). Unica pieza nueva real de infraestructura de test: `EnHiloSta<T>`, un
+hilo STA propio (`Thread.SetApartmentState(ApartmentState.STA)`) para construir/medir el panel -
+xunit corre en MTA por defecto y el constructor de `Panel`/`FrameworkElement` dispara
+`System.Windows.Input.InputManager`, que exige STA (`InvalidOperationException` real, confirmado
+al primer intento sin el hilo dedicado - el arnes visual T24-SLOTGRID no lo necesitaba porque su
+`Main()` ya lleva `[STAThread]`). Sin paquete nuevo (`xunit.stafact` u otro): la solucion mas
+simple (un `Thread` dedicado por medicion) bastaba.
+8 tests nuevos: modo fijo se congela en `MinCell` y pide mas ancho del disponible (recortado por
+WPF, mismo gotcha ya documentado en T24-SLOTGRID caso1); `AdaptiveColumns=true` con el MISMO
+escenario reduce de 6 a 4 columnas y la rejilla sale mas ALTA (149px vs 84px, mismo contenido,
+mismo ancho); `actualColumns` nunca supera `maximumColumns` con un ancho enorme; caso degenerado
+`MinCell+Gap=0` no revienta; ancho infinito se comporta como el modo fijo; y los 3 casos exactos
+de T24-SLOTGRID (suelo `MinCell`, techo `MaxCell`, `ReferenceWidth` cruzado) reproducidos aqui con
+`AdaptiveColumns=false` para confirmar que la formula del modo de siempre no cambio, de forma
+headless e instantanea (el arnes visual real, `Terrakeep.App.Tests` completo, tarda ~2min13s por
+pasada segun mediciones previas de este mismo fichero - no se toco ni se re-ejecuto en esta ronda,
+las nuevas pruebas xunit dan la misma garantia sobre la formula sin necesitar la ventana real).
+
+**Evidencia real de verificacion**:
+- `dotnet build Terrakeep.slnx -c Release`: **0 Advertencia(s), 0 Errores**.
+- `dotnet test Terrakeep.Core.Tests -c Release --no-build`: **782/782**, sin regresion.
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: primera pasada completa,
+  **763/764** (1 fallo real: `ExplorationWorldLauncherTests.RefreshWorldsCommand_...`, sensible a
+  tiempos async, no relacionado con `SlotGridPanel`) - confirmado en aislamiento
+  (`--filter "FullyQualifiedName~ExplorationWorldLauncherTests"`): **2/2** en verde. Segunda
+  pasada completa, sin filtro: **764/764**, confirmando que el fallo de la primera pasada fue una
+  intermitencia preexistente (timing bajo carga), no una regresion introducida por este cambio.
+  756 (baseline citado en el encargo) + 8 tests nuevos = 764.
+- `dotnet build Terrakeep.App -c Debug`: **0/0** - `Terrakeep.exe`
+  (`Terrakeep.App/bin/Debug/net10.0-windows/`, el binario real referenciado por
+  `herramientas.json`) recompilado con el cambio. Confirmado con `tasklist` que el proceso NO
+  estaba abierto antes de recompilar (sin bloqueo, sin necesidad de avisar de un despliegue
+  pendiente).
+
+**Commit local**: `Terrakeep.App/Controls/SlotGridPanel.cs` +
+`Terrakeep.App.ViewModels.Tests/SlotGridPanelAdaptiveColumnsTests.cs` + esta entrada de
+`bitacora.md`. Ningun otro archivo (los cambios sin comitear de `Terrakeep.Core.Tests/*`,
+`Terrakeep.App.Tests/AuditoriaMaquetacion.cs`/`ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`,
+`scripts/*` y `Terrasavr-Native.zip` que ya estaban en el arbol de trabajo al empezar esta ronda
+son de otras rondas en paralelo, no se tocaron ni se incluyeron). Sin `git push`.

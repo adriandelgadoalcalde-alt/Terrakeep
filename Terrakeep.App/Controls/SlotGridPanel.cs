@@ -90,6 +90,33 @@ public sealed class SlotGridPanel : Panel
         nameof(ReferenceWidth), typeof(double), typeof(SlotGridPanel),
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    // AdaptiveColumns (FASE A del responsive global, PDF "Arreglo familia keep", segundo bloque -
+    // "TERRAKEEP: RESPONSIVE GLOBAL, PAGINACION Y SCROLL COMO ULTIMO RECURSO"). Generalizacion
+    // DENTRO del propio panel del mismo patron que hasta ahora vivia SOLO fuera, en
+    // ChestInspectorColumnsConverter (DensityConverters.cs): en vez de que cada pantalla nueva
+    // reinvente su propio converter que le dice a SlotGridPanel cuantas columnas usar, el panel
+    // puede calcularlo el mismo con el ancho REAL disponible.
+    //
+    // Semantica exacta pedida por el encargo: `Columns` pasa a significar "maximumColumns" (el
+    // techo de siempre, NUNCA se ignora - preserva fixed-columns donde ya tiene significado
+    // semantico real, ej. Equipamiento a 5). `actualColumns` es el maximo numero de columnas que
+    // caben de verdad con una celda de al menos MinCell legible, sin superar ese techo - con
+    // menos columnas la rejilla se hace mas ALTA (mas filas), nunca depende de un converter
+    // externo y nunca crea su propio scroll interno (eso sigue siendo responsabilidad del scroll
+    // owner EXTERIOR que hospede el panel, exactamente igual que hoy).
+    //
+    // Opt-in, por defecto false: con AdaptiveColumns=false el calculo de `cols` es LITERAL el
+    // mismo `Math.Max(1, Math.Min(Columns, n))` de siempre - comportamiento identico byte a byte
+    // al que tenia el panel antes de esta pasada, nada cambia para ninguna pantalla real (ninguna
+    // usa todavia esta propiedad, ver bitacora.md).
+    //
+    // NO conectado (a proposito, todavia) a ChestInspectorColumnsConverter - migrarlo es trabajo
+    // de una fase posterior, coordinada aparte, para no arriesgar una regresion visual en una
+    // pantalla que ya funciona hoy.
+    public static readonly DependencyProperty AdaptiveColumnsProperty = DependencyProperty.Register(
+        nameof(AdaptiveColumns), typeof(bool), typeof(SlotGridPanel),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
     public int Columns { get => (int)GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
     public double MinCell { get => (double)GetValue(MinCellProperty); set => SetValue(MinCellProperty, value); }
     public double MaxCell { get => (double)GetValue(MaxCellProperty); set => SetValue(MaxCellProperty, value); }
@@ -97,6 +124,7 @@ public sealed class SlotGridPanel : Panel
     public double AvailableHeight { get => (double)GetValue(AvailableHeightProperty); set => SetValue(AvailableHeightProperty, value); }
     public int ReferenceColumns { get => (int)GetValue(ReferenceColumnsProperty); set => SetValue(ReferenceColumnsProperty, value); }
     public double ReferenceWidth { get => (double)GetValue(ReferenceWidthProperty); set => SetValue(ReferenceWidthProperty, value); }
+    public bool AdaptiveColumns { get => (bool)GetValue(AdaptiveColumnsProperty); set => SetValue(AdaptiveColumnsProperty, value); }
 
     private double _cell = 44;
     private int _cols = 1;
@@ -106,7 +134,25 @@ public sealed class SlotGridPanel : Panel
         int n = InternalChildren.Count;
         if (n == 0) return new Size(0, 0);
 
-        int cols = Math.Max(1, Math.Min(Columns, n));
+        int maximumColumns = Math.Max(1, Math.Min(Columns, n));
+
+        // AdaptiveColumns: actualColumns = maximo numero de columnas que caben de verdad con
+        // MinCell legible en el ancho REAL disponible, sin superar maximumColumns - misma formula
+        // (inversa de cellFromWidth) que ya usaba ChestInspectorColumnsConverter desde fuera. Con
+        // ancho infinito (medida sin restriccion real, p.ej. antes del primer layout) o con
+        // MinCell+Gap<=0 (configuracion degenerada) no hay ancho real contra el que adaptar - se
+        // queda en maximumColumns, igual que el modo fijo.
+        int cols = maximumColumns;
+        if (AdaptiveColumns && !double.IsInfinity(availableSize.Width))
+        {
+            double celdaConHueco = MinCell + Gap;
+            if (celdaConHueco > 0)
+            {
+                int columnasQueCaben = (int)Math.Floor((availableSize.Width + Gap) / celdaConHueco);
+                cols = Math.Clamp(columnasQueCaben, 1, maximumColumns);
+            }
+        }
+
         int rows = (int)Math.Ceiling(n / (double)cols);
 
         double availW = double.IsInfinity(availableSize.Width) ? MaxCell * cols + Gap * (cols - 1) : availableSize.Width;
