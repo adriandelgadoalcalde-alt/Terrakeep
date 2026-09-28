@@ -31773,3 +31773,59 @@ con Terrakeep cerrado; SHA256 publicado = instalado =
 `6af239950723966d8fd81c3d25088118c5ef90dbbe9b3dace263f94541cbbd7b`. Worktree retirado. Debug de
 `herramientas.json` compilado a las 13:17 con el arreglo (contiene `Terrakeep.Cursores.mano-agarrar`).
 Commits: `020fde86`, `a72c0f7d`.
+
+## 28-sep-2026 - FASE B del responsive global: segunda revisión visual (WARN) corregida (H-01..H-06)
+
+Veredicto del segundo revisor independiente sobre `f50cfbf9`: WARN (V-01..V-04 resueltos; las 3
+subvistas solo desde Extra, aceptado). Correcciones aplicadas (aplicador-fix-responsive-faseB-28sep2026):
+
+- **H-04 (High, datos reales) - `eb42e87c`**. `CharacterFileService.CarpetasPersonajesDePrueba`
+  SUSTITUYE (no suma, a diferencia de `ExtraPlayerFolders`) las carpetas de personajes; solo se puede
+  fijar con `App.ModoDiagnostico=true`. `Terrakeep.App.Tests/AislamientoPartidasReales.cs`, al arrancar
+  el arnés y antes de `new MainWindow()`: copia solo los `.plr/.tplr` reales a
+  `%TEMP%\TerrakeepArnes-<pid>\{tModLoader\Players,Players}` (conserva fechas y el segmento
+  `tModLoader`), sustituye las carpetas, guarda `%LOCALAPPDATA%\Terrakeep\session.json` y lo restaura al
+  salir, borra la carpeta temporal, y se detiene si el servicio siguiera viendo una carpeta real.
+  `ComprobarPersonajeAislado(vm)` aborta con FALLO si el personaje cargado está fuera de la carpeta
+  temporal (HOME-OPEN de `Program.cs` y `EQUIP_RESPONSIVE_SOLO`). El canario ya no usa `OpenCommand`:
+  copia el `.plr/.tplr` a su propia subcarpeta temporal y lo abre por ruta (`LoadFromPath`). Como la
+  sustitución es global, TODOS los modos del arnés que abrían `Characters[0]`/`FirstOrDefault()`
+  (NAV123, LIBCARD, DRAG_GHOST, DIAG_NAVTOGGLE, bloques de `Program.cs`) abren ahora copias sin tocar su
+  código. Tests: `CarpetasPersonajesDePruebaTests` (no activable fuera de diagnóstico; activado no deja
+  ninguna carpeta real ni extra). **Pendiente real**: los MUNDOS (`.wld`) siguen abiertos por ruta
+  absoluta real en ~15 sitios de canarios de Exploración (`roca_negra.wld`, `Blando_Río.wld`) - no
+  cubierto por esta fase.
+- **H-01 - `4e20a72a`**. Tras V-02 el panel Editar desplazaba 26,9px a 1080x700 con la Librería
+  desplegada (ext 294,5; Prefijo/Quitar ocultos). Estrella y "Vaciar slot" suben a la fila del título
+  "Editar" (ancho libre), el rol del slot ("Cabeza") pasa a un `Run` acentuado del subtítulo (espacio no
+  separable tras el "·") y el aire bajo título y cabecera baja de 10 a 8px (§14 paso 7). Nada se oculta
+  ni se recorta. Medido: ext 277,3, scr 9,6px (EN: 0). El canario falla (`EDITAR-SCROLL`) si supera el
+  permiso (12,3px). Permiso §13 rehecho en el Task Context: `baa9fe76` (medida vieja y marcado aceptado
+  sin preguntar) RESUELTO/sustituido por `aa5f7395` (medida real 9,6px, límite 12,3px,
+  aceptadoPorUsuario=false, pendiente de decisión del usuario).
+- **H-02 - `4e20a72a`**. Las 3 subvistas (Extra) en un `UniformGrid` 1x3 centrado con separación fija
+  (Margin 8,0) en lugar de 3 columnas `*` con cada rejilla centrada: hueco máximo entre rejillas 28px
+  (antes 140-210px). El canario mide el ancho del CONTENIDO (suma de rejillas + laterales) y falla si el
+  hueco supera 40px: 93% a 1920, 68% maximizado (MaxCell 72, sin crecer más). Para la FASE D: franja
+  vertical vacía entre Equipamiento y la Librería en 1920/maximizado (la fila de Objetos es "3*" y el
+  contenido de Equipamiento ocupa ~390px de ~520-720).
+- **H-03 - `4e20a72a`**. "Cargado 'X'..." se guarda como receta (`MostrarEstadoLocalizable`) y se
+  re-traduce al cambiar de idioma si sigue siendo el mensaje visible; "archivo · versión N"
+  (`FileVersionLine`) se notifica. Pendiente: el resto de mensajes de estado (guardado, conjuntos...)
+  siguen siendo texto fijo en el idioma en que se emitieron.
+- **H-05 - `4e20a72a`**. Con una sola subvista, cambiar a Vanidad/Tintes (o de loadout) lleva Editar al
+  slot equivalente (mismo índice) de la subvista visible. Canario: 3/3.
+- **H-06 - `783c66d3`**. `ComplementoKeepQA.cs` + `KEEPQA-INTEGRACION.md` versionados tal cual (sin
+  cambios desde el 24-sep; `Program.cs` ya llamaba a `EjecutarComplementoKeepQA`, un checkout limpio no
+  compilaba).
+
+### Verificación
+
+- Hashes SHA256 de las 24 partidas reales (`.plr/.tplr/.wld/.twld` de tModLoader y vainilla) +
+  `session.json`: idénticos antes y después de cada ejecución (`EQUIP_RESPONSIVE_SOLO` x3, `NAV123`,
+  `AR14`, `KEEPQA_EQUIPINV`, `ARLAY`). `Eldelgas.plr` (tModLoader) `14cd89901248e4e2…` al empezar y al
+  terminar. Carpetas `TerrakeepArnes-*` borradas al salir (0 restantes).
+- `dotnet build Terrakeep.slnx -c Release` 0/0; `Terrakeep.Core.Tests` 782/782;
+  `Terrakeep.App.ViewModels.Tests` 777/777.
+- `EQUIP_RESPONSIVE_SOLO` 0 FALLO; `NAV123_SOLO`/`AR14_SOLO`/`KEEPQA_EQUIPINV_SOLO`/`ARLAY_CANARIO_SOLO`
+  0 FALLO. Capturas "despues" regeneradas en `docs/evidencia/responsive-global/faseB/`.
