@@ -103,7 +103,19 @@ public partial class BuffSlotViewModel : ObservableObject
 
     // Refresh() es idempotente sobre el buff que ya hay puesto (no toca PlrBuff, solo recalcula
     // lo que se muestra), asi que rehacerlo entero al cambiar de idioma es seguro.
-    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
+    //
+    // FASE B del responsive global (28-sep-2026, encontrado por EQUIP_RESPONSIVE_SOLO): el
+    // PropertyChanged de estos textos llegaba a BuffsViewModel como una edicion real
+    // (SlotChanged -> MarkDirty) - cambiar de idioma dejaba el personaje "sin guardar".
+    // RefrescandoIdioma lo distingue, mismo criterio que AppearanceViewModel.RefrescandoIdioma.
+    public bool RefrescandoIdioma { get; private set; }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        RefrescandoIdioma = true;
+        try { Refresh(); }
+        finally { RefrescandoIdioma = false; }
+    }
 
     private void Refresh()
     {

@@ -132,7 +132,21 @@ public partial class AppearanceViewModel : ObservableObject
             LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
+    // FASE B del responsive global (28-sep-2026, encontrado por EQUIP_RESPONSIVE_SOLO): true
+    // mientras se refrescan SOLO textos por un cambio de idioma. MainViewModel marca "sin
+    // guardar" ante cualquier PropertyChanged de Apariencia - sin esta marca, cambiar de idioma
+    // (HairDyeDisplayName) dejaba el personaje como modificado sin ningun dato real cambiado, y el
+    // siguiente "abrir otro personaje"/cerrar ofrecia guardarlo (con "Si", escribia el .plr).
+    public bool RefrescandoIdioma { get; private set; }
+
     private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        RefrescandoIdioma = true;
+        try { RefrescarTextosDeIdioma(); }
+        finally { RefrescandoIdioma = false; }
+    }
+
+    private void RefrescarTextosDeIdioma()
     {
         // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los tintes de pelo se
         // llaman por el NOMBRE REAL DEL OBJETO del juego, que ahora cambia con el idioma.

@@ -102,6 +102,7 @@ public partial class BuffsViewModel : ObservableObject
             slot.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName is nameof(BuffSlotViewModel.IsSelected) or nameof(BuffSlotViewModel.JustEdited) or nameof(BuffSlotViewModel.RejectionMessage)) return;
+                if (slot.RefrescandoIdioma) return; // re-traduccion de textos, no una edicion (FASE B)
                 SlotChanged?.Invoke();
                 slot.TriggerEditFlash();
             };
