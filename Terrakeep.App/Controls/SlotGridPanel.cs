@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Terrakeep.App.Controls;
 
@@ -129,9 +130,19 @@ public sealed class SlotGridPanel : Panel
     private double _cell = 44;
     private int _cols = 1;
 
+    // FASE C del responsive global (28-sep-2026): cuanto alto le FALTA a la rejilla en la ultima
+    // medida con alto finito - 0 si cabe (la celda se encoge hasta caber) y > 0 solo cuando ni
+    // siquiera a MinCell cabe en el alto ofrecido. WPF recorta el DesiredSize de cada elemento a
+    // su availableSize (ver CLAUDE.md del repo), asi que ese exceso no llega a los padres por el
+    // layout normal: lo lee AjusteAlViewport para crecer justo lo que falta y dejar que el scroll
+    // owner de la pagina lo absorba (s14 paso 8), en vez de recortar las ultimas filas.
+    public double DeficitAlto { get; private set; }
+    private double _deficitNotificado;
+
     protected override Size MeasureOverride(Size availableSize)
     {
         int n = InternalChildren.Count;
+        DeficitAlto = 0;
         if (n == 0) return new Size(0, 0);
 
         int maximumColumns = Math.Max(1, Math.Min(Columns, n));
@@ -177,6 +188,19 @@ public sealed class SlotGridPanel : Panel
 
         double totalW = cols * cell + Gap * (cols - 1);
         double totalH = rows * cell + Gap * (rows - 1);
+        double deficitAnterior = _deficitNotificado;
+        if (!double.IsInfinity(availableSize.Height)) DeficitAlto = Math.Max(0, totalH - availableSize.Height);
+        _deficitNotificado = DeficitAlto;
+        // El deficit NO cambia el DesiredSize que ven los padres (WPF lo recorta), asi que un cambio
+        // que nace aqui dentro - p.ej. aparece el banner "Deshacer" encima de la rejilla y le quita
+        // 36px - no volveria a medir nunca a AjusteAlViewport: la ultima fila quedaria recortada sin
+        // scroll (medido con INVALM_RESPONSIVE_SOLO). Se le avisa a mano; si el cambio lo provoca su
+        // propia medida (primera pasada con el alto del viewport), no hace falta y no se avisa.
+        if (Math.Abs(DeficitAlto - deficitAnterior) > 0.5)
+        {
+            for (var d = VisualTreeHelper.GetParent(this); d != null; d = VisualTreeHelper.GetParent(d))
+                if (d is AjusteAlViewport ajuste) { if (!ajuste.Midiendo) ajuste.InvalidateMeasure(); break; }
+        }
         return new Size(totalW, totalH);
     }
 

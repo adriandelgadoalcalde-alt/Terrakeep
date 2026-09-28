@@ -2579,6 +2579,16 @@ internal static partial class Program
             Console.WriteLine("DONE (EQUIP_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // INVALM_RESPONSIVE_SOLO=1 (28-sep-2026, FASE C del responsive global): Inventario y los 4
+        // Almacenes con colecciones llenas, tamaños, ES/EN, compacto, clic en slot sin mover el scroll,
+        // resize en caliente y negative acceptance del scroll local viejo - ver
+        // CanarioResponsiveInventarioAlmacenes.cs.
+        if (Environment.GetEnvironmentVariable("INVALM_RESPONSIVE_SOLO") == "1")
+        {
+            EjecutarInvAlmResponsiveSolo(window, vm);
+            Console.WriteLine("DONE (INVALM_RESPONSIVE_SOLO)");
+            Environment.Exit(0);
+        }
         // DIAG_NAVTOGGLE_POS_SOLO=1 (26-sep-2026, investigador-bug, mismo TASK CONTEXT de arriba):
         // diagnostico desechable, mide con UI real la posicion Y del StackPanel "ObjetosNavToggle"
         // (RadioButton 1/2/3) contra su celda Grid compartida con ObjetosPageHost - ver

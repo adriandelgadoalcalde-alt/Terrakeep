@@ -241,6 +241,22 @@ public partial class ObjetosView : UserControl
             ViewModel.SelectSlot(slot);
     }
 
+    // FASE C del responsive global (bug hallado por el canario de arrastre, 020fde86): al pulsar un
+    // slot, el MouseLeftButtonDown burbujeaba hasta el primer ScrollViewer ancestro y
+    // ScrollViewer.OnMouseLeftButtonDown hacia Focus() sobre si mismo - FrameworkElement.OnGotFocus
+    // llama entonces a BringIntoView() y el ScrollViewer de la pagina se desplazaba para enseñar ENTERO
+    // al que habia cogido el foco (medido con INVALM_RESPONSIVE_SOLO: 74,6px en Inventario y 84,3px en
+    // Almacenes a 1080x700, antes de que el arrastre llegara a arrancar), y el foco de teclado acababa
+    // en el ScrollViewer en vez de en el slot (H5-14: los slots SON enfocables, Supr/Intro/F/Ctrl+C/V).
+    // El slot pulsado toma el foco el mismo y marca el evento como resuelto, igual que hace un Button:
+    // ningun ScrollViewer de encima se lo roba. Si el slot estuviera medio tapado, su propio
+    // BringIntoView lo termina de enseñar (el comportamiento normal de cualquier lista de WPF).
+    // Doble clic (MouseBinding) y arrastre (PreviewMouseLeftButtonDown/MouseMove) no dependen de esto.
+    private void OnItemSlotMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is UIElement slot && slot.Focus()) e.Handled = true;
+    }
+
     private void OnItemSlotMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || _dragStartSlot is not { } start) return;

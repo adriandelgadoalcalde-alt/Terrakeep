@@ -436,7 +436,7 @@
                  KeyDown propio (Supr vacia, Intro abre "Elegir...", F alterna favorito, Ctrl+C/
                  Ctrl+V copian/pegan el objeto entero - ver OnItemSlotKeyDown). -->
             <Border AllowDrop="True" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
-                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
+                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseLeftButtonDown="OnItemSlotMouseLeftButtonDown" MouseMove="OnItemSlotMouseMove"
                     DragOver="OnItemSlotDragOver" Drop="OnItemSlotDrop" KeyDown="OnItemSlotKeyDown">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
@@ -645,11 +645,12 @@
              piezas reutilizables para ofrecer DOS variantes sin duplicar nada:
                - SlotGridItemsPanel: la rejilla real (SlotGridPanel + sus bindings de siempre).
                - ContainerUndoBannerTemplate: el banner "Deshacer" de H4-05.
-               - ContainerCompactTemplate: banner + ScrollViewer propio + rejilla - la de SIEMPRE,
-                 que siguen usando Inventario/Almacenes (su revision es la FASE C, no se toca aqui).
                - ContainerFlowTemplate: banner + rejilla SIN ScrollViewer propio - para regiones que
-                 ya viven dentro de un scroll owner exterior (Equipamiento: la pagina
-                 ObjetosPaginaEquipamiento es el UNICO dueño del scroll vertical, s13 del encargo).
+                 ya viven dentro de un scroll owner exterior (la pagina ObjetosPagina* es el UNICO
+                 dueño del scroll vertical, s13 del encargo).
+             FASE C (28-sep-2026): ContainerCompactTemplate (banner + ScrollViewer PROPIO + rejilla), la
+             variante que conservaban Inventario/Almacenes, queda RETIRADA - ver el comentario en su
+             antiguo sitio, mas abajo, y Controls/AjusteAlViewport.cs.
              AvailableHeight sigue enlazado al ScrollViewer ancestro mas cercano (recorrido real del
              arbol visual - un ElementName aqui seria fragil, ver SlotGridPanel.cs): en la variante
              Flow ese ancestro es el propio scroll owner de la pagina, asi que una rejilla nunca
@@ -706,27 +707,17 @@
             </Border>
         </DataTemplate>
 
-        <!-- Rejilla compacta de UN contenedor entero - pregunta a Opus sobre el diseño
-             2-sep-2026, unificada tras el feedback del usuario ("equipamiento no tiene el mismo
-             formato que inventario y el resto de las 9 pestañas"). SlotGridPanel
-             (Terrakeep.App/Controls) calcula un tamaño de celda real que crece/encoge con la
-             ventana; si no cabria ni a MinCell, aparece scroll (nunca se sacrifica la
-             legibilidad). Columns viene de ContainerViewModel.Columns. Variante CON ScrollViewer
-             propio: Inventario/Almacenes (la FASE C del responsive global decidira su forma). -->
-        <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
-            <DockPanel>
-                <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource ContainerUndoBannerTemplate}"
-                                Focusable="False" IsTabStop="False" />
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}"
-                                  ItemsPanel="{StaticResource SlotGridItemsPanel}" />
-                </ScrollViewer>
-            </DockPanel>
-        </DataTemplate>
-
+        <!-- FASE C del responsive global (28-sep-2026, s13/s26 A/s28): RETIRADA ContainerCompactTemplate, la
+             rejilla de contenedor con ScrollViewer PROPIO que usaban Inventario y Almacenes. Vivia dentro del
+             ScrollViewer de su pagina (NAV123), asi que era un scroll anidado del mismo eje que nunca
+             desplazaba (recibia alto infinito), congelaba la celda en el primer tamaño que tuvo (57,1px de
+             1080 a 2576px de ancho: SlotGridPanel.AvailableHeight acababa enlazado a su propio alto) y, al
+             pulsar un slot, cogia el foco (ScrollViewer.OnMouseLeftButtonDown -> Focus -> BringIntoView) y
+             arrastraba la pagina 74-84px. Sustituida por ContainerFlowTemplate + Controls/AjusteAlViewport. -->
         <!-- FASE B del responsive global: misma rejilla y mismo banner, SIN ScrollViewer propio -
              la region crece en alto con naturalidad y el scroll owner EXTERIOR (la pagina) absorbe
-             el alto si de verdad hace falta (s8/s13/s14 del encargo). Usada por Equipamiento. -->
+             el alto si de verdad hace falta (s8/s13/s14 del encargo). Usada por Equipamiento y, desde
+             la FASE C, tambien por Inventario y Almacenes (UNICA plantilla de contenedor). -->
         <DataTemplate x:Key="ContainerFlowTemplate" DataType="{x:Type vm:ContainerViewModel}">
             <DockPanel>
                 <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource ContainerUndoBannerTemplate}"
@@ -822,7 +813,7 @@
                              una tarjeta de la Libreria hasta un slot visible sea posible de verdad. -->
                         <Grid>
                             <Grid.RowDefinitions>
-                                <!-- Las 2 filas compiten de verdad por el alto ("*" ambas cuando la Libreria esta desplegada): Objetos con MinHeight=216 (suelo real, 5 filas de Inventario) y Libreria con Height/MinHeight ligados a IsLibraryVisible (colapsada = Auto/0, desplegada = 2*/200) para que plegarla devuelva espacio de verdad. Limitacion conocida y aceptada: a 1080x700 con Libreria desplegada la 5a fila de Inventario ya no cabe entera sin el ScrollViewer de seguridad (accesible igualmente). Historial completo: ADR-TERRAKEEP-003. -->
+                                <!-- Las 2 filas compiten de verdad por el alto ("*" ambas cuando la Libreria esta desplegada): Objetos con MinHeight=216 (suelo real, 5 filas de Inventario) y Libreria con Height/MinHeight ligados a IsLibraryVisible (colapsada = Auto/0, desplegada = 2*/200) para que plegarla devuelva espacio de verdad. Historial completo: ADR-TERRAKEEP-003. FASE C del responsive global (28-sep-2026): la "limitacion conocida" que aqui se documentaba (a 1080x700 con la Libreria desplegada la 5a fila de Inventario solo se alcanzaba con el ScrollViewer de seguridad) queda resuelta sin scroll local: AjusteAlViewport ajusta la rejilla al alto real de la pagina (las 50 casillas enteras, celda 40px en ese caso). -->
                                 <RowDefinition Height="3*" MinHeight="216" />
                                 <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
@@ -898,7 +889,9 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                            <!-- FASE C: el titulo de pagina lo da ahora la navegacion etiquetada (ObjetosNavToggle, mas
+                                                 abajo), que se superpone a esta fila; la fila (SharedSizeGroup) se conserva
+                                                 como hueco para que el contenido empiece debajo de ella. -->
                                         </Grid>
                                         <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
                                              sobre el diseño, quinta pasada: "yo juntaría la página de
@@ -1164,16 +1157,29 @@
                                          (fijo, no se mueve entre paginas). Unificado a sin margen, igual que
                                          Equipamiento/Almacenes - ver comentario completo en el Grid de mas
                                          arriba (SharedSizeGroup="ObjetosHeaderRow"). -->
+                                    <!-- FASE C del responsive global: la pagina es el UNICO scroll owner vertical; su
+                                         contenido se ajusta al viewport (AjusteAlViewport) - la rejilla 10x5 encoge o
+                                         crece la celda hasta caber debajo de la cabecera (MinCell..MaxCell) y solo si ni
+                                         a MinCell cabe, la pagina crece lo justo y la desplaza su owner (s14 paso 8).
+                                         DockPanel (no StackPanel) para que la rejilla reciba el alto REAL restante. -->
+                                    <controls:AjusteAlViewport AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                                     <Border x:Name="ObjetosSeccionInventario">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                            <!-- FASE C: el titulo de pagina lo da ahora la navegacion etiquetada (ObjetosNavToggle, mas
+                                                 abajo), que se superpone a esta fila; la fila (SharedSizeGroup) se conserva
+                                                 como hueco para que el contenido empiece debajo de ella. -->
                                         </Grid>
+                                        <!-- FASE C: VerticalAlignment=Top - el marco se ciñe a cabecera+rejilla (mide con el
+                                             alto restante, pero no se estira hasta el fondo del viewport). Margin superior
+                                             6->2, el mismo que el marco de Equipamiento, y relleno vertical 10->8 (s14 paso 7,
+                                             compactar dentro de limites de legibilidad): medido, con 10 quedaban 4px de
+                                             scroll de pagina a 1080x700 con la Libreria desplegada (rejilla ya en MinCell). -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top">
                                             <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
                                                  igual de util y no existe en ningun sitio" - la vista Amplia (mas
                                                  abajo) ya tenia esta cabecera, la normal/compacta no tenia
@@ -1246,7 +1252,7 @@
                                                     <TextBlock Grid.Column="0" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
                                                 </Grid>
-                                                <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                             </DockPanel>
                                         </Border>
 
@@ -1262,8 +1268,9 @@
                                              restaurarle 3 botones que se habian quedado fuera en la copia manual -
                                              ver el commit real de esta pieza para el texto integro si hiciera
                                              falta recuperarlo). -->
-                                    </StackPanel>
+                                    </DockPanel>
                                     </Border>
+                                    </controls:AjusteAlViewport>
                                 </ScrollViewer>
                                 <!-- T3 PASO 1: seccion Almacenes - antes vivia como pestaña propia SOLO en
                                      Compacto/Normal (se ocultaba entera en Amplio, donde el bloque de dos
@@ -1275,22 +1282,46 @@
                                     <!-- NAV123 centrado real (26-sep-2026): mismo motivo que ObjetosSeccionInventario
                                          arriba - Margin="0,14,0,0" retirado, sin margen igual que las otras 2
                                          paginas. -->
+                                    <!-- FASE C: mismo modelo que Inventario (UNICO scroll owner + AjusteAlViewport). -->
+                                    <controls:AjusteAlViewport AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                                     <Border x:Name="ObjetosSeccionAlmacenes">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,6">
+                                    <DockPanel>
+                                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                            <!-- FASE C: el titulo de pagina lo da ahora la navegacion etiquetada (ObjetosNavToggle, mas
+                                                 abajo), que se superpone a esta fila; la fila (SharedSizeGroup) se conserva
+                                                 como hueco para que el contenido empiece debajo de ella. -->
                                         </Grid>
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top">
                                             <DockPanel DataContext="{Binding StorageGroup}">
-                                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                    <!-- Auditoria de redimensionado, R-01: WrapPanel por el mismo motivo
-                                                         que la cabecera de Inventario (H-08) - 5 botones en una fila no
-                                                         debe poder recortar la fila de pildoras de almacen que va detras. -->
-                                                    <WrapPanel DockPanel.Dock="Right">
+                                                <!-- FASE C (s14 pasos 1-2, reflow + wrap): selector de los 4 almacenes y botones en UN
+                                                     WrapPanel - las 4 pildoras van SIEMPRE juntas (primer hijo, medido con el ancho
+                                                     entero) y los botones siguen en la misma fila si caben o bajan a la siguiente.
+                                                     Antes (DockPanel con los botones a la derecha, medidos primero) las pildoras se
+                                                     quedaban con ~227px a 1080 y se partian en 3 filas: Forja y Camara del vacio caian
+                                                     debajo, lejos de Banco/Caja fuerte, y la cabecera se comia ~25px mas de alto. -->
+                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
+                                                         que pulsar su pildora y contar" - DisplayLabel ya trae el
+                                                         recuento real en vivo ("Banco (38/40)"). -->
+                                                    <ItemsControl x:Name="AlmacenesSelector" ItemsSource="{Binding Options}" Margin="0,0,12,0">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <!-- Auditoria de redimensionado, R-01: WrapPanel por el mismo motivo que la
+                                                         cabecera de Inventario (H-08). -->
+                                                    <WrapPanel VerticalAlignment="Center">
                                                         <!-- H5-03: mismos 3 botones reales que Inventario, operando sobre
                                                              el almacen SELECCIONADO ahora mismo (Current) - igual que
                                                              Ordenar/Vaciar contenedor ya hacen aqui al lado. -->
@@ -1308,27 +1339,13 @@
                                                         <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding Current.ClearAllCommand}"
                                                                 ToolTip="{Binding Loc[tt_empty_storage], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
                                                     </WrapPanel>
-                                                    <ItemsControl ItemsSource="{Binding Options}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
-                                                                 que pulsar su pildora y contar" - DisplayLabel ya trae el
-                                                                 recuento real en vivo ("Banco (38/40)"). -->
-                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
-                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </DockPanel>
-                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                </WrapPanel>
+                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                             </DockPanel>
                                         </Border>
-                                    </StackPanel>
+                                    </DockPanel>
                                     </Border>
+                                    </controls:AjusteAlViewport>
                                 </ScrollViewer>
                                 </Grid>
                                 <!-- NAV123: selector directo Equipamiento/Inventario/Almacenes - reemplaza el
@@ -1354,8 +1371,14 @@
                                      titulo de cada pagina - su alto queda sincronizado al maximo real entre
                                      ViewSelector y SectionText, y el StackPanel interior se centra en esa fila
                                      con VerticalAlignment="Center" (ya no hay Margin superior fijo). -->
-                                <Grid x:Name="ObjetosNavToggle" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                      Margin="0,0,4,0" Panel.ZIndex="5">
+                                <!-- FASE C del responsive global (hallazgo del revisor de la FASE B): los botones eran
+                                     "1"/"2"/"3" sin etiqueta, a la derecha, junto a los 1/2/3 de Loadout (que significan otra
+                                     cosa). Ahora llevan icono real del juego + nombre de la pagina (y su tooltip), van a la
+                                     izquierda y hacen de encabezado de la pagina (el titulo suelto de cada pagina se retira:
+                                     duplicaba el boton marcado). Mismos RadioButton, mismo GroupName/Tag/Click/IsChecked:
+                                     la navegacion no cambia. Caben enteros en el minimo (~330px de ~630 en ES). -->
+                                <Grid x:Name="ObjetosNavToggle" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                      Panel.ZIndex="5">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow" />
                                     </Grid.RowDefinitions>
@@ -1367,17 +1390,35 @@
                                              global, via RequestObjetosSection). El Click sigue llamando a
                                              RequestObjetosSection para no depender solo de ConvertBack. -->
                                         <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                     Padding="10,4" Content="1" Tag="0" Click="OnObjetosNavToggleClick"
+                                                     Padding="10,4" FontSize="12" Tag="0" Click="OnObjetosNavToggleClick"
                                                      IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
-                                                     ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
+                                                     ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="pack://siteoforigin:,,,/Assets/vanilla/icons/81.png" Width="16" Height="16" Margin="0,0,6,0"
+                                                       Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </RadioButton>
                                         <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                     Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
+                                                     Padding="10,4" FontSize="12" Tag="1" Click="OnObjetosNavToggleClick"
                                                      IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
-                                                     ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
+                                                     ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="pack://siteoforigin:,,,/Assets/vanilla/icons/48.png" Width="16" Height="16" Margin="0,0,6,0"
+                                                       Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </RadioButton>
                                         <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                     Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
+                                                     Padding="10,4" FontSize="12" Tag="2" Click="OnObjetosNavToggleClick"
                                                      IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
-                                                     ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
+                                                     ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="pack://siteoforigin:,,,/Assets/vanilla/icons/87.png" Width="16" Height="16" Margin="0,0,6,0"
+                                                       Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </RadioButton>
                                     </StackPanel>
                                 </Grid>
                                 </Grid>
