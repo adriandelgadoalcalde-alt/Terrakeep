@@ -30869,3 +30869,81 @@ totalmente distintas.
 **Commit local**: unico fichero tocado, esta entrada de `bitacora.md` - ningun `.cs`/`.xaml` de
 `Terrakeep.App`/`Terrakeep.Core` tocado, ningun archivo del working set del agente en paralelo
 (`SlotGridPanel.cs`, `AuditoriaMaquetacion.cs`, etc.) tocado ni comiteado. Sin `git push`.
+
+## Reconfirmacion "hover/borde superior cortado en las cards de carpeta raiz de la Libreria
+## (Materiales/Buffs/Investigacion)" - YA NO REPRODUCE, sobrevive al ADR-TERRAKEEP-032
+## (28-sep-2026, investigador-bug)
+
+Encargo del coordinador: revalidar el punto INCONCLUSO del encargo maestro sobre "hover cortado en
+libreria" (Materiales/Buffs), identificado contra `imagen2.png` de
+`Downloads\Keep\Arreglos familia keep\`. Caso ya conocido y documentado en KeepQA:
+`KeepQA/src/regresion/casos/terrakeep-libreria-cards-hover-borde-superior-cortado.json` (abierto
+24-sep-2026 por un investigador-bug anterior). Motivo real de la revalidacion: el campo
+`commit_que_lo_arreglo` de ese caso seguia diciendo "no aplicado todavia" en el JSON, pero el codigo
+real ya lleva el arreglo aplicado desde el `306a7d41` del 25-sep-2026 (aplicador-fix) - Y ademas
+`MainWindow.xaml` sufrio despues una reestructuracion grande (`ADR-TERRAKEEP-032`, 15 extracciones a
+`UserControl`, incluida la de Objetos en `23dcc574`, 27-sep-2026) que movio TODAS las lineas
+originales que el caso citaba (`MainWindow.xaml:3690/3906/4067`) - hacia falta confirmar con
+ejecucion real, no solo con el diff historico, que el arreglo sigue vivo tras el movimiento de
+archivos. No se toco ningun `.cs`/`.xaml` de produccion.
+
+**Evidencia real de hoy**:
+- Las 3 superficies afectadas (mismo Style `NavCardButton`, `Terrakeep.App/Styles/Theme.xaml:1231-
+  1269`) llevan hoy `Margin="0,4,0,0"` en el `ItemsControl` de tarjetas de carpeta raiz, el mismo
+  clearance real que recomendaba el caso original: Objetos en
+  `Terrakeep.App/Views/ObjetosView.xaml:1627` (movido aqui por el `ADR-TERRAKEEP-032`, antes
+  `MainWindow.xaml:~3690`), Buffs en `Terrakeep.App/MainWindow.xaml:1456` (sigue en `MainWindow.xaml`
+  a proposito, ver `ADR-TERRAKEEP-032` mas arriba: "Buffs/Research... nunca estuvieron en el orden de
+  extraccion del plan") e Investigacion en `Terrakeep.App/MainWindow.xaml:1620`. Los 3 puntos llevan
+  el mismo comentario de cabecera citando `imagen2/LIBCARD_CLIP_SOLO` y explicando por que el
+  clearance tiene que ir en `Margin` del `ItemsControl` y NUNCA en `Padding` del `ScrollViewer`
+  (`Padding` ahi se traduce en `Margin` del `ScrollContentPresenter` por defecto de WPF, que
+  desplaza a la vez la caja que recorta Y el contenido - cero mejora real, medido en su momento por
+  quien aplico el arreglo).
+- `dotnet build Terrakeep.App.Tests -c Release`: compilacion correcta, 0 errores (confirma que el
+  canario sigue compilando tras el `ADR-TERRAKEEP-032`, sin ningun ajuste necesario en el propio
+  canario - localiza los `NavCardButton` por `Style`/`FindResource`, no por ruta de archivo).
+- `LIBCARD_CLIP_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`, ejecutado DOS
+  veces de forma independiente hoy: **0 lineas `FALLO`** en ambas ejecuciones. Medicion real (misma
+  simulacion de hover que el canario original: `TranslateTransform.Y=-3` sobre `BdLift`,
+  `RectCompleto` vs `RectVisible`):
+  - `libreria-objetos`: fila 1 ("Materiales") `RectCompleto.Top=662,12` vs `RectVisible.Top=662,12`
+    -> recorte real 0px. Fila 2 ("Pociones (regeneracion)", control): 0px.
+  - `libreria-buffs`: fila 1 ("Utilidad (17)") -> recorte real 0px. Fila 2 ("Special (10)", control):
+    0px.
+  - `investigacion`: fila 1 ("Materiales") `RectCompleto.Top=349,69` vs `RectVisible.Top=349,69` ->
+    recorte real 0px. Fila 2 ("Pociones (regeneracion)", control): 0px.
+  - Capturas reales guardadas (estado normal, confirman visualmente el aire por encima de la fila 1
+    que antes no existia): `libcard-clip-libreria-objetos.png`, `libcard-clip-libreria-buffs.png`,
+    `libcard-clip-investigacion.png` en `Terrakeep.App.Tests/bin/Release/net10.0-windows/`.
+
+**Veredicto**: YA NO REPRODUCE. Causa raiz historica (ya arreglada): `NavCardButton` sube el
+`Border` interno "Bd" -3px en hover via `TranslateTransform x:Name="BdLift"`
+(`Theme.xaml:1249-1260`, `DoubleAnimation To="-3"` en el `Trigger IsMouseOver`) - las 3 rejillas de
+tarjetas de carpeta raiz (Objetos/Buffs/Investigacion) metian su `ItemsControl`/`WrapPanel` dentro de
+un `ScrollViewer` sin ningun margen superior de reserva, asi que con `VerticalOffset=0` la fila 1
+quedaba pegada al borde exacto del viewport y los -3px del lift caian fuera del area que el
+`ScrollViewer` recorta. Arreglado en `306a7d41` (25-sep-2026) anadiendo `Margin="0,4,0,0"` al
+`ItemsControl` de las 3 superficies - arreglo estructural real (clearance de layout), no un
+`Clip`/`Effect` nuevo ni el lift bajado a 0, tal y como pedia el caso original. Confirmado hoy que el
+arreglo sobrevivio intacto a la reestructuracion de `MainWindow.xaml` en `UserControl` del
+`ADR-TERRAKEEP-032`.
+
+**Cobertura KeepQA/arnes**: ya cerrada por el canario PREEXISTENTE `LIBCARD_CLIP_SOLO=1`
+(`Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs:203-324`, wireado en `Program.cs:2573-2578`)
+- no hace falta un canario nuevo, el hueco de cobertura ya estaba cerrado desde el 24-sep-2026 y
+  sigue midiendo con codigo real (no visual), no solo comprobando que el patron de texto siga
+  presente. Unico ajuste real hecho hoy: el caso de regresion de KeepQA
+  (`KeepQA/src/regresion/casos/terrakeep-libreria-cards-hover-borde-superior-cortado.json`) tenia el
+  campo `commit_que_lo_arreglo` desactualizado ("no aplicado todavia") y las rutas de
+  `archivo`/`notas` seguian citando lineas de `MainWindow.xaml` que el `ADR-TERRAKEEP-032` ya movio -
+  actualizado con el commit real, la ejecucion de hoy y las rutas nuevas (`ObjetosView.xaml` para
+  Objetos, `MainWindow.xaml` con lineas nuevas para Buffs/Investigacion). El propio `regresion.js` de
+  KeepQA solo comprueba que `Program.cs` siga conteniendo el patron `LIBCARD_CLIP_SOLO` (existencia
+  del canario, modo "contiene"), no su veredicto en verde - por eso esta ronda ejecuto el canario de
+  verdad en vez de fiarse solo de ese chequeo estatico.
+
+**Commit local**: esta entrada de `bitacora.md` +
+`KeepQA/src/regresion/casos/terrakeep-libreria-cards-hover-borde-superior-cortado.json`
+(actualizacion de metadatos, mismo caso, sin crear uno nuevo) - ningun `.cs`/`.xaml` de
+`Terrakeep.App`/`Terrakeep.Core` tocado. Sin `git push`.
