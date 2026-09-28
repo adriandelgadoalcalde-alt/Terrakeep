@@ -290,6 +290,8 @@
   "explore_save_spawn_tooltip": "Escribe el nuevo punto de aparición directamente en el archivo .wld del mundo (crea antes una copia de seguridad .bak automática)",
   "explore_save_time": "Guardar hora y luna",
   "explore_save_time_tooltip": "Escribe la hora, la fase lunar, la luna de sangre y el eclipse directamente en el archivo .wld del mundo (crea antes una copia de seguridad .bak automática)",
+  "explore_save_world": "Guardar mundo",
+  "explore_save_world_tooltip": "Guarda de golpe todos los cambios pendientes del mundo (modo de juego, punto de aparición, hora/luna y banderas de jefes) - lo mismo que pulsar cada botón 'Guardar' de 'Editar mundo' uno a uno, con la misma copia de seguridad .bak automática. Los cofres y los letreros se guardan aparte, con su propio botón, al editarlos.",
   "explore_spawn_point": "Punto de aparición",
   "explore_time_and_moon": "Hora y luna",
   "explore_time_hour": "Hora:",

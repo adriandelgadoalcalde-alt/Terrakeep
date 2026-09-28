@@ -31024,6 +31024,96 @@ las nuevas pruebas xunit dan la misma garantia sobre la formula sin necesitar la
 `scripts/*` y `Terrasavr-Native.zip` que ya estaban en el arbol de trabajo al empezar esta ronda
 son de otras rondas en paralelo, no se tocaron ni se incluyeron). Sin `git push`.
 
+## 28-sep-2026 - Exploracion: boton "Guardar mundo" nuevo (pregunta directa del usuario sobre como se guarda el mundo hoy)
+
+Pregunta textual del usuario: *"en exploracion como se guarda el mundo? cuando le das a guardar en
+tu personaje si esta cargado tambien? o se guarda cuando le das a guardar en los cofres? deberia de
+haber un boton de guardar igual que hay uno de cargar mundo? si es asi que este en la derecha del
+todo"*.
+
+**Investigacion real (los 3 escenarios que pregunto), antes de tocar nada**:
+1. **"Guardar" de Personaje** (`MainViewModel.cs:1695`, `private void Save()`) - lee/escribe
+   EXCLUSIVAMENTE `_loaded` (el `.plr`/`.tplr` cargado); no referencia `_world`, `Exploration` ni
+   `WorldFileService` en ningun punto. **Nunca toca el mundo cargado en Exploracion**, cargado o
+   no.
+2. **"Guardar" de un cofre abierto** (`ExplorationViewModel.SaveEditingChestAsync`,
+   `WorldFileService.SaveChestItems`) - escritura atomica e INMEDIATA de ESE cofre concreto en
+   cuanto se pulsa su propio boton (con copia `.bak`), nunca de "todo el mundo".
+3. **El resto de ediciones del mundo** (modo de juego/punto de aparicion/hora y luna/banderas de
+   jefes, las 4 secciones de "Editar mundo") - cada una **ya escribia** de forma atomica e
+   inmediata en el `.wld` en cuanto se pulsaba su PROPIO boton dedicado
+   (`SaveWorldGameModeAsync`/`SaveSpawnPointAsync`/`SaveTimeAndMoonAsync`/`SaveBossFlagsAsync`,
+   todas con el mismo patron de copia `.bak`) - letreros igual
+   (`SaveSignTextAsync`)/roster de NPCs escribe directo sin paso intermedio. **No existia ningun
+   estado "sucio" agregado que un boton nuevo tuviera que volcar** - lo que faltaba de verdad era
+   un atajo real para no tener que ir boton a boton por las 4 secciones cuando hay varias
+   pendientes a la vez.
+
+**Arreglo real aplicado**: nuevo comando `SaveWorldChangesCommand`/`CanSaveWorldChanges`
+(`Terrakeep.App/ViewModels/ExplorationViewModel.cs`, junto a `SaveBossFlagsAsync`) - `CanExecute`
+es la OR de las 4 secciones (`CanSaveWorldGameMode/CanSaveSpawnPoint/CanSaveTimeAndMoon/
+CanSaveBossFlags`); al ejecutar, invoca SECUENCIALMENTE (nunca en paralelo: cada `Save*Async` lee
+y reemplaza el mismo campo mutable `_world`) las que tengan cambios pendientes. Los 21 sitios que
+ya notificaban `NotifyCanExecuteChanged` de cada comando individual (los `partial void
+OnEditXxxChanged` de las 14 banderas de jefes + spawn + hora/luna/modo + los 4 `finally` de cada
+`Save*Async`) ahora notifican tambien al comando nuevo, para que se habilite/deshabilite en
+tiempo real igual que los demas. Cofres y letreros se dejaron FUERA a proposito (documentado en el
+propio comentario del codigo): son ediciones ligadas a un editor concreto abierto
+(`EditingChest`/`SelectedSignHit`) con su propio boton "Guardar" ya visible justo al lado -
+meterlos en un boton generico de la barra forzaria a guardar algo que el usuario puede tener a
+medio escribir.
+
+**Boton nuevo** (`Terrakeep.App/MainWindow.xaml`, dentro del `WrapPanel` de la barra de
+Exploracion): mismo estilo que "Cargar mundo" (`Tag="Accent"`), ultimo hijo real del `WrapPanel`
+para quedar en el extremo derecho de la fila (pedido explicito: "que este en la derecha del
+todo"), visible solo con un mundo cargado. Claves de idioma nuevas `explore_save_world`/
+`explore_save_world_tooltip` en `strings_es.json`/`strings_en.json`.
+
+**Verificacion real**: `Terrakeep.App.ViewModels.Tests/ExplorationSaveWorldChangesTests.cs`
+(nuevo, 3 tests) construye un `.wld` MINIMO real con `WldWriter.WriteWorld` (mismo mecanismo que
+`Terrakeep.Core.Tests/WldFormat/WldWriterWriteWorldTests.cs`), lo carga con `LoadFromPathAsync` y
+comprueba en DISCO (releyendo con `WldReader.ReadHeader`) que un cambio de spawn + un cambio de
+banderas de jefes A LA VEZ (dos secciones distintas) se escriben los DOS de un solo golpe con
+`SaveWorldChangesCommand`, con su `.bak`, y que el boton queda deshabilitado despues; un tercer
+test confirma con evidencia real que "Guardar" de Personaje no interactua con el mundo pendiente.
+**3/3 en verde** (aislado, ~2.4s).
+
+**Gates**: `dotnet build Terrakeep.slnx -c Release` 0/0 (el unico error de compilacion visto en
+esta ronda fue en `Terrakeep.App.Tests/DiagZOrderTemp.cs`, un fichero temporal SIN COMITEAR de
+otra ronda en paralelo de drag-and-drop, "DIAGNOSTICO TEMPORAL - NO COMMITEAR" en su propio
+comentario - no tocado). `dotnet build Terrakeep.App.ViewModels.Tests -c Release` (aislado): 0/0.
+`dotnet test` del area de Exploracion completa (`FullyQualifiedName~Exploration`, excluyendo el
+`ExplorationWorldLauncherTests` ya documentado como intermitente en la entrada anterior de esta
+misma bitacora) - **13/13 en verde**, incluidos los 3 tests nuevos. La pasada COMPLETA de
+`Terrakeep.App.ViewModels.Tests` (760+ tests) se intento 3 veces y las 3 quedo bloqueada por
+contencion real de CPU (confirmado con `Get-Process`: hasta 4 `testhost.exe` simultaneos de otros
+agentes en paralelo, uno con mas de 1400s de CPU acumulado) sin terminar ni fallar - mismo patron
+de intermitencia por carga ya documentado repetidas veces en esta bitacora (incluida la entrada
+inmediatamente anterior), no evidencia de una regresion real: el subconjunto relevante (Exploracion
+completa) SI corrio limpio y rapido en cuanto se aislo del resto de la contienda.
+
+### Recompilacion/redespliegue real
+
+Ni `Terrakeep.exe` (Debug) ni el `Terrakeep.exe` instalado estaban en ejecucion (verificado con
+`tasklist` antes de copiar). `dotnet build Terrakeep.App/Terrakeep.App.csproj -c Debug`: 0/0 (el
+binario real de `herramientas.json`, entrada `terrakeep_native`). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64`: 0/0, seguido de
+`robocopy /MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\
+Programs\Terrakeep\` (el destino real, barra de tareas y Menu Inicio apuntan ahi - mismo patron ya
+establecido en la entrada anterior de esta bitacora) - 1 archivo copiado (`Terrakeep.exe`, lo
+unico que cambio), 0 errores, hash SHA256 identico entre publicado e instalado
+(`85FF4323AC69C4F220C11E4684AF2BC6867A869253D2A45EE61CD3013F500715`).
+
+**Commit local**: `Terrakeep.App/ViewModels/ExplorationViewModel.cs` +
+`Terrakeep.App/MainWindow.xaml` + `Terrakeep.App/Assets/strings_es.json` +
+`Terrakeep.App/Assets/strings_en.json` + `Terrakeep.App.ViewModels.Tests/
+ExplorationSaveWorldChangesTests.cs` + esta entrada de `bitacora.md`. Ningun otro archivo del
+arbol de trabajo (varias rondas en paralelo de otros agentes tenian ya modificados/nuevos
+`Terrakeep.App.Tests/Program.cs`/`AuditoriaMaquetacion.cs`/`CanarioDragGhostZOrderLibreria.cs`/
+`ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`, `Terrakeep.App/Controls/DragDropSupport.cs`,
+`Terrakeep.App/MainWindow.xaml.cs`, varios `Terrakeep.Core.Tests/*`, `scripts/*` y
+`Terrasavr-Native.zip` - ninguno se toco ni se incluyo). Sin `git push`.
+
 ## 28-sep-2026 - "Parpadeos en la pestaña Vecindad" (encargo directo) - INVESTIGADO: no es este repo (rol investigador-bug, no aplica ningun arreglo)
 
 Encargo directo del usuario: "hay que seguir investigando el tema de los parpadeos en la pestaña

@@ -433,7 +433,7 @@ public partial class ExplorationViewModel : ObservableObject
         OnPropertyChanged(nameof(WorldGameModeSaveStatus));
     }
 
-    partial void OnWorldGameModeChanged(int value) => SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+    partial void OnWorldGameModeChanged(int value) { SaveWorldGameModeCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
 
     // Hallazgo real de la oleada del 6-sep-2026 (area Exploracion): los CUATRO chips de dificultad
     // se ofrecian siempre, en cualquier mundo - pero en un mundo anterior a la version 209 del
@@ -534,6 +534,7 @@ public partial class ExplorationViewModel : ObservableObject
         finally
         {
             SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+            SaveWorldChangesCommand.NotifyCanExecuteChanged();
         }
     }
     // F-7 (auditoria de Opus vs TEdit, E-06): "el punto de aparicion del mundo... su unico uso
@@ -592,8 +593,8 @@ public partial class ExplorationViewModel : ObservableObject
     private string? _spawnSaveStatusKey; private object?[] _spawnSaveStatusArgs = [];
     public string? SpawnSaveStatus => _spawnSaveStatusKey is null ? null : LocalizationService.Instance.Format(_spawnSaveStatusKey, _spawnSaveStatusArgs);
     private void SetSpawnSaveStatus(string? clave, params object?[] args) { _spawnSaveStatusKey = clave; _spawnSaveStatusArgs = args; OnPropertyChanged(nameof(SpawnSaveStatus)); }
-    partial void OnEditSpawnXChanged(int value) => SaveSpawnPointCommand.NotifyCanExecuteChanged();
-    partial void OnEditSpawnYChanged(int value) => SaveSpawnPointCommand.NotifyCanExecuteChanged();
+    partial void OnEditSpawnXChanged(int value) { SaveSpawnPointCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditSpawnYChanged(int value) { SaveSpawnPointCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
     private bool CanSaveSpawnPoint() => IsWorldLoaded && _currentWorldPath != null && (EditSpawnX != _savedSpawnX || EditSpawnY != _savedSpawnY);
 
     [RelayCommand(CanExecute = nameof(CanSaveSpawnPoint))]
@@ -612,7 +613,7 @@ public partial class ExplorationViewModel : ObservableObject
             SetSpawnSaveStatus("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex) { SetSpawnSaveStatus("status_save_failed", ex.Message); }
-        finally { SaveSpawnPointCommand.NotifyCanExecuteChanged(); }
+        finally { SaveSpawnPointCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
     }
 
     // --- Hora del dia, luna, luna de sangre, eclipse ---
@@ -627,10 +628,10 @@ public partial class ExplorationViewModel : ObservableObject
     private string? _timeSaveStatusKey; private object?[] _timeSaveStatusArgs = [];
     public string? TimeSaveStatus => _timeSaveStatusKey is null ? null : LocalizationService.Instance.Format(_timeSaveStatusKey, _timeSaveStatusArgs);
     private void SetTimeSaveStatus(string? clave, params object?[] args) { _timeSaveStatusKey = clave; _timeSaveStatusArgs = args; OnPropertyChanged(nameof(TimeSaveStatus)); }
-    partial void OnEditTimeHourChanged(double value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
-    partial void OnEditMoonPhaseChanged(int value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
-    partial void OnEditBloodMoonChanged(bool value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
-    partial void OnEditIsEclipseChanged(bool value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+    partial void OnEditTimeHourChanged(double value) { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditMoonPhaseChanged(int value) { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditBloodMoonChanged(bool value) { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditIsEclipseChanged(bool value) { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
 
     // Main.dayLength=54000.0, Main.nightLength=32400.0 (Terraria/Main.cs real, sin guarda de
     // version - constantes fijas del juego): el dia guardado va de 4:30 a 19:30 (15 horas
@@ -676,7 +677,7 @@ public partial class ExplorationViewModel : ObservableObject
             SetTimeSaveStatus("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex) { SetTimeSaveStatus("status_save_failed", ex.Message); }
-        finally { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); }
+        finally { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
     }
 
     // --- Banderas de progreso: jefes principales + modo dificil ---
@@ -709,20 +710,20 @@ public partial class ExplorationViewModel : ObservableObject
     private string? _flagsSaveStatusKey; private object?[] _flagsSaveStatusArgs = [];
     public string? FlagsSaveStatus => _flagsSaveStatusKey is null ? null : LocalizationService.Instance.Format(_flagsSaveStatusKey, _flagsSaveStatusArgs);
     private void SetFlagsSaveStatus(string? clave, params object?[] args) { _flagsSaveStatusKey = clave; _flagsSaveStatusArgs = args; OnPropertyChanged(nameof(FlagsSaveStatus)); }
-    partial void OnEditDownedBoss1Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedBoss2Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedBoss3Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedQueenBeeChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedMech1Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedMech2Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedMech3Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedPlantChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedGolemChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedSlimeKingChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditHardModeChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedGoblinArmyChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedFrostLegionChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
-    partial void OnEditDownedPiratesChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedBoss1Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedBoss2Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedBoss3Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedQueenBeeChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedMech1Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedMech2Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedMech3Changed(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedPlantChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedGolemChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedSlimeKingChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditHardModeChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedGoblinArmyChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedFrostLegionChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    partial void OnEditDownedPiratesChanged(bool value) { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
 
     private bool CanSaveBossFlags() => IsWorldLoaded && _currentWorldPath != null && (
         EditDownedBoss1 != _savedDownedBoss1 || EditDownedBoss2 != _savedDownedBoss2 || EditDownedBoss3 != _savedDownedBoss3 ||
@@ -769,7 +770,39 @@ public partial class ExplorationViewModel : ObservableObject
             SetFlagsSaveStatus("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex) { SetFlagsSaveStatus("status_save_failed", ex.Message); }
-        finally { SaveBossFlagsCommand.NotifyCanExecuteChanged(); }
+        finally { SaveBossFlagsCommand.NotifyCanExecuteChanged(); SaveWorldChangesCommand.NotifyCanExecuteChanged(); }
+    }
+
+    // --- Guardar mundo (boton de la barra de herramientas, encargo del usuario 28-sep-2026:
+    // "deberia de haber un boton de guardar igual que hay uno de cargar mundo?... que este en la
+    // derecha del todo"). Investigado antes de tocar nada: el mundo NUNCA se guarda como efecto
+    // colateral de "Guardar" en Personaje (MainViewModel.Save() solo toca _loaded, el .plr/.tplr,
+    // nunca _world/Exploration) ni solo al guardar cofres - cada grupo de edicion del mundo YA
+    // escribe en el .wld de forma atomica e INMEDIATA en cuanto se pulsa su propio boton dedicado
+    // (SaveWorldGameModeAsync/SaveSpawnPointAsync/SaveTimeAndMoonAsync/SaveBossFlagsAsync de
+    // arriba, mas SaveEditingChestAsync/SaveSignTextAsync mas abajo - las 6 con el mismo patron
+    // de copia .bak real, WorldFileService.SaveXxx). O sea que no habia ningun estado "sucio" sin
+    // guardar que un boton nuevo tuviera que volcar - lo que faltaba era un atajo real para no
+    // tener que ir botón a botón por las 4 secciones de "Editar mundo" (modo de juego/spawn/hora
+    // y luna/banderas de jefes) cuando hay varias pendientes a la vez. Cofres y letreros se
+    // quedan FUERA a proposito: son ediciones ligadas a un editor abierto concreto (EditingChest/
+    // SelectedSignHit), con su propio boton "Guardar" ya visible justo al lado mientras se editan
+    // - meterlos aqui obligaria a este boton generico a saber de un cofre/letrero concreto que
+    // puede que el usuario NO quiera guardar todavia (a medio escribir), rompiendo la unica regla
+    // real de "Solo lectura" salvo accion explicita que ya documenta explore_readonly_tooltip.
+    private bool CanSaveWorldChanges() =>
+        CanSaveWorldGameMode() || CanSaveSpawnPoint() || CanSaveTimeAndMoon() || CanSaveBossFlags();
+
+    [RelayCommand(CanExecute = nameof(CanSaveWorldChanges))]
+    private async Task SaveWorldChangesAsync()
+    {
+        // Secuencial a proposito (nunca Task.WhenAll): cada Save*Async lee _world al empezar y lo
+        // reemplaza al terminar (mismo campo mutable) - en paralelo, la segunda escritura pisaria
+        // el _world que la primera acaba de renovar y perderia su propio cambio.
+        if (CanSaveWorldGameMode()) await SaveWorldGameModeAsync();
+        if (CanSaveSpawnPoint()) await SaveSpawnPointAsync();
+        if (CanSaveTimeAndMoon()) await SaveTimeAndMoonAsync();
+        if (CanSaveBossFlags()) await SaveBossFlagsAsync();
     }
 
     // --- Bestiario (solo lectura - ver el limite real documentado en WldBestiary/bitacora.md) ---

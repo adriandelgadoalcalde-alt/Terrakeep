@@ -2190,6 +2190,21 @@
                         <Button Content="{Binding Loc[explore_export_png], Mode=OneWay}" Click="OnExportMapClick" Padding="8,2" Margin="10,0,0,0"
                                 ToolTip="{Binding Loc[explore_export_png_tooltip], Mode=OneWay}" />
                     </StackPanel>
+                    <!-- Boton "Guardar mundo" (encargo del usuario 28-sep-2026: "deberia de haber
+                         un boton de guardar igual que hay uno de cargar mundo?... que este en la
+                         derecha del todo") - mismo estilo que "Cargar mundo" de arriba (Tag=
+                         "Accent"), ultimo hijo real de este WrapPanel para quedar en el extremo
+                         derecho de la barra. Ver el comentario real completo de
+                         ExplorationViewModel.CanSaveWorldChanges/SaveWorldChangesAsync: guarda de
+                         golpe las 4 secciones de "Editar mundo" que tengan cambios pendientes
+                         (modo de juego/spawn/hora y luna/banderas de jefes) - cofres y letreros se
+                         guardan aparte, con su propio boton, al editarlos. Solo visible con un
+                         mundo cargado, igual que el resto de esta fila; el propio Command se
+                         deshabilita solo cuando no hay nada pendiente que guardar. -->
+                    <Button Content="{Binding Loc[explore_save_world], Mode=OneWay}" Tag="Accent" Margin="20,0,0,0"
+                            Command="{Binding Exploration.SaveWorldChangesCommand}"
+                            ToolTip="{Binding Loc[explore_save_world_tooltip], Mode=OneWay}"
+                            Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
                 </WrapPanel>
 
                 <!-- H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para

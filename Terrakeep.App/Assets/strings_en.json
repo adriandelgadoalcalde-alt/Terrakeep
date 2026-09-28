@@ -290,6 +290,8 @@
   "explore_save_spawn_tooltip": "Writes the new spawn point directly to the world's .wld file (creates an automatic .bak backup first)",
   "explore_save_time": "Save time and moon",
   "explore_save_time_tooltip": "Writes the time, moon phase, blood moon and eclipse directly to the world's .wld file (creates an automatic .bak backup first)",
+  "explore_save_world": "Save world",
+  "explore_save_world_tooltip": "Saves every pending world change at once (game mode, spawn point, time/moon and boss flags) - same as pressing each 'Save' button in 'Edit world' one by one, with the same automatic .bak backup. Chests and signs are saved separately, with their own button, while editing them.",
   "explore_spawn_point": "Spawn point",
   "explore_time_and_moon": "Time and moon",
   "explore_time_hour": "Time:",
