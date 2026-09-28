@@ -31448,3 +31448,133 @@ el coordinador; se re-hizo el staging quirúrgico desde cero) + `Terrakeep.App.T
 CanarioDragGhostZOrderLibreria.cs` (canario nuevo, archivo entero, sin conflicto). Nunca `git add
 -A`; `MainWindow.xaml.cs` (69 líneas de OTRO agente, el toggle del menú de Personaje) y el resto de
 archivos modificados por otras sesiones se dejaron intactos, sin tocar.
+
+## 28-sep-2026 - FASE B del responsive global: Objetos > Equipamiento (aplicador-fix-responsive-faseB-28sep2026)
+
+Encargo: PDF "Arreglo familia keep", bloque 2 "TERRAKEEP - RESPONSIVE GLOBAL, PAGINACIÓN Y SCROLL COMO
+ÚLTIMO RECURSO" (changeMode REPLACE), secciones 4-7 (Equipamiento), 13-14 (scroll ownership, orden de
+preferencia), 16 (misma funcionalidad en todos los tamaños), 24-26 (resize en caliente, ES/EN,
+negative acceptance), 28-29 (supersession, no patch stacking) y 34 (texto estructural sin scroll
+local). FASE A ya estaba en `59b5fd2d` (`SlotGridPanel.AdaptiveColumns`). Requirement del Task
+Context creado en esta ronda: `6b59710e-e57b-4677-89a1-2c4c58c29b5a` (REPLACE, 19 criterios de la
+§33, NO DONE: quedan las fases C-G). MinWidth/MinHeight de la ventana NO se tocan (§31, fase G).
+
+### Canario nuevo: `EQUIP_RESPONSIVE_SOLO=1` (`Terrakeep.App.Tests/CanarioResponsiveEquipamiento.cs`)
+
+Mide la página de Equipamiento con geometría real (`RectCompleto` vs `ZonaVisible`/`VisibleEntero`,
+el mismo par de AR-LAY/NAV123) en 1080x700 (mínimo declarado) con la Librería plegada y desplegada,
+1366x768 (plegada/desplegada), 1920x1080, maximizado real (2576x1408 en esta máquina), las 3
+subvistas en el mínimo, EN en el mínimo y un resize en caliente 1920→1366→1080→1920. Falla con
+`FALLO: EQUIP_RESPONSIVE_SOLO-<código>` si hay SCROLL-ANIDADO (ScrollViewer vertical dentro de
+`ObjetosPaginaEquipamiento`), SELECTOR (Armadura/Vanidad/Tintes, Loadout o nav 1/2/3 no enteros sin
+desplazar), CLIP-H/CLIP-V (recorte sin escape o solo alcanzable por un scroll anidado), CELDA
+(< MinCell), OVERLAP (regiones o celdas, incluido el panel Editar), HSCROLL (Disabled con extent >
+viewport o barra horizontal), TEXTO-LOCAL (§34), RESIZE (pérdida de subpágina/vista/loadout/slot de
+Editar/librería/búsqueda o ViewModel recreado) y VIEJO (negative acceptance, abajo). Capturas en
+`EQUIP_RESPONSIVE_EVIDENCIA` → `docs/evidencia/responsive-global/faseB/equip-{antes,despues}-*.png`.
+
+### Medición ANTES (HEAD `02f82f5f`, 135 FALLO)
+
+- Scroll anidado: **9 ScrollViewer verticales** dentro de la página en todos los tamaños Compacto/
+  Normal y **10** en Extra (fila SlotRowHost/ADR-011, lateral Mascotas, cabecera `MaxHeight=112`,
+  rejilla central/ADR-015 y uno por cada contenedor vía `ContainerCompactTemplate`). 13 FALLO
+  SCROLL-ANIDADO + 114 TEXTO-LOCAL (Loadout/Vista/Defensa/bono dentro de la caja `MaxHeight=112`).
+- Selector Armadura/Vanidad/Tintes: 3/3 visible hasta 1519px, **0/3 en 1920x1080 y maximizado**
+  (`IsEquipmentExpanded`): 4 FALLO SELECTOR. En esos tamaños las 3 rejillas salían a la vez con
+  celdas de **40-44px** (la celda la limitaba el alto de cada ScrollViewer local) - más pequeñas
+  que a 1366 (79,8px).
+- Página: 1080x700 plegada vp=448,1 ext=442,4; desplegada vp=293,6 ext=442,4 scr=148,7;
+  1366x768 desplegada scr=107,9; 1920 ext=422,1 sin scroll. Columnas de la fila a 1080:
+  140/276/208 (celdas Mascotas 44, Armadura 52, Monedas 44).
+- Clipping/overlap/HSCROLL: 0 en todos los tamaños (el modelo viejo "no perdía" nada, lo escondía
+  detrás de scrolls anidados - justo lo que el encargo rechaza).
+- 4 FALLO VIEJO (el canario ya sabe reconocer el mecanismo viejo).
+
+### Qué se cambió (mecanismo viejo RETIRADO, no parcheado)
+
+- `Terrakeep.App/Views/ObjetosView.xaml`:
+  - `ContainerCompactTemplate` partida en `SlotGridItemsPanel` (ItemsPanelTemplate, la rejilla de
+    siempre con los mismos bindings), `ContainerUndoBannerTemplate` (banner H4-05) y DOS variantes:
+    `ContainerCompactTemplate` (con ScrollViewer propio, la usan todavía Inventario/Almacenes - su
+    forma final es la FASE C) y `ContainerFlowTemplate` nueva (sin ScrollViewer: la región crece y
+    la absorbe el scroll owner exterior). Sin duplicar ni una línea de la rejilla ni del banner.
+  - Página de Equipamiento: `ObjetosPaginaEquipamiento` es el ÚNICO scroll owner vertical.
+    RETIRADOS: el ScrollViewer que envolvía el SlotRowHost (ADR-TERRAKEEP-011), el del lateral
+    Mascotas/Tintes, el de la cabecera con `MaxHeight=112` (AR-14d), el de la rejilla central
+    (ADR-TERRAKEEP-015), la fila `"*" MinHeight=84` que compensaba la cabecera, la rejilla "Amplio"
+    de 3 columnas y los `Visibility` ligados a `IsEquipmentExpanded`.
+  - NUEVO: `EquipamientoFila` (SlotRowHost, UNA fila, 3 columnas Auto/*/Auto con MinWidth 140/216/
+    140), `EquipamientoCentro` (cabecera + subvista apiladas, `VerticalAlignment=Top`),
+    `EquipamientoCabecera` (Loadout/Vista en WrapPanel, Defensa y bono con `TextWrapping`, sin
+    scroll ni MaxHeight), `EquipamientoSelectorVista` (Armadura/Vanidad/Tintes SIEMPRE visible),
+    `EquipamientoSubvistaActual` (una subvista, `ContainerFlowTemplate`). Monedas | Munición pasan
+    a dos columnas verticales de 4 lado a lado (`PilaMonedasMunicion` horizontal), como en el
+    propio inventario del juego y como el lateral de Mascotas.
+  - Iteración real documentada: la primera versión dejó 2 filas Auto con los laterales en
+    `RowSpan=2` → WPF repartía el alto sobrante del lateral entre las filas y la rejilla bajaba
+    ~70px separada de su cabecera (visto en la captura, no en los números) → se pasó a una sola fila
+    con cabecera+subvista en `EquipamientoCentro`. La segunda midió CLIP-H 11,4px (ES) / 17,7px (EN)
+    en 1080x700 con Librería desplegada: la columna Auto de Monedas (fila de 4, celdas 58,8px) pedía
+    267px y, con el MinWidth=216 del centro, se salía del ancho real de la fila → reflow de
+    Monedas/Munición a columnas de 4 (4 filas caben dentro del alto que ya fijan las 5 filas de
+    Mascotas: la fila no crece y el centro recupera ~110px de ancho).
+- `Terrakeep.App/ViewModels/MainViewModel.cs`: `IsEquipmentExpanded` ELIMINADA (y su
+  `OnPropertyChanged`); Coins/Ammo con `columns: 1, minCell: 32, maxCell: 56` (mismo suelo/techo
+  que Mascota/Montura/Tinte).
+- Tests adaptados al contrato nuevo (no para fabricar un verde): `EquipamientoUmbralAmplioTests.
+  ExtraSigueMostrandoLasTresVistas` (fijaba el comportamiento viejo) sustituido por
+  `EquipamientoYaNoCambiaDeArquitecturaConElTamano` (negative acceptance: la propiedad no existe);
+  los umbrales de SizeClass se conservan (AmplioMinWidth sigue alimentando IsStorageExpanded, el
+  auto-revelado de la Librería, etc.). `AuditoriaEquipamiento.cs` (AR-14/AR-14e) y `Program.cs`
+  (E2-UMBRAL) dejan de leer la propiedad retirada y buscan la columna central por columna, no por
+  fila.
+- `AdaptiveColumns` (FASE A) NO se usa en Equipamiento, a propósito y con medida: todas sus
+  rejillas tienen columnas con significado semántico (Armadura 5x2, Mascotas/Tintes/Monedas/
+  Munición 1x5 y 1x4 como en el juego) y ninguna baja de MinCell en el rango medido (celdas mínimas
+  55,5-57,1px a 1080x700). Además los laterales viven en columnas `Auto`, que miden con ancho
+  infinito: ahí AdaptiveColumns no tendría ancho real contra el que adaptar.
+- §7 (panel Editar, `ColumnDefinition Width="300"`): decisión KEEP con geometría real, sin cambio en
+  esta fase. En el mínimo el eje escaso es el ALTO (fila de Objetos 293,6px con la Librería
+  desplegada), así que ponerlo debajo o como subpágina costaría ~280px de alto o quitaría el slot de
+  la vista al editarlo; en ancho la página conserva 631-648px con 0 recortes/solapes. Pendiente real
+  medido: a 1080x700 con Librería desplegada y un objeto seleccionado, el ScrollViewer propio del
+  panel Editar (L-d, hermano de la página, no anidado) desplaza 12,3px (ext 279,9 en vp 267,6) - es
+  consecuencia del reparto de alto con la fila de la Librería (FASE D) y del mínimo (FASE G), y
+  Editar es compartido con Inventario/Almacenes (FASE C). Queda anotado para esas fases.
+
+### Medición DESPUÉS (0 FALLO)
+
+- Scroll anidado: **0** ScrollViewer (ni visibles ni ocultos) en el árbol de Equipamiento, en todos
+  los tamaños. Página 1080x700 plegada vp=448,1 ext=388,9 (cabe entera, sin scroll); desplegada
+  vp=293,6 ext=386,5 scr=92,9 (antes 148,7) - lo absorbe el owner principal; 1366x768 desplegada
+  scr=54,4 (antes 107,9); 1920x1080 y maximizado sin scroll (ext 391,6).
+- Selector Armadura/Vanidad/Tintes: **3/3 entero sin desplazar en todos los tamaños** (incluidos
+  1920 y maximizado), Loadout 3/3, nav 1/2/3 3/3. EN (Armor/Vanity/Dyes) igual.
+- Clipping 0, overlap 0 (regiones, celdas y panel Editar), HSCROLL 0, CELDA 0, TEXTO-LOCAL 0.
+- Columnas a 1080: 142/340/142 (plegada), 141,1/323,9/142 (desplegada); celdas Armadura 58,8/57,1px
+  (antes 52/48,6), Mascotas/Monedas 55,5-56px. 1366: Armadura 79,8/78,1px. 1920/maximizado: Armadura
+  90px (MaxCell, mismo tamaño de icono que Inventario), laterales 56px.
+- Resize en caliente 1920→1366→1080→1920: mismo `EquipmentGroup`, subpágina 0, vista Social,
+  loadout 2, slot de Editar, Librería desplegada y búsqueda "sword" conservados en los 4 pasos.
+- VIEJO (negative acceptance): ScrollViewer con MaxHeight = 0 (antes 1), ScrollViewer en el árbol
+  de Equipamiento = 0 (antes 12), Armadura y Vanidad renderizadas a la vez en 1920 = False (antes
+  True), `MainViewModel.IsEquipmentExpanded` existe = False.
+- Punto abierto para el revisor visual (§17): a 1920+ la rejilla de Armadura (90px, 466px de ancho)
+  queda centrada en una columna central de ~1100px con aire a los lados. Se eligió a propósito la
+  misma navegación en todos los tamaños (§4 "preferencia", §16) en vez de volver a mostrar las 3
+  subvistas a la vez solo en ventanas grandes (arrastrar entre Armadura y Vanidad sería una función
+  que solo existe en grande).
+
+### Verificación
+
+- `dotnet build Terrakeep.slnx -c Release`: 0 advertencias / 0 errores.
+- `Terrakeep.Core.Tests`: 782/782. `Terrakeep.App.ViewModels.Tests`: 767/767 (1 Fact sustituido por
+  1 Fact, mismo total).
+- Canarios relacionados sin regresión: `NAV123_SOLO` 0 FALLO, `AR14_SOLO` 0 FALLO (AR-14/14b/14c/
+  14d/14e), `KEEPQA_EQUIPINV_SOLO` 0 FALLO, `ARLAY_CANARIO_SOLO` OK.
+- `SNAPSHOT_VISUAL_SOLO`: 3 FALLO (inicio, panel-inventario, inicio-en) - PREEXISTENTES: reproducidos
+  idénticos con mis 6 archivos apartados (`git stash push -u -- <mis rutas>`, build, run,
+  `git stash pop`) sobre HEAD `02f82f5f`. No es regresión de esta fase (ni siquiera toca Inicio).
+- Obstáculo resuelto: un `git worktree` de HEAD para ese baseline falló dos veces (ruta demasiado
+  larga en el scratchpad; y en `C:\wtfb` no compila porque `Terrakeep.App` referencia
+  `..\..\ServidorKeep` por ruta relativa) → se usó el stash por rutas, sin tocar el trabajo ajeno.
