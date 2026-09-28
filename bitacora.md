@@ -32027,3 +32027,70 @@ AMBIENTAL: reproducido idéntico en un worktree de `0900908b` (anterior a cualqu
 `WorldCompareViewModel`), y el mismo test pasó a las 15:00 (785/785); coincide con el cambio de monitor/sesión
 de esta tarde (RenderTargetBitmap en blanco, gotcha ya documentado en CLAUDE.md). Con `AjusteAlViewportTests`
 (6/6) y el resto verdes.
+
+## 28-sep-2026 - Arnés: capturas reales con la sesión de Windows desconectada + blindaje R2-L2 (`fcb53495`)
+
+**Obstáculo (regla de autonomía técnica).** Con el usuario fuera, la sesión 1 quedó DESCONECTADA a las 15:51:54
+(`qwinsta`: "Desc"; consola física en LogonUI). Desde entonces TODO `RenderTargetBitmap` salía con los bytes a 0:
+las capturas de evidencia del arnés (el revisor visual de la FASE C lo detectó) y el test de producto
+`WorldCompareCardExportTests.ExportarTarjetaPng_...`. La geometría seguía bien, así que los canarios daban
+"0 FALLO" con evidencia vacía. Prohibido reconectar/desbloquear la sesión (`tscon`) o tocar Windows.
+
+**Causa (PresentationCore 10.0.12 decompilado con ilspycmd, `MediaContext..cctor` y `CreateChannels`).** Un
+proceso de escritorio (`UserInteractive=true`) sin dispositivos de pantalla válidos NO renderiza salvo que se
+active el AppContext switch documentado `Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable`
+(se pasa al canal de composición con `DUCE.NotifyPolicyChangeForNonInteractiveMode`). No es un problema de
+ventana: `HwndTarget` solo desactiva el destino de la ventana al desconectarse; el fallo afecta también a un
+`DrawingVisual` sin ventana.
+
+**Mediciones reales en esta sesión desconectada** (programa desechable del scratchpad, `render-sesion-desc\exp`,
+`SM_REMOTESESSION=1`), píxeles no cero:
+
+| Vía | DrawingVisual 100x100 | Border sin ventana 200x80 | VisualBrush 200x80 | Window real 300x200 |
+|---|---|---|---|---|
+| Sin nada | 0 | 0 | 0 | 0 |
+| `RenderOptions.ProcessRenderMode = SoftwareOnly` | 0 | 0 | 0 | 0 |
+| Hilo STA aparte | 0 | 0 | 0 | 0 |
+| **Switch** (solo o con SoftwareOnly o en hilo aparte) | **10000** | **16000** | **16000** | **47520/60000** (todo menos el marco no cliente) |
+
+La clave de registro `HKCU\...\Avalon.Graphics\DisableHWAcceleration` no se probó: es global del usuario (prohibido)
+y equivale a SoftwareOnly, que ya se midió que no sirve (el problema no es la aceleración, es la política de
+"sin pantallas").
+
+**Aplicado (solo arnés, nada de `Terrakeep.App`).**
+- `Terrakeep.App.Tests.csproj`: `RuntimeHostConfigurationOption` con el switch → va al `runtimeconfig.json` del
+  arnés, se aplica antes de la primera línea de `Main` y a TODAS las capturas de todos los modos. Con pantallas
+  presentes no cambia nada. `TERRAKEEP_ARNES_SIN_RENDER_FORZADO=1` lo apaga a propósito (aceptación negativa).
+- `ValidacionCapturasSesion.cs` (R2-L2 a): al arrancar imprime `SESION-ESTADO:` (`WTSQuerySessionInformation`/
+  `WTSConnectState`, `SM_REMOTESESSION`, `SM_CMONITORS`, valor del switch) y `RENDER-SONDA:` (rectángulo 8x8). Al
+  salir (ProcessExit o excepción no capturada) revisa cada `.png` escrito en esta ejecución bajo la carpeta del
+  arnés y bajo cualquier variable `*_EVIDENCIA`; si es de un solo color (todo 0 incluido) imprime
+  `INCONCLUSIVE: captura en blanco (<motivo con el estado de sesión>) <ruta>` y un resumen `CAPTURAS-VALIDACION:`.
+- `AislamientoPartidasReales.cs` (R2-L2 b): `RestaurarAislamiento(via)` idempotente, con los BYTES exactos de
+  `session.json`, enganchado a ProcessExit, `AppDomain.UnhandledException` y `Console.CancelKeyPress`. No se añade
+  manejador propio en `Dispatcher.UnhandledException` a propósito: `Main` ya marca `Handled=true` (el arnés sigue y
+  ProcessExit restaura) y una excepción del dispatcher sin manejar se relanza y cae en `AppDomain.UnhandledException`;
+  suscribirse antes que la `Application` vería `Handled=false` y restauraría a destiempo. `taskkill /F` sigue
+  siendo imposible de interceptar (límite del SO).
+- `Program.cs`: `PrepararValidacionCapturas()` lo primero de `Main`; modo `AISLAMIENTO_EXCEPCION_SOLO=1`.
+
+**Verificación (sesión aún desconectada).**
+- `INVALM_RESPONSIVE_SOLO`: 0 fallo(s), `RENDER-SONDA: OK 64/64`, `CAPTURAS-VALIDACION: 35 revisadas, 35 con
+  contenido real`. `invalm-actual-inv-medio-1366x768-libdesplegada.png`: 992482/1049088 píxeles no cero, 7091
+  colores; mirada a ojo: interfaz real completa (Inventario de Eldelgas, Editar, Librería).
+- Misma ejecución con `TERRAKEEP_ARNES_SIN_RENDER_FORZADO=1`: `RENDER-SONDA: INCONCLUSIVE 0/64`, `35 INCONCLUSIVE
+  (en blanco)`, la misma captura 0/1049088 (1 color) - la validación detecta de verdad lo que antes pasaba por bueno.
+- `EQUIP_RESPONSIVE_SOLO`: 0 fallo(s), 20/20 capturas con contenido.
+- `AISLAMIENTO_EXCEPCION_SOLO`: `session.json` a2463d6b… → 7DA8CA7E… tras cargar la copia → excepción sin capturar
+  → "restaurado (UnhandledException)" → a2463d6b… otra vez.
+- Build Release de la solución 0 errores; Core 782/782; ViewModels 785/786 (el único fallo es
+  `ExportarTarjetaPng_...`, producto, no se toca). Medido aparte: con el switch añadido a mano solo al
+  `runtimeconfig.json` de salida de ViewModels.Tests, `WorldCompareCardExportTests` pasa 3/3; restaurado el
+  fichero, vuelve a fallar. Arreglo sugerido (pendiente de decisión del coordinador, fuera de este alcance): el
+  mismo `RuntimeHostConfigurationOption` en `Terrakeep.App.ViewModels.Tests.csproj`.
+- Partidas reales (114 ficheros) y `settings.json`/`window.json`/`world_view_state.json`: SHA256 idénticos antes y
+  después. `session.json` cambió durante la ventana de trabajo, pero NO por este arnés (cada ejecución propia lo
+  dejó en el valor de su arranque): otro agente tenía un arnés en `%TEMP%\qv28` (pid 385600, 16:18) y al terminar
+  devolvió `session.json` a su contenido real de las 16:12:55 (`Eldelgas.plr` real). La "foto" inicial de esta
+  tarea había capturado el estado intermedio de ese otro arnés (`uia-harness-test.plr` temporal), así que no se
+  restaura esa copia a propósito.
