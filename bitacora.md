@@ -32280,3 +32280,66 @@ se resolvia y los botones salian SIN texto con el canario en verde - arreglado (
 - La pasada completa del arnes (H5-07, LIB-05, T-E...) no se ha lanzado: usa entrada real de raton, prohibida en esta
   ronda. H5-07 usa el mismo mecanismo de carpeta extra que INI-09 (verde). Pendiente para quien tenga el escritorio.
 - ServidorKeep.Core (referenciado) escribe en %LOCALAPPDATA%\ServidorKeep: fuera del alcance de este blindaje.
+
+## 28-sep-2026 (noche) - FASE D, segunda revision visual (WARN): M-01, L-01..L-04 y seguridad de ViewModels.Tests
+
+Agente: aplicador-fix-responsive-faseD-28sep2026. Base `63b0df41`. Evidencia del revisor: `scratchpad\revisor-faseD-r2\`.
+Evidencia de esta ronda: `docs/evidencia/responsive-global/faseD/revisor-r2/` (logs `lib-rojo-63b0df41-rapido.log`,
+`lib-despues-r2.log`, `invalm-despues-r2.log`, `equip-despues-r2.log`, `inicio-ajustes-r2.log` y capturas).
+Commits: `9fcda254` (seguridad + L-03), `223366bf` (L-02 + M-01 + L-04), `a07e4f0c` (L-01).
+
+### Seguridad: ViewModels.Tests escribia en la carpeta REAL de Backups (punto 6)
+- `Terrakeep.App.ViewModels.Tests/AislamientoEstadoTests.cs`: `[ModuleInitializer]` que redirige `CarpetaEstadoApp` a
+  `%TEMP%\TerrakeepVmTests-estado-<pid>` (borrado al salir; App.ModoDiagnostico solo se enciende para fijarla y vuelve a
+  su valor) y cuenta las escrituras bloqueadas por la guarda. 3 tests nuevos (temporal propio, la guarda bloquea la
+  carpeta real, SaveBackup va al temporal).
+- Prueba: lista de `%LOCALAPPDATA%\Terrakeep\Backups` antes y despues de la pasada completa de ViewModels.Tests (807/807):
+  2868 = 2868 entradas, identicas, y `find -newer` sin ningun fichero modificado dentro. El temporal desaparece al salir.
+- L-03: `BackupHistoryService` comprueba `PermiteEscribir` antes de `DirectoryFor` en `SaveBackup`, en `Borrar`,
+  `DeleteOrphanHistories` y `MigrarHistorialAntiguo` (Directory.Move).
+- Basura existente (SOLO LISTADA, nada borrado; decide el usuario), clasificada por el `SourcePlrPath` del `meta.json`
+  del `.tkbak` mas reciente de cada carpeta: 2868 carpetas = 2848 de rutas TEMPORALES (tanda1 1180, adrian 476,
+  loadouts-test 472, cabecera-test 243, calamity-badge 241, savetest 235, uia-harness-test 1), 13 sin meta.json
+  (formato antiguo/vacias: tanda1 5, adrian 2, loadouts-test 2, cabecera-test 1, calamity-badge 1, personaje 1,
+  savetest 1) y 7 de rutas REALES de Documents\My Games\Terraria (Eldelgas, Zenith y adrian de tModLoader, Terrariano
+  de vainilla y 3 TerrakeepPrueba de perfiles tModLoader de KeepQA). Listado completo en el scratchpad de la sesion
+  (`fixD\backups-clasificacion.txt`).
+
+### M-01 - desplegable abierto sin su boton
+`Controls/Desplegable.cs` cierra el Popup cuando su boton deja de verse (`IsVisibleChanged`): vale para cualquier
+desplegable (prefijo y subcategorias). Antes (63b0df41, mismo canario): abierto=True a 1520 y a 1920x1080 con el boton
+invisible (4 FALLO ES/EN); ahora se cierra al crecer la ventana hasta el selector en linea.
+
+### L-02 - espacio sin uso bajo Editar en Amplio/Extra (s17)
+Retirada la barra lateral de alto completo (`MainViewModel.IsEditarBarraCompleta`, ahora con negative acceptance en
+VM tests). Editar vive SIEMPRE en la fila de contenido (alto segun contenido) y la Libreria SIEMPRE a ancho completo,
+en Objetos y Buffs. Lo unico que cambia es el selector de prefijo: en linea si la fila mide >= 470px (peor objeto medido:
+449,8px ES / 422,1 EN), en desplegable si no - decidido por el alto de la FILA (`ObjetosView.SelectorPrefijoEnLinea`),
+nunca por el objeto elegido, asi que elegir un slot no mueve nada (la alternativa "Editar de alto completo solo si su
+contenido no cabe" hacia saltar el ancho de la Libreria al seleccionar a 1520x860, donde la fila mide ~396).
+Libreria antes -> despues: 1012/1322 -> 1322/1322px (1520x860), 1412/1722 -> 1722/1722 (1920x1080), 2052/2362 ->
+2362/2362 (2560x1440); alto sin uso bajo Editar 507/719/1079px -> 0 (buffs 513/726/1086 -> 0). D-01 intacto: 1080x700 y
+1320x700 89,8px (2 filas), 1366x768 120,3px. Peor objeto con el selector en linea a 1920x1080 y 2560x1440: 17/17
+prefijos enteros, 71px de margen hasta el fondo de su fila.
+
+### L-04 - contraste de los prefijos de Calamity
+`CalamityTextBrush` (#FF7B72, misma familia de rojo) solo para el texto: 2,90:1 -> 6,25:1 medido en pixeles
+(5,42:1 sobre el fondo del prefijo actual). Bordes, puntos e insignias siguen con CalamityBrush.
+
+### L-01 - terminologia oficial (es-ES.Items.json de lang.zip)
+Mineral Carmesí, Clorofita, Piñonita, Madera Perlada, Bambú, Nebulosa, Champiñón, Oro, Madera de Caoba Rica, Vagonetas,
+Cañas de Pescar; un termino por mueble, el que usa el juego en sus objetos: Fregaderos (66 objetos), Retretes (65;
+"Inodoro" 1), Linternas (72), Librerías (63), Aparadores (64), Bancos de Trabajo, Candelabros. "Vidrio" se mantiene
+a proposito: el juego dice "cristal" para Glass y Crystal, que son carpetas hermanas. Todo en el generador. Armaduras de
+Calamity: `CalamityCategoryLabel` separa el CamelCase desde el 2.o segmento ("Armadura - Desert Prowler"),
+`EtiquetasCalamityEsTests`.
+
+### Canario y cierre
+- Codigos nuevos: LIBRERIA-ANCHO, M-01 (PREFIJO-DESPLEGABLE), contraste L-04; EDITAR-BARRA pasa a medir el selector en
+  linea hasta 2560x1440 y el margen de Editar respecto a SUS filas. Rojo en 63b0df41 (modo rapido): 10 FALLO. Verde en
+  HEAD: LIBRARY 0 (completo), EQUIP 0, INVALM 0, INICIO_AJUSTES 0 FALLO.
+- Build 0/0; Core.Tests 789/789 (+7); ViewModels.Tests 807/807 (809 - 6 de la regla retirada + 4).
+- 4 JSON reales y 23 partidas con el mismo SHA256 que al empezar; Backups real igual (2868).
+- Desplegado desde worktree limpio en `a07e4f0c`: SHA256 publicado = instalado =
+  `e52e943d583d304d8caccd7aad4ff5bd677a1c26d6b6e0d405dd4ac77468c6e7` en `%LocalAppData%\Programs\Terrakeep\`
+  (Terrakeep cerrado; accesos directos apuntan ahi). Debug de herramientas.json recompilado 0/0.
