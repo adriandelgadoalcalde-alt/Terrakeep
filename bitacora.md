@@ -30800,3 +30800,72 @@ ninguna de las 15 rondas tuvo una regresion real de PRODUCCION, pero varias (ADR
 031) encontraron y arreglaron regresiones reales de COBERTURA DE TEST causadas por esas mismas
 suposiciones. El patron que mas veces evito problemas: grep exhaustivo de TODO el archivo (nunca
 solo el rango que se va a mover) antes de tocar una sola linea.
+
+## Reconfirmacion "boton Editar del Inspector de cofre inalcanzable por hover-delay" - YA NO
+## REPRODUCE, sin solapamiento con los 2 bugs de cofre cerrados hoy (28-sep-2026, investigador-bug)
+
+Encargo del coordinador: revalidar el punto del encargo maestro sobre el boton "editar" del
+Inspector de cofre que quedaria inalcanzable por un problema de hover-delay - EXPRESAMENTE distinto
+de los 2 bugs de cofre ya cerrados hoy mismo (`213ecf109`, prefijos con `RelativeSource
+AncestorType=Window` en vez de `ItemsControl`; `dfa3ad3c2`, `SaveEditingChestCommand` sin
+`NotifyCanExecuteChanged()` en `OnEditingChestChanged`). No se toco ningun `.cs`/`.xaml` de
+produccion - solo lectura + esta entrada de documentacion, respetando que otro agente
+(`aplicador-fix`) tenia en ese momento `Terrakeep.App/Controls/SlotGridPanel.cs` modificado sin
+commitear y varios `dotnet.exe` reales en ejecucion (confirmado por `tasklist`, 7 procesos) - por
+eso esta ronda NO relanzo `dotnet build`/`dotnet test` (evitar colisionar con un build en curso
+sobre el mismo `.sln`), y se apoya en evidencia ya real y en la lectura de codigo de hoy en vez de
+repetir una ejecucion.
+
+**Evidencia real de hoy (lectura directa, sin suponer nada)**:
+- `Terrakeep.App/Views/ChestInspectorView.xaml` completo (412 lineas) leido de punta a punta: CERO
+  `MouseEnter`/`MouseLeave`/`IsMouseOver` propios del control, CERO
+  `ToolTipService.InitialShowDelay`/`ShowDuration`. El boton "Editar" real que abre este inspector
+  vive en `Terrakeep.App/Views/BrowseView.xaml:284-299` (fila de la lista de cofres), con su propio
+  comentario explicito desde su creacion ("Editor de cofres v1... Boton 'Editar' SIEMPRE VISIBLE, no
+  hace falta desplegar antes el contenido de solo lectura de arriba") - nunca condicionado a hover
+  sostenido.
+- `grep -rn "InitialShowDelay|ShowDuration" Terrakeep.App/` → 0 resultados en TODA la aplicacion, no
+  solo en el Inspector de cofre - no existe ese mecanismo en ningun punto de la UI real.
+- `git show --stat` de `213ecf109` y `dfa3ad3c2`: tocan `ChestInspectorView.xaml` (bindings de
+  prefijo) y `ExplorationViewModel.cs` (`CanSaveEditingChest`/`NotifyCanExecuteChanged`)
+  respectivamente - cero mencion de `MouseEnter`/`MouseLeave`/hover en ninguno de los 2 diffs,
+  confirmando que ninguno de los 2 arreglos de hoy es este hallazgo ni lo solapa.
+
+**Evidencia real preexistente, verificada de nuevo hoy por lectura (no repetida en ejecucion, ver
+motivo del build arriba)**: este mismo punto ("Editar cofre inalcanzable por perdida de hover al
+desplazar el raton") ya fue investigado y cerrado 3 veces de forma independiente ANTES de hoy,
+todas con evidencia dinamica real, no solo lectura de codigo:
+1. 24/25-sep-2026, `CanarioClusterCofresInspector.cs` (bloque `COFRES-INSPECTOR-P1`) - NO
+   reproducible con el boton "Editar" siempre visible de `BrowseView.xaml`.
+2. 26-sep-2026 (tras `ExploracionRediseno` Fase B-I), misma conclusion.
+3. 26-sep-2026, `CanarioFlujoCompletoCofres.cs` (`FLUJOCOFRES_SOLO=1`, TASK CONTEXT
+   e5eaea9e-c261-4199-8e7d-060b6054f58d): flujo completo de 8 pasos (abrir/seleccionar/editar/
+   cambiar de slot/guardar/cancelar/volver/cambiar de cofre) OBSERVED con evidencia real (7
+   capturas + hash SHA256 del `.wld` antes/despues + recarga independiente) - conclusion textual
+   del investigador de entonces: "el punto 1 original (hover) puede darse por CERRADO de verdad
+   esta vez... no hace falta una 4a revalidacion salvo que reaparezca con evidencia real nueva
+   (video/captura del usuario)". Ninguna evidencia nueva de ese tipo ha aparecido desde entonces.
+
+**Veredicto**: YA NO REPRODUCE. Causa raiz historica: el diseño ANTERIOR al `ExploracionRediseno`
+(anterior al 25/26-sep-2026) abria el editor de cofre como un panel dependiente de mantener el
+cursor sobre la fila (hover), lo que si podia perderse al desplazar el raton hacia el editor. La
+arquitectura actual (`ExplorationSidebarMode.ChestInspector`, pagina exclusiva del sidebar,
+`ChestInspectorView.xaml` completo) elimino esa dependencia de hover de raiz: el boton "Editar" es
+un click directo y siempre visible, y el inspector que se abre no depende de ningun estado de
+mouse-over sostenido. No aplica ningun archivo:linea de "causa real" porque no hay causa activa que
+corregir - no se recomienda ningun cambio a `aplicador-fix` para este punto especifico.
+
+**Cobertura KeepQA/arnes**: ya cerrada por canarios PREEXISTENTES y permanentes (no se anade uno
+nuevo porque el hueco ya estaba cerrado antes de hoy) - `COFRES-INSPECTOR-P1`
+(`CanarioClusterCofresInspector.cs`) y el flujo de 8 pasos de `CanarioFlujoCompletoCofres.cs`
+(`FLUJOCOFRES_SOLO=1`), ambos wireados en `Terrakeep.App.Tests/Program.cs`. Recomendacion para
+quien retome esto en el futuro: si el usuario reporta el sintoma otra vez con evidencia nueva
+(video/captura), revisar primero si el `settings.json` real tiene `ExplorationSidebarWidth` en un
+valor que corte columnas (hallazgo YA DISTINTO de "ancho del sidebar", `ADR` de 26-sep-2026 en esta
+misma bitacora, YA corregido por `ChestInspectorColumnsConverter`) antes de volver a sospechar de
+hover - son 2 sintomas visualmente parecidos ("algo del cofre queda inalcanzable") pero de causas
+totalmente distintas.
+
+**Commit local**: unico fichero tocado, esta entrada de `bitacora.md` - ningun `.cs`/`.xaml` de
+`Terrakeep.App`/`Terrakeep.Core` tocado, ningun archivo del working set del agente en paralelo
+(`SlotGridPanel.cs`, `AuditoriaMaquetacion.cs`, etc.) tocado ni comiteado. Sin `git push`.
