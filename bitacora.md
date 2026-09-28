@@ -31957,3 +31957,16 @@ README_SHOTS reescribe `docs/screenshots/` del repo: restaurado con `git checkou
 - Obstáculo resuelto: una tanda larga pasó a segundo plano por un `fork` fallido de bash (lanzador `py` que
   interpretó el shebang del script); no llegó a ejecutar nada. Se esperó con `controladorEspera.js` y se
   relanzó en tandas cortas.
+
+### Despliegue real (FASE C)
+Publicado desde un `git worktree` limpio en `fd3709c8` (`Keep\Terrasavr-Win\TKfc`, misma profundidad para
+`..\..\ServidorKeep`; retirado después) con `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` y copiado con `robocopy /MIR` (sin `unins000.*`) a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\`; Terrakeep no estaba abierto (`tasklist`). SHA256
+publicado = instalado = `90be7d3c3de4fd39e4430c0251ab63667cf7d7fd7225160bd6e3ed352d0c92c5`; el exe instalado
+contiene `AjusteAlViewport`, `OnItemSlotMouseLeftButtonDown` y `CarpetasMundosDePrueba` (la única
+`...ContainerCompactTemplate` que queda es `BuffContainerCompactTemplate`, de Buffs: mismo patrón, FASE E).
+Binario Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 a las 15:18 con el cambio.
+Control final: las 23 partidas reales con el mismo SHA256 que al empezar. Queda en `%TEMP%` una carpeta
+`TerrakeepArnes-354916` (15:05) con una copia de `prueba.plr` que el borrado al salir del arnés no pudo
+quitar (fichero aún abierto) y que no tengo permiso para borrar desde aquí; es una copia, no una partida real.
