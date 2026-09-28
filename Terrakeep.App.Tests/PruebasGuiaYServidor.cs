@@ -24,7 +24,7 @@ internal static partial class Program
     {
         string origenPlr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.plr";
         string origenTplr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.tplr";
-        string origenWld = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+        string origenWld = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
 
         if (!File.Exists(origenPlr))
         {

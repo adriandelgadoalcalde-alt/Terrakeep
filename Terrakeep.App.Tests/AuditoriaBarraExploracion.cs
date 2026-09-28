@@ -104,7 +104,7 @@ internal static partial class Program
         {
             if (!vm.Exploration.IsWorldLoaded)
             {
-                string worldPathEx6 = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string worldPathEx6 = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                 if (!File.Exists(worldPathEx6))
                 {
                     Console.WriteLine("AR-EX6: roca_negra.wld no esta en esta maquina y no hay ningun mundo ya cargado - omitido (la fila de zoom solo existe con IsWorldLoaded=true)");

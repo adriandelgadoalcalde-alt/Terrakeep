@@ -97,7 +97,7 @@ internal static partial class Program
             }
 
             // ================= Puntos 2 y 3: geometria real medida sobre un mundo real =================
-            string mundo = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+            string mundo = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
             if (!File.Exists(mundo))
             {
                 Console.WriteLine($"COFRES-INSPECTOR: no se encontro {mundo} (mundo real con 358 cofres) - abortando la parte de geometria (puntos 2/3)");
@@ -1214,7 +1214,7 @@ internal static partial class Program
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;
             vm.Exploration.SelectedCategory = WorldSearchCategory.All;
-            string mundoDeSiempre = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string mundoDeSiempre = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (File.Exists(mundoDeSiempre))
             {
                 var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempre);

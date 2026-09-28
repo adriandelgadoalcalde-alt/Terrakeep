@@ -132,11 +132,11 @@ internal static partial class Program
         }
 
         CargarMundoYVerificar(
-            @"C:\Users\adrian\Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld",
+            MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld"),
             "todos-vivos", esperadoDerrotado: false);
 
         CargarMundoYVerificar(
-            @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld",
+            MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld"),
             "todos-derrotados", esperadoDerrotado: true);
     }
 }

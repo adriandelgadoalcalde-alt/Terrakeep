@@ -244,7 +244,7 @@ internal static partial class Program
                 Console.WriteLine("SCREENSHOT-AVISO: no se encontro 'Eldelgas' (tModLoader) para 02-personaje");
             }
 
-            string worldPathShot = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPathShot = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (File.Exists(worldPathShot))
             {
                 vmShot.SelectedTabIndex = 4; // Exploracion
@@ -291,7 +291,7 @@ internal static partial class Program
             var vmDiag = (MainViewModel)window.DataContext;
             vmDiag.SelectedTabIndex = 4; // Exploracion
             DoEvents();
-            string worldPathDiag = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPathDiag = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (!File.Exists(worldPathDiag))
             {
                 Console.WriteLine($"AR-EX-HSCROLL: no se encontro {worldPathDiag} - abortando diagnostico");
@@ -1296,7 +1296,7 @@ internal static partial class Program
         {
             try
             {
-                string worldPathEx3 = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string worldPathEx3 = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                 if (!File.Exists(worldPathEx3))
                     Console.WriteLine("EX3_SOLO: roca_negra.wld no esta en esta maquina - omitido");
                 else
@@ -2128,7 +2128,7 @@ internal static partial class Program
         {
             try
             {
-                string mundoPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string mundoPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                 if (!File.Exists(mundoPath)) { Console.WriteLine("IDEA7_SOLO: AVISO - falta el mundo real de prueba, se omite"); }
                 else
                 {
@@ -2255,7 +2255,7 @@ internal static partial class Program
                 // completamente negro, un caso limite propio del arnes de pruebas, no del producto
                 // real, ver bitacora.md) - solo hace falta que el PERSONAJE este limpio para que el
                 // objetivo pendiente de la Guia caiga en Superficie de verdad.
-                string wldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string wldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
 
                 var personajeLimpio = new Terrakeep.Core.PlrFormat.PlrCharacter
                 {
@@ -2413,7 +2413,7 @@ internal static partial class Program
         {
             try
             {
-                string mundoPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string mundoPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                 if (!File.Exists(mundoPath)) { Console.WriteLine("T6_SOLO: AVISO - falta el mundo real de prueba, se omite"); }
                 else
                 {
@@ -2583,6 +2583,20 @@ internal static partial class Program
         // Almacenes con colecciones llenas, tamaños, ES/EN, compacto, clic en slot sin mover el scroll,
         // resize en caliente y negative acceptance del scroll local viejo - ver
         // CanarioResponsiveInventarioAlmacenes.cs.
+        // AISLAMIENTO_MUNDO_NEGATIVO_SOLO=1 (28-sep-2026, FASE C - negative acceptance del aislamiento
+        // de mundos): intenta abrir en Exploracion la ruta REAL de un mundo (no la copia). La guarda
+        // (CharacterFileService.ComprobarMundoDePrueba, primera linea de LoadFromPathAsync) tiene que
+        // abortar el proceso con "FALLO: AISLAMIENTO-MUNDO" y codigo 5 ANTES de leer un solo byte. Si
+        // se llega a la linea siguiente, la guarda no funciona.
+        if (Environment.GetEnvironmentVariable("AISLAMIENTO_MUNDO_NEGATIVO_SOLO") == "1")
+        {
+            string real = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Terraria", "tModLoader", "Worlds", "roca_negra.wld");
+            Console.WriteLine($"AISLAMIENTO_MUNDO_NEGATIVO: intentando abrir la ruta REAL '{real}' - se espera 'FALLO: AISLAMIENTO-MUNDO' y salida con codigo 5 antes de leerlo");
+            _ = vm.Exploration.LoadFromPathAsync(real);
+            DoEvents();
+            Console.WriteLine("FALLO: AISLAMIENTO_MUNDO_NEGATIVO_SOLO - la guarda NO aborto al abrir un mundo real");
+            Environment.Exit(1);
+        }
         if (Environment.GetEnvironmentVariable("INVALM_RESPONSIVE_SOLO") == "1")
         {
             EjecutarInvAlmResponsiveSolo(window, vm);
@@ -2899,9 +2913,9 @@ internal static partial class Program
             {
                 string[] mundosReales =
                 [
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld",
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld"),
                 ];
                 foreach (string ruta in mundosReales)
                 {
@@ -2976,7 +2990,7 @@ internal static partial class Program
         {
             try
             {
-                string original = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string original = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                 if (!File.Exists(original)) { Console.WriteLine($"IDEA1C_SOLO: AVISO - falta {original}, no hay nada que verificar"); Console.WriteLine("DONE (IDEA1C_SOLO)"); Environment.Exit(0); }
 
                 var mundoOriginal = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(original));
@@ -3084,7 +3098,7 @@ internal static partial class Program
             try
             {
                 string plrCalamity = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\Eldelgas.plr";
-                string wldMax = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                string wldMax = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                 if (!File.Exists(plrCalamity) || !File.Exists(wldMax))
                 {
                     Console.WriteLine("BESTIARIO_SOLO: AVISO - falta el personaje o el mundo real de esta maquina, se omite la prueba");
@@ -3270,7 +3284,7 @@ internal static partial class Program
                     Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
                 };
                 File.WriteAllBytes(plrPathHc, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeHc));
-                string wldPathHc = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string wldPathHc = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
 
                 vm.Settings.AddCharacterFolder(dirHc);
                 vm.Home.RefreshCommand.Execute(null);
@@ -3621,7 +3635,7 @@ internal static partial class Program
         {
             try
             {
-                string ruta = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                string ruta = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                 if (!File.Exists(ruta)) { Console.WriteLine($"BLANDO_RIO_SOLO: AVISO - falta {ruta}"); Console.WriteLine("DONE (BLANDO_RIO_SOLO)"); Environment.Exit(0); }
 
                 FijarTamaño(window, 1600, 900);
@@ -4049,11 +4063,11 @@ internal static partial class Program
             {
                 string[] mundos =
                 [
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\adriandres.wld",
-                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\El_Musgo_de_Accidentes.wld",
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\adriandres.wld"),
+                    MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\El_Musgo_de_Accidentes.wld"),
                 ];
                 string? mejorRuta = null; int mejorCuenta = -1;
                 foreach (string ruta in mundos)
@@ -4145,7 +4159,7 @@ internal static partial class Program
         {
             try
             {
-                string ruta = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                string ruta = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                 if (!File.Exists(ruta)) { Console.WriteLine($"NPC_ZORDER_SOLO: AVISO - falta {ruta}"); Console.WriteLine("DONE (NPC_ZORDER_SOLO)"); Environment.Exit(0); }
                 FijarTamaño(window, 1600, 900);
                 DoEvents();
@@ -4230,8 +4244,8 @@ internal static partial class Program
         {
             try
             {
-                string mundoA = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
-                string mundoB = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                string mundoA = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+                string mundoB = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                 if (!File.Exists(mundoA) || !File.Exists(mundoB))
                 {
                     Console.WriteLine($"IDEA8_SOLO: AVISO - faltan mundos reales de prueba (A existe={File.Exists(mundoA)}, B existe={File.Exists(mundoB)}), se omite");
@@ -5391,7 +5405,7 @@ internal static partial class Program
         // "Guardar" y sus CanExecute).
         if (Environment.GetEnvironmentVariable("WORLDEDIT_SOLO") == "1")
         {
-            string worldPathWE = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPathWE = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             string copiaWE = Path.Combine(Path.GetTempPath(), $"terrakeep-test-worldedit-{Guid.NewGuid():N}.wld");
             try
             {
@@ -7852,7 +7866,7 @@ internal static partial class Program
         // esperando).
         try
         {
-            string worldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (File.Exists(worldPath))
             {
                 vm.SelectedTabIndex = 4; // Exploracion - si no, la captura cae en la pestaña que dejo el test anterior
@@ -9345,7 +9359,7 @@ internal static partial class Program
                 // para que "aparece 21" sea la prueba real de que se abrio el cofre EQUIVOCADO).
                 try
                 {
-                    string mundoCofres = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                    string mundoCofres = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                     if (!File.Exists(mundoCofres))
                         Console.WriteLine("AR-13d: no se encontro Blando_Río.wld (mundo real con los 358 cofres) - omitido");
                     else
@@ -9410,7 +9424,7 @@ internal static partial class Program
                     }
 
                     // Al terminar se deja recargado el mundo de siempre, mismo criterio que AR-13c.
-                    string mundoDeSiempreAR13d = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    string mundoDeSiempreAR13d = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                     if (File.Exists(mundoDeSiempreAR13d))
                     {
                         var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempreAR13d);
@@ -9443,7 +9457,7 @@ internal static partial class Program
                 // (el mismo fix no debe robarle la captura al arrastre real).
                 try
                 {
-                    string mundoCofresClic = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                    string mundoCofresClic = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
                     if (!File.Exists(mundoCofresClic))
                         Console.WriteLine("AR-13e: no se encontro Blando_Río.wld (mundo real con los 358 cofres) - omitido");
                     else
@@ -9558,7 +9572,7 @@ internal static partial class Program
                         DoEvents();
                     }
 
-                    string mundoDeSiempreAR13e = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    string mundoDeSiempreAR13e = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                     if (File.Exists(mundoDeSiempreAR13e))
                     {
                         var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempreAR13e);
@@ -9590,8 +9604,8 @@ internal static partial class Program
                 // Al terminar se deja recargado el mundo de siempre: el resto del arnes cuenta con el.
                 try
                 {
-                    string mundoConMods = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld";
-                    string mundoDeSiempre = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    string mundoConMods = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld");
+                    string mundoDeSiempre = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                     if (!File.Exists(mundoConMods))
                         Console.WriteLine("AR-13c: no se encontro Afueras_de_Larvas_de_gusano.wld (mundo real con cofres de Calamity) - omitido");
                     else
@@ -10220,8 +10234,8 @@ internal static partial class Program
                 // y cargar otro mundo desde el lanzador), no solo en la ViewModel.
                 try
                 {
-                    string mundoA = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld";
-                    string mundoB = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    string mundoA = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld");
+                    string mundoB = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                     if (!File.Exists(mundoA) || !File.Exists(mundoB))
                         Console.WriteLine("AR-EX1b: hacen falta dos mundos reales distintos - omitido");
                     else
@@ -10384,7 +10398,7 @@ internal static partial class Program
                 //       dos lineas, que es justo lo que empuja a la categoria.
                 try
                 {
-                    string mundoOk = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    string mundoOk = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
                     var dropHandler = typeof(MainWindow).GetMethod("OnWindowDrop", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     if (dropHandler == null) Console.WriteLine("FALLO: AR-EX4-DROP - no se encontro OnWindowDrop (se renombro en MainWindow.xaml.cs?)");
                     else if (!File.Exists(mundoOk)) Console.WriteLine("AR-EX4-DROP: no hay mundo real con el que probar - omitido");

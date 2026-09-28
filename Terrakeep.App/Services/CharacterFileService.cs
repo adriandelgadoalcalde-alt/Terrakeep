@@ -259,6 +259,7 @@ public sealed class CharacterFileService
     // ExplorationViewModel para listar los mundos reales de un plumazo.
     public static string GetDefaultWorldsDirectory()
     {
+        if (CarpetasMundosDePrueba is { Count: > 0 } prueba) return prueba[0];
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
         return Directory.Exists(candidate) ? candidate : documents;
@@ -304,6 +305,61 @@ public sealed class CharacterFileService
     }
     public static IReadOnlyList<string> ExtraWorldFolders { get; set; } = [];
 
+    // SOLO PRUEBAS - gemelo para MUNDOS de CarpetasPersonajesDePrueba (FASE C del responsive global,
+    // 28-sep-2026: pendiente documentado en la FASE B - ~49 sitios del arnes abrian Documents\My Games\
+    // Terraria\...\Worlds\*.wld REALES por ruta absoluta, y varios de ellos guardan). Mismo candado:
+    // solo se pueden fijar con App.ModoDiagnostico=true; en la app real nada los activa.
+    //   - CarpetasMundosDePrueba SUSTITUYE las carpetas de mundos que se escanean (Exploracion,
+    //     busqueda global); de las carpetas extra de Ajustes solo quedan las que caen dentro de
+    //     RaicesMundosPermitidasDePrueba (las temporales que crea el propio arnes, AJU-03).
+    //   - RaicesMundosPermitidasDePrueba: unicas carpetas donde el arnes puede ABRIR o ESCRIBIR un
+    //     mundo (su carpeta aislada y la temporal del sistema, donde viven sus copias).
+    //   - ComprobarMundoDePrueba(ruta): lo llaman los puntos reales de apertura/escritura de un .wld
+    //     (Exploracion, Comparar, busqueda global, WorldFileService). Con las raices puestas y una ruta
+    //     fuera de ellas avisa a AlTocarMundoFueraDePrueba (el arnes imprime FALLO y aborta el proceso
+    //     sin tocar nada) y, por si nadie escucha, lanza para que la operacion no siga.
+    private static IReadOnlyList<string>? _carpetasMundosDePrueba;
+    private static IReadOnlyList<string>? _raicesMundosPermitidasDePrueba;
+    private static Action<string>? _alTocarMundoFueraDePrueba;
+
+    public static IReadOnlyList<string>? CarpetasMundosDePrueba
+    {
+        get => _carpetasMundosDePrueba;
+        set { ExigirModoDiagnostico(value, nameof(CarpetasMundosDePrueba)); _carpetasMundosDePrueba = value; }
+    }
+
+    public static IReadOnlyList<string>? RaicesMundosPermitidasDePrueba
+    {
+        get => _raicesMundosPermitidasDePrueba;
+        set { ExigirModoDiagnostico(value, nameof(RaicesMundosPermitidasDePrueba)); _raicesMundosPermitidasDePrueba = value; }
+    }
+
+    public static Action<string>? AlTocarMundoFueraDePrueba
+    {
+        get => _alTocarMundoFueraDePrueba;
+        set { ExigirModoDiagnostico(value, nameof(AlTocarMundoFueraDePrueba)); _alTocarMundoFueraDePrueba = value; }
+    }
+
+    private static void ExigirModoDiagnostico(object? valor, string propiedad)
+    {
+        if (valor != null && !App.ModoDiagnostico)
+            throw new InvalidOperationException($"{propiedad} solo puede usarse en modo diagnostico (arnes de pruebas).");
+    }
+
+    public static bool EsRutaMundoPermitidaDePrueba(string ruta)
+    {
+        if (RaicesMundosPermitidasDePrueba is not { } raices) return true;
+        string completa = Path.GetFullPath(ruta);
+        return raices.Any(r => completa.StartsWith(Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static void ComprobarMundoDePrueba(string ruta)
+    {
+        if (RaicesMundosPermitidasDePrueba == null || EsRutaMundoPermitidaDePrueba(ruta)) return;
+        AlTocarMundoFueraDePrueba?.Invoke(ruta);
+        throw new InvalidOperationException($"Modo diagnostico: se intento abrir o escribir un mundo fuera de las carpetas de prueba ({ruta}).");
+    }
+
     public static IReadOnlyList<string> GetAllPlayersDirectories()
     {
         if (CarpetasPersonajesDePrueba != null)
@@ -321,6 +377,12 @@ public sealed class CharacterFileService
     // Gemelo real de GetAllPlayersDirectories, para mundos - ver el comentario de arriba.
     public static IReadOnlyList<string> GetAllWorldsDirectories()
     {
+        if (CarpetasMundosDePrueba != null)
+        {
+            var prueba = CarpetasMundosDePrueba.Where(Directory.Exists).ToList();
+            AppendExtraFolders(prueba, ExtraWorldFolders.Where(EsRutaMundoPermitidaDePrueba).ToList());
+            return prueba;
+        }
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string tModLoader = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
         string vanilla = Path.Combine(documents, "My Games", "Terraria", "Worlds");

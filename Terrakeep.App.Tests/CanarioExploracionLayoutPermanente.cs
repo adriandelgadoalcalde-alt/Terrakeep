@@ -43,7 +43,7 @@ internal static partial class Program
     {
         try
         {
-            string mundo = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string mundo = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (!File.Exists(mundo))
             {
                 Console.WriteLine("EXPLORATION_LAYOUT: mundo real roca_negra.wld no encontrado - omitido");

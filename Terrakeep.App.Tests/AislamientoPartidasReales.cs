@@ -22,8 +22,18 @@
 // personaje; si el .plr cargado esta FUERA de la carpeta temporal imprime FALLO y aborta el proceso
 // antes de que ninguna accion pueda escribir en el.
 //
-// Los MUNDOS (.wld) no estan cubiertos aqui: varios canarios abren rutas absolutas reales de
-// Worlds\ (roca_negra.wld, Blando_Rio.wld) - pendiente documentado en bitacora.md.
+// MUNDOS (FASE C del responsive global, 28-sep-2026 - cierra el pendiente documentado en la FASE B):
+//   5. Copia los .wld/.twld de nivel superior de tModLoader\Worlds y Worlds (vainilla) a
+//      <carpeta temporal>\{tModLoader\Worlds, Worlds} y CharacterFileService.CarpetasMundosDePrueba
+//      SUSTITUYE las carpetas reales (Exploracion y la busqueda global solo ven las copias).
+//   6. MundoAislado(rutaReal): los ~49 literales del arnes que abrian Documents\My Games\Terraria\...
+//      \*.wld por ruta absoluta pasan por aqui y reciben la COPIA (misma ruta relativa dentro de la
+//      carpeta temporal; si un mundo no estaba copiado - p.ej. KeepQA-Vanilla-Server - se copia al
+//      pedirlo; si no existe en esta maquina, la ruta devuelta tampoco existe y el File.Exists del
+//      llamante se comporta igual que antes).
+//   7. Guarda: CharacterFileService.RaicesMundosPermitidasDePrueba = {carpeta temporal del arnes,
+//      %TEMP%}; cualquier apertura/escritura real de un mundo fuera de ellas (Exploracion, Comparar,
+//      busqueda global, WorldFileService) imprime FALLO: AISLAMIENTO-MUNDO y aborta el proceso.
 using System.IO;
 using Terrakeep.App.Services;
 using Terrakeep.App.ViewModels;
@@ -63,6 +73,36 @@ internal static partial class Program
         }
         CharacterFileService.CarpetasPersonajesDePrueba = destinos;
 
+        // Mundos (5-7, ver cabecera).
+        var origenesMundos = new (string real, string relativo)[]
+        {
+            (Path.Combine(documentos, "My Games", "Terraria", "tModLoader", "Worlds"), Path.Combine("tModLoader", "Worlds")),
+            (Path.Combine(documentos, "My Games", "Terraria", "Worlds"), "Worlds"),
+        };
+        var destinosMundos = new List<string>();
+        int mundosCopiados = 0;
+        foreach (var (real, relativo) in origenesMundos)
+        {
+            string destino = Path.Combine(_raizAislada, relativo);
+            Directory.CreateDirectory(destino);
+            destinosMundos.Add(destino);
+            if (!Directory.Exists(real)) continue;
+            foreach (string f in Directory.EnumerateFiles(real))
+            {
+                string ext = Path.GetExtension(f);
+                if (!ext.Equals(".wld", StringComparison.OrdinalIgnoreCase) && !ext.Equals(".twld", StringComparison.OrdinalIgnoreCase)) continue;
+                File.Copy(f, Path.Combine(destino, Path.GetFileName(f)), overwrite: true);
+                mundosCopiados++;
+            }
+        }
+        CharacterFileService.CarpetasMundosDePrueba = destinosMundos;
+        CharacterFileService.RaicesMundosPermitidasDePrueba = [_raizAislada, Path.GetTempPath()];
+        CharacterFileService.AlTocarMundoFueraDePrueba = ruta =>
+        {
+            Console.WriteLine($"FALLO: AISLAMIENTO-MUNDO - se intento abrir o escribir el mundo '{ruta}', FUERA de la carpeta temporal del arnes ({_raizAislada}) y de %TEMP%. Se aborta el arnes sin tocarlo.");
+            Environment.Exit(5);
+        };
+
         string sessionJson = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
         _sessionJsonExistia = File.Exists(sessionJson);
         _sessionJsonGuardado = _sessionJsonExistia ? File.ReadAllText(sessionJson) : null;
@@ -86,7 +126,31 @@ internal static partial class Program
                 Console.WriteLine($"FALLO: AISLAMIENTO - CharacterFileService sigue escaneando una carpeta real ({d}); el arnes se detiene sin abrir nada.");
                 Environment.Exit(3);
             }
-        Console.WriteLine($"AISLAMIENTO: {copiados} .plr/.tplr reales COPIADOS a {_raizAislada}; carpetas reales sustituidas; session.json guardado (existia={_sessionJsonExistia}) y se restaurara al salir.");
+        foreach (string d in CharacterFileService.GetAllWorldsDirectories())
+            if (!EstaDentro(d, _raizAislada))
+            {
+                Console.WriteLine($"FALLO: AISLAMIENTO-MUNDO - CharacterFileService sigue escaneando una carpeta de mundos real ({d}); el arnes se detiene sin abrir nada.");
+                Environment.Exit(3);
+            }
+        Console.WriteLine($"AISLAMIENTO: {copiados} .plr/.tplr y {mundosCopiados} .wld/.twld reales COPIADOS a {_raizAislada}; carpetas reales de personajes y mundos sustituidas; session.json guardado (existia={_sessionJsonExistia}) y se restaurara al salir.");
+    }
+
+    // (6) Ruta de la COPIA aislada de un mundo real. Solo acepta rutas bajo Documents\My Games\Terraria\
+    // (las que el arnes usaba a pelo); cualquier otra se devuelve tal cual (ya es una copia/fixture).
+    internal static string MundoAislado(string rutaReal)
+    {
+        string raizJuego = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Terraria");
+        if (_raizAislada == null || !EstaDentro(rutaReal, raizJuego)) return rutaReal;
+        string relativa = Path.GetRelativePath(raizJuego, rutaReal);
+        string copia = Path.Combine(_raizAislada, relativa);
+        if (!File.Exists(copia) && File.Exists(rutaReal))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(copia)!);
+            File.Copy(rutaReal, copia, overwrite: false);
+            string twld = Path.ChangeExtension(rutaReal, ".twld");
+            if (File.Exists(twld)) File.Copy(twld, Path.ChangeExtension(copia, ".twld"), overwrite: true);
+        }
+        return copia;
     }
 
     private static bool EstaDentro(string ruta, string raiz)

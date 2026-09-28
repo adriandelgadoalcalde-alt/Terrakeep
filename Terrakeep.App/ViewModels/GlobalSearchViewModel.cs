@@ -110,6 +110,7 @@ public sealed partial class GlobalSearchViewModel : ObservableObject
         foreach (var entry in worlds)
         {
             if (worldHits.Count >= MaxResultsPerSide) break;
+            Services.CharacterFileService.ComprobarMundoDePrueba(entry.FilePath); // guarda del arnes, sin efecto en la app real
             try
             {
                 var world = WldReader.Read(File.ReadAllBytes(entry.FilePath));

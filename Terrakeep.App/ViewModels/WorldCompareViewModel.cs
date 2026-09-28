@@ -51,6 +51,7 @@ public sealed partial class WorldCompareViewModel : ObservableObject
 
     private async Task LoadSideAsync(string path, bool isA)
     {
+        Services.CharacterFileService.ComprobarMundoDePrueba(path); // guarda del arnes, sin efecto en la app real
         IsLoading = true;
         ErrorMessage = null;
         try

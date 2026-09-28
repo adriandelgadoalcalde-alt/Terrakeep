@@ -304,7 +304,7 @@ internal static partial class Program
         // ---------------------------------------------------------------------------------
         try
         {
-            string worldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (!File.Exists(worldPath))
             {
                 Console.WriteLine("VIEWPORT-exploracion_resultados: mundo real roca_negra.wld no encontrado - omitido");
@@ -427,7 +427,7 @@ internal static partial class Program
         // ---------------------------------------------------------------------------------
         try
         {
-            string worldPathFaseH = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string worldPathFaseH = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (!File.Exists(worldPathFaseH))
             {
                 Console.WriteLine("VIEWPORT-faseH: mundo real roca_negra.wld no encontrado - omitido");

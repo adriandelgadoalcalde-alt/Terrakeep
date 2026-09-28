@@ -200,6 +200,9 @@ public static class WorldFileService
 
     private static void WriteAtomic(string path, byte[] bytes)
     {
+        // Guarda del arnes de pruebas (sin efecto en la app real): nunca escribir un mundo real desde
+        // una prueba - ver CharacterFileService.ComprobarMundoDePrueba.
+        CharacterFileService.ComprobarMundoDePrueba(path);
         string tmpPath = path + ".tmp";
         File.WriteAllBytes(tmpPath, bytes);
         try

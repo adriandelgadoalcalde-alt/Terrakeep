@@ -196,7 +196,7 @@ internal static partial class Program
             // carga el mundo real de esta maquina (solo LECTURA, nunca se guarda) y se recorren
             // sus cinco categorias reales, que es donde viven los nombres de tile/pared/mineral,
             // los objetos dentro de cofres y la lista de NPCs.
-            string mundoReal = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string mundoReal = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
             if (File.Exists(mundoReal))
             {
                 vm.SelectedTabIndex = 4;

@@ -2653,6 +2653,7 @@ public partial class ExplorationViewModel : ObservableObject
         var wldFiles = dirs.SelectMany(dir => Directory.GetFiles(dir, "*.wld"));
         foreach (string path in wldFiles.OrderByDescending(File.GetLastWriteTimeUtc))
         {
+            CharacterFileService.ComprobarMundoDePrueba(path); // guarda del arnes, sin efecto en la app real
             try
             {
                 var header = WldReader.ReadHeader(File.ReadAllBytes(path));
@@ -2757,6 +2758,8 @@ public partial class ExplorationViewModel : ObservableObject
     // hilo de UI de siempre, sin necesidad de marshalling manual.
     public async Task LoadFromPathAsync(string wldPath)
     {
+        // Guarda del arnes de pruebas (sin efecto en la app real): ver CharacterFileService.ComprobarMundoDePrueba.
+        CharacterFileService.ComprobarMundoDePrueba(wldPath);
         IsLoading = true;
         // Arranca en 0 con el texto generico de siempre - el primer aviso real de tileProgress
         // (mas abajo) lo sustituye en cuanto ReadTiles procesa su primera tanda de columnas, pero
