@@ -31702,3 +31702,14 @@ de idioma no ensucia (`IsDirty tras cambiar de idioma en vivo = False`).
   AR-14 mida solo rejillas visibles: la rejilla lado a lado oculta conservaba posiciones de 1920 y
   daba 13 falsos "invade 205-648px" en el barrido descendente).
 - Capturas "despues" regeneradas (16) en `docs/evidencia/responsive-global/faseB/`.
+
+### Despliegue real (corrección de la FASE B)
+
+Publicado desde un `git worktree` limpio en `7adecae9` (`Keep\Terrasavr-Win\TKfb`, misma profundidad
+para que `..\..\..\ServidorKeep` resuelva; retirado después) para NO desplegar el trabajo sin
+comitear de otro agente en `DragDropSupport.cs`/`Terrakeep.App.csproj`. `robocopy /MIR` (sin
+`unins000.*`) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\`; Terrakeep no estaba abierto.
+SHA256 publicado = instalado = `9646e5bd0640a0baf959252aba4efc1291a68c3cd85338eae6e0eaadf1147a41`; el
+exe instalado contiene `EquipamientoSubvistasLadoALado`/`EditarSubtituloSlot`/`IsEquipmentSideBySide`.
+El binario Debug de `herramientas.json` NO se recompiló: en este momento compilaría el trabajo a medias
+del otro agente.
