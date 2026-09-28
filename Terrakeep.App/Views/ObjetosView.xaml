@@ -119,7 +119,56 @@
                  resto de la app ("ScrollViewer de seguridad" - MountsContainer, Almacenes...). -->
             <ScrollViewer VerticalScrollBarVisibility="Auto">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[action_edit], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+                <!-- FASE B del responsive global, H-01 (segunda revision visual, 28-sep-2026): los
+                     botones de accion del slot (estrella de favorito + "Vaciar slot") suben a la
+                     fila del titulo "Editar", que tenia ancho de sobra y ningun contenido a la
+                     derecha. Antes compartian fila con icono+nombre+subtitulo y le robaban ~80px:
+                     el subtitulo envolvia a 2 lineas y el rol ("Cabeza") iba en una 3a, y a
+                     1080x700 con la Libreria desplegada el panel desplazaba 26,9px, tapando
+                     Prefijo/Quitar. Nada se oculta ni se recorta (s34): mismos botones, mismo
+                     texto completo, solo mejor repartido. Ademas el aire bajo el titulo y bajo la
+                     cabecera del slot pasa de 10 a 8px (s14 paso 7, compactar dentro de limites de
+                     legibilidad): medido, con 10px quedaban 13,6px de scroll en ES (ext 281,3). -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8" LastChildFill="True">
+                    <StackPanel x:Name="EditarAccionesSlot" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                Visibility="{Binding HasSelection, Converter={StaticResource ObjetosBoolToVis}}">
+                        <!-- H5-06 (quinta auditoria de Opus): mismo interruptor que el menu
+                             contextual del slot, aqui tambien - el Content cambia de verdad
+                             (★ lleno/vacio) para que el propio boton diga su estado sin tener
+                             que leer un tooltip. -->
+                        <!-- OBJ-05 (oleada de Objetos, 6-sep-2026): la estrella solo se ofrece donde el
+                             .plr puede guardarla de verdad - Banco/Caja fuerte/Fragua/Mascotas/Tintes de
+                             montura NO llevan byte de favorito (Player.cs:55497-55499 del juego real
+                             escribe el banco con type+stack+prefix y nada mas), y los loadouts solo desde
+                             la version 322. Antes se ofrecia en los 4 sitios: el usuario la encendia, la
+                             veia marcada, guardaba, y al recargar habia desaparecido sin ningun aviso.
+                             Ver ItemSlotViewModel.SupportsFavorite. -->
+                        <Button Command="{Binding Slot.ToggleFavoriteCommand}"
+                                ToolTip="{Binding Loc[tt_toggle_favorite], Mode=OneWay}" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
+                                FontSize="12" VerticalAlignment="Center"
+                                Visibility="{Binding Slot.SupportsFavorite, Converter={StaticResource ObjetosBoolToVis}}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content" Value="&#9734;" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Slot.IsFavorited}" Value="True">
+                                            <Setter Property="Content" Value="&#9733;" />
+                                            <Setter Property="Foreground" Value="{StaticResource MasterGoldBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <!-- La tarjeta compacta (Inventario/Almacenes, pregunta a Opus sobre el
+                             diseño 2-sep-2026) ya no tiene sitio para un boton "✕" propio -
+                             este panel, que acompaña a cualquier slot seleccionado sea cual sea
+                             el contenedor, es donde vive ahora tambien para esos casos (la
+                             tarjeta rica conserva el suyo ademas, por comodidad). -->
+                        <Button Content="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding Slot.ClearCommand}"
+                                ToolTip="{Binding Loc[tt_empty_this_slot], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Loc[action_edit], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                </DockPanel>
 
                 <TextBlock DockPanel.Dock="Top" Text="{Binding NoPrefixMessage}" Style="{StaticResource CaptionText}"
                            TextWrapping="Wrap" Margin="0,0,0,10"
@@ -147,41 +196,7 @@
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource ObjetosBoolToVis}}">
-                    <DockPanel Margin="0,0,0,10">
-                        <!-- La tarjeta compacta (Inventario/Almacenes, pregunta a Opus sobre el
-                             diseño 2-sep-2026) ya no tiene sitio para un boton "✕" propio -
-                             este panel, que acompaña a cualquier slot seleccionado sea cual sea
-                             el contenedor, es donde vive ahora tambien para esos casos (la
-                             tarjeta rica conserva el suyo ademas, por comodidad). -->
-                        <Button DockPanel.Dock="Right" Content="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding Slot.ClearCommand}"
-                                ToolTip="{Binding Loc[tt_empty_this_slot], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
-                        <!-- H5-06 (quinta auditoria de Opus): mismo interruptor que el menu
-                             contextual del slot, aqui tambien - el Content cambia de verdad
-                             (★ lleno/vacio) para que el propio boton diga su estado sin tener
-                             que leer un tooltip. -->
-                        <!-- OBJ-05 (oleada de Objetos, 6-sep-2026): la estrella solo se ofrece donde el
-                             .plr puede guardarla de verdad - Banco/Caja fuerte/Fragua/Mascotas/Tintes de
-                             montura NO llevan byte de favorito (Player.cs:55497-55499 del juego real
-                             escribe el banco con type+stack+prefix y nada mas), y los loadouts solo desde
-                             la version 322. Antes se ofrecia en los 4 sitios: el usuario la encendia, la
-                             veia marcada, guardaba, y al recargar habia desaparecido sin ningun aviso.
-                             Ver ItemSlotViewModel.SupportsFavorite. -->
-                        <Button DockPanel.Dock="Right" Command="{Binding Slot.ToggleFavoriteCommand}"
-                                ToolTip="{Binding Loc[tt_toggle_favorite], Mode=OneWay}" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
-                                FontSize="12" VerticalAlignment="Center"
-                                Visibility="{Binding Slot.SupportsFavorite, Converter={StaticResource ObjetosBoolToVis}}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                    <Setter Property="Content" Value="&#9734;" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Slot.IsFavorited}" Value="True">
-                                            <Setter Property="Content" Value="&#9733;" />
-                                            <Setter Property="Foreground" Value="{StaticResource MasterGoldBrush}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                    <DockPanel Margin="0,0,0,8">
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                VerticalAlignment="Center"
@@ -198,13 +213,14 @@
                                 <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
                                 <Run Text="{Binding Loc[label_dot_slot], Mode=OneWay}" />
                                 <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
+                                <!-- Auditoria de Opus, E-3: "un usuario que no conoce el juego no
+                                     sabe que el slot 3 es 'Accesorio 1'" (locClass real del juego).
+                                     H-01: ahora un Run acentuado en la MISMA linea del subtitulo en
+                                     vez de un TextBlock propio - null (contenedores sin rol) deja el
+                                     Run vacio, sin separador huerfano; espacio NO separable tras el punto para que
+                                     "·" nunca quede solo al final de una linea. -->
+                                <Run Text="{Binding Slot.SlotRoleLabel, Mode=OneWay, StringFormat='·&#160;{0}'}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
                             </TextBlock>
-                            <!-- Auditoria de Opus, E-3: "un usuario que no conoce el juego no
-                                 sabe que el slot 3 es 'Accesorio 1'" - respaldado por el
-                                 original real (locClass Helmet/Shirt/Pants/Accessory $1). -->
-                            <TextBlock Text="{Binding Slot.SlotRoleLabel}" Style="{StaticResource CaptionText}"
-                                       FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
-                                       Visibility="{Binding Slot.SlotRoleLabel, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
                     </DockPanel>
 
@@ -1033,14 +1049,16 @@
                                                                   Content="{Binding EquipmentGroup.Current}"
                                                                   ContentTemplate="{StaticResource ContainerFlowTemplate}"
                                                                   Visibility="{Binding IsEquipmentSideBySide, Converter={StaticResource InverseBoolToVis}}" />
-                                                  <Grid x:Name="EquipamientoSubvistasLadoALado"
-                                                        Visibility="{Binding IsEquipmentSideBySide, Converter={StaticResource ObjetosBoolToVis}}">
-                                                      <Grid.ColumnDefinitions>
-                                                          <ColumnDefinition Width="*" />
-                                                          <ColumnDefinition Width="*" />
-                                                          <ColumnDefinition Width="*" />
-                                                      </Grid.ColumnDefinitions>
-                                                      <Border x:Name="EquipamientoColumnaTintes" HorizontalAlignment="Center" Grid.Column="0" Margin="0,0,6,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Dyes">
+                                                  <!-- H-02 (segunda revision visual): UniformGrid 1x3 centrado en vez de 3
+                                                       columnas "*" con cada rejilla centrada en la suya - aquello dejaba
+                                                       140-210px de hueco entre rejillas a 1920/maximizado. UniformGrid mide
+                                                       cada celda con 1/3 del ancho disponible (la celda del slot se limita por
+                                                       ancho igual que antes), pero con HorizontalAlignment=Center el grupo
+                                                       ocupa solo 3 x el ancho real de la rejilla mas ancha y se centra: la
+                                                       separacion entre rejillas es fija (Margin 8,0 = 16px), no el sobrante. -->
+                                                  <UniformGrid x:Name="EquipamientoSubvistasLadoALado" Rows="1" Columns="3" HorizontalAlignment="Center"
+                                                               Visibility="{Binding IsEquipmentSideBySide, Converter={StaticResource ObjetosBoolToVis}}">
+                                                      <Border x:Name="EquipamientoColumnaTintes" Margin="8,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Dyes">
                                                           <Border.Style>
                                                               <Style TargetType="Border">
                                                                   <Setter Property="BorderBrush" Value="Transparent" />
@@ -1056,7 +1074,7 @@
                                                               <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                                           </StackPanel>
                                                       </Border>
-                                                      <Border x:Name="EquipamientoColumnaVanidad" HorizontalAlignment="Center" Grid.Column="1" Margin="0,0,6,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Social">
+                                                      <Border x:Name="EquipamientoColumnaVanidad" Margin="8,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Social">
                                                           <Border.Style>
                                                               <Style TargetType="Border">
                                                                   <Setter Property="BorderBrush" Value="Transparent" />
@@ -1072,7 +1090,7 @@
                                                               <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                                           </StackPanel>
                                                       </Border>
-                                                      <Border x:Name="EquipamientoColumnaArmadura" HorizontalAlignment="Center" Grid.Column="2" Margin="0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Items">
+                                                      <Border x:Name="EquipamientoColumnaArmadura" Margin="8,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Items">
                                                           <Border.Style>
                                                               <Style TargetType="Border">
                                                                   <Setter Property="BorderBrush" Value="Transparent" />
@@ -1088,7 +1106,7 @@
                                                               <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                                           </StackPanel>
                                                       </Border>
-                                                  </Grid>
+                                                  </UniformGrid>
                                                   </StackPanel>
 
                                                   <!-- Lateral derecho Monedas/Municion. Historial completo: ADR-TERRAKEEP-005. -->

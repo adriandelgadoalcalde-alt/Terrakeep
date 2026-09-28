@@ -128,9 +128,31 @@ public partial class MainViewModel : ObservableObject
                         slot.RefreshLocalizedText();
         }
         finally { _refrescandoIdiomaSlots = false; }
+        // H-03: cabecera "Archivo.plr · version N" y mensaje de estado de carga, re-traducidos.
+        OnPropertyChanged(nameof(FileVersionLine));
+        if (_recetaEstado != null && StatusMessage == _textoRecetaEstado)
+        {
+            _textoRecetaEstado = _recetaEstado();
+            StatusMessage = _textoRecetaEstado;
+        }
     }
 
     private bool _refrescandoIdiomaSlots;
+
+    // H-03 (segunda revision visual de la FASE B, 28-sep-2026): "Cargado 'X' - N objeto(s) de
+    // Calamity" se quedaba en el idioma en que se cargo. El mensaje de estado se guarda como
+    // RECETA ademas de como texto; al cambiar de idioma, si el mensaje visible sigue siendo el que
+    // produjo esa receta (nadie lo ha sustituido por otro), se re-traduce. Solo lo usa hoy el
+    // mensaje de carga; el resto de mensajes de estado (guardado, conjuntos...) siguen siendo
+    // texto fijo - pendiente documentado en bitacora.md.
+    private Func<string>? _recetaEstado;
+    private string? _textoRecetaEstado;
+    private void MostrarEstadoLocalizable(Func<string> receta)
+    {
+        _recetaEstado = receta;
+        _textoRecetaEstado = receta();
+        StatusMessage = _textoRecetaEstado;
+    }
 
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
     // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
@@ -1672,9 +1694,11 @@ public partial class MainViewModel : ObservableObject
             HasCalamityData = _loaded.TplrPath != null;
             IsCharacterLoaded = true;
             int calamityCount = _loaded.MergedContainers.Values.Sum(items => items.Count(i => i.IsCalamity));
-            StatusMessage = HasCalamityData
-                ? LocalizationService.Instance.Format("status_loaded_with_calamity", _loaded.Character.Name, calamityCount)
-                : LocalizationService.Instance.Format("status_loaded_vanilla_only", _loaded.Character.Name);
+            string nombreCargado = _loaded.Character.Name;
+            bool conCalamity = HasCalamityData;
+            MostrarEstadoLocalizable(() => conCalamity
+                ? LocalizationService.Instance.Format("status_loaded_with_calamity", nombreCargado, calamityCount)
+                : LocalizationService.Instance.Format("status_loaded_vanilla_only", nombreCargado));
             GlobalErrorMessage = null; // H-3: una carga con exito limpia cualquier error global anterior
             // H5-07: el ULTIMO personaje se recuerda de inmediato, no solo al cerrar la app - si
             // la app se cierra en seco (corte de luz, Administrador de tareas), la proxima
@@ -1986,6 +2010,24 @@ public partial class MainViewModel : ObservableObject
         foreach (var c in EquipmentGroup.AllContainers)
             foreach (var s in c.Slots)
                 HookSlotEditing(s);
+        // FASE B del responsive global, H-05 (segunda revision visual, 28-sep-2026): con una sola
+        // subvista a la vista, cambiar a Vanidad/Tintes (o de loadout) dejaba el panel Editar
+        // mostrando el slot de Armadura, que ya no se veia. Si el slot en edicion es de
+        // Equipamiento pero no de la subvista que ahora manda, se selecciona el slot EQUIVALENTE
+        // (mismo indice) de la nueva - mismo hueco del cuerpo, otra capa. Con las 3 lado a lado
+        // (Extra) es coherente igual: el selector y la columna enfocada siguen al slot en edicion.
+        var grupo = EquipmentGroup;
+        grupo.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(EquipmentGroupViewModel.Current)) return;
+            var enEdicion = ItemEdit.Slot;
+            if (enEdicion == null || grupo.Current.Slots.Contains(enEdicion)) return;
+            int indice = -1;
+            foreach (var c in grupo.AllContainers)
+                if ((indice = c.Slots.IndexOf(enEdicion)) >= 0) break;
+            if (indice < 0) return; // el slot en edicion no es de Equipamiento (Inventario...): no se toca
+            if (indice < grupo.Current.Slots.Count) SelectSlot(grupo.Current.Slots[indice]);
+        };
 
         Research.LoadFrom(_loaded.Character);
         // Bd-d: foto fija de "lo que ya se posee" para la pestaña Builds, recalculada tambien

@@ -38,6 +38,13 @@ internal static partial class Program
     // V-01/V-04: umbral de uso del ancho de la fila en ventanas grandes (>= 1900px). El modelo de
     // una sola subvista de la primera version de la FASE B daba ~54% a 1920 y ~37% maximizado.
     private const double UsoAnchoMinimoGrande = 0.60;
+    // H-02: hueco horizontal maximo entre dos rejillas de subvista vecinas (separacion fija de 16px
+    // + borde/padding de cada columna); el modelo de 3 columnas "*" dejaba 140-210px.
+    private const double HuecoMaximoEntreSubvistas = 40;
+    // H-01: scroll propio maximo del panel Editar. Es el valor del permiso excepcional s13 registrado
+    // en el Task Context (waiver del requirement 6b59710e); si el panel desplaza mas, el permiso ya no
+    // cubre la realidad y el canario falla.
+    private const double ScrollEditarPermitido = 12.3;
 
     private static void EjecutarEquipResponsiveSolo(MainWindow window, MainViewModel vm)
     {
@@ -46,9 +53,30 @@ internal static partial class Program
 
         try
         {
-            var personajeReal = vm.Home.Characters.FirstOrDefault();
-            vm.IsDirty = false; // salvaguarda: abrir otro personaje nunca debe ofrecer guardar el anterior
-            if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
+            // H-04 (datos reales del usuario): el personaje se COPIA (.plr + .tplr) a una carpeta
+            // temporal propia de este canario y se abre POR RUTA con LoadFromPath - sin pasar por
+            // Home/OpenCommand ni por ningun dialogo de "cambios sin guardar". El origen es la copia
+            // que el arnes ya aislo (AislamientoPartidasReales.cs), nunca Documents\My Games real.
+            // session.json lo guarda/restaura el arnes al salir.
+            var origen = vm.Home.Characters.FirstOrDefault(c => EstaDentro(c.FilePath, RaizPersonajesAislada))?.FilePath;
+            if (origen == null) { Fallo("AISLAMIENTO", "no hay ninguna copia aislada de personaje que abrir"); return; }
+            string carpetaCanario = Path.Combine(RaizPersonajesAislada, "canario-equip", "tModLoader", "Players");
+            Directory.CreateDirectory(carpetaCanario);
+            string rutaCanario = Path.Combine(carpetaCanario, Path.GetFileName(origen));
+            File.Copy(origen, rutaCanario, overwrite: true);
+            string tplrOrigen = Path.ChangeExtension(origen, ".tplr");
+            if (File.Exists(tplrOrigen)) File.Copy(tplrOrigen, Path.ChangeExtension(rutaCanario, ".tplr"), overwrite: true);
+            void AbrirCopia()
+            {
+                vm.IsDirty = false;
+                vm.LoadFromPath(rutaCanario);
+                DoEvents(); DoEvents();
+                ComprobarPersonajeAislado(vm, "EQUIP_RESPONSIVE_SOLO"); // guarda (d): aborta si no es la copia
+                if (!string.Equals(vm.LoadedFilePath, rutaCanario, StringComparison.OrdinalIgnoreCase))
+                { Fallo("AISLAMIENTO", $"el personaje cargado ({vm.LoadedFilePath}) no es la copia del canario"); Environment.Exit(4); }
+            }
+            AbrirCopia();
+            Console.WriteLine($"EQUIP-RESP AISLAMIENTO: abierto por ruta '{vm.LoadedFilePath}' (copia de '{origen}')");
             if (vm.EquipmentGroup == null) { Fallo("PREPARACION", "no hay EquipmentGroup (¿personaje sin cargar?)"); return; }
 
             string outDir = Environment.GetEnvironmentVariable("EQUIP_RESPONSIVE_EVIDENCIA")
@@ -255,6 +283,8 @@ internal static partial class Program
                 {
                     var svEditar = Descendientes<ScrollViewer>(editar).FirstOrDefault(sv => sv.IsVisible && sv.TemplatedParent is not TextBoxBase);
                     Console.WriteLine($"EQUIP-RESP {cab} | Editar: {editar.ActualWidth:0.#}x{editar.ActualHeight:0.#} scrollPropio vp={svEditar?.ViewportHeight:0.#} ext={svEditar?.ExtentHeight:0.#} scr={svEditar?.ScrollableHeight:0.#} slotSeleccionado={(vm.ItemEdit.Slot != null)}");
+                    if (svEditar != null && svEditar.ScrollableHeight > ScrollEditarPermitido + 0.05)
+                        Fallo("EDITAR-SCROLL", $"{cab}: el panel Editar desplaza {svEditar.ScrollableHeight:0.#}px, mas que el permiso excepcional s13 ({ScrollEditarPermitido}px)");
                 }
 
                 // --- V-02: textos del panel Editar recortados (clipH de la pagina no lo veia: Editar
@@ -293,8 +323,22 @@ internal static partial class Program
                         .SelectMany(p => p.Children.OfType<FrameworkElement>()).Select(c => RectCompleto(c, window)).ToList();
                     double lateralIzq = Descendientes<FrameworkElement>(pagina).FirstOrDefault(f => f.Name == "CajaMascotasTintes")?.ActualWidth ?? 0;
                     double lateralDer = Descendientes<FrameworkElement>(pagina).FirstOrDefault(f => f.Name == "CajaMonedasMunicion")?.ActualWidth ?? 0;
-                    double tramoCentro = celdasCentro.Count == 0 ? 0 : celdasCentro.Max(r => r.Right) - celdasCentro.Min(r => r.Left);
+                    // H-02: ancho del CONTENIDO (suma del tramo real de cada rejilla), no del tramo
+                    // entre la primera y la ultima celda - los huecos entre rejillas ya no cuentan.
+                    var tramosRejilla = Descendientes<SlotGridPanel>(pagina)
+                        .Where(p => p.IsVisible && p.Children.Count > 0 && grupo.AllContainers.Contains(p.DataContext as ContainerViewModel))
+                        .Select(p => { var rs = p.Children.OfType<FrameworkElement>().Select(c => RectCompleto(c, window)).ToList(); return (Left: rs.Min(r => r.Left), Right: rs.Max(r => r.Right)); })
+                        .OrderBy(t => t.Left).ToList();
+                    double tramoCentro = tramosRejilla.Sum(t => t.Right - t.Left);
                     usoAncho = (lateralIzq + lateralDer + tramoCentro) / fila.ActualWidth;
+                    double huecoMax = 0;
+                    for (int t = 1; t < tramosRejilla.Count; t++) huecoMax = Math.Max(huecoMax, tramosRejilla[t].Left - tramosRejilla[t - 1].Right);
+                    if (tramosRejilla.Count > 1)
+                    {
+                        Console.WriteLine($"EQUIP-RESP {cab} | hueco maximo entre rejillas de subvista={huecoMax:0.#}px (umbral {HuecoMaximoEntreSubvistas}px)");
+                        if (huecoMax > HuecoMaximoEntreSubvistas)
+                            Fallo("ANCHO", $"{cab}: {huecoMax:0.#}px de hueco entre dos rejillas de subvista (s17)");
+                    }
                 }
                 int subvistas = Descendientes<SlotGridPanel>(pagina).Count(p => p.IsVisible && grupo.AllContainers.Contains(p.DataContext as ContainerViewModel));
                 Console.WriteLine($"EQUIP-RESP {cab} | usoAnchoFila={usoAncho:P0} subvistasVisibles={subvistas} ladoALado={vm.IsEquipmentSideBySide}");
@@ -361,6 +405,23 @@ internal static partial class Program
             Medir("maximizado-libdesplegada");
             window.WindowState = WindowState.Normal; DoEvents();
 
+            // H-05: con UNA subvista, cambiar de Armadura a Vanidad/Tintes lleva el panel Editar al
+            // slot equivalente (mismo indice) de la nueva subvista, nunca deja uno que ya no se ve.
+            {
+                FijarTamaño(window, 1080, 700); vm.IsLibraryCollapsed = true; IrAEquipamiento();
+                SeleccionarVista(EquipmentKind.Items);
+                var slot2 = vm.EquipmentGroup.Current.Slots[2];
+                vm.SelectSlot(slot2); DoEvents();
+                foreach (var k in new[] { EquipmentKind.Social, EquipmentKind.Dyes, EquipmentKind.Items })
+                {
+                    SeleccionarVista(k);
+                    bool ok = vm.ItemEdit.Slot != null && vm.EquipmentGroup.Current.Slots.IndexOf(vm.ItemEdit.Slot) == 2;
+                    Console.WriteLine($"EQUIP-RESP SUBVISTA->EDITAR: vista={k} -> Editar en el slot {(vm.ItemEdit.Slot == null ? "ninguno" : vm.EquipmentGroup.Current.Slots.IndexOf(vm.ItemEdit.Slot).ToString())} de la subvista visible (esperado 2)");
+                    if (!ok) Fallo("EDITAR-SUBVISTA", $"al cambiar a {k} el panel Editar no muestra el slot equivalente de la subvista visible");
+                }
+                if (slotConObjeto != null) { vm.SelectSlot(slotConObjeto); DoEvents(); }
+            }
+
             // Las 3 subvistas en el minimo (s22: "ah, tambien existe Vanidad" no debe pasar).
             FijarTamaño(window, 1080, 700); vm.IsLibraryCollapsed = true; IrAEquipamiento();
             SeleccionarVista(EquipmentKind.Social); Medir("min-1080x700-vanidad");
@@ -398,12 +459,7 @@ internal static partial class Program
                 if (!vivoOk) Fallo("IDIOMA", "al cambiar a ingles en vivo los nombres de Monedas/Municion/loadout no se traducen");
                 Medir("min-1080x700-EN-envivo");
                 // Arranque en frio en EN: se vuelve a abrir el personaje con el idioma ya en ingles.
-                var personaje = vm.Home.Characters.FirstOrDefault();
-                // Salvaguarda de datos reales: este canario trabaja sobre el personaje REAL del
-                // usuario y nunca debe poder guardarlo - IsDirty=false antes de reabrir (nada que
-                // guardar = sin dialogo ConfirmDiscardChanges).
-                vm.IsDirty = false;
-                if (personaje != null) { vm.Home.OpenCommand.Execute(personaje); DoEvents(); DoEvents(); }
+                AbrirCopia(); // misma copia aislada, por ruta (H-04)
                 IrAEquipamiento(); SeleccionarVista(EquipmentKind.Items);
                 bool frioOk = vm.CoinsContainer!.DisplayName.StartsWith(loc["storage_coins"]) && vm.AmmoContainer!.DisplayName.StartsWith(loc["storage_ammo"])
                               && vm.EquipmentGroup!.Current.Slots.First().ContainerName != cont;

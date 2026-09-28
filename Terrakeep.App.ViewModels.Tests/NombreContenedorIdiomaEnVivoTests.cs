@@ -78,6 +78,7 @@ public sealed class NombreContenedorIdiomaEnVivoTests
             Assert.False(vm.IsDirty);
             string monedasEs = vm.CoinsContainer!.DisplayName;
             string loadoutEs = vm.EquipmentGroup!.Current.Slots[0].ContainerName;
+            string? estadoEs = vm.StatusMessage, versionEs = vm.FileVersionLine;
 
             string? pila = null;
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainViewModel.IsDirty) && vm.IsDirty) pila ??= Environment.StackTrace; };
@@ -88,6 +89,10 @@ public sealed class NombreContenedorIdiomaEnVivoTests
             Assert.StartsWith(loc["storage_coins"], vm.CoinsContainer.DisplayName);
             Assert.NotEqual(loadoutEs, vm.EquipmentGroup.Current.Slots[0].ContainerName);
             Assert.StartsWith(vm.EquipmentGroup.Current.Slots[0].ContainerName, vm.EquipmentGroup.Current.DisplayName);
+            // H-03: mensaje "Cargado 'X'..." y linea "archivo · version N" re-traducidos tambien.
+            Assert.NotEqual(estadoEs, vm.StatusMessage);
+            Assert.Equal(loc.Format("status_loaded_vanilla_only", "Idioma"), vm.StatusMessage);
+            Assert.NotEqual(versionEs, vm.FileVersionLine);
         }
         finally
         {
