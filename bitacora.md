@@ -31588,3 +31588,42 @@ SHA256 idéntico publicado/instalado `cefc6dc6d473423ed25dcd71286fcf82d3d5dfe64d
 el exe instalado contiene `EquipamientoSelectorVista` y ya no contiene `IsEquipmentExpanded`
 (`grep -a`). Binario Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 con el
 cambio. Commits: `8f3094dc` (arreglo + canario + tests adaptados), `213fd407` (bitácora + capturas).
+
+## 28-sep-2026 - Ghost de arrastre: solo el sprite, encima de la punta del cursor y más grande
+
+Pedido textual del usuario: "ahora puedes quitar el recuadro blanco o sea ocultarlo y que solo se
+vea el sprite, además hay que ponerlo que esté por encima de la punta del mouse y hay que hacer que
+los sprites arrastrados se vean algo más grandes y ya quedará perfecto".
+
+**Antes** (`Terrakeep.App/Controls/DragDropSupport.cs`, `DragAdorner`): `VisualBrush` de la
+tarjeta/slot ENTERO (fondo, borde, botón "Colocar"...) con opacidad 0.75, al mismo tamaño que el
+elemento y dibujado en `cursor + (12,12)` - abajo a la derecha, parcialmente tapado por la flecha.
+
+**Ahora** (mismo archivo, nueva clase pública `DragGhost` + `DragGhost.SpriteAdorner`, sustituye a
+`DragAdorner`):
+1. Solo el sprite: `BuscarSprite` localiza el `Image` real visible con `Source` de mayor área dentro
+   del elemento arrastrado y `OnRender` hace `DrawImage` de su `ImageSource` sin rectángulo, fondo
+   ni borde (fallback al `VisualBrush` viejo solo si no hubiera ningún `Image`, hoy no pasa).
+2. Encima de la punta: `CalcularRectGhost` lo centra en X sobre el hotspot y deja el borde inferior
+   `SeparacionSobreCursorPx = 6` px por encima. La conversión `GetCursorPos`+`PointFromScreen` (DPI)
+   y la capa de ventana completa (arreglo z-order `02f82f5f`) no cambian; además se posiciona ya en
+   el primer frame (antes arrancaba en (0,0) hasta el primer `GiveFeedback`).
+3. Más grande: `EscalaSprite = 1.5` sobre el tamaño con que se ve el sprite, con
+   `LadoMinimoPx = 48` en el lado mayor, `BitmapScalingMode.NearestNeighbor`. Opacidad 0.85.
+Cubre los 4 orígenes que llaman a `StartCardDrag`: Librería de objetos y slots de inventario
+(`ObjetosView.xaml.cs`), Librería de buffs y slots de buffs (`MainWindow.xaml.cs`).
+
+**Verificación**: canario `DRAG_GHOST_LIBRERIA_SOLO=1` ampliado (`VerificarAspectoGhostArrastre`)
+sobre tarjeta real de la Librería (sprite 30x30 -> ghost 48x48) y slot real de inventario (28,2x30
+-> 45,2x48): centrado 0 px, borde inferior 6 px por encima de la punta, render offscreen real del
+adorno con 1620/738 píxeles pintados y 0 donde el sprite es transparente (sin caja) y 0 fuera de su
+rect -> OK. Posición en arrastre real sigue OK (292 `GiveFeedback`, 286 distintas, span 571/581 px).
+`DRAG_GHOST_ZORDER_LIBRERIA_SOLO=1` sigue OK (capa 1164x821). Evidencia PNG en
+`docs/evidencia/drag-ghost/`. `dotnet build Terrakeep.slnx -c Release` 0/0; `Terrakeep.Core.Tests`
+782/782; `Terrakeep.App.ViewModels.Tests` 774/774.
+
+**Despliegue**: publicado desde un worktree limpio en `bb8c76cd` (para no incluir el trabajo sin
+comitear de otro agente en `ObjetosView.xaml`/ViewModels), `robocopy /MIR` a
+`%LocalAppData%\Programs\Terrakeep\` con `Terrakeep.exe` cerrado; SHA256 publicado = instalado =
+`641B63EB837CE90D7F3DD9521F57D46D986A44C6E7ABF473FD15C9D04158A4AD`. Debug de `herramientas.json`
+recompilado 0/0 (incluye el nuevo `DragGhost`).
