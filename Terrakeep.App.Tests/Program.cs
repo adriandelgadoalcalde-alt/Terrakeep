@@ -6720,23 +6720,22 @@ internal static partial class Program
         {
             Console.WriteLine($"IsLibraryCollapsed antes={vm.IsLibraryCollapsed}");
 
-            System.Windows.Controls.Grid? libraryRowGrid = null;
-            void FindLibraryGrid(System.Windows.DependencyObject d)
-            {
-                if (d is System.Windows.Controls.Grid g && g.RowDefinitions.Count == 2 && g.RowDefinitions[1].MaxHeight == 460)
-                    libraryRowGrid = g;
-                int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
-                for (int i = 0; i < n; i++) FindLibraryGrid(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
-            }
-            FindLibraryGrid(window);
+            // FASE D del responsive global (28-sep-2026): el tope MaxHeight de la fila (460/640,
+            // LibraryRowMaxHeight) se RETIRO en 9c3df863, asi que buscar la rejilla por "MaxHeight==460"
+            // ya no encontraba nada (FALLO ... NO-FOUND en cada pasada completa). Contrato nuevo: la fila
+            // real tiene nombre propio (x:Name="FilaLibreria" en ObjetosView.xaml, el mismo que usa
+            // LIBRARY_RESPONSIVE_SOLO) - se localiza por nombre, y se exige ademas que siga SIN tope
+            // enlazado (la negative acceptance del tope viejo vive en LIBRARY_RESPONSIVE_SOLO-VIEJO).
+            var objetosViewFila = window.FindName("ObjetosView") as System.Windows.FrameworkElement;
+            var filaLibreria = objetosViewFila?.FindName("FilaLibreria") as System.Windows.Controls.RowDefinition;
 
-            if (libraryRowGrid == null)
+            if (filaLibreria == null)
             {
-                Console.WriteLine("FALLO: Grid real de la fila de Libreria (RowDefinitions.Count==2, MaxHeight==460) NO-FOUND");
+                Console.WriteLine("FALLO: fila real de la Libreria (ObjetosView.FilaLibreria) NO-FOUND");
             }
             else
             {
-                double AltoFilaLibreria() => libraryRowGrid.RowDefinitions[1].ActualHeight;
+                double AltoFilaLibreria() => filaLibreria.ActualHeight;
 
                 DoEvents(); DoEvents();
                 double altoDesplegada = AltoFilaLibreria();
