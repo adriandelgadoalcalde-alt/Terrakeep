@@ -246,6 +246,7 @@ public sealed class CharacterFileService
     // personajes reales de un plumazo en Inicio.
     public static string GetDefaultPlayersDirectory()
     {
+        if (CarpetasPersonajesDePrueba is { Count: > 0 } prueba) return prueba[0];
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
         return Directory.Exists(candidate) ? candidate : documents;
@@ -281,10 +282,32 @@ public sealed class CharacterFileService
     // una vez al arrancar (App.xaml.cs, SettingsService.Load) y de nuevo cada vez que el
     // usuario edita la lista en Ajustes.
     public static IReadOnlyList<string> ExtraPlayerFolders { get; set; } = [];
+
+    // SOLO PRUEBAS (H-04 de la segunda revision visual de la FASE B del responsive global,
+    // 28-sep-2026, tras el incidente real de ese dia: un canario abrio Eldelgas.plr REAL, respondio
+    // "Si" al dialogo de cambios sin guardar y lo sobrescribio 3 veces - ver bitacora.md y la regla
+    // del CLAUDE.md del repo). A diferencia de ExtraPlayerFolders (que SUMA carpetas), esto
+    // SUSTITUYE por completo las carpetas de personajes: con un valor puesto, ni la carpeta real de
+    // tModLoader ni la de vainilla ni las carpetas extra de Ajustes se escanean jamas. Solo se
+    // puede fijar con App.ModoDiagnostico=true (el arnes Terrakeep.App.Tests lo pone lo primero
+    // de todo): en la app real no existe ningun camino que lo active, ni por error.
+    private static IReadOnlyList<string>? _carpetasPersonajesDePrueba;
+    public static IReadOnlyList<string>? CarpetasPersonajesDePrueba
+    {
+        get => _carpetasPersonajesDePrueba;
+        set
+        {
+            if (value != null && !App.ModoDiagnostico)
+                throw new InvalidOperationException("CarpetasPersonajesDePrueba solo puede usarse en modo diagnostico (arnes de pruebas).");
+            _carpetasPersonajesDePrueba = value;
+        }
+    }
     public static IReadOnlyList<string> ExtraWorldFolders { get; set; } = [];
 
     public static IReadOnlyList<string> GetAllPlayersDirectories()
     {
+        if (CarpetasPersonajesDePrueba != null)
+            return CarpetasPersonajesDePrueba.Where(Directory.Exists).ToList();
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string tModLoader = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
         string vanilla = Path.Combine(documents, "My Games", "Terraria", "Players");

@@ -52,6 +52,12 @@ internal static partial class Program
         // Terrakeep.App.App.ModoDiagnostico y en MainWindow.xaml.cs.
         Terrakeep.App.App.ModoDiagnostico = true;
 
+        // H-04 (28-sep-2026, regla del CLAUDE.md del repo): ninguna prueba toca las partidas reales
+        // del usuario - copias en una carpeta temporal que SUSTITUYE a las reales, session.json
+        // guardado y restaurado. Ver AislamientoPartidasReales.cs. Tiene que ir ANTES de
+        // "new MainWindow()" (Inicio escanea personajes en su constructor).
+        PrepararAislamientoPartidasReales();
+
         // Complementacion bidireccional (24-sep-2026): Terrakeep conserva su arnes WPF/UIA
         // nativo; KEEPQA_COMPLEMENTO_SOLO permite que ese mismo arnes invoque los gates
         // compartidos de KeepQA sin duplicar su logica. KeepQA, a su vez, sigue pudiendo lanzar
@@ -827,6 +833,7 @@ internal static partial class Program
             vm.Home.OpenCommand.Execute(first);
             DoEvents();
             DoEvents();
+            ComprobarPersonajeAislado(vm, "HOME-OPEN"); // H-04: Characters[0] es una COPIA, nunca la partida real
             Console.WriteLine($"HOME-OPEN: click en '{first.Name}' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 1), CharacterName={vm.CharacterName}, IsCharacterLoaded={vm.IsCharacterLoaded}");
 
             // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta

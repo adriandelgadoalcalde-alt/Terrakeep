@@ -18,6 +18,9 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
+    // Ruta real del .plr cargado ahora mismo (null sin personaje). Solo lectura - la usa el arnes
+    // de pruebas para comprobar que nunca trabaja sobre una partida real del usuario (H-04).
+    public string? LoadedFilePath => _loaded?.PlrPath;
 
     // Auditoria de Opus, T-B (segunda auditoria, Fable): "elegir OTRO personaje en Inicio con
     // cambios sin guardar los tira sin avisar - mismo agujero real que OnWindowClosing ya
