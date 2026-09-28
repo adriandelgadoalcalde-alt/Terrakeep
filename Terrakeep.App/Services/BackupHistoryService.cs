@@ -179,6 +179,9 @@ public sealed class BackupHistoryService
     public BackupEntry? SaveBackup(string plrPath, string? tplrPath, BackupReason reason)
     {
         if (!File.Exists(plrPath)) return null;
+        // Revisor visual r2, L-03: la guarda del arnes/tests va ANTES de DirectoryFor (que puede mover una
+        // carpeta de historial antigua) - ver CarpetaEstadoApp.PermiteEscribir.
+        if (!CarpetaEstadoApp.PermiteEscribir(BackupsRoot)) return null;
 
         byte[] plrBytes = File.ReadAllBytes(plrPath);
         string? tplrReal = tplrPath ?? Path.ChangeExtension(plrPath, ".tplr");
@@ -478,6 +481,7 @@ public sealed class BackupHistoryService
 
     private static void Borrar(BackupEntry entry)
     {
+        if (!CarpetaEstadoApp.PermiteEscribir(entry.ContainerPath)) return; // guarda (L-03)
         try
         {
             File.Delete(entry.ContainerPath);
@@ -561,6 +565,7 @@ public sealed class BackupHistoryService
         int n = 0; long bytes = 0;
         foreach (var h in huerfanas)
         {
+            if (!CarpetaEstadoApp.PermiteEscribir(h.Directory)) continue; // guarda (L-03)
             try
             {
                 Directory.Delete(h.Directory, recursive: true);
@@ -634,6 +639,8 @@ public sealed class BackupHistoryService
         {
             if (carpetaAntigua == carpetaNueva) return;
             if (!Directory.Exists(carpetaAntigua) || Directory.Exists(carpetaNueva)) return;
+            // guarda (L-03): mover es escribir en las dos rutas
+            if (!CarpetaEstadoApp.PermiteEscribir(carpetaAntigua) || !CarpetaEstadoApp.PermiteEscribir(carpetaNueva)) return;
             Directory.Move(carpetaAntigua, carpetaNueva);
         }
         catch (Exception)
