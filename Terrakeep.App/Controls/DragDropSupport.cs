@@ -46,6 +46,27 @@ namespace Terrakeep.App.Controls;
 // instrumentacion real: 477 de 479 posiciones identicas bit a bit). GetCursorPos (Win32, la
 // API real que SI sigue actualizandose durante el bucle OLE) + PointFromScreen es el patron
 // estandar para este problema concreto de WPF.
+//
+// Bug real "el ghost se pierde al arrastrar fuera de la Libreria" (28-sep-2026, reportado por
+// el usuario: "según lo vas moviendo para llevarlo al inventario... se lo comen las capas de
+// fuera de la libreria"). Causa real confirmada de forma estructural (dump de VisualTreeHelper.
+// GetParent desde el AdornerLayer encontrado, sin depender de ninguna captura de pantalla):
+// `AdornerLayer.GetAdornerLayer(element)`, cuando `element` es una tarjeta de la Libreria (o
+// cualquier slot dentro de un ScrollViewer, que es el caso real de las 3 librerias y de varios
+// paneles de slots), NO devuelve la capa de toda la ventana - devuelve una capa LOCAL propia del
+// ScrollViewer que contiene al elemento (WPF le da a los descendientes de un ScrollViewer su
+// propio AdornerLayer, anidado dentro de ScrollContentPresenter, para que adornos "normales"
+// -selección de texto, indicadores de resize- se recorten y se desplacen CON el scroll). Medido
+// en vivo: esa capa local medía 815x160px (el viewport visible de la lista de la Libreria) frente
+// a los 1164x821px reales de la capa de la ventana completa (la del AdornerDecorator implícito de
+// Window, dos instancias DISTINTAS confirmadas con ReferenceEquals). Como ScrollContentPresenter
+// SIEMPRE recorta su contenido al viewport (es lo que hace que el scroll funcione), cualquier cosa
+// que el DragAdorner dibuje fuera de esos ~160px de alto queda cortada en cuanto el cursor sale de
+// la zona visible de la Libreria - exactamente "se lo comen las capas de fuera de la libreria".
+// Arreglo: coger la capa desde la RAIZ de la ventana (`Window.GetWindow(element).Content`) en vez
+// de desde el propio elemento arrastrado - así el ghost usa SIEMPRE la capa de ventana completa,
+// tenga o no el elemento un ScrollViewer por encima, con el mismo fallback de antes (al propio
+// elemento) si no hay ninguna Window real todavía.
 internal static class DragDropSupport
 {
     [StructLayout(LayoutKind.Sequential)]
@@ -60,12 +81,13 @@ internal static class DragDropSupport
 
     internal static void StartCardDrag(FrameworkElement element, DataObject data, DragDropEffects allowedEffects = DragDropEffects.Copy | DragDropEffects.Move)
     {
-        // AdornerLayer.GetAdornerLayer/DragAdorner anclados al PROPIO elemento arrastrado (no a
-        // la ventana) - es el patron real de WPF: el layer que encuentra ya cubre toda la
-        // ventana (el AdornerDecorator implicito del template por defecto de Window), y usar el
-        // mismo elemento como AdornedElement mantiene la posicion en el MISMO espacio de
-        // coordenadas que UpdatePosition, sin tener que reproyectar nada a mano.
-        var layer = AdornerLayer.GetAdornerLayer(element);
+        // Capa de la VENTANA COMPLETA, nunca la capa local (mas pequeña) de un ScrollViewer
+        // intermedio - ver el hallazgo del 28-sep-2026 arriba. AdornedElement sigue siendo el
+        // propio `element` (mantiene el mismo espacio de coordenadas que UpdatePosition, que sigue
+        // usando `element.PointFromScreen`), solo cambia DE QUE CAPA cuelga el adorno.
+        var rootVisual = (Visual?)Window.GetWindow(element)?.Content;
+        var layer = (rootVisual != null ? AdornerLayer.GetAdornerLayer(rootVisual) : null)
+            ?? AdornerLayer.GetAdornerLayer(element);
         if (layer == null) { DragDrop.DoDragDrop(element, data, allowedEffects); return; }
 
         var adorner = new DragAdorner(element, element);

@@ -2588,6 +2588,16 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // DRAG_GHOST_ZORDER_LIBRERIA_SOLO=1 (28-sep-2026, "se lo comen las capas de fuera de la
+        // libreria" reportado por el usuario): ver el comentario largo de cabecera en
+        // CanarioDragGhostZOrderLibreria.cs.
+        if (Environment.GetEnvironmentVariable("DRAG_GHOST_ZORDER_LIBRERIA_SOLO") == "1")
+        {
+            EjecutarDragGhostZOrderLibreriaSolo(window, vm);
+            Console.WriteLine("DONE (DRAG_GHOST_ZORDER_LIBRERIA_SOLO)");
+            Environment.Exit(0);
+        }
+
         // HOMEBANNER_SOLO=1 (24-sep-2026, revision-correccion-integral-familia-Keep, bloque
         // "imagen1" - Inicio: banner "Continuar con X" + tarjetas): canario real de
         // investigador-bug (patron de 2 fases), ver el comentario largo de cabecera en
