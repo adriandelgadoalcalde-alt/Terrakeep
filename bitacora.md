@@ -31023,3 +31023,77 @@ las nuevas pruebas xunit dan la misma garantia sobre la formula sin necesitar la
 `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`/`ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`,
 `scripts/*` y `Terrasavr-Native.zip` que ya estaban en el arbol de trabajo al empezar esta ronda
 son de otras rondas en paralelo, no se tocaron ni se incluyeron). Sin `git push`.
+
+## 28-sep-2026 - "Parpadeos en la pestaña Vecindad" (encargo directo) - INVESTIGADO: no es este repo (rol investigador-bug, no aplica ningun arreglo)
+
+Encargo directo del usuario: "hay que seguir investigando el tema de los parpadeos en la pestaña
+vecindad siguen estando y muy presentes", con instruccion de investigar dentro de
+`Terrasavr-Native` (Terrakeep, WPF).
+
+**Busqueda exhaustiva en ESTE repo, sin resultado real**: grep case-insensitive de
+`vecindad|neighborhood|felicidad|happiness|vecino` sobre todo `Terrakeep.App/`,
+`Terrakeep.Core/`, `*.xaml`, `strings_es.json`/`strings_en.json` y este mismo `bitacora.md`. Los
+unicos hits reales son (1) "vecindad de 8" en `ESPEC-ui-exploracion.md:1293` (el halo de resaltado
+de minerales en el mapa, concepto de tile-vecino, nada que ver con NPCs) y (2) menciones sueltas de
+"vecino" en contextos de UI no relacionados (slot vecino de una rejilla, elemento vecino de fila,
+etc.). Las 8 pestañas reales de nivel superior de Terrakeep (`strings_es.json:778-785`: Acerca de,
+Builds, Personaje, Exploracion, Guia, Inicio, Servidor, Novedades) NO incluyen ninguna "Vecindad", y
+ninguna de las sub-pestañas de "Exploracion" (`ExplorationViewModel.cs`, panel de NPCs/casas/
+busqueda) se llama asi tampoco. **Terrakeep.App (WPF) no tiene ninguna pestaña "Vecindad" hoy** -
+no hay nada que reproducir aqui.
+
+**Causa real de la confusion, confirmada por evidencia cruzada**: la pestaña "Vecindad" SI existe,
+pero en el proyecto HERMANO **TerrakeepMod** (tModLoader, no WPF - mismo autor/marca "Terrakeep",
+repo distinto): `Documents\My Games\Terraria\tModLoader\ModSources\TerrakeepMod\UI\Exploracion\
+PestanaVecindad.cs`, sub-pestaña nueva de Exploracion añadida el 20-sep-2026 ("idea 5 - planificador
+de felicidad de vecinos", bitacora de TerrakeepMod linea 8677). Ese mismo parpadeo YA fue
+investigado y "cerrado" alli: **BUG 3** (`bitacora.md` de TerrakeepMod, lineas 10420-10497 y
+10564-10657) - causa raiz confirmada con medicion real: `PestanaVecindad.cs:118-125`
+(`Update`) llamaba `Refrescar()` cada 30 fotogramas SIN comprobar si algo cambiaba de verdad,
+`_lista.Clear()` + reconstruccion completa de filas cada vez (3 reconstrucciones en 95 fotogramas
+vigiladas por identidad de objeto). Arreglo aplicado (commit `4004113`, aplicador-fix `a133c584`):
+instantanea de comparacion (`_instantaneaAnterior`, string concatenado por NPC) ANTES de
+reconstruir - si coincide con la anterior, `Refrescar()` no toca `_lista` en absoluto. Verificado
+entonces: 3 reconstrucciones -> 1 sola en 95 fotogramas.
+
+**Por que el encargo de hoy (28-sep) dice que el parpadeo "sigue estando, muy presente" pese a ese
+cierre**: leido el codigo actual de `PestanaVecindad.cs` (lineas 190-212, confirmado que el arreglo
+de BUG 3 sigue en pie tal cual se describe arriba), la instantanea de comparacion incluye
+`(fiable ? -1 : (int)distanciaTiles)` por cada NPC (linea 206) - la distancia REAL en tiles del
+jugador a cada vecino, redondeada a entero, SOLO se congela a `-1` cuando el NPC esta dentro de
+`RadioTilesFiable`. Fuera de ese radio, `(int)distanciaTiles` cambia con cualquier movimiento real
+del jugador O del NPC (los NPC de pueblo caminan solos de forma constante) - cada vez que ese
+entero cruza una unidad, la instantanea deja de coincidir con la anterior y `Refrescar()` SI vuelve
+a hacer `_lista.Clear()` + reconstruccion completa, exactamente el mismo parpadeo que BUG 3
+pretendia eliminar. El arreglo de BUG 3 solo elimina el caso "nada cambio de verdad"; no elimina el
+caso "algo cambia constantemente por diseño" (distancia con NPCs paseando), que en una ciudad con
+varios NPCs activos es el caso comun, no el raro. **Hipotesis real, no confirmada en vivo** (no se
+ha lanzado tModLoader en esta sesion, fuera del alcance/repo asignado) - queda para quien investigue
+TerrakeepMod: verificar con el mismo arnes ya documentado alli (`TERRAKEEP_INVESTIGACION_3BUGS=1`)
+si el numero de reconstrucciones sigue siendo alto con NPCs caminando de verdad (no solo quietos
+como en la comprobacion original de BUG 3, que solo tenia "2 NPC en el sandbox" y no menciona si
+estaban en movimiento).
+
+**LIMITE REAL de esta ronda**: el bug descrito por el usuario no es reproducible en
+`Terrasavr-Native`/`Terrakeep.App` (WPF) porque la pestaña "Vecindad" no existe en este repo -
+confirmado por busqueda exhaustiva, no por ausencia de intento. Ningun archivo `.cs`/`.xaml` de
+`Terrakeep.App`/`Terrakeep.Core` tocado (nada que arreglar aqui). No se crea canario nuevo en el
+arnes de `Terrakeep.App.Tests` porque no hay ninguna superficie real que cubrir en este proyecto -
+un canario que "compruebe que no existe una pestaña Vecindad" no detectaria el bug real (que vive en
+otro runtime/lenguaje) y daria una falsa sensacion de cobertura.
+
+**Recomendacion concreta para el coordinador**: reencargar la investigacion (y, si aplica, el
+arreglo) a **TerrakeepMod**, no a Terrakeep.App - archivo real:
+`Documents\My Games\Terraria\tModLoader\ModSources\TerrakeepMod\UI\Exploracion\PestanaVecindad.cs`,
+zona a revisar `Refrescar()` (lineas ~156-224 a fecha de hoy) y en concreto la linea ~206
+(`(fiable ? -1 : (int)distanciaTiles)` dentro de la instantanea). Verificar EN VIVO con NPCs
+caminando (no solo 2 NPC quietos como el sandbox original de BUG 3) cuantas reconstrucciones reales
+ocurre por minuto; si la hipotesis de arriba se confirma, el arreglo natural es o bien cuantizar la
+distancia a un bucket mas grueso (p.ej. redondear a multiplos de 5-10 tiles en vez de a 1) para que
+no cruce el umbral con cada paso, o bien pasar del modelo "reconstruir todo si algo cambio" a
+"actualizar solo el texto de la fila que cambio" (la opcion B que el propio disenio de BUG 3 ya
+descarto por mayor superficie, ver linea 10477 de esa bitacora - puede que ahora sea la que de
+verdad hace falta).
+
+**Commit local**: solo esta entrada de `bitacora.md`. Ningun otro archivo tocado, ningun `git
+push`.
