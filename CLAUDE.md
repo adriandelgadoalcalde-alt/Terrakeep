@@ -255,3 +255,15 @@ sesión:
   `C:\Users\adrian\.claude\CLAUDE.md`. Instalar siempre de forma no
   invasiva (global o scratchpad, nunca como dependencia de producción del
   proyecto sin que se pida explícitamente).
+- **Nunca tocar las partidas reales del usuario desde pruebas o canarios**
+  (`Documents\My Games\Terraria\tModLoader\Players\*.plr/.tplr` y `Worlds\*.wld`,
+  y sus equivalentes de Terraria vainilla). Probar siempre sobre copias en una
+  carpeta temporal o fixtures del arnés. Antes de cualquier clic o tecla
+  simulados (`SendInput`), comprobar que no hay ningún diálogo modal abierto; si
+  aparece uno ("¿Guardar cambios?", etc.), abortar sin pulsar nada y nunca
+  responder "Sí"/"Guardar". Dirigir la entrada simulada a la ventana del proceso
+  de prueba (PID/HWND), nunca al primer plano a ciegas. Al terminar, verificar que
+  los hashes de los `.plr`/`.wld` reales no han cambiado. Incidente real
+  28-sep-2026: un canario abrió `Eldelgas.plr`, respondió "Sí" al diálogo de
+  guardar y lo sobrescribió 3 veces (restaurado desde
+  `%LOCALAPPDATA%\Terrakeep\Backups\`, ver `bitacora.md`).
