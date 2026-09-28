@@ -32343,3 +32343,103 @@ Calamity: `CalamityCategoryLabel` separa el CamelCase desde el 2.o segmento ("Ar
 - Desplegado desde worktree limpio en `a07e4f0c`: SHA256 publicado = instalado =
   `e52e943d583d304d8caccd7aad4ff5bd677a1c26d6b6e0d405dd4ac77468c6e7` en `%LocalAppData%\Programs\Terrakeep\`
   (Terrakeep cerrado; accesos directos apuntan ahi). Debug de herramientas.json recompilado 0/0.
+
+## 28-sep-2026 - FASE E del responsive global: rejilla de Buffs (parcial - RESTRICCION DE EJECUCION)
+
+Agente: aplicador-fix-responsive-faseE-28sep2026 (patron de dos fases; requirement
+`6b59710e-e57b-4677-89a1-2c4c58c29b5a`). Base `7a18ae7d`. Commit del arreglo: `1433d61e`.
+
+**Restriccion de ejecucion del encargo**: otro agente estaba probando Don't Starve Together con el
+raton real y necesitaba el escritorio - prohibido `Terrakeep.App.Tests`, abrir ventanas o `SendInput`
+hasta recibir "via libre". Permitido: leer/programar, `dotnet build`, `dotnet test` de Core.Tests/
+ViewModels.Tests. Esta entrada documenta el trabajo real hecho DENTRO de ese limite - medicion con el
+arnes, ejecucion del canario nuevo, capturas y despliegue quedan pendientes de la siguiente ronda.
+
+### Investigacion real (lectura de codigo, sin arnes)
+Las 7 pestañas internas de Personaje que no son Objetos/Library/BuffLibrary/Research (ya cerradas en
+B/C/D): Buffs, Investigacion (Fase D), Apariencia, Puntos de aparicion, Desbloqueos, Version, Comparar
+(`MainViewModel.PersonajeInnerTab`, enum privado: Objetos=0 Buffs=1 Investigacion=2 Apariencia=3
+SpawnPoints=4 Desbloqueos=5 Version=6 Comparar=7). El encargo pide "Buffs (su parte no-libreria) +
+Apariencia + Puntos de aparicion + Desbloqueos + Version + Comparar" (6 regiones, Investigacion ya
+cerrada).
+- **Buffs (BUG REAL, confirmado por lectura de codigo y comparacion linea a linea con
+  `Views/ObjetosView.xaml`)**: `BuffContainerCompactTemplate` (MainWindow.xaml) era la UNICA region
+  de toda la app que seguia con el patron viejo "ContainerCompactTemplate" - un `ScrollViewer` PROPIO
+  envolviendo la rejilla, sin ningun scroll owner de pagina real por encima (la fila `Grid.Row="0"` de
+  la pestaña Buffs solo tenia el `Border` con el banner+rejilla directamente dentro de la celda del
+  Grid exterior, a diferencia de Equipamiento/Inventario/Almacenes que desde la FASE C viven cada uno
+  dentro de su propio `ScrollViewer` de pagina + `AjusteAlViewport`). Ya anticipado por la propia
+  bitacora de la FASE C: "la unica `...ContainerCompactTemplate` que queda es
+  `BuffContainerCompactTemplate`, de Buffs: mismo patron, FASE E" (linea 31968). 44/22/10 slots en 11
+  columnas (4 filas exactas a la version mas alta) - caben de sobra en MinCell, sin ninguna razon real
+  para que necesite scroll propio nunca.
+- **Apariencia (candidata real, NO tocada esta ronda)**: dos `ScrollViewer` HERMANOS (no anidados) -
+  columna izquierda (preview 240x336 + checkbox + 2 filas de botones + un texto de ayuda) y columna
+  derecha (genero/peinado/tinte/colores/estadisticas). El propio comentario historico de la columna
+  izquierda (`R-07/H-07`) la llama "ScrollViewer de seguridad" y explica por que se añadio: "en
+  ventanas bajas (~700px de alto) la ultima linea del parrafo se recortaba SIN forma de alcanzarla" -
+  el anti-patron OLD MODEL EXACTO que el encargo pide sustituir (s34: "no quiero pequeños ScrollViewer
+  para leer texto normal"). Estimado a mano (Border 368 + margen 10 + CheckBox 28 + 2 WrapPanel 40+40 +
+  texto de ayuda ~50 ≈ 536px) contra el alto de contenido disponible a 1080x700 (~550-590px, por
+  comparacion con medidas reales de otras pestañas a ese mismo ancho de fases anteriores): un margen
+  MUY estrecho, no una diferencia enorme - candidata a corregirse con reflow/compactado de espaciado
+  (s14 paso 7) en vez de una reestructuracion grande, pero **sin verificacion runtime posible esta
+  ronda** (la unica fuente fiable es medirlo de verdad con el arnes, no una cuenta a mano) - se deja
+  documentado para la siguiente ronda en vez de aplicar un numero adivinado sin poder comprobarlo.
+- **Puntos de aparicion (`SpawnpointsView.xaml`), Desbloqueos (`UnlocksView.xaml`), Version
+  (`VersionView.xaml`), Comparar (`CompareView.xaml`)**: las 4 ya cumplen el contrato nuevo por
+  lectura de codigo - UN solo `ScrollViewer` por pagina con la cabecera/selectores/botones
+  estructurales FUERA de el (nunca dentro), reflow real con `WrapPanel` donde hace falta (Desbloqueos:
+  13 casillas en 4 grupos; Version: 4 grupos de version + diagnosticos), sin scroll anidado del mismo
+  eje ni scrolls compitiendo. Sin cambio de codigo de produccion - solo verificado por lectura, la
+  confirmacion final (clipping=0 en el minimo real) queda pendiente del arnes.
+
+### Arreglo real (Buffs)
+`Terrakeep.App/MainWindow.xaml`: `BuffContainerCompactTemplate` pierde su `ScrollViewer` propio (queda
+banner + `ItemsControl`/`SlotGridPanel` directos, `AvailableHeight` sigue apuntando al ancestro
+`ScrollViewer` mas cercano - solo cambia CUAL es ese ancestro). La fila `Grid.Row="0"` de la pestaña
+Buffs pasa a `ScrollViewer x:Name="BuffsPaginaContenedor"` + `controls:AjusteAlViewport
+x:Name="AjusteBuffs"` envolviendo el `Border` de siempre - mismo patron exacto ya verificado por la
+FASE C en `ObjetosPaginaInventario`/`AjusteInventario` (ver `Views/ObjetosView.xaml:1192-1318`), sin
+inventar ningun mecanismo nuevo (s28/s29). `EditarBuffTarjeta` (columna 1, sin scroll propio desde la
+FASE D) no cambia.
+
+### Canario nuevo `PERSONAJE_RESPONSIVE_SOLO` (`Terrakeep.App.Tests/CanarioResponsivePersonajeResto.cs`)
+Registrado en `Program.cs`. Mide la rejilla de Buffs (los 44 slots rellenos, peor caso) en los 5
+tamaños del encargo (1080x700/1366x768/1520x860/1920x1080/2560x1440) x ES/EN, primera entrada con el
+VM recien cargado, Libreria de buffs plegada y desplegada, banner "Deshacer" visible, resize en
+caliente (grande->normal->minimo->grande sin perder pestaña/idioma/slot de Editar) y negative
+acceptance del `ScrollViewer` viejo (SCROLL-ANIDADO/PAGINA-SCROLL/ENTERAS/CLIP-H/CLIP-V/HSCROLL/VIEJO,
+mismos codigos que EQUIP/INVALM_RESPONSIVE_SOLO). Aisla la copia del personaje igual que los canarios
+hermanos (`AislamientoPartidasReales.cs`), nunca guarda. Para las otras 5 pestañas: solo geometria
+INFORMATIVA (nunca `Fallo()`) - ScrollViewer visibles y su `vp/ext/scr` en cada tamaño, incluido el
+aviso explicito en Apariencia ("scr>0 = necesita el 'ScrollViewer de seguridad' a este tamaño").
+**NO ejecutado esta ronda** (restriccion de ejecucion) - compila (`dotnet build` 0/0) pero no hay
+lectura roja/verde real todavia. Pendiente en la siguiente ronda: confirmar rojo contra `7a18ae7d`
+(worktree limpio) y verde contra `1433d61e`, capturas en `docs/evidencia/responsive-global/faseE/`.
+
+### Verificacion (dentro del limite permitido)
+- `dotnet build Terrakeep.slnx -c Debug`: 0/0 (incluye el canario nuevo).
+- `Terrakeep.Core.Tests`: 789/789, sin regresion.
+- `Terrakeep.App.ViewModels.Tests`: 807/807, sin regresion (ningun ViewModel tocado esta ronda).
+- `Terrakeep.App.Tests` (EQUIP/INVALM/LIBRARY/PERSONAJE, la pasada completa): **NO ejecutados** -
+  restriccion de ejecucion explicita del encargo. Pendiente de "via libre para el arnes".
+- Despliegue a `%LocalAppData%\Programs\Terrakeep\` y recompilar el Debug de `herramientas.json`:
+  **pendiente**, mismo motivo (el encargo lo deja explicitamente para cuando haya via libre).
+
+### Commits
+`1433d61e` - "FASE E del responsive global: retira el ultimo ScrollViewer anidado (rejilla de Buffs)"
+(`Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/Program.cs`,
+`Terrakeep.App.Tests/CanarioResponsivePersonajeResto.cs` - archivos exactos, sin `git add -A`; el
+resto del working tree seguia con cambios de otros agentes en paralelo, sin tocar).
+
+### Pendiente para la siguiente ronda (con el arnes libre)
+1. Ejecutar `PERSONAJE_RESPONSIVE_SOLO`: confirmar rojo contra `7a18ae7d` y verde contra `1433d61e`.
+2. Medir Apariencia de verdad (no a mano) y decidir si el ajuste de espaciado basta o hace falta
+   reflow/SizeClass real; aplicar el arreglo si procede.
+3. Confirmar por geometria real (no solo lectura) que SpawnPoints/Desbloqueos/Version/Comparar cumplen
+   el contrato en el minimo real (1080x700), ES/EN.
+4. Sin regresion: `EQUIP_RESPONSIVE_SOLO`/`INVALM_RESPONSIVE_SOLO`/`LIBRARY_RESPONSIVE_SOLO` en 0 FALLO.
+5. Capturas antes/despues en `docs/evidencia/responsive-global/faseE/`.
+6. Desplegar desde worktree limpio a `%LocalAppData%\Programs\Terrakeep\` (Terrakeep cerrado,
+   verificar hash) y recompilar el Debug de `herramientas.json`.
