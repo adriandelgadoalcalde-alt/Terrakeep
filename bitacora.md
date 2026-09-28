@@ -31970,3 +31970,49 @@ Binario Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 a las 
 Control final: las 23 partidas reales con el mismo SHA256 que al empezar. Queda en `%TEMP%` una carpeta
 `TerrakeepArnes-354916` (15:05) con una copia de `prueba.plr` que el borrado al salir del arnés no pudo
 quitar (fichero aún abierto) y que no tengo permiso para borrar desde aquí; es una copia, no una partida real.
+
+## 28-sep-2026 - FASE C del responsive global: correcciones del revisor visual independiente (FAIL sobre fdb44463)
+
+Veredicto del revisor (evidencia en `scratchpad\revisor-faseC-r1\`): FAIL. Correcciones (`ae8d23f9`):
+
+- **H-C1 (High)**: la PRIMERA entrada en Inventario a 1080x700 con la Librería desplegada dejaba la página en
+  316px para un viewport de 295,9 (20px de scroll, celda 44 en vez de 40, 5ª fila y borde del marco
+  cortados) hasta plegar/desplegar o redimensionar. Causa medida instrumentando `AjusteAlViewport` (log
+  temporal, retirado): la primera medida llega con el MinCell POR DEFECTO de `SlotGridPanel` (44; el
+  MultiBinding con `AncestorType=Window` aún no ha resuelto) -> déficit 20 -> el decorador vuelve a medir la
+  rejilla con alto+20; al resolver MinCell=40, WPF re-mide SOLO la rejilla con esa restricción inflada (236),
+  a 44px cabe justo, el déficit sigue en 0 y el decorador nunca se entera. Arreglo (opción 1 del revisor, sin
+  inflar-y-sumar porque eso recortaría la última fila en el arrange): `SlotGridPanel.MedidaConAltoFinitoEvent`,
+  evento enrutado que burbujea en CADA medida con alto finito (sustituye al recorrido a mano del árbol, Low
+  #5); `AjusteAlViewport` lo atiende con `InvalidateMeasure()` solo si no está midiendo él mismo (las medidas
+  que provoca él las ignora: sin bucle de layout). Primera entrada ANTES: vp 295,9 ext 316 scr 20, celda 44,
+  40/50 enteras; DESPUÉS: vp 295,9 ext 295,9 scr 0, celda 40, 50/50 (Almacenes: 44,1, 40/40, scr 0). Test de
+  regresión `AjusteAlViewportTests.SiLaRejillaSeReMidePorSuCuentaElAjusteVuelveAlAltoReal` (MinCell 44->40 +
+  `UpdateLayout` real): contrafactual con el aviso desactivado -> 286 en vez de 266 (el bug exacto); con él, 266.
+- **M-C3**: el canario ya no solo imprime. `PAGINA-SCROLL` si la página desplaza > 0,5px sin banner,
+  `ENTERAS` si no se ven todas las casillas, primera entrada en desplegada medida ANTES que la plegada,
+  medida tras "Deshacer" (scr 0, 50/50) y `BANDA` (abajo). Contra fdb44463: 2 FALLO (PAGINA-SCROLL 20px,
+  ENTERAS 40/50) - captura `invalm-r2-antes-inv-primera-entrada-1080x700-libdesplegada.png`. Ahora 0.
+- **M-C1 (§17)**: `AjusteAlViewport.AltoUtilMaximo` (alto con la celda máxima para ese ancho) y
+  `ObjetosView.AjustarRepartoObjetosLibreria` (LayoutUpdated, converge en un paso): con Inventario/Almacenes
+  activos y la Librería desplegada, la fila de Objetos (`FilaObjetos`) se limita a lo mayor entre la página a
+  celda máxima y el panel Editar entero (no se le crea scroll) + 9px, y la Librería (`FilaLibreria`) se queda
+  el resto sin el tope `LibraryRowMaxHeight` (se reaplica: el binding lo vuelve a escribir al cambiar
+  HeightClass - medido, se quedaba en 640). Marcos `HorizontalAlignment=Center`, ceñidos a cabecera+rejilla.
+  Medido: banda vacía bajo el marco con la rejilla en MaxCell 1px (antes ~193px Inventario / ~280px Almacenes
+  a 2560x1440); Librería 690px (Inventario) / 777px (Almacenes) a 2560x1440 (antes 513 / tope 640), 416,6px a
+  1920 con Almacenes; marco 960px centrado (rejilla 936). En tamaños pequeños no cambia nada (el tope supera el
+  reparto 3*): 1080x700 y 1366x768 desplegada siguen con scr 0 y todas las casillas. MaxCell no se toca, una
+  sola región por página. Nota: a 1080x1162 (monitor vertical) Inventario deja 44px bajo el marco porque el
+  panel Editar con Cénit necesita ese alto (a propósito, para no crearle scroll).
+- **Low #4**: cabecera de Almacenes (píldoras + acciones) centrada en el eje de la rejilla (criterio N-03).
+- **M-C2**: registrado aparte en el requirement (known-diff `570a3c9d`, Medium, no aceptado): scroll de Editar
+  con un arma de Inventario (Cénit) 138,9 / 98,1 / 42,9px a 1080 desplegada / 1366 desplegada / 1520 - para la
+  FASE D/E con §7. No se toca. El permiso `aa5f7395` (armadura) sigue en 7,3px (no empeora).
+- **Para la FASE D (anotado, no tocado)**: contraste bajo de la categoría seleccionada en el árbol de la
+  Librería (hallazgo Low del revisor).
+
+Verificación: build Release 0/0; Core 782/782; ViewModels 786/786; `INVALM_RESPONSIVE_SOLO` 0 FALLO (capturas
+"despues" regeneradas); `EQUIP_RESPONSIVE_SOLO`/`NAV123_SOLO`/`AR14_SOLO`/`KEEPQA_EQUIPINV_SOLO` 0 FALLO,
+`ARLAY_CANARIO_SOLO` OK. Las 23 partidas reales con el mismo SHA256 antes y después (sin SendInput);
+`session.json` igual a su copia de las 14:40 (esta vez guardada COPIA, no solo hash).
