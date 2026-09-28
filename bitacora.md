@@ -32016,3 +32016,14 @@ Verificación: build Release 0/0; Core 782/782; ViewModels 786/786; `INVALM_RESP
 "despues" regeneradas); `EQUIP_RESPONSIVE_SOLO`/`NAV123_SOLO`/`AR14_SOLO`/`KEEPQA_EQUIPINV_SOLO` 0 FALLO,
 `ARLAY_CANARIO_SOLO` OK. Las 23 partidas reales con el mismo SHA256 antes y después (sin SendInput);
 `session.json` igual a su copia de las 14:40 (esta vez guardada COPIA, no solo hash).
+
+Despliegue (corrección del revisor): worktree limpio en `6bf67224` (retirado), `dotnet publish -c Release
+-p:PublishProfile=win-x64`, `robocopy /MIR` (sin `unins000.*`) a `%LocalAppData%\Programs\Terrakeep\` con
+Terrakeep cerrado; SHA256 publicado = instalado = `0dd43cc34bca731ba1e050aa8268afd87beb02c521d75647baa34cbba3ed720d`
+(contiene `MedidaConAltoFinito`, `AltoUtilMaximo`, `AjustarRepartoObjetosLibreria`). Debug de `herramientas.json`
+recompilado 0/0. ViewModels.Tests en la pasada final: 785/786 - el único fallo,
+`WorldCompareCardExportTests.ExportarTarjetaPng_...` (el PNG renderizado sale con todos los bytes a 0), es
+AMBIENTAL: reproducido idéntico en un worktree de `0900908b` (anterior a cualquier cambio de esta ronda en
+`WorldCompareViewModel`), y el mismo test pasó a las 15:00 (785/785); coincide con el cambio de monitor/sesión
+de esta tarde (RenderTargetBitmap en blanco, gotcha ya documentado en CLAUDE.md). Con `AjusteAlViewportTests`
+(6/6) y el resto verdes.
