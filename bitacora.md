@@ -31627,3 +31627,78 @@ comitear de otro agente en `ObjetosView.xaml`/ViewModels), `robocopy /MIR` a
 `%LocalAppData%\Programs\Terrakeep\` con `Terrakeep.exe` cerrado; SHA256 publicado = instalado =
 `641B63EB837CE90D7F3DD9521F57D46D986A44C6E7ABF473FD15C9D04158A4AD`. Debug de `herramientas.json`
 recompilado 0/0 (incluye el nuevo `DragGhost`).
+
+## 28-sep-2026 - FASE B del responsive global: correcciones tras el revisor visual (FAIL, V-01..V-04)
+
+Revisor visual independiente: FAIL (evidencia en el requirement `6b59710e`). Aplicadas las 5 correcciones
+del coordinador (aplicador-fix-responsive-faseB-28sep2026).
+
+- **V-01 (High, s17)**: la primera versión (una subvista siempre) usaba ~54% del ancho de la fila a
+  1920 y ~37% maximizado. Ahora `MainViewModel.IsEquipmentSideBySide` enseña las 3 subvistas a la vez
+  en el orden del juego (Tinte | Vanidad | Armadura, `EquipamientoColumnaTintes/Vanidad/Armadura`,
+  cada columna ceñida a su rejilla). El selector Armadura/Vanidad/Tintes NO desaparece: resalta la
+  subvista enfocada (borde de acento por `SelectedKind`), pulsarlo lleva el foco de teclado al primer
+  slot de esa columna (`ObjetosView.OnEquipmentKindClick`) y seleccionar un slot de otra columna mueve
+  el selector (`EquipmentGroupViewModel.SyncKindWithSlot`, llamado desde `SelectSlot`). MaxCell de
+  Armadura/Vanidad/Tintes 90 → 72. **Desviación medida respecto al encargo ("desde Amplio/Extra")**:
+  umbral Extra (>= 1920). Con las 3 desde Amplio, a 1520x860 las celdas caían a 40,1-41,3px (el
+  MinCell) frente a 72px con una subvista a 1366 - agrandar la ventana encogía los iconos un 44%. Las
+  3 a >= 56px necesitan ~936px de columna central (~1750px de ventana). Resultado: uso del ancho de la
+  fila 98% a 1920 (celdas 66,8-68px) y 89% maximizado 2576x1408 (72px); 1520: una subvista a 72px, 65%.
+- **V-02**: subtítulo del panel Editar (`EditarSubtituloSlot`) con `TextWrapping`. Antes salía
+  "Loadout 1 - armadura/accesoric" sin número de slot; ahora envuelve a 2 líneas (172,9x29,3px) con
+  "· slot 0" visible en todos los tamaños. El canario mide recortes de TextBlocks dentro de Editar
+  (`Recorte()` + `ZonaVisible`): 0.
+- **V-03 (s25)**: `ContainerViewModel` tiene un constructor con resolvedor de nombre que escucha el
+  cambio real de idioma (suscripción débil) y re-traduce su `DisplayName` y el `ContainerName` de sus
+  slots (`ItemSlotViewModel.RefreshContainerName`). `AddContainer` y `EquipmentGroupViewModel.
+  AddSlotSet` pasan resolvedores (copia local de la variable del bucle). Medido: en vivo "Monedas
+  (4/4)"→"Coins (4/4)", "Munición (4/4)"→"Ammo (4/4)", subtítulo de Editar "Loadout 1 -
+  armadura/accesorios"→"Loadout 1 - armor/accessories"; arranque en frío en EN correcto; vuelta a ES
+  correcta.
+- **V-04**: la comprobación VIEJO del canario ya no exige "una sola subvista": falla si hay >1 subvista
+  sin el selector entero y coherente (exactamente una columna resaltada = `SelectedKind`). Nuevo
+  escenario ANCHO (umbral 60% en ventanas >= 1900px), caso Amplio 1520x860, coherencia activa a 1920
+  (clic en Vanidad → foco de teclado en su columna; slot de Tintes → selector en Tintes).
+- **Permiso excepcional s13** registrado en el Task Context para el scroll propio de 12,3px del panel
+  Editar a 1080x700 con la Librería desplegada (motivo, región, evidencia y fase que lo resuelve).
+
+### Incidente real durante esta corrección: el canario escribió el personaje real del usuario (corregido)
+
+Una versión intermedia del canario reabría el personaje real (`Home.OpenCommand`, para medir el
+arranque en frío en EN). Como el personaje quedaba `IsDirty` tras cambiar de idioma, se mostró el
+diálogo real "cambios sin guardar" y, al responderse "Sí" (ejecución desacoplada, no presencié quién
+lo respondió), `Save()` escribió `Documents\My Games\Terraria\tModLoader\Players\Eldelgas.plr/.tplr`
+tres veces (12:03:54, 12:06:52, 12:19:37). Detectado por el aviso "Guardado" en una captura y por las
+fechas del .plr. Restaurado: el historial de Terrakeep (`%LOCALAPPDATA%\Terrakeep\Backups\
+Eldelgas-aced7768\20260928-120354-184-A.tkbak`, "BeforeSave" del primer guardado, idéntico byte a byte
+al snapshot de las 08:08 → el estado real del usuario) se copió sobre `Eldelgas.plr/.tplr` y sobre sus
+`.bak` (SHA256 `14cd89901248…` / `7732b8e1b84f…`). Copia del estado sobrescrito conservada en el
+scratchpad de la sesión (`eldelgas-antes-de-restaurar/`). Verificado después: las ejecuciones
+siguientes del canario dejan el .plr con el mismo hash y el historial sin copias nuevas (20 → 20).
+
+Causa real (bug de producción, anterior a esta fase, destapado por el canario): cambiar de idioma
+marcaba el personaje como modificado sin ningún dato cambiado - (1) `AppearanceViewModel` re-traducía
+`HairDyeDisplayName`, (2) `ItemSlotViewModel.RefreshLocalizedText` (via `MainViewModel.
+OnIdiomaCambiadoSlots`) y (3) `BuffSlotViewModel` re-traducían sus textos, y los tres `PropertyChanged`
+llegaban a `MarkDirty`. Arreglado sin ocultar ediciones reales: `AppearanceViewModel.
+RefrescandoIdioma`, `BuffSlotViewModel.RefrescandoIdioma` y `MainViewModel._refrescandoIdiomaSlots`
+marcan la re-traducción y los manejadores de "sin guardar" la ignoran; `ContainerName` excluido en los
+3 filtros de propiedades de UI. Test nuevo con personaje cargado desde un .plr temporal y un buff
+real (`CambiarDeIdiomaConPersonajeCargado_TraduceYNoMarcaCambios`): FALLA con el arreglo de Buffs
+comentado (contrafactual ejecutado, pila de `BuffsViewModel.Rebuild`) y PASA con él. El canario además
+pone `IsDirty=false` antes de cualquier `OpenCommand` sobre el personaje real y comprueba que cambiar
+de idioma no ensucia (`IsDirty tras cambiar de idioma en vivo = False`).
+
+### Verificación
+
+- `dotnet build Terrakeep.slnx -c Release`: 0/0 (con el trabajo en curso de otro agente en
+  `DragDropSupport.cs`/`Terrakeep.App.csproj` hubo un intervalo sin compilar ajeno a esta fase; no se
+  tocaron esos archivos).
+- `Terrakeep.Core.Tests` 782/782; `Terrakeep.App.ViewModels.Tests` 775/775 (767 + 5 del Theory de
+  umbral + 3 de `NombreContenedorIdiomaEnVivoTests`).
+- `EQUIP_RESPONSIVE_SOLO`: 0 FALLO; personaje real intacto (hash antes = después, 20 → 20 copias).
+- `NAV123_SOLO` 0, `KEEPQA_EQUIPINV_SOLO` 0, `ARLAY_CANARIO_SOLO` OK, `AR14_SOLO` 0 (tras hacer que
+  AR-14 mida solo rejillas visibles: la rejilla lado a lado oculta conservaba posiciones de 1920 y
+  daba 13 falsos "invade 205-648px" en el barrido descendente).
+- Capturas "despues" regeneradas (16) en `docs/evidencia/responsive-global/faseB/`.
