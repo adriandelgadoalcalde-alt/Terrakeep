@@ -31334,7 +31334,9 @@ serie por "Proceso de host de pruebas bloqueado" - la máquina tenía **decenas 
 esta ronda (confirmado con `tasklist` real, que en un momento dado llegó a tardar más de 2
 minutos en responder) - mismo patrón de intermitencia por contención ya documentado repetidas
 veces en esta bitácora, no una regresión de este cambio (ninguno de los 528 tests que sí llegaron
-a correr falló). No se reintentó una pasada completa dado el estado de la máquina en ese momento.
+a correr falló). **Actualización posterior al commit `dc68bf66`**: una segunda pasada completa
+(`vstest.console` sobre el `bin\Release` recién compilado con el arreglo ya incluido) terminó con
+**767/767 en verde, 0 fallos** (47 min 11 s por la misma contención) - gate completo confirmado.
 
 ### Recompilación/redespliegue real
 
@@ -31351,3 +31353,98 @@ arreglo) + `Terrakeep.App.Tests/Program.cs` (canario nuevo, staging quirúrgico 
 `git hash-object`/`git update-index` porque OTRO agente en paralelo tenía ya en el working tree
 un bloque suyo distinto sin relación, en el mismo fichero, a medio terminar - nunca `git add -A`,
 solo mi propio contenido llegó al índice). No se tocó ningún otro control de la cabecera.
+
+### 28-sep-2026 - "el ghost de arrastre desde la Libreria se pierde al salir de su zona" (reporte
+### real del usuario: "ahora lo coge pero según lo vas moviendo... se lo comen las capas de fuera
+### de la libreria") - causa real distinta del bug de posición del 25-sep, confirmada de forma
+### 100% estructural (sin depender de ninguna captura de pantalla)
+
+Encargo recibido ya con el bug reproducido por el usuario: el arreglo del 25-sep-2026
+(`GetCursorPos` en vez de `Mouse.GetPosition`) dejó la POSICIÓN del ghost siguiendo al cursor con
+normalidad, pero aparecio un SEGUNDO bug distinto, en la CAPA donde se dibuja: al arrastrar una
+tarjeta de la Libreria hacia el Inventario/Equipamiento (o cualquier zona fuera de la propia
+Libreria), el ghost desaparece en cuanto el cursor sale de la zona visible de la Libreria.
+
+**Investigación real (sin patrón de 2 fases separado esta vez - hallazgo y arreglo en la misma
+ronda)**: se intentó primero verificación visual real (arrastre físico con `SendInput` fino +
+captura de PANTALLA REAL vía `BitBlt`, no `RenderTargetBitmap` - ver limitación ya documentada el
+25-sep) pero la captura no mostró el ghost ni cerca del origen ni del destino, resultado
+inconcluyente por la MISMA limitación ya conocida (un `Adorner` recién invalidado no se pinta de
+verdad dentro del mismo tick síncrono, tampoco vía BitBlt si se captura demasiado rápido tras
+`InvalidateVisual`). En vez de insistir con capturas frágiles, se aisló la hipótesis con evidencia
+**estructural y determinista**: un volcado de `VisualTreeHelper.GetParent` empezando en el
+`AdornerLayer` que `AdornerLayer.GetAdornerLayer(tarjeta)` devuelve de verdad para una tarjeta real
+de la Libreria (personaje real 'Eldelgas', categoría 'Materiales').
+
+**Causa real**: la tarjeta vive dentro de un `ScrollViewer` (la lista de resultados de la
+Libreria). WPF le da a los descendientes de un `ScrollViewer` su propia `AdornerLayer` LOCAL,
+anidada dentro de `ScrollContentPresenter` (pensada para que adornos normales - selección de
+texto, indicadores de resize - se recorten y se desplacen CON el scroll, comportamiento correcto
+para esos casos). Medido en vivo: esa capa local medía **815x160px** (el viewport visible de la
+lista) frente a los **1164x821px** reales de la capa de la ventana completa (la del
+`AdornerDecorator` implícito de `Window`) - dos instancias DISTINTAS confirmadas con
+`ReferenceEquals`. Como `ScrollContentPresenter` SIEMPRE recorta su contenido al viewport (es lo
+que hace que el scroll funcione), cualquier cosa que el `DragAdorner` dibujara fuera de esos
+~160px de alto quedaba cortada en cuanto el cursor salía de la Libreria - exactamente "se lo comen
+las capas de fuera de la libreria" (el usuario arrastra HACIA ARRIBA, hacia Equipamiento/
+Inventario, que está fuera - por encima - de ese viewport recortado).
+
+**Arreglo aplicado** (`Terrakeep.App/Controls/DragDropSupport.cs`, `StartCardDrag`): coger la capa
+desde la RAÍZ de la ventana (`Window.GetWindow(element).Content`) en vez de desde el propio
+elemento arrastrado, con el mismo fallback de antes (al propio elemento) si no hubiera ninguna
+`Window` real todavía. `AdornedElement` sigue siendo el propio `element` (mismo espacio de
+coordenadas que ya usa `UpdatePosition` vía `PointFromScreen`), solo cambia DE QUÉ CAPA cuelga el
+adorno.
+
+**Verificación real**:
+- Canario preexistente de posición (`CanarioDragGhostLibreria.cs`, `DRAG_GHOST_LIBRERIA_SOLO=1`):
+  sigue OK tras el arreglo (292 `GiveFeedback`, 286/292 posiciones distintas, span 571px sobre
+  581px reales recorridos) - sin regresión en el mecanismo del 25-sep.
+- Canario NUEVO (`Terrakeep.App.Tests/CanarioDragGhostZOrderLibreria.cs`,
+  `DRAG_GHOST_ZORDER_LIBRERIA_SOLO=1`): re-deriva con la MISMA API pública de WPF (sin tocar nada
+  privado de `DragDropSupport`, mismo criterio ya establecido en el proyecto sin
+  `InternalsVisibleTo`) la capa que produccion usa ahora desde `window.Content` y confirma que
+  cubre la ventana completa (medido: ventana real 1180x860, capa resuelta 1164x821 - ≥90% en cada
+  eje) - deliberadamente NO depende de `RenderTargetBitmap` sobre un `Adorner` ni de capturas de
+  pantalla (limitación ya documentada, ver arriba). Cierra el hueco de cobertura real: nunca antes
+  se había probado DE QUÉ CAPA cuelga el ghost cuando el elemento vive dentro de un `ScrollViewer`.
+- `dotnet build Terrakeep.App`/`Terrakeep.App.Tests` (Debug): 0/0. `dotnet build Terrakeep.App`
+  (Release): 0/0 (la solución completa no se pudo compilar de una sola vez en Release por un
+  `testhost` de OTRO agente bloqueando la copia de `Terrakeep.App.ViewModels.Tests\bin\Release\
+  ...` en ese instante - transitorio, ajeno a este cambio, confirmado con `tasklist`).
+
+**`Terrakeep.App.ViewModels.Tests` - BLOQUEADO por contención real del entorno, no verificado en
+esta ronda**: 3 intentos reales (con salida aislada vía `-p:BaseOutputPath` para descartar
+conflicto de archivos con otros agentes) - los 3 compilan correctamente y arrancan el descubrimiento
+de pruebas ("1 archivos de prueba... coincidieron"), pero se quedan colgados sin avanzar ni un solo
+resultado durante 5-50 minutos (CPU casi plana, p.ej. 11.09→11.40 en 9 minutos), incluso tras matar
+el intento anterior y reintentar. La colección tiene `DisableTestParallelization=true` y al menos un
+test arranca su propio hilo `STA`/ventana real (`SlotGridPanelAdaptiveColumnsTests`) - con múltiples
+agentes de la familia Keep compitiendo por el mismo escritorio real en paralelo ahora mismo
+(confirmado: `testhost.exe`/`dotnet.exe` de otros agentes activos durante todo el intento, y la
+propia bitácora, entrada inmediatamente anterior a esta, de OTRO agente documentando la misma
+contención en el mismo fichero), es coherente que un test temprano se quede esperando foco/
+activación de ventana que nunca llega. Regla de la familia aplicada ("si algo falla dos veces
+seguidas, parar y escribirlo en bitácora, no insistir en bucle"): tras el 3er intento idéntico se
+paró aquí en vez de seguir reintentando. Riesgo de regresión real evaluado como MUY BAJO pese a
+esto: `DragDropSupport.cs` es un helper puro de la capa de Vista (`Terrakeep.App.Controls`), sin
+ningún llamante en código de ViewModel (`grep` confirma que solo `MainWindow.xaml.cs` y
+`ObjetosView.xaml.cs`, ambos code-behind de Vista, llaman a `StartCardDrag`) - `Terrakeep.App.
+ViewModels.Tests` no ejercita esta ruta en absoluto. Pendiente real: re-ejecutar
+`Terrakeep.App.ViewModels.Tests` completo en cuanto el escritorio compartido esté menos saturado.
+
+**Despliegue real**: `Terrakeep.exe` (Debug, el binario real de `herramientas.json`) recompilado
+0/0 - proceso no estaba abierto (confirmado con `tasklist`), sin nada pendiente de cerrar. Release
+de `Terrakeep.App` también recompilado 0/0 tras liberarse el lock. No existe ninguna copia
+instalada de `Terrakeep.exe` en este equipo (`Program Files`/`Program Files (x86)`/
+`%LOCALAPPDATA%\Programs` sin resultados) - el único binario real a redesplegar es el de `bin\`.
+
+**Commit real** (Terrasavr-Native, sin `git push`): `Terrakeep.App/Controls/DragDropSupport.cs`
+(el arreglo) + `Terrakeep.App.Tests/Program.cs` (10 líneas del hook del canario nuevo, staged con
+un patch quirúrgico vía `git apply --cached` porque OTRO agente en paralelo tenía ya en el working
+tree un bloque suyo distinto sin relación, `PERSONAJEMENU_TOGGLE_SOLO`, en el mismo fichero -
+además un `git reset --soft` de un tercer agente vació el índice a mitad de la ronda, avisado por
+el coordinador; se re-hizo el staging quirúrgico desde cero) + `Terrakeep.App.Tests/
+CanarioDragGhostZOrderLibreria.cs` (canario nuevo, archivo entero, sin conflicto). Nunca `git add
+-A`; `MainWindow.xaml.cs` (69 líneas de OTRO agente, el toggle del menú de Personaje) y el resto de
+archivos modificados por otras sesiones se dejaron intactos, sin tocar.
