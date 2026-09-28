@@ -85,24 +85,51 @@ internal static class DragDropSupport
         // intermedio - ver el hallazgo del 28-sep-2026 arriba. AdornedElement sigue siendo el
         // propio `element` (mantiene el mismo espacio de coordenadas que UpdatePosition, que sigue
         // usando `element.PointFromScreen`), solo cambia DE QUE CAPA cuelga el adorno.
-        var rootVisual = (Visual?)Window.GetWindow(element)?.Content;
+        var window = Window.GetWindow(element);
+        var rootVisual = (Visual?)window?.Content;
         var layer = (rootVisual != null ? AdornerLayer.GetAdornerLayer(rootVisual) : null)
             ?? AdornerLayer.GetAdornerLayer(element);
-        if (layer == null) { DragDrop.DoDragDrop(element, data, allowedEffects); return; }
 
-        var adorner = DragGhost.CrearAdorner(element);
-        GetCursorPos(out var inicio);
-        adorner.UpdatePosition(element.PointFromScreen(new Point(inicio.X, inicio.Y)));
-        layer.Add(adorner);
+        DragGhost.SpriteAdorner? adorner = null;
+        if (layer != null)
+        {
+            adorner = DragGhost.CrearAdorner(element);
+            GetCursorPos(out var inicio);
+            adorner.UpdatePosition(element.PointFromScreen(new Point(inicio.X, inicio.Y)));
+            layer.Add(adorner);
+        }
+
+        // Pedido del usuario (28-sep-2026, con foto real): el cursor OLE por defecto (flecha con el
+        // recuadro punteado de "mover/copiar") desaparece en TODO el arrastre - se sustituye por la
+        // mano que agarra (o su variante "no se puede soltar aqui" cuando el destino devuelve None).
+        var cursorMano = DragCursors.Agarrar(element);
+        var cursorNo = DragCursors.NoPermitido(element);
         void OnFeedback(object? s, GiveFeedbackEventArgs e)
         {
-            GetCursorPos(out var screenPt);
-            // Punta del cursor (hotspot) en coordenadas del elemento - misma conversion
-            // GetCursorPos+PointFromScreen de siempre (DPI incluido); el desplazamiento relativo
-            // (sprite ENCIMA de la punta) lo decide DragGhost.CalcularRectGhost.
-            adorner.UpdatePosition(element.PointFromScreen(new Point(screenPt.X, screenPt.Y)));
+            if (adorner != null)
+            {
+                GetCursorPos(out var screenPt);
+                // Hotspot del cursor (centro de la palma) en coordenadas del elemento - misma
+                // conversion GetCursorPos+PointFromScreen de siempre (DPI incluido); la colocacion
+                // relativa (sprite CENTRADO en el hotspot) la decide DragGhost.CalcularRectGhost.
+                adorner.UpdatePosition(element.PointFromScreen(new Point(screenPt.X, screenPt.Y)));
+            }
+            DragCursors.AplicarFeedback(e, cursorMano, cursorNo);
+        }
+        // Zonas sin destino real (fondo, cabeceras, otras pestañas, la propia Libreria): la ventana
+        // tiene AllowDrop=True (solo para soltar .plr/.wld, OnWindowDrop) y sin un DragOver propio
+        // WPF devolvia el efecto PERMITIDO por el origen - el cursor anunciaba "se puede soltar"
+        // donde soltar no hace nada. Mientras dura ESTE arrastre, lo que ningun slot haya marcado
+        // como Handled (OnItemSlotDragOver/OnBuffSlotDragOver si lo hacen) pasa a None. Nunca toca
+        // un arrastre de ficheros desde el Explorador (FileDrop).
+        void OnDragOverSinDestino(object s, DragEventArgs e)
+        {
+            if (e.Handled || e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
         }
         element.GiveFeedback += OnFeedback;
+        if (window != null) window.DragOver += OnDragOverSinDestino;
         try
         {
             DragDrop.DoDragDrop(element, data, allowedEffects);
@@ -110,7 +137,10 @@ internal static class DragDropSupport
         finally
         {
             element.GiveFeedback -= OnFeedback;
-            layer.Remove(adorner);
+            if (window != null) window.DragOver -= OnDragOverSinDestino;
+            if (adorner != null) layer!.Remove(adorner);
+            // Termine como termine (soltar, Esc, soltar fuera de la ventana): fuera la mano.
+            DragCursors.Restaurar();
         }
     }
 
@@ -127,8 +157,9 @@ internal static class DragDropSupport
 //     IconPath) y se dibuja SOLO su ImageSource con DrawImage, sin rectangulo, fondo ni borde.
 //     Si no hubiera ningun Image (no pasa hoy en ningun origen real), se cae al VisualBrush de
 //     antes para no quedarse sin ghost.
-//  2. Encima de la punta: centrado en horizontal sobre el hotspot y con su borde inferior
-//     SeparacionSobreCursorPx por encima - la flecha nunca lo tapa.
+//  2. (Sustituido el 28-sep-2026, segunda ronda) Antes: encima de la punta de la flecha. Ahora el
+//     cursor es una mano que agarra (DragCursors) y el sprite va CENTRADO en su hotspot (centro de
+//     la palma, OffsetSobreHotspot = 0,0) - "que la mano haga que lo agarra por el centro".
 //  3. Mas grande: EscalaSprite x el tamaño con que se ve el sprite en la tarjeta, con un minimo de
 //     LadoMinimoPx en el lado mayor, escalado por vecino mas cercano (pixel art nitido).
 // Publico (no internal) SOLO para que el arnes Terrakeep.App.Tests (sin InternalsVisibleTo,
@@ -139,8 +170,11 @@ public static class DragGhost
     public const double EscalaSprite = 1.5;
     /// <summary>Tamaño minimo (px logicos) del lado mayor del sprite arrastrado.</summary>
     public const double LadoMinimoPx = 48;
-    /// <summary>Separacion (px logicos) entre el borde inferior del sprite y la punta del cursor.</summary>
-    public const double SeparacionSobreCursorPx = 6;
+    /// <summary>Desplazamiento (px logicos) del CENTRO del sprite respecto al hotspot del cursor de
+    /// mano (centro de la palma). 0,0 = la mano "agarra" el objeto por su centro (pedido del usuario
+    /// 28-sep-2026: que la mano tape parte del objeto es aceptable). Ajustable aqui sin tocar nada
+    /// mas.</summary>
+    public static readonly Vector OffsetSobreHotspot = new(0, 0);
     /// <summary>Opacidad del sprite arrastrado (ligera transparencia para ver el destino debajo).</summary>
     public const double OpacidadSprite = 0.85;
 
@@ -154,10 +188,9 @@ public static class DragGhost
         return new Size(mostrado.Width * escala, mostrado.Height * escala);
     }
 
-    /// <summary>Rectangulo del sprite: centrado en X sobre la punta del cursor y con su borde
-    /// inferior SeparacionSobreCursorPx por encima de ella.</summary>
-    public static Rect CalcularRectGhost(Point puntaCursor, Size sprite) =>
-        new(puntaCursor.X - sprite.Width / 2, puntaCursor.Y - SeparacionSobreCursorPx - sprite.Height, sprite.Width, sprite.Height);
+    /// <summary>Rectangulo del sprite: su CENTRO en el hotspot del cursor (+ OffsetSobreHotspot).</summary>
+    public static Rect CalcularRectGhost(Point hotspot, Size sprite) =>
+        new(hotspot.X + OffsetSobreHotspot.X - sprite.Width / 2, hotspot.Y + OffsetSobreHotspot.Y - sprite.Height / 2, sprite.Width, sprite.Height);
 
     /// <summary>Image real del sprite dentro del elemento arrastrado: visible, con Source, y la de
     /// mayor area renderizada (en un slot de objetos, el icono real frente al "fantasma" de hueco
@@ -191,7 +224,7 @@ public static class DragGhost
             : new SpriteAdorner(arrastrado, new VisualBrush(arrastrado) { Stretch = Stretch.Uniform }, new Size(arrastrado.ActualWidth, arrastrado.ActualHeight));
     }
 
-    /// <summary>Adorno que dibuja SOLO el sprite (sin caja) encima de la punta del cursor.
+    /// <summary>Adorno que dibuja SOLO el sprite (sin caja) centrado en el hotspot del cursor de mano.
     /// IsHitTestVisible en False para no interferir con el propio Drop.</summary>
     public sealed class SpriteAdorner : Adorner
     {
@@ -226,10 +259,10 @@ public static class DragGhost
             RectActual = DragGhost.CalcularRectGhost(new Point(0, 0), TamañoSprite);
         }
 
-        /// <summary>Recoloca el sprite encima de la punta del cursor (coordenadas del elemento adornado).</summary>
-        public void UpdatePosition(Point puntaCursor)
+        /// <summary>Recoloca el sprite centrado en el hotspot del cursor (coordenadas del elemento adornado).</summary>
+        public void UpdatePosition(Point hotspot)
         {
-            RectActual = DragGhost.CalcularRectGhost(puntaCursor, TamañoSprite);
+            RectActual = DragGhost.CalcularRectGhost(hotspot, TamañoSprite);
             InvalidateVisual();
         }
 
@@ -241,4 +274,146 @@ public static class DragGhost
             drawingContext.Pop();
         }
     }
+}
+
+// Pedido del usuario (28-sep-2026, con foto real del arrastre): "cuando coges algo, que cambie de
+// ratón a una mano, hacer que esa mano haga que lo agarra por el centro el objeto... Y hay que
+// ocultar ese pequeño cuadrado que hay al lado del ratón". El "pequeño cuadrado" es el cursor OLE
+// por defecto de DragDrop.DoDragDrop (flecha + recuadro punteado de mover/copiar). WPF no trae un
+// cursor de mano cerrada (Cursors.Hand es la mano que SEÑALA), asi que se incrustan dos .cur
+// propios (Assets/cursors/, generados con scripts/generar-cursor-mano/): mano que agarra y la misma
+// mano con el disco rojo de "no se puede soltar aqui". Cada .cur trae 32/40/48/64/96 px con el
+// hotspot en el centro de la palma (16,18 en 32 px); se elige la imagen del tamaño de cursor real
+// del sistema para el DPI del monitor (GetSystemMetricsForDpi(SM_CXCURSOR)), sin reescalar.
+// Se carga con CreateIconFromResourceEx en vez de `new Cursor(Stream)` para CONSERVAR el HCURSOR:
+// el arnes (CanarioDragCursorMano) lo compara con GetCursor()/GetCursorInfo durante un arrastre
+// real. Publico (no internal) por el mismo motivo que DragGhost: el arnes no tiene InternalsVisibleTo.
+public static class DragCursors
+{
+    public const string RecursoAgarrar = "Terrakeep.Cursores.mano-agarrar.cur";
+    public const string RecursoNoPermitido = "Terrakeep.Cursores.mano-agarrar-no.cur";
+
+    private static readonly System.Collections.Generic.Dictionary<(string, int), (Cursor cursor, IntPtr handle, int lado, Point hotspot)> _cache = new();
+
+    /// <summary>HCURSOR de la mano que agarra usada por el ultimo arrastre (0 si aun no se cargo).</summary>
+    public static IntPtr HandleAgarrarActual { get; private set; }
+    /// <summary>HCURSOR de la variante "no se puede soltar aqui" usada por el ultimo arrastre.</summary>
+    public static IntPtr HandleNoPermitidoActual { get; private set; }
+    /// <summary>Lado (px fisicos) de la imagen del .cur elegida en la ultima carga.</summary>
+    public static int LadoActual { get; private set; }
+    /// <summary>Hotspot (px fisicos, dentro de la imagen elegida) de la ultima carga.</summary>
+    public static Point HotspotActual { get; private set; }
+
+    public static Cursor Agarrar(Visual? contexto)
+    {
+        var (c, h) = Cargar(RecursoAgarrar, contexto);
+        HandleAgarrarActual = h;
+        return c;
+    }
+
+    public static Cursor NoPermitido(Visual? contexto)
+    {
+        var (c, h) = Cargar(RecursoNoPermitido, contexto);
+        HandleNoPermitidoActual = h;
+        return c;
+    }
+
+    /// <summary>Lo que hace el GiveFeedback de StartCardDrag: nunca el cursor OLE por defecto;
+    /// mano si el destino acepta algo, "no se puede" si devuelve None.</summary>
+    public static void AplicarFeedback(GiveFeedbackEventArgs e, Cursor mano, Cursor noPermitido)
+    {
+        bool acepta = (e.Effects & (DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link)) != 0;
+        e.UseDefaultCursors = false;
+        Mouse.SetCursor(acepta ? mano : noPermitido);
+        e.Handled = true;
+    }
+
+    /// <summary>Fin del arrastre (soltar, Esc o soltar fuera de la ventana): flecha normal y que WPF
+    /// vuelva a aplicar el cursor real del elemento que haya debajo, si es de esta ventana.</summary>
+    public static void Restaurar()
+    {
+        SetCursor(LoadCursor(IntPtr.Zero, IDC_ARROW));
+        Mouse.UpdateCursor();
+    }
+
+    private static (Cursor, IntPtr) Cargar(string recurso, Visual? contexto)
+    {
+        int objetivo = LadoObjetivo(contexto);
+        lock (_cache)
+        {
+            if (_cache.TryGetValue((recurso, objetivo), out var enCache))
+            {
+                LadoActual = enCache.lado; HotspotActual = enCache.hotspot;
+                return (enCache.cursor, enCache.handle);
+            }
+            byte[] cur;
+            using (var s = typeof(DragCursors).Assembly.GetManifestResourceStream(recurso))
+            {
+                if (s == null) return (Cursors.Hand, IntPtr.Zero);
+                using var ms = new System.IO.MemoryStream();
+                s.CopyTo(ms);
+                cur = ms.ToArray();
+            }
+            var (lado, hx, hy, datos) = ElegirImagen(cur, objetivo);
+            if (datos == null) return (Cursors.Hand, IntPtr.Zero);
+            // Formato de recurso RT_CURSOR: WORD hotspotX + WORD hotspotY + DIB.
+            var buf = new byte[4 + datos.Length];
+            BitConverter.GetBytes((ushort)hx).CopyTo(buf, 0);
+            BitConverter.GetBytes((ushort)hy).CopyTo(buf, 2);
+            datos.CopyTo(buf, 4);
+            IntPtr h = CreateIconFromResourceEx(buf, (uint)buf.Length, false, 0x00030000, lado, lado, 0);
+            if (h == IntPtr.Zero) return (Cursors.Hand, IntPtr.Zero);
+            var cursor = System.Windows.Interop.CursorInteropHelper.Create(new HandleCursor(h));
+            _cache[(recurso, objetivo)] = (cursor, h, lado, new Point(hx, hy));
+            LadoActual = lado;
+            HotspotActual = new Point(hx, hy);
+            return (cursor, h);
+        }
+    }
+
+    private static int LadoObjetivo(Visual? contexto)
+    {
+        double escala = 1;
+        try { if (contexto != null) escala = VisualTreeHelper.GetDpi(contexto).DpiScaleX; } catch (InvalidOperationException) { }
+        int lado = 0;
+        try { lado = GetSystemMetricsForDpi(SM_CXCURSOR, (uint)Math.Round(96 * escala)); } catch (EntryPointNotFoundException) { }
+        return lado > 0 ? lado : (int)Math.Round(32 * escala);
+    }
+
+    /// <summary>Elige del .cur la imagen mas pequeña con lado &gt;= objetivo (o la mayor si ninguna llega).</summary>
+    private static (int lado, int hx, int hy, byte[]? datos) ElegirImagen(byte[] cur, int objetivo)
+    {
+        if (cur.Length < 6 || BitConverter.ToUInt16(cur, 2) != 2) return (0, 0, 0, null);
+        int n = BitConverter.ToUInt16(cur, 4);
+        int mejor = -1, mejorLado = 0;
+        for (int i = 0; i < n; i++)
+        {
+            int lado = cur[6 + 16 * i]; if (lado == 0) lado = 256;
+            bool llega = lado >= objetivo, mejorLlega = mejorLado >= objetivo;
+            if (mejor < 0 || (llega && (!mejorLlega || lado < mejorLado)) || (!llega && !mejorLlega && lado > mejorLado)) { mejor = i; mejorLado = lado; }
+        }
+        if (mejor < 0) return (0, 0, 0, null);
+        int e = 6 + 16 * mejor;
+        int hx = BitConverter.ToUInt16(cur, e + 4), hy = BitConverter.ToUInt16(cur, e + 6);
+        int tam = BitConverter.ToInt32(cur, e + 8), off = BitConverter.ToInt32(cur, e + 12);
+        if (off < 0 || tam <= 0 || off + tam > cur.Length) return (0, 0, 0, null);
+        var datos = new byte[tam];
+        Array.Copy(cur, off, datos, 0, tam);
+        return (mejorLado, hx, hy, datos);
+    }
+
+    private sealed class HandleCursor : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid
+    {
+        public HandleCursor(IntPtr h) : base(true) { SetHandle(h); }
+        protected override bool ReleaseHandle() => DestroyCursor(handle);
+    }
+
+    private const int SM_CXCURSOR = 13;
+    private static readonly IntPtr IDC_ARROW = new(32512);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr CreateIconFromResourceEx(byte[] presbits, uint dwResSize, bool fIcon, uint dwVer, int cxDesired, int cyDesired, uint flags);
+    [DllImport("user32.dll")] private static extern bool DestroyCursor(IntPtr hCursor);
+    [DllImport("user32.dll")] private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
+    [DllImport("user32.dll")] private static extern IntPtr LoadCursor(IntPtr hInstance, IntPtr lpCursorName);
+    [DllImport("user32.dll")] private static extern IntPtr SetCursor(IntPtr hCursor);
 }

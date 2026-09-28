@@ -19,6 +19,11 @@
     <Content Include="Assets\**\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- 28-sep-2026: cursores propios del arrastre (mano que agarra / "no se puede soltar aqui"),
+         incrustados en el ensamblado - los carga DragCursors (Controls/DragDropSupport.cs) sin
+         depender de ficheros sueltos ni de Application.Current. Generados con
+         scripts/generar-cursor-mano/. -->
+    <EmbeddedResource Include="Assets\cursors\*.cur" LogicalName="Terrakeep.Cursores.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <PropertyGroup>

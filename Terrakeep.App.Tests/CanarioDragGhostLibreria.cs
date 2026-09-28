@@ -55,6 +55,7 @@
 // arreglo de produccion, que ya esta confirmado por la medicion numerica de posicion (GetCursorPos)
 // de arriba. Se descarto la captura para no dejar codigo que aparenta verificar algo que en
 // realidad no funciona en este arnes.
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -68,8 +69,24 @@ internal static partial class Program
     {
         try
         {
+            // Seguridad (28-sep-2026, aviso del coordinador tras un incidente real con un .plr del
+            // usuario sobrescrito por otra prueba en vivo): este canario hace arrastres REALES que
+            // modifican el personaje en memoria, asi que NUNCA abre el fichero real - carga una COPIA
+            // (.plr + .tplr si existe) en la propia salida de compilacion, con el PID en la ruta.
+            // Cualquier guardado accidental iria a la copia, jamas a Documents\My Games.
             var personajeReal = vm.Home.Characters.FirstOrDefault();
-            if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
+            if (personajeReal != null && File.Exists(personajeReal.FilePath))
+            {
+                string carpetaCopia = Path.Combine(AppContext.BaseDirectory, "copia-personaje-drag", Environment.ProcessId.ToString());
+                Directory.CreateDirectory(carpetaCopia);
+                string copia = Path.Combine(carpetaCopia, Path.GetFileName(personajeReal.FilePath));
+                File.Copy(personajeReal.FilePath, copia, overwrite: true);
+                string tplr = Path.ChangeExtension(personajeReal.FilePath, ".tplr");
+                if (File.Exists(tplr)) File.Copy(tplr, Path.ChangeExtension(copia, ".tplr"), overwrite: true);
+                vm.LoadFromPath(copia);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"DRAG_GHOST_LIBRERIA: personaje cargado desde una COPIA ('{copia}'), nunca desde el original");
+            }
             vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; // Personaje > Objetos
             FijarTamaño(window, 1180, 860);
             DoEvents(); DoEvents(); DoEvents();
@@ -124,6 +141,12 @@ internal static partial class Program
             var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
             bool foco = ForzarPrimerPlano(hwnd);
             Console.WriteLine($"DRAG_GHOST_LIBRERIA: foco real conseguido antes del arrastre = {foco}");
+            if (!SeguroParaInyectar(hwnd) || !EsDeLaVentana(hwnd, centroOrigen) || !EsDeLaVentana(hwnd, centroDestino))
+            {
+                tarjeta.GiveFeedback -= OnFeedbackDeDiagnostico;
+                Console.WriteLine("FALLO: DRAG_GHOST_LIBRERIA_SOLO - ABORTADO sin pulsar nada: la ventana de prueba no esta en primer plano, esta deshabilitada (dialogo modal abierto) o el origen/destino lo tapa otra ventana");
+                return;
+            }
 
             // Arrastre real (SetCursorPos/mouse_event a nivel de SO, ya usado en este arnes para
             // otros gestos - ver ForzarPrimerPlano/RealClickAt) desde un hilo aparte: DoDragDrop
@@ -205,6 +228,10 @@ internal static partial class Program
             {
                 Console.WriteLine("DRAG_GHOST_LIBRERIA: OK - la posicion real del cursor (GetCursorPos+PointFromScreen) siguio recorriendo un rango comparable a la distancia real del arrastre; el ghost deberia seguir al cursor con normalidad (verificar tambien visualmente si hay dudas).");
             }
+
+            // 28-sep-2026 (segunda ronda): cursor de mano propio en arrastres REALES desde
+            // Libreria, Inventario, Equipamiento y Almacenes - ver CanarioDragCursorMano.cs.
+            EjecutarCursorManoArrastres(window, vm);
         }
         catch (Exception ex) { Console.WriteLine("DRAG_GHOST_LIBRERIA-EXCEPTION: " + ex); }
     }
@@ -215,7 +242,7 @@ internal static partial class Program
     // un elemento real y comprueba, con criterios independientes de la implementacion:
     //  - dibuja solo el sprite (no el VisualBrush de la tarjeta entera);
     //  - tamaño >= 1,5x el sprite tal como se ve, y lado mayor >= 48px;
-    //  - centrado en X sobre la punta y con el borde inferior por ENCIMA de ella (sin solaparla);
+    //  - (desde el 28-sep-2026, segunda ronda) su CENTRO en el hotspot del cursor de mano, +-1 px;
     //  - render offscreen real (RenderTargetBitmap del propio adorno): ningun pixel pintado donde el
     //    sprite solo es transparente (sin fondo/borde/caja) y nada fuera de su rectangulo.
     // Contra el comportamiento viejo (VisualBrush de la tarjeta, +12,+12, mismo tamaño) fallan las
@@ -240,16 +267,17 @@ internal static partial class Program
         if (ladoGhost + 0.01 < 48) fallos.Add($"el lado mayor del sprite arrastrado ({ladoGhost:0.#}px) es menor que el minimo de 48px");
         if (Math.Abs(tam.Width / tam.Height - mostrado.Width / mostrado.Height) > 0.02) fallos.Add("el escalado no conserva la proporcion del sprite");
 
-        var punta = new Point(tam.Width / 2 + 12, tam.Height + 30);
+        // 28-sep-2026 (segunda ronda, "que la mano lo agarre por el centro"): el CENTRO del sprite
+        // tiene que caer en el hotspot del cursor (centro de la palma de la mano), +-1 px.
+        var punta = new Point(tam.Width / 2 + 24, tam.Height / 2 + 24);
         adorner.UpdatePosition(punta);
         var r = adorner.RectActual;
-        Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: punta del cursor=({punta.X:0.#},{punta.Y:0.#}) -> rect ghost=({r.Left:0.#},{r.Top:0.#},{r.Width:0.#}x{r.Height:0.#}) ; borde inferior {punta.Y - r.Bottom:0.#}px por encima ; centro X desviado {Math.Abs((r.Left + r.Right) / 2 - punta.X):0.##}px");
-        if (Math.Abs((r.Left + r.Right) / 2 - punta.X) > 0.5) fallos.Add("el sprite no esta centrado en horizontal sobre la punta del cursor");
-        if (r.Bottom > punta.Y - 2) fallos.Add($"el borde inferior del sprite ({r.Bottom:0.#}) no queda por encima de la punta ({punta.Y:0.#}) - la flecha lo tapa");
-        if (r.Bottom < punta.Y - 20) fallos.Add($"el sprite queda demasiado lejos por encima de la punta ({punta.Y - r.Bottom:0.#}px)");
+        double desvX = (r.Left + r.Right) / 2 - punta.X, desvY = (r.Top + r.Bottom) / 2 - punta.Y;
+        Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: hotspot del cursor=({punta.X:0.#},{punta.Y:0.#}) -> rect ghost=({r.Left:0.#},{r.Top:0.#},{r.Width:0.#}x{r.Height:0.#}) ; centro del sprite desviado ({desvX:0.##},{desvY:0.##})px del hotspot");
+        if (Math.Abs(desvX) > 1 || Math.Abs(desvY) > 1) fallos.Add($"el centro del sprite no cae en el hotspot del cursor (desviado {desvX:0.##},{desvY:0.##} px; tolerancia 1 px)");
 
         // Render offscreen real del propio adorno.
-        int W = (int)Math.Ceiling(r.Right + 12), H = (int)Math.Ceiling(punta.Y + 12);
+        int W = (int)Math.Ceiling(r.Right + 24), H = (int)Math.Ceiling(r.Bottom + 24);
         adorner.Measure(new Size(W, H));
         adorner.Arrange(new Rect(0, 0, W, H));
         adorner.UpdateLayout();
@@ -308,10 +336,11 @@ internal static partial class Program
                 enc.Save(fs);
             }
             Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: evidencia PNG en {dir}\\drag-ghost-{etiqueta}-*.png");
+            GuardarComposicionMano(rtb, punta, etiqueta, elemento, dir);
         }
         catch (Exception ex) { Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: aviso - no se pudo guardar el PNG de evidencia: {ex.Message}"); }
 
-        if (fallos.Count == 0) Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: OK - solo sprite, sin recuadro, {ladoGhost / ladoMostrado:0.##}x mas grande y encima de la punta del cursor");
+        if (fallos.Count == 0) Console.WriteLine($"DRAG_GHOST_ASPECTO[{etiqueta}]: OK - solo sprite, sin recuadro, {ladoGhost / ladoMostrado:0.##}x mas grande y centrado en el hotspot de la mano");
         else foreach (var f in fallos) Console.WriteLine($"FALLO: DRAG_GHOST_ASPECTO[{etiqueta}] - {f}");
     }
 }
