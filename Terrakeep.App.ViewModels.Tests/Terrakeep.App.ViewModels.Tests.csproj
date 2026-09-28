@@ -38,4 +38,11 @@
     <ProjectReference Include="..\Terrakeep.App\Terrakeep.App.csproj" />
   </ItemGroup>
 
+  <!-- Algunos tests renderizan a PNG (RenderTargetBitmap, p. ej. WorldCompareCardExportTests).
+       Con la sesion de Windows desconectada WPF no dibuja nada salvo con este interruptor
+       documentado; con pantallas presentes no cambia nada. Mismo ajuste que Terrakeep.App.Tests. -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable" Value="true" />
+  </ItemGroup>
+
 </Project>
