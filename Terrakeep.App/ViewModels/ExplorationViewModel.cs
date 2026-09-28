@@ -1521,6 +1521,15 @@ public partial class ExplorationViewModel : ObservableObject
         // que ya pasa con IsEditing arriba.
         if (newValue != null) SidebarMode = ExplorationSidebarMode.ChestInspector;
         else if (oldValue != null) SidebarMode = ExplorationSidebarMode.Browse;
+
+        // Bug real (28-sep-2026, encargo maestro Familia Keep): CanSaveEditingChest() depende de
+        // EditingChest, pero nada reevaluaba SaveEditingChestCommand al cambiarlo - a diferencia
+        // del patron correcto ya usado por SaveSpawnPointCommand (OnEditSpawnXChanged/YChanged
+        // llaman a NotifyCanExecuteChanged() explicitamente). El boton Guardar del Inspector de
+        // cofre se quedaba deshabilitado para siempre tras abrir un cofre (su CanExecute solo se
+        // evaluaba una vez, en la construccion, cuando EditingChest todavia era null) - sintoma
+        // real reportado por el usuario ("cambiar un prefijo no activa poder guardar el cofre").
+        SaveEditingChestCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
