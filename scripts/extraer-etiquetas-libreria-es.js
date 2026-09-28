@@ -76,11 +76,24 @@ try {
     "Quest fish": "Misión de Pez", "Potions (regeneration)": "Pociones (regeneración)",
     "Accessories ($1)": "Accesorios ($1)", "Magic damage ($1)": "Daño Mágico ($1)",
     "Summon damage ($1)": "Daño de Invocación ($1)", "Summoner whips ($1)": "Látigos de Invocador ($1)",
-    "Fishing poles ($1)": "Cañas de Pesca ($1)", "Bookcase": "Librerías", "Bathtub": "Bañeras",
+    "Fishing poles ($1)": "Cañas de Pescar ($1)", "Bookcase": "Librerías", "Bathtub": "Bañeras",
     "Lamp": "Lámparas", "Chandelier": "Lámparas de Araña", "Sofa": "Sofás",
     "Ebonwood": "Madera de Ébano", "Shadewood": "Madera Sombría", "Dynasty": "Dinástica",
     "Spooky wood": "Madera Tétrica", "Plants & Organic": "Plantas & Orgánico",
     "Marble": "Mármol", "Vortex": "Vórtice", "Lesion": "Lesión",
+    // Segunda revision visual (L-01): terminologia OFICIAL de Terraria contrastada con
+    // es-ES.Items.json de lang.zip (Mineral carmesí, Lingote de clorofita / piñonita, Madera perlada,
+    // Bambú, Fragmento de nebulosa, Silla de champiñón / de oro, Vagoneta, Madera de caoba rica) y un
+    // solo termino por mueble, el del juego: Fregadero (66 objetos), Retrete (65; "Inodoro" 1), Linterna
+    // (72; "Farolillo" 2), Librería (63), Aparador (64), Banco de trabajo, Candelabro. "Glass" se queda
+    // en "Vidrio" a proposito: el juego dice "cristal" tanto para Glass como para Crystal, y las dos
+    // carpetas conviven en la misma rama.
+    "Demonite & Crimtane": "Mineral Endemoniado & Mineral Carmesí",
+    "Hallowed & Chlorophyte": "Sagrado & Clorofita", "Shroomite & Ectoplasm": "Piñonita & Ectoplasma",
+    "Nebula": "Nebulosa", "Pearlwood": "Madera Perlada", "Bamboo": "Bambú", "Mushroom": "Champiñón",
+    "Golden": "Oro", "Mahogany": "Madera de Caoba Rica", "Minecarts": "Vagonetas",
+    "Sink": "Fregaderos", "Toilet": "Retretes", "Dresser": "Aparadores", "Candelabra": "Candelabros",
+    "Workbench": "Bancos de Trabajo", "Bookcases ($1)": "Librerías ($1)", "Lanterns ($1)": "Linternas ($1)",
   };
   let corregidas = 0;
   for (const [clave, texto] of Object.entries(correcciones)) {

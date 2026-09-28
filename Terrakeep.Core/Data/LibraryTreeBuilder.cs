@@ -321,6 +321,11 @@ public static class LibraryTreeBuilder
         if (CalamityCategoryLabelsEs.TryGetValue(category, out var direct)) return direct;
         var segments = category.Split('/');
         if (CalamityCategoryLabelsEs.TryGetValue(segments[0], out var topLabel)) segments[0] = topLabel;
+        // Revisor visual r2 de la FASE D (L-01): los nombres propios del mod que no se traducen (sets de
+        // armadura: "DesertProwler", "GodSlayer", "TitanHeart"...) salian pegados en CamelCase SOLO en español;
+        // el ingles ya los separaba (CalamityCategoryLabelEn). Misma separacion aqui, a partir del 2.o segmento
+        // (una categoria desconocida de un solo segmento se sigue devolviendo tal cual).
+        for (int i = 1; i < segments.Length; i++) segments[i] = SepararCamelCase(segments[i]);
         return string.Join(" - ", segments);
     }
 
