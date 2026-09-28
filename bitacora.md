@@ -31578,3 +31578,13 @@ Editar/librería/búsqueda o ViewModel recreado) y VIEJO (negative acceptance, a
 - Obstáculo resuelto: un `git worktree` de HEAD para ese baseline falló dos veces (ruta demasiado
   larga en el scratchpad; y en `C:\wtfb` no compila porque `Terrakeep.App` referencia
   `..\..\ServidorKeep` por ruta relativa) → se usó el stash por rutas, sin tocar el trabajo ajeno.
+
+### Despliegue real (FASE B)
+
+`Terrakeep.exe` no estaba en ejecución (`tasklist`). `dotnet publish Terrakeep.App/Terrakeep.App.csproj
+-c Release -p:PublishProfile=win-x64` en verde → `robocopy /MIR` (excluyendo `unins000.*`) a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (barra de tareas y Menú Inicio apuntan ahí):
+SHA256 idéntico publicado/instalado `cefc6dc6d473423ed25dcd71286fcf82d3d5dfe64dea971514017ddd7555c94b`;
+el exe instalado contiene `EquipamientoSelectorVista` y ya no contiene `IsEquipmentExpanded`
+(`grep -a`). Binario Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 con el
+cambio. Commits: `8f3094dc` (arreglo + canario + tests adaptados), `213fd407` (bitácora + capturas).
