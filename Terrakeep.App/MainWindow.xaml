@@ -411,9 +411,18 @@
             </Border>
         </DataTemplate>
 
-        <!-- Rejilla compacta de los 44/22/10 slots de buff reales - calco de
-             ContainerCompactTemplate, misma SlotGridPanel/ReferenceColumns=10 (mismo tamaño de
-             icono que el resto de rejillas de la app). -->
+        <!-- FASE E del responsive global (28-sep-2026, s8/s13/s14/s26 A/s28): RETIRADO el
+             ScrollViewer PROPIO que envolvia la rejilla - era la ULTIMA copia real del patron
+             "ContainerCompactTemplate" que la FASE C ya retiro para Equipamiento/Inventario/
+             Almacenes (ver el comentario completo en Views/ObjetosView.xaml, mismo bug real:
+             ese ScrollViewer anidado dentro del scroll owner de la pagina recibia alto
+             INFINITO, se quedaba del alto de su propio contenido -> la celda de SlotGridPanel
+             quedaba CONGELADA en el primer tamaño que tuvo, y al pulsar un slot el foco
+             arrastraba la pagina). Ahora banner + rejilla SIN ScrollViewer propio (calco de
+             ContainerFlowTemplate): el nuevo ScrollViewer "BuffsPaginaContenedor" (mas abajo,
+             en el TabItem) es el UNICO scroll owner y AvailableHeight sigue apuntando a el
+             (recorrido real del arbol visual - el ancestro ScrollViewer mas cercano cambia solo
+             porque el de aqui desaparece, sin tocar el binding). -->
         <DataTemplate x:Key="BuffContainerCompactTemplate" DataType="{x:Type vm:BuffContainerViewModel}">
             <DockPanel>
                 <!-- H4-05/H4-06 (cuarta auditoria de Opus, Fable): mismo banner real de Deshacer
@@ -433,22 +442,20 @@
                         </TextBlock>
                     </DockPanel>
                 </Border>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de SlotGridPanel
-                                     (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
-                                <controls:SlotGridPanel Columns="{Binding Columns}"
-                                                         MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
-                                                         MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
-                                                         Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
-                                                         ReferenceColumns="10"
-                                                         AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de SlotGridPanel
+                                 (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
+                            <controls:SlotGridPanel Columns="{Binding Columns}"
+                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                                     ReferenceColumns="10"
+                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
             </DockPanel>
         </DataTemplate>
 
@@ -1271,7 +1278,16 @@
                                 <ColumnDefinition Width="300" />
                             </Grid.ColumnDefinitions>
 
-                                <Border Grid.Row="0" Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                <!-- FASE E del responsive global (28-sep-2026, s8/s13/s14/s26 A/s28): la rejilla de Buffs
+                                     era la UNICA region que quedaba con un ScrollViewer PROPIO anidado (ver el
+                                     comentario retirado de BuffContainerCompactTemplate, mas arriba). Mismo patron ya
+                                     verificado por la FASE C para Inventario/Almacenes: ScrollViewer "BuffsPaginaContenedor"
+                                     como UNICO scroll owner vertical de esta celda + AjusteAlViewport (mide contra
+                                     ViewportHeight, la rejilla encoge/crece la celda entre MinCell..MaxCell y solo si ni
+                                     a MinCell cabe crece la pagina lo justo para que la desplace su owner). -->
+                                <ScrollViewer x:Name="BuffsPaginaContenedor" Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <controls:AjusteAlViewport x:Name="AjusteBuffs" AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                         Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,8">
                                     <DockPanel>
                                         <!-- H4-06 (cuarta auditoria de Opus, Fable): "la rejilla de Buffs no
@@ -1302,6 +1318,8 @@
                                         <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
                                     </DockPanel>
                                 </Border>
+                                </controls:AjusteAlViewport>
+                                </ScrollViewer>
 
                                 <Border x:Name="EditarBuffTarjeta" Style="{StaticResource EditarTarjetaComposicion}">
                                     <ContentControl Content="{Binding BuffEdit}" ContentTemplate="{StaticResource BuffEditTemplate}" />

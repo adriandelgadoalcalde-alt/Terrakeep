@@ -2656,6 +2656,15 @@ internal static partial class Program
             Console.WriteLine("DONE (LIBRARY_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // PERSONAJE_RESPONSIVE_SOLO=1 (28-sep-2026, FASE E del responsive global): "resto de Personaje"
+        // (Buffs - su rejilla, NO la Libreria de abajo, ya cerrada en la FASE D -, Apariencia, Puntos de
+        // aparicion, Desbloqueos, Version y Comparar) - ver CanarioResponsivePersonajeResto.cs.
+        if (Environment.GetEnvironmentVariable("PERSONAJE_RESPONSIVE_SOLO") == "1")
+        {
+            EjecutarPersonajeRestoResponsiveSolo(window, vm);
+            Console.WriteLine("DONE (PERSONAJE_RESPONSIVE_SOLO)");
+            Environment.Exit(0);
+        }
         // INICIO_AJUSTES_SOLO=1 (28-sep-2026): solo el bloque de Inicio/Ajustes/Novedades/Acerca de
         // (INI-*, PruebasInicioAjustes.cs) - sin la pasada completa, que usa entrada real de raton. Sirve
         // para comprobar las carpetas extra de prueba (INI-03/05/07/08/09) con el aislamiento del arnes.
