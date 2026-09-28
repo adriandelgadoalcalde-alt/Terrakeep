@@ -350,17 +350,35 @@ internal static partial class Program
             // a nivel de SO): recorren los mismos manejadores de clase (ScrollViewer.
             // OnMouseLeftButtonDown -> Focus -> BringIntoView) que un clic de verdad.
             // ---------------------------------------------------------------------------------
-            void PruebaClic(ScrollViewer pagina, string nombrePagina, ContainerViewModel contenedor, string id, bool desplazada)
+            // parcial=true (pasada completa con raton real del 28-sep-2026, residuo de 9,8px pedido a 1366x520 - real 1366x700 por el MinHeight - en el
+            // slot 7 de Equipamiento): se pulsa una celda MEDIO TAPADA por el borde del viewport - el caso que
+            // dispara BringIntoView de verdad. Sin ningun clic ni Focus() previo que deje el scroll ya movido
+            // (lo que ocultaba el salto en el canario de arrastre).
+            void PruebaClic(ScrollViewer pagina, string nombrePagina, ContainerViewModel contenedor, string id, bool desplazada, bool parcial = false)
             {
                 pagina.ScrollToVerticalOffset(0);
+                Keyboard.ClearFocus();
                 DoEvents(); DoEvents(); WaitForDispatcher(80);
                 if (desplazada && pagina.ScrollableHeight > 1) { pagina.ScrollToVerticalOffset(Math.Min(15, pagina.ScrollableHeight)); DoEvents(); DoEvents(); }
                 window.Activate(); DoEvents();
-                var candidatas = Celdas(pagina, contenedor).Where(EnteroEnAmbosEjes).ToList();
-                // Una celda de la ultima fila visible entera (el caso mas propenso a arrastrar el
-                // scroll: BringIntoView de un contenedor mas alto que el viewport alinea arriba).
-                var celda = candidatas.OrderByDescending(c => RectCompleto(c, window).Top).ThenBy(c => RectCompleto(c, window).Left).FirstOrDefault();
-                string cab = $"[{id}] {nombrePagina} {window.ActualWidth:0}x{window.ActualHeight:0} libreriaPlegada={vm.IsLibraryCollapsed} desplazada={desplazada}";
+                FrameworkElement? celda;
+                if (parcial)
+                {
+                    // Celda con objeto cortada por el borde inferior del viewport (se ve entre el 25 y el 95 %).
+                    celda = Celdas(pagina, contenedor).Where(c => c.DataContext is ItemSlotViewModel { IsNotEmpty: true })
+                        .Select(c => (c, v: RectVisible(c, window), r: RectCompleto(c, window)))
+                        .Where(t => !t.v.IsEmpty && t.v.Height >= t.r.Height * 0.25 && t.v.Height <= t.r.Height * 0.95)
+                        .OrderByDescending(t => t.r.Top).Select(t => t.c).FirstOrDefault();
+                }
+                else
+                {
+                    var candidatas = Celdas(pagina, contenedor).Where(EnteroEnAmbosEjes).ToList();
+                    // Una celda de la ultima fila visible entera (el caso mas propenso a arrastrar el
+                    // scroll: BringIntoView de un contenedor mas alto que el viewport alinea arriba).
+                    celda = candidatas.OrderByDescending(c => RectCompleto(c, window).Top).ThenBy(c => RectCompleto(c, window).Left).FirstOrDefault();
+                }
+                string cab = $"[{id}] {nombrePagina} {window.ActualWidth:0}x{window.ActualHeight:0} libreriaPlegada={vm.IsLibraryCollapsed} desplazada={desplazada} parcial={parcial}";
+                if (parcial && celda == null) { Console.WriteLine($"INVALM CLIC {cab}: INCONCLUSIVE - ninguna celda con objeto medio tapada por el borde del viewport (scr={pagina.ScrollableHeight:0.#})"); return; }
                 if (celda == null) { Console.WriteLine($"INVALM CLIC {cab}: INCONCLUSIVE - ninguna celda entera visible"); return; }
                 var todos = Descendientes<ScrollViewer>(window).Where(sv => sv.IsVisible && sv.TemplatedParent is not TextBoxBase).ToList();
                 var antes = todos.ToDictionary(sv => sv, sv => sv.VerticalOffset);
@@ -493,6 +511,23 @@ internal static partial class Program
             IrA(2); PruebaClic(pagAlm, "Almacenes", vm.StorageGroup.Current, "clic-alm", false); PruebaClic(pagAlm, "Almacenes", vm.StorageGroup.Current, "clic-alm", true);
             IrA(0);
             if (vm.EquipmentGroup != null) { PruebaClic(pagEquip, "Equipamiento", vm.EquipmentGroup.Current, "clic-equip", false); PruebaClic(pagEquip, "Equipamiento", vm.EquipmentGroup.Current, "clic-equip", true); }
+            // Residuo del salto al pulsar (verificador QA con raton real, 28-sep-2026): 1366x700 (su sonda pedia 1366x520; el MinHeight lo deja en 700), celda medio
+            // tapada (slot 7 de Equipamiento) - la pagina se desplazaba 9,8px al bajar el boton.
+            // Por debajo del MinHeight (como la sonda del verificador, 1366x520): se baja el suelo SOLO en este
+            // bloque del arnes para que las paginas desplacen de verdad y haya celdas medio tapadas.
+            double minAltoOriginal = window.MinHeight;
+            foreach (var (tw, th) in new[] { (1366.0, 700.0), (1366.0, 520.0) })
+            {
+                window.MinHeight = Math.Min(minAltoOriginal, th);
+                FijarTamaño(window, tw, th); vm.IsLibraryCollapsed = false;
+                string sufijo = $"{tw:0}x{th:0}";
+                IrA(0);
+                if (vm.EquipmentGroup != null) PruebaClic(pagEquip, "Equipamiento", vm.EquipmentGroup.Current, $"clic-equip-parcial-{sufijo}", false, parcial: true);
+                IrA(1); PruebaClic(pagInv, "Inventario", vm.InventoryContainer, $"clic-inv-parcial-{sufijo}", false, parcial: true);
+                IrA(2); PruebaClic(pagAlm, "Almacenes", vm.StorageGroup.Current, $"clic-alm-parcial-{sufijo}", false, parcial: true);
+            }
+            window.MinHeight = minAltoOriginal;
+            FijarTamaño(window, 1080, 700);
 
             // ---------------------------------------------------------------------------------
             // 4) Navegacion de pagina con etiqueta propia (no "1/2/3" a secas).

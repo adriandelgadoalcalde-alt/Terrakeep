@@ -327,9 +327,32 @@ public partial class ObjetosView : UserControl
     // ningun ScrollViewer de encima se lo roba. Si el slot estuviera medio tapado, su propio
     // BringIntoView lo termina de enseñar (el comportamiento normal de cualquier lista de WPF).
     // Doble clic (MouseBinding) y arrastre (PreviewMouseLeftButtonDown/MouseMove) no dependen de esto.
+    //
+    // Residuo medido en la pasada completa con raton real (28-sep-2026, verificador QA, FASE D): a 1366x520,
+    // slot 7 de Equipamiento (fila de abajo, medio tapada por el borde del viewport), la pagina
+    // ObjetosPaginaEquipamiento se desplazaba 9,8px AL BAJAR el boton: slot.Focus() -> OnGotFocus ->
+    // BringIntoView() del propio slot, que el ScrollViewer de la pagina atiende para enseñarlo entero. El slot
+    // se movia bajo el cursor justo cuando empieza un posible arrastre. Un clic de raton ya apunta a lo que el
+    // usuario ve: durante ESE Focus() se marca como atendida la peticion BringIntoView del slot, asi que
+    // ningun ScrollViewer se mueve y el foco sigue quedando en el slot (Supr/Intro/F/Ctrl+C/V). La navegacion
+    // con teclado (Tab/flechas) no pasa por aqui y sigue desplazando para enseñar el slot enfocado.
     private void OnItemSlotMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is UIElement slot && slot.Focus()) e.Handled = true;
+        if (sender is not FrameworkElement slot) return;
+        slot.RequestBringIntoView += SuprimirBringIntoViewDelClic;
+        try
+        {
+            if (slot.Focus()) e.Handled = true;
+        }
+        finally
+        {
+            slot.RequestBringIntoView -= SuprimirBringIntoViewDelClic;
+        }
+    }
+
+    private static void SuprimirBringIntoViewDelClic(object sender, RequestBringIntoViewEventArgs e)
+    {
+        if (ReferenceEquals(e.TargetObject, sender)) e.Handled = true;
     }
 
     private void OnItemSlotMouseMove(object sender, MouseEventArgs e)

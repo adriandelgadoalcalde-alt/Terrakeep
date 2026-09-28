@@ -169,27 +169,15 @@ internal static partial class Program
         List<FrameworkElement> Todos() => contenedores.SelectMany(c => SlotsVisibles(window, c)).ToList();
         var slot = Todos().Select(b => (ItemSlotViewModel)b.DataContext).FirstOrDefault(s => s.IsNotEmpty);
         if (slot == null) return (null, Todos());
+        // Seleccionar el origen SI cambia de verdad el diseño (el panel Editar enseña ese objeto), asi que se
+        // hace antes de calcular el destino. Lo que YA NO se hace (pasada completa con raton real, 28-sep-2026):
+        // el Focus() y el clic real previo sobre el origen "para dejar el scroll asentado" - enmascaraban justo
+        // el salto que tenia que ver este canario (la pagina se desplazaba 9,8px al bajar el boton sobre un slot
+        // medio tapado, ObjetosView.OnItemSlotMouseLeftButtonDown). Arreglado en produccion, el mouse-down del
+        // propio arrastre no puede mover nada; si vuelve, el destino calculado aqui dejara de estar bajo el
+        // cursor y el canario lo vera (cursor/efecto sobre el destino).
         vm.SelectSlot(slot);
         DoEvents(); DoEvents(); DoEvents();
-        // El clic real tambien le da el foco de teclado al slot (Border Focusable) y WPF hace
-        // BringIntoView, que puede desplazar el ScrollViewer unos px: se provoca aqui de antemano.
-        (Todos().FirstOrDefault(b => ReferenceEquals(b.DataContext, slot)) as IInputElement)?.Focus();
-        DoEvents(); DoEvents(); DoEvents();
-        // Medido (28-sep-2026): aun asi, el mouse-down REAL sobre el slot desplaza el ScrollViewer
-        // ~37 px ANTES de que arranque el arrastre (el foco acaba en el ScrollViewer) - no es cosa de
-        // StartCardDrag (el desplazamiento ya esta hecho en el primer GiveFeedback). Un clic real
-        // previo sobre el origen deja el diseño ya asentado antes de calcular el destino.
-        if (Todos().FirstOrDefault(b => ReferenceEquals(b.DataContext, slot)) is { } previo)
-        {
-            var hw = new System.Windows.Interop.WindowInteropHelper(window).Handle;
-            ForzarPrimerPlano(hw);
-            if (!SeguroParaInyectar(hw)) throw new InvalidOperationException("ABORTADO sin pulsar nada: ventana de prueba no en primer plano o con un dialogo modal abierto");
-            var c = Centro(previo);
-            SetCursorPos((int)c.X, (int)c.Y); DoEvents(); System.Threading.Thread.Sleep(60);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero); DoEvents(); System.Threading.Thread.Sleep(60); DoEvents();
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero); DoEvents(); System.Threading.Thread.Sleep(60);
-            DoEvents(); DoEvents(); DoEvents();
-        }
         var todos = Todos();
         return (todos.FirstOrDefault(b => ReferenceEquals(b.DataContext, slot)), todos);
     }
