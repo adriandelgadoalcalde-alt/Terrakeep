@@ -37,6 +37,65 @@ public partial class ObjetosView : UserControl
     public ObjetosView()
     {
         InitializeComponent();
+        LayoutUpdated += (_, _) => AjustarRepartoObjetosLibreria();
+    }
+
+    // FASE C, correccion M-C1 del revisor (s17 "mostrar mas resultados"): en ventanas grandes la rejilla
+    // de Inventario/Almacenes topa en MaxCell (escala 2,00x del pixel art, no se sube) y la fila "3*" de
+    // Objetos le sobraba: medido a 2560x1440, ~200px (Inventario) y ~290px (Almacenes) de banda muerta
+    // entre el marco y la Libreria. Con la Libreria desplegada y una de esas dos paginas activa, la fila
+    // de Objetos se limita a lo que de verdad puede usar - lo mayor entre la pagina con la celda maxima
+    // (AjusteAlViewport.AltoUtilMaximo) y el panel Editar entero, para no crearle scroll - y la Libreria
+    // (fila "2*") se queda con el resto, sin su tope LibraryRowMaxHeight (que existe para que no le robe
+    // alto a los contenedores; aqui ese alto ya no les sirve). En tamaños pequeños el tope es mayor que
+    // el reparto "3*" y no cambia nada (la rejilla sigue ajustandose al alto real, H-C1). Equipamiento
+    // no se toca (su franja es de la FASE D). Los valores dependen solo del ANCHO, asi que converge en un
+    // paso (solo se escribe si cambia > 0,5px).
+    private bool _libreriaSinTope;
+
+    private void AjustarRepartoObjetosLibreria()
+    {
+        if (DataContext is not MainViewModel vm) return;
+        AjusteAlViewport? ajuste = vm.ObjetosSubTabIndex switch { 1 => AjusteInventario, 2 => AjusteAlmacenes, _ => null };
+        double tope = double.PositiveInfinity;
+        if (ajuste != null && vm.IsLibraryVisible && ajuste.IsVisible && ajuste.AltoUtilMaximo > 0)
+        {
+            double editar = EditarTarjeta.ActualHeight;
+            var svEditar = BuscarScrollEditar(EditarTarjeta);
+            if (svEditar != null) editar = EditarTarjeta.ActualHeight - svEditar.ViewportHeight + svEditar.ExtentHeight;
+            // + 8 del Margin inferior de la rejilla de Objetos + 1px de holgura de redondeo.
+            tope = Math.Max(ajuste.AltoUtilMaximo, editar) + 9;
+        }
+        if (Math.Abs(FilaObjetos.MaxHeight - tope) > 0.5 && !(double.IsInfinity(tope) && double.IsInfinity(FilaObjetos.MaxHeight)))
+            FilaObjetos.MaxHeight = tope;
+
+        bool sinTope = !double.IsInfinity(tope);
+        // Se reaplica aunque ya estuviera quitado: el binding de LibraryRowMaxHeight vuelve a escribir su
+        // tope cuando cambia HeightClass (medido: a 2560x1440 la Libreria se quedaba en 640px).
+        if (sinTope && !double.IsInfinity(FilaLibreria.MaxHeight))
+        {
+            FilaLibreria.SetCurrentValue(RowDefinition.MaxHeightProperty, double.PositiveInfinity);
+            _libreriaSinTope = true;
+        }
+        else if (!sinTope && _libreriaSinTope)
+        {
+            // Devuelve el tope enlazado de siempre (LibraryRowMaxHeight).
+            System.Windows.Data.BindingOperations.GetBindingExpression(FilaLibreria, RowDefinition.MaxHeightProperty)?.UpdateTarget();
+            _libreriaSinTope = false;
+        }
+    }
+
+    private static ScrollViewer? BuscarScrollEditar(DependencyObject raiz)
+    {
+        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(raiz);
+        for (int i = 0; i < n; i++)
+        {
+            var hijo = System.Windows.Media.VisualTreeHelper.GetChild(raiz, i);
+            if (hijo is ScrollViewer sv) return sv;
+            var r = BuscarScrollEditar(hijo);
+            if (r != null) return r;
+        }
+        return null;
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;

@@ -221,6 +221,29 @@ internal static partial class Program
                     Fallo("CELDA", $"{cab}: celdas de {celda:0.#}px, por debajo de MinCell={sgp.MinCell:0.#}");
                 if (celdas.Count != contenedor.Slots.Count)
                     Fallo("CELDA", $"{cab}: la rejilla pinta {celdas.Count} celdas y el contenedor tiene {contenedor.Slots.Count}");
+                // H-C1/M-C3 (revisor de la FASE C): contrato real de "de un plumazo" (s22) para estas
+                // paginas FINITAS - sin el banner "Deshacer" (que crece la cabecera un momento y SI puede
+                // empujar la ultima fila al scroll del owner) todas las casillas se ven ENTERAS y la pagina
+                // no desplaza. Antes solo se imprimia.
+                bool conBanner = contenedor.CanUndoClear;
+                if (!conBanner && pagina.ScrollableHeight > 0.5)
+                    Fallo("PAGINA-SCROLL", $"{cab}: la pagina desplaza {pagina.ScrollableHeight:0.#}px (ext {pagina.ExtentHeight:0.#} en vp {pagina.ViewportHeight:0.#}) sin banner - la rejilla no se ajusto al viewport");
+                if (!conBanner && enteras < celdas.Count)
+                    Fallo("ENTERAS", $"{cab}: solo {enteras}/{celdas.Count} casillas se ven enteras sin desplazar");
+
+                // --- M-C1 (revisor, s17): banda muerta bajo el marco y marco cenido. Con la rejilla en
+                //     MaxCell y la Libreria desplegada el alto que la pagina ya no usa pasa a la Libreria. ---
+                var marco = sgp == null ? null : Descendientes<Border>(pagina).FirstOrDefault(b => b.IsAncestorOf(sgp) && b.CornerRadius.TopLeft == 10);
+                var filaLib = objetosView!.FindName("FilaLibreria") as RowDefinition;
+                if (marco != null)
+                {
+                    var rm = RectCompleto(marco, window); var rp = RectCompleto(pagina, window);
+                    double banda = rp.Bottom - rm.Bottom;
+                    bool enMaxCell = sgp != null && celda >= sgp.MaxCell - 0.5;
+                    Console.WriteLine($"INVALM {cab} | marco {rm.Width:0.#}x{rm.Height:0.#} (rejilla {anchoRejilla:0.#} de ancho) | banda vacia bajo el marco dentro de la pagina={banda:0.#}px | fila Libreria={filaLib?.ActualHeight:0.#}px | celda en MaxCell={enMaxCell}");
+                    if (enMaxCell && !vm.IsLibraryCollapsed && banda > 40)
+                        Fallo("BANDA", $"{cab}: con la rejilla en MaxCell quedan {banda:0.#}px vacios bajo el marco que deberian pasar a la Libreria (s17)");
+                }
 
                 // --- Clipping de celdas, botones y textos ---
                 var elementos = new List<FrameworkElement>(celdas);
@@ -392,6 +415,12 @@ internal static partial class Program
                 // maximizado real depende de el - ver MAXIMIZADO mas abajo).
                 ("extra-2560x1440-libdesplegada", 2560, 1440, false),
             };
+            // H-C1 (revisor): la PRIMERA entrada en cada pagina, en el minimo con la Libreria DESPLEGADA y
+            // sin ninguna medida previa de esa pagina en este proceso (ViewModel recien creado y personaje
+            // recien cargado), es el caso que dejaba ext=316 en vp=295,9 - se mide ANTES que la plegada.
+            window.WindowState = WindowState.Normal; FijarTamaño(window, 1080, 700); vm.IsLibraryCollapsed = false;
+            IrA(1); SeleccionarSlotInventario(); Medir(pagInv, "Inventario", vm.InventoryContainer, "inv-primera-entrada-1080x700-libdesplegada");
+            IrA(2); ElegirAlmacen(0); SeleccionarSlotAlmacen(); Medir(pagAlm, "Almacenes", vm.StorageGroup.Current, "alm-primera-entrada-1080x700-libdesplegada");
             foreach (var (id, w, h, plegada) in casos)
             {
                 window.WindowState = WindowState.Normal; DoEvents();
@@ -451,6 +480,7 @@ internal static partial class Program
                 if (vm.InventoryContainer.CanUndoClear) vm.InventoryContainer.UndoClearCommand.Execute(null);
                 DoEvents(); DoEvents(); vm.IsDirty = false;
                 Console.WriteLine($"INVALM BANNER: tras 'Deshacer' Inventario {vm.InventoryContainer.Slots.Count(s => !s.IsEmpty)}/50");
+                Medir(pagInv, "Inventario", vm.InventoryContainer, "inv-min-1080x700-tras-deshacer");
             }
 
             // ---------------------------------------------------------------------------------

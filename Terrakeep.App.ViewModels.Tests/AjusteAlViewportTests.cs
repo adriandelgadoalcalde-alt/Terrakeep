@@ -101,6 +101,36 @@ public sealed class AjusteAlViewportTests
         Assert.Equal(0, infinito, precision: 3);
     }
 
+    // H-C1 (revisor de la FASE C): primera medida con el MinCell POR DEFECTO de SlotGridPanel (44, el
+    // MultiBinding real aun no resuelto) -> no cabe y el decorador infla la restriccion de la rejilla;
+    // cuando MinCell pasa a 40, WPF re-mide SOLO la rejilla con esa restriccion inflada. Sin el aviso
+    // (evento MedidaConAltoFinito) la pagina se quedaba en 50+5*44+16=286 para un viewport de 266.
+    // Con el aviso el decorador reparte de nuevo desde el alto real: 266, celda 40, sin deficit.
+    [Fact]
+    public void SiLaRejillaSeReMidePorSuCuentaElAjusteVuelveAlAltoReal()
+    {
+        var (antes, despues, celda) = EnHiloSta(() =>
+        {
+            var rejilla = new SlotGridPanel { Columns = 10, MinCell = 44, MaxCell = 90, Gap = 4 };
+            for (int i = 0; i < 50; i++) rejilla.Children.Add(new Border());
+            var dock = new DockPanel { LastChildFill = true };
+            var cabecera = new Border { Height = 50 };
+            DockPanel.SetDock(cabecera, Dock.Top);
+            dock.Children.Add(cabecera);
+            dock.Children.Add(rejilla);
+            var ajuste = new AjusteAlViewport { AltoViewport = 266, Child = dock };
+            ajuste.Measure(new Size(600, double.PositiveInfinity));
+            double a = ajuste.DesiredSize.Height;               // 50 + 5*44 + 16 = 286 (no cabe a 44)
+            rejilla.MinCell = 40;                                // "el binding resuelve"
+            ajuste.UpdateLayout();                               // LayoutManager real: re-mide la rejilla sola
+            ajuste.Measure(new Size(600, double.PositiveInfinity));
+            return (a, ajuste.DesiredSize.Height, (rejilla.DesiredSize.Height - 16) / 5);
+        });
+        Assert.Equal(286, antes, precision: 1);
+        Assert.Equal(266, despues, precision: 1);
+        Assert.Equal(40, celda, precision: 1);
+    }
+
     // Sin viewport medido todavia (AltoViewport=0, primer layout): medida natural, sin romper nada.
     [Fact]
     public void SinViewportTodaviaMideNatural()

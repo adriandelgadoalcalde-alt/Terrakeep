@@ -31,9 +31,26 @@ public sealed class AjusteAlViewport : Decorator
 
     public double AltoViewport { get => (double)GetValue(AltoViewportProperty); set => SetValue(AltoViewportProperty, value); }
 
+    // Correccion M-C1 del revisor (s17): alto que ocuparia el contenido con la rejilla en su celda
+    // MAXIMA posible para este ancho (MinCell..MaxCell, sin limite de alto). Si la fila de la pagina es
+    // mas alta que esto, el sobrante no sirve de nada aqui - ObjetosView se lo da a la Libreria.
+    public double AltoUtilMaximo { get; private set; }
+
+    public AjusteAlViewport()
+    {
+        // Correccion H-C1 (ver SlotGridPanel.MedidaConAltoFinitoEvent): una rejilla que se mide por su
+        // cuenta (sus propias propiedades cambiaron) pide volver a repartir desde el alto real.
+        AddHandler(SlotGridPanel.MedidaConAltoFinitoEvent, new RoutedEventHandler((_, e) =>
+        {
+            e.Handled = true;
+            if (!Midiendo) InvalidateMeasure();
+        }));
+    }
+
     // true mientras este decorador mide a su hijo: los cambios de SlotGridPanel.DeficitAlto que
     // provoca esa misma medida no necesitan avisarle (ver SlotGridPanel.MeasureOverride).
     internal bool Midiendo { get; private set; }
+    private const double AltoSinLimite = 100000;
 
     protected override Size MeasureOverride(Size constraint)
     {
@@ -51,6 +68,10 @@ public sealed class AjusteAlViewport : Decorator
                 hijo.Measure(constraint);
                 return hijo.DesiredSize;
             }
+
+            // Alto util maximo (M-C1): medida con un alto finito enorme -> celda = min(ancho, MaxCell).
+            hijo.Measure(new Size(constraint.Width, AltoSinLimite));
+            AltoUtilMaximo = hijo.DesiredSize.Height;
 
             hijo.Measure(new Size(constraint.Width, alto));
             double deficit = DeficitDeRejillas(hijo);

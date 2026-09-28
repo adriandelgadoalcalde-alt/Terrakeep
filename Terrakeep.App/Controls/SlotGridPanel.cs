@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace Terrakeep.App.Controls;
 
@@ -137,13 +136,28 @@ public sealed class SlotGridPanel : Panel
     // layout normal: lo lee AjusteAlViewport para crecer justo lo que falta y dejar que el scroll
     // owner de la pagina lo absorba (s14 paso 8), en vez de recortar las ultimas filas.
     public double DeficitAlto { get; private set; }
-    private double _deficitNotificado;
+
+    // Correccion H-C1 del revisor de la FASE C: aviso a AjusteAlViewport en CADA medida con alto
+    // finito (evento enrutado que burbujea, sin recorrer el arbol a mano). Antes solo se avisaba si
+    // cambiaba DeficitAlto, y eso no bastaba: en la primera entrada a Inventario el MinCell enlazado
+    // (MultiBinding con AncestorType=Window) aun valia el 44 por defecto, la rejilla no cabia y el
+    // decorador la volvia a medir con alto+20; cuando el binding resolvia MinCell=40, WPF re-media SOLO
+    // la rejilla con esa restriccion INFLADA, a 44px cabia justo, el deficit seguia en 0 y la pagina se
+    // quedaba en 316px para un viewport de 295,9 (20px de scroll, 5a fila cortada). Cualquier medida
+    // propia de la rejilla (MinCell/MaxCell/Columns/hijos que cambian) debe dar al decorador la ocasion
+    // de volver a repartir desde el alto REAL; las que provoca el propio decorador las ignora el (sin bucle).
+    public static readonly RoutedEvent MedidaConAltoFinitoEvent = EventManager.RegisterRoutedEvent(
+        "MedidaConAltoFinito", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(SlotGridPanel));
 
     protected override Size MeasureOverride(Size availableSize)
     {
         int n = InternalChildren.Count;
         DeficitAlto = 0;
-        if (n == 0) return new Size(0, 0);
+        if (n == 0)
+        {
+            if (!double.IsInfinity(availableSize.Height)) RaiseEvent(new RoutedEventArgs(MedidaConAltoFinitoEvent, this));
+            return new Size(0, 0);
+        }
 
         int maximumColumns = Math.Max(1, Math.Min(Columns, n));
 
@@ -188,18 +202,10 @@ public sealed class SlotGridPanel : Panel
 
         double totalW = cols * cell + Gap * (cols - 1);
         double totalH = rows * cell + Gap * (rows - 1);
-        double deficitAnterior = _deficitNotificado;
-        if (!double.IsInfinity(availableSize.Height)) DeficitAlto = Math.Max(0, totalH - availableSize.Height);
-        _deficitNotificado = DeficitAlto;
-        // El deficit NO cambia el DesiredSize que ven los padres (WPF lo recorta), asi que un cambio
-        // que nace aqui dentro - p.ej. aparece el banner "Deshacer" encima de la rejilla y le quita
-        // 36px - no volveria a medir nunca a AjusteAlViewport: la ultima fila quedaria recortada sin
-        // scroll (medido con INVALM_RESPONSIVE_SOLO). Se le avisa a mano; si el cambio lo provoca su
-        // propia medida (primera pasada con el alto del viewport), no hace falta y no se avisa.
-        if (Math.Abs(DeficitAlto - deficitAnterior) > 0.5)
+        if (!double.IsInfinity(availableSize.Height))
         {
-            for (var d = VisualTreeHelper.GetParent(this); d != null; d = VisualTreeHelper.GetParent(d))
-                if (d is AjusteAlViewport ajuste) { if (!ajuste.Midiendo) ajuste.InvalidateMeasure(); break; }
+            DeficitAlto = Math.Max(0, totalH - availableSize.Height);
+            RaiseEvent(new RoutedEventArgs(MedidaConAltoFinitoEvent, this));
         }
         return new Size(totalW, totalH);
     }

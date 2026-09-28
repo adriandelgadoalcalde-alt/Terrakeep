@@ -814,8 +814,11 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <!-- Las 2 filas compiten de verdad por el alto ("*" ambas cuando la Libreria esta desplegada): Objetos con MinHeight=216 (suelo real, 5 filas de Inventario) y Libreria con Height/MinHeight ligados a IsLibraryVisible (colapsada = Auto/0, desplegada = 2*/200) para que plegarla devuelva espacio de verdad. Historial completo: ADR-TERRAKEEP-003. FASE C del responsive global (28-sep-2026): la "limitacion conocida" que aqui se documentaba (a 1080x700 con la Libreria desplegada la 5a fila de Inventario solo se alcanzaba con el ScrollViewer de seguridad) queda resuelta sin scroll local: AjusteAlViewport ajusta la rejilla al alto real de la pagina (las 50 casillas enteras, celda 40px en ese caso). -->
-                                <RowDefinition Height="3*" MinHeight="216" />
-                                <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
+                                <!-- FASE C, correccion M-C1 (s17): x:Name para que ObjetosView.xaml.cs
+                                     (AjustarRepartoObjetosLibreria) ceda a la Libreria el alto que
+                                     Inventario/Almacenes ya no pueden usar (rejilla en MaxCell). -->
+                                <RowDefinition x:Name="FilaObjetos" Height="3*" MinHeight="216" />
+                                <RowDefinition x:Name="FilaLibreria" Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
                                                MaxHeight="{Binding LibraryRowMaxHeight}" />
                             </Grid.RowDefinitions>
@@ -1162,7 +1165,7 @@
                                          crece la celda hasta caber debajo de la cabecera (MinCell..MaxCell) y solo si ni
                                          a MinCell cabe, la pagina crece lo justo y la desplaza su owner (s14 paso 8).
                                          DockPanel (no StackPanel) para que la rejilla reciba el alto REAL restante. -->
-                                    <controls:AjusteAlViewport AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                    <controls:AjusteAlViewport x:Name="AjusteInventario" AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                                     <Border x:Name="ObjetosSeccionInventario">
                                     <DockPanel>
                                         <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -1173,13 +1176,16 @@
                                                  abajo), que se superpone a esta fila; la fila (SharedSizeGroup) se conserva
                                                  como hueco para que el contenido empiece debajo de ella. -->
                                         </Grid>
-                                        <!-- FASE C: VerticalAlignment=Top - el marco se ciñe a cabecera+rejilla (mide con el
+                                        <!-- Correccion M-C1: HorizontalAlignment=Center - en ventanas grandes (rejilla en
+                                             MaxCell) el marco se ciñe tambien en ANCHO a cabecera+rejilla, centrado, en vez
+                                             de un marco a ancho completo con la rejilla al 46% dentro. Mismo en Almacenes.
+                                             FASE C: VerticalAlignment=Top - el marco se ciñe a cabecera+rejilla (mide con el
                                              alto restante, pero no se estira hasta el fondo del viewport). Margin superior
                                              6->2, el mismo que el marco de Equipamiento, y relleno vertical 10->8 (s14 paso 7,
                                              compactar dentro de limites de legibilidad): medido, con 10 quedaban 4px de
                                              scroll de pagina a 1080x700 con la Libreria desplegada (rejilla ya en MinCell). -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top" HorizontalAlignment="Center">
                                             <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
                                                  igual de util y no existe en ningun sitio" - la vista Amplia (mas
                                                  abajo) ya tenia esta cabecera, la normal/compacta no tenia
@@ -1283,7 +1289,7 @@
                                          arriba - Margin="0,14,0,0" retirado, sin margen igual que las otras 2
                                          paginas. -->
                                     <!-- FASE C: mismo modelo que Inventario (UNICO scroll owner + AjusteAlViewport). -->
-                                    <controls:AjusteAlViewport AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                    <controls:AjusteAlViewport x:Name="AjusteAlmacenes" AltoViewport="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
                                     <Border x:Name="ObjetosSeccionAlmacenes">
                                     <DockPanel>
                                         <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -1295,7 +1301,7 @@
                                                  como hueco para que el contenido empiece debajo de ella. -->
                                         </Grid>
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,8" Margin="0,2,0,0" VerticalAlignment="Top" HorizontalAlignment="Center">
                                             <DockPanel DataContext="{Binding StorageGroup}">
                                                 <!-- FASE C (s14 pasos 1-2, reflow + wrap): selector de los 4 almacenes y botones en UN
                                                      WrapPanel - las 4 pildoras van SIEMPRE juntas (primer hijo, medido con el ancho
@@ -1303,7 +1309,9 @@
                                                      Antes (DockPanel con los botones a la derecha, medidos primero) las pildoras se
                                                      quedaban con ~227px a 1080 y se partian en 3 filas: Forja y Camara del vacio caian
                                                      debajo, lejos de Banco/Caja fuerte, y la cabecera se comia ~25px mas de alto. -->
-                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                <!-- Correccion Low del revisor (mismo criterio de UN eje que N-03): el bloque de
+                                                     pildoras+acciones va centrado sobre la rejilla, no pegado a la izquierda. -->
+                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6" HorizontalAlignment="Center">
                                                     <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
                                                          que pulsar su pildora y contar" - DisplayLabel ya trae el
                                                          recuento real en vivo ("Banco (38/40)"). -->
@@ -1423,7 +1431,7 @@
                                 </Grid>
                                 </Grid>
 
-                                <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
+                                <Border x:Name="EditarTarjeta" Grid.Column="1" Style="{StaticResource SidePanelCard}">
                                     <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
                                 </Border>
                             </Grid>
