@@ -2656,6 +2656,17 @@ internal static partial class Program
             Console.WriteLine("DONE (LIBRARY_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // INICIO_AJUSTES_SOLO=1 (28-sep-2026): solo el bloque de Inicio/Ajustes/Novedades/Acerca de
+        // (INI-*, PruebasInicioAjustes.cs) - sin la pasada completa, que usa entrada real de raton. Sirve
+        // para comprobar las carpetas extra de prueba (INI-03/05/07/08/09) con el aislamiento del arnes.
+        if (Environment.GetEnvironmentVariable("INICIO_AJUSTES_SOLO") == "1")
+        {
+            int espera = 0;
+            while (vm.Home.IsScanning && espera < 200) { DoEvents(); System.Threading.Thread.Sleep(50); espera++; }
+            PruebasInicioAjustesNovedadesAcercaDe(vm, window);
+            Console.WriteLine("DONE (INICIO_AJUSTES_SOLO)");
+            Environment.Exit(0);
+        }
         // DIAG_NAVTOGGLE_POS_SOLO=1 (26-sep-2026, investigador-bug, mismo TASK CONTEXT de arriba):
         // diagnostico desechable, mide con UI real la posicion Y del StackPanel "ObjetosNavToggle"
         // (RadioButton 1/2/3) contra su celda Grid compartida con ObjetosPageHost - ver
