@@ -117,6 +117,22 @@ public sealed class SlotGridPanel : Panel
         nameof(AdaptiveColumns), typeof(bool), typeof(SlotGridPanel),
         new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    // PreferirCeldaGrande (FASE D del responsive global, 28-sep-2026) - solo tiene efecto junto con
+    // AdaptiveColumns y con un alto finito conocido (AvailableHeight del scroll owner de los resultados).
+    // Para rejillas SIN columnas semanticas (resultados de la Libreria y de la Libreria de buffs, s8/s17).
+    // AdaptiveColumns a secas elige SIEMPRE el maximo de columnas que caben a MinCell: con muchos
+    // resultados es lo correcto (llenar el ancho, mas resultados a la vista), pero cuando TODOS caben en
+    // el viewport deja celdas minimas y media pantalla vacia (medido: categoria de 100 objetos a
+    // 2560x1440, 40 columnas de 47px en 3 filas sobre un viewport de 584px). Con esta opcion, si hay un
+    // numero de columnas con el que todo cabe en el alto disponible, se elige el que da la celda MAS
+    // GRANDE (empate: mas columnas); si ni con el maximo de columnas cabe a MinCell, se queda en el
+    // maximo de columnas a MinCell (el scroll owner exterior absorbe el resto, s14 paso 8). Nunca supera
+    // Columns (maximumColumns) ni MaxCell/ReferenceColumns. Por defecto false: nada cambia en Fase A.
+    public static readonly DependencyProperty PreferirCeldaGrandeProperty = DependencyProperty.Register(
+        nameof(PreferirCeldaGrande), typeof(bool), typeof(SlotGridPanel),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
+    public bool PreferirCeldaGrande { get => (bool)GetValue(PreferirCeldaGrandeProperty); set => SetValue(PreferirCeldaGrandeProperty, value); }
+
     public int Columns { get => (int)GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
     public double MinCell { get => (double)GetValue(MinCellProperty); set => SetValue(MinCellProperty, value); }
     public double MaxCell { get => (double)GetValue(MaxCellProperty); set => SetValue(MaxCellProperty, value); }
@@ -178,10 +194,26 @@ public sealed class SlotGridPanel : Panel
             }
         }
 
+        double availH = double.IsInfinity(availableSize.Height) ? AvailableHeight : availableSize.Height;
+
+        if (AdaptiveColumns && PreferirCeldaGrande && !double.IsInfinity(availableSize.Width) && availH > 0)
+        {
+            double w = availableSize.Width;
+            double refW0 = ReferenceWidth > 0 ? ReferenceWidth : w;
+            double techoRef = ReferenceColumns > 0 ? (refW0 - Gap * (ReferenceColumns - 1)) / ReferenceColumns : double.PositiveInfinity;
+            int mejorCols = -1; double mejorCelda = 0;
+            for (int c = cols; c >= 1; c--)
+            {
+                int r = (int)Math.Ceiling(n / (double)c);
+                double celdaC = Math.Min(Math.Min((w - Gap * (c - 1)) / c, (availH - Gap * (r - 1)) / r), Math.Min(techoRef, MaxCell));
+                if (celdaC >= MinCell - 0.01 && celdaC > mejorCelda + 0.01) { mejorCelda = celdaC; mejorCols = c; }
+            }
+            if (mejorCols > 0) cols = mejorCols;
+        }
+
         int rows = (int)Math.Ceiling(n / (double)cols);
 
         double availW = double.IsInfinity(availableSize.Width) ? MaxCell * cols + Gap * (cols - 1) : availableSize.Width;
-        double availH = double.IsInfinity(availableSize.Height) ? AvailableHeight : availableSize.Height;
         // Antes del primer paso de layout real (AvailableHeight todavia en 0) - no colapsar a
         // una rejilla ilegible, partir de MaxCell hasta que el remedido real llegue.
         if (availH <= 0) availH = MaxCell * rows + Gap * (rows - 1);

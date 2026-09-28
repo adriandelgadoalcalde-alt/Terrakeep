@@ -751,12 +751,13 @@ public partial class MainViewModel : ObservableObject
         _ => 640,
     };
 
-    // H5-08 (quinta auditoria de Opus): "el MaxHeight=460 fijo de la fila de Libreria en
-    // Objetos y en Buffs" era una de las 2 constantes ciegas señaladas - con sitio vertical
-    // real (Alto), la fila puede crecer mas sin apretar la cuadricula de encima (Height="3*"
-    // ya le da proporcionalmente mas a los contenedores, este techo solo evitaba que la
-    // Libreria se llevara un trozo desproporcionado en ventanas muy altas y estrechas).
-    public double LibraryRowMaxHeight => HeightClass == WindowHeightClass.Alto ? 640 : 460;
+    // H5-08 (quinta auditoria de Opus) convirtio el MaxHeight=460 fijo de la fila de la Libreria (Objetos
+    // y Buffs) en LibraryRowMaxHeight (460/640 segun HeightClass). FASE D del responsive global
+    // (28-sep-2026, s17/s28): RETIRADA. La fila de Objetos ya se limita a lo que su pagina usa de verdad
+    // (ObjetosView.AjustarRepartoObjetosLibreria, Equipamiento incluido) y la Libreria se queda el resto;
+    // el tope solo dejaba bandas vacias entre ambas (130px a 1920x1080, 346px a 2560x1440 bajo
+    // Equipamiento) y en Buffs el reparto 3*/2* nunca lo alcanzaba. Negative acceptance:
+    // LIBRARY_RESPONSIVE_SOLO (VIEJO) y HeightClassTests.
 
     // H5-09 (quinta auditoria de Opus): "cuatro pantallas siguen con ancho fijo mientras Inicio y
     // Apariencia si respiran" (Desbloqueos 440, Version 500, las 2 sub-pestañas de Novedades 760,
@@ -823,7 +824,6 @@ public partial class MainViewModel : ObservableObject
     // IsBuffLibraryVisible mas abajo.
     partial void OnHeightClassChanged(WindowHeightClass value)
     {
-        OnPropertyChanged(nameof(LibraryRowMaxHeight));
         OnPropertyChanged(nameof(IsLibraryVisible));
         OnPropertyChanged(nameof(IsBuffLibraryVisible));
     }

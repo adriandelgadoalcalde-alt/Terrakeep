@@ -12,7 +12,6 @@ public sealed class HeightClassTests
         var vm = new MainViewModel();
         vm.UpdateSizeClass(1600); // Amplio de ancho, pero la sobrecarga de 1 argumento nunca sube a Alto
         Assert.Equal(WindowHeightClass.Bajo, vm.HeightClass);
-        Assert.Equal(460d, vm.LibraryRowMaxHeight);
     }
 
     [Fact]
@@ -29,7 +28,16 @@ public sealed class HeightClassTests
         var vm = new MainViewModel();
         vm.UpdateSizeClass(1080, 900);
         Assert.Equal(WindowHeightClass.Alto, vm.HeightClass);
-        Assert.Equal(640d, vm.LibraryRowMaxHeight);
+    }
+
+    // FASE D del responsive global (28-sep-2026, s26/s28 negative acceptance): el tope de alto de la fila
+    // de la Libreria (LibraryRowMaxHeight, 460/640 segun HeightClass) se RETIRO - la Libreria se queda
+    // con el alto que Objetos no usa (ObjetosView.AjustarRepartoObjetosLibreria). Si alguien lo
+    // reintroduce, este test falla. Sustituye a las dos aserciones 460/640 que fijaban el mecanismo viejo.
+    [Fact]
+    public void ElTopeDeAltoDeLaLibreriaYaNoExiste()
+    {
+        Assert.Null(typeof(MainViewModel).GetProperty("LibraryRowMaxHeight"));
     }
 
     [Fact]

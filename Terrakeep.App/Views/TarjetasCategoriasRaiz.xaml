@@ -1,0 +1,59 @@
+<!-- FASE D del responsive global (28-sep-2026, s11/s17): tarjetas de carpeta raiz ("Ver todo": sin carpeta ni
+     busqueda, H5-13/H4-07) COMPARTIDAS por la Libreria de objetos, la Libreria de buffs e Investigacion -
+     antes 3 copias de la misma plantilla, cada una con su ScrollViewer propio. Viven dentro del UNICO scroll
+     owner de resultados de cada superficie. DataContext = el CatalogBrowserViewModel de la superficie.
+
+     Cada tarjeta es la carpeta raiz (mismo NavCardButton de siempre, mismo clearance de hover de
+     imagen2/LIBCARD_CLIP_SOLO) y DEBAJO sus subcarpetas de primer nivel como pastillas: el estado "Ver todo"
+     pasa a ser un mapa de dos niveles del catalogo. Motivo medido (s17): a 2560x1440 las 10 tarjetas
+     ocupaban una sola fila (132px) de un viewport de 584px y el resto quedaba vacio; con la fila de
+     categorias principales siempre visible encima (NavegadorCategorias), repetir solo las raices tampoco
+     aportaba nada nuevo. Las pastillas de subcarpeta llevan a esa carpeta con un clic (mismo SelectCommand
+     real del nodo). EsBuffs elige la etiqueta de recuento ("N buff(s)" en vez de "N objeto(s)"). -->
+<UserControl x:Class="Terrakeep.App.Views.TarjetasCategoriasRaiz"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:views="clr-namespace:Terrakeep.App.Views">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="TarjetasBoolToVis" />
+    </UserControl.Resources>
+    <ItemsControl x:Name="TarjetasRaiz" ItemsSource="{Binding RootCategories}" Focusable="False" IsTabStop="False">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
+                <StackPanel Width="236" Margin="0,0,12,12">
+                    <Button Style="{StaticResource NavCardButton}" Command="{Binding SelectCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Name}">
+                        <StackPanel>
+                            <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - un StackPanel horizontal mide
+                                 con ancho infinito y el TextWrapping del nombre no llegaba a aplicarse nunca. -->
+                            <DockPanel Margin="0,0,0,4">
+                                <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding EsBuffs, RelativeSource={RelativeSource AncestorType=views:TarjetasCategoriasRaiz}, Converter={StaticResource InverseBoolToVis}}" />
+                            <TextBlock Text="{Binding BuffCountLabel, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding EsBuffs, RelativeSource={RelativeSource AncestorType=views:TarjetasCategoriasRaiz}, Converter={StaticResource TarjetasBoolToVis}}" />
+                        </StackPanel>
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Children}" Margin="4,6,0,0" Focusable="False" IsTabStop="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
+                                <Button Style="{StaticResource PastillaCategoria}" Command="{Binding SelectCommand}" CommandParameter="{Binding}"
+                                        AutomationProperties.Name="{Binding Name}" Content="{Binding Name}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

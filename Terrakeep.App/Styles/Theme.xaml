@@ -1296,6 +1296,74 @@
         </Style.Triggers>
     </Style>
 
+    <!-- FASE D del responsive global (28-sep-2026): pastillas de categoria de la familia "catalogo con
+         categorias" (Views/NavegadorCategorias.xaml y Views/TarjetasCategoriasRaiz.xaml). Aqui y no en el
+         UserControl porque las usan los dos controles. -->
+        <Color x:Key="NavCatSeleccionColor">#4834d4</Color>
+        <SolidColorBrush x:Key="NavCatSeleccionBrush" Color="{StaticResource NavCatSeleccionColor}" />
+
+        <!-- Pastilla base: plantilla propia (no el Button por defecto de WPF, cuyo cromo Aero pintaba el
+             azul claro de hover bajo texto claro - el hallazgo de contraste del revisor de la FASE C).
+             Estados por Tag, cada uno con contraste medido (texto sobre su fondo real):
+               normal  TextPrimary #f0f1f8 sobre BgElevated #1e2233  ~14:1
+               Ruta    TextPrimary #f0f1f8 sobre AccentMuted #2a2856 + borde de acento  ~12:1
+               Sel     blanco sobre #4834d4 (AccentDeep, misma familia del acento)  ~7,7:1
+             (antes: AccentBrush #6C63FF sobre AccentMuted #2a2856 = 3,17:1). -->
+        <Style x:Key="PastillaCategoriaBase" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="7,1" />
+            <Setter Property="Margin" Value="0,0,4,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{StaticResource BgElevatedBrush}" BorderBrush="Transparent" BorderThickness="1"
+                                CornerRadius="11" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Ruta">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Sel">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NavCatSeleccionBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource NavCatSeleccionBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PastillaCategoria" TargetType="Button" BasedOn="{StaticResource PastillaCategoriaBase}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsInSelectedPath}" Value="True">
+                    <Setter Property="Tag" Value="Ruta" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Tag" Value="Sel" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PastillaVerTodo" TargetType="Button" BasedOn="{StaticResource PastillaCategoriaBase}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedCategory}" Value="{x:Null}">
+                    <Setter Property="Tag" Value="Sel" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+
     <!-- Tarjeta de navegacion clicable (pagina de Inicio) - anima de verdad al pasar el raton
          (antes solo cambiaba el color al instante): sube 3px, la sombra crece, el borde se
          tiñe del color de acento QUE SE LE PASE (Tag) - permite reproducir la variedad de

@@ -85,7 +85,59 @@ public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject
     // H5-13: cualquier cambio real de SelectedCategory (incluida una asignacion directa, ej.
     // ResearchViewModel.Reset limpiando la seleccion al descargar el personaje - no solo los 2
     // comandos de abajo) mantiene ShowRootCategoryCards sincronizada de verdad.
-    partial void OnSelectedCategoryChanged(CategoryNodeViewModel? value) => OnPropertyChanged(nameof(ShowRootCategoryCards));
+    partial void OnSelectedCategoryChanged(CategoryNodeViewModel? value)
+    {
+        OnPropertyChanged(nameof(ShowRootCategoryCards));
+        RecalcularRuta();
+    }
+
+    // FASE D del responsive global (28-sep-2026, PDF "Arreglo familia keep" bloque 2, s9-s12/s14/s26 C).
+    // El arbol lateral de categorias (columna fija de 210px con su propio ScrollViewer, en las 3
+    // superficies) escondia las categorias PRINCIPALES detras de un scroll: medido a 1080x700, 4/10 en la
+    // Libreria y 5/8 en la de buffs visibles sin desplazar. Lo sustituye NavegadorCategorias
+    // (Views/NavegadorCategorias.xaml, UN control para las 3): fila de categorias principales SIEMPRE
+    // visible (wrap) + UNA linea de ruta con desplegable para los niveles de debajo (s12: drill-down/
+    // flyout). Esa linea necesita saber la ruta real de la carpeta elegida y que nodo aporta las
+    // subcategorias - se calcula aqui, una sola vez para las 3 superficies (misma razon que H5-15).
+    //
+    // RutaCategoria: raiz..seleccionada (vacia sin seleccion). MigasCategoria: la misma ruta sin la raiz
+    // (la raiz ya se ve resaltada en la fila principal). NodoSubcategorias: el nodo mas profundo de la
+    // ruta que tiene subcarpetas - la seleccionada si las tiene, si no su padre (asi, con una hoja
+    // elegida, el desplegable enseña sus hermanas con ella marcada).
+    public ObservableCollection<CategoryNodeViewModel> RutaCategoria { get; } = [];
+    public ObservableCollection<CategoryNodeViewModel> MigasCategoria { get; } = [];
+    [ObservableProperty] private CategoryNodeViewModel? _nodoSubcategorias;
+    [ObservableProperty] private bool _haySubnavegacion;
+
+    private void RecalcularRuta()
+    {
+        foreach (var n in RutaCategoria) n.IsInSelectedPath = false;
+        RutaCategoria.Clear();
+        MigasCategoria.Clear();
+        var ruta = SelectedCategory == null ? null : BuscarRuta(RootCategories, SelectedCategory);
+        if (ruta != null)
+        {
+            for (int i = 0; i < ruta.Count; i++)
+            {
+                RutaCategoria.Add(ruta[i]);
+                if (i > 0) MigasCategoria.Add(ruta[i]);
+                if (i < ruta.Count - 1) ruta[i].IsInSelectedPath = true;
+            }
+        }
+        NodoSubcategorias = ruta?.LastOrDefault(n => n.Children.Count > 0);
+        HaySubnavegacion = MigasCategoria.Count > 0 || NodoSubcategorias != null;
+    }
+
+    private static List<CategoryNodeViewModel>? BuscarRuta(IEnumerable<CategoryNodeViewModel> nodos, CategoryNodeViewModel objetivo)
+    {
+        foreach (var n in nodos)
+        {
+            if (ReferenceEquals(n, objetivo)) return [n];
+            var sub = BuscarRuta(n.Children, objetivo);
+            if (sub != null) { sub.Insert(0, n); return sub; }
+        }
+        return null;
+    }
 
     // Bug real corregido 2-sep-2026 (LibraryViewModel), replicado a mano otras 2 veces antes de
     // esta base: IsExpanded no se tocaba nunca aqui, asi que ninguna carpeta por debajo de la

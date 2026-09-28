@@ -2626,6 +2626,15 @@ internal static partial class Program
             Console.WriteLine("DONE (INVALM_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // LIBRARY_RESPONSIVE_SOLO=1 (28-sep-2026, FASE D del responsive global): la familia "catalogo con
+        // categorias" (Libreria de objetos, Libreria de buffs, Investigacion) + panel Editar de Objetos,
+        // banda de Equipamiento y eje de Almacenes - ver CanarioResponsiveLibrerias.cs.
+        if (Environment.GetEnvironmentVariable("LIBRARY_RESPONSIVE_SOLO") == "1")
+        {
+            EjecutarLibreriasResponsiveSolo(window, vm);
+            Console.WriteLine("DONE (LIBRARY_RESPONSIVE_SOLO)");
+            Environment.Exit(0);
+        }
         // DIAG_NAVTOGGLE_POS_SOLO=1 (26-sep-2026, investigador-bug, mismo TASK CONTEXT de arriba):
         // diagnostico desechable, mide con UI real la posicion Y del StackPanel "ObjetosNavToggle"
         // (RadioButton 1/2/3) contra su celda Grid compartida con ObjetosPageHost - ver

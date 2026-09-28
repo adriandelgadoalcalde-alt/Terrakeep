@@ -102,6 +102,12 @@ public sealed partial class CategoryNodeViewModel : ObservableObject
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isExpanded;
 
+    // FASE D del responsive global (28-sep-2026): ancestro de la carpeta SELECCIONADA (no ella misma).
+    // Con el arbol lateral retirado, la navegacion de categorias (NavegadorCategorias) marca la ruta
+    // entera - p.ej. "Materiales" sigue resaltada en la fila de categorias principales mientras se
+    // navega por "Materiales > Pre-Hardmode > Cobre y estaño". Lo mantiene CatalogBrowserViewModel.
+    [ObservableProperty] private bool _isInSelectedPath;
+
     // Auditoria de Opus, Bloque 6 (T-18): "CategoryNodeTemplate"/"ResearchCategoryNodeTemplate"/
     // "BuffCategoryNodeTemplate" en MainWindow.xaml eran 3 copias identicas del mismo arbol,
     // solo distintas en A QUE SelectCategoryCommand apuntaba cada boton (Library/Research/

@@ -51,51 +51,39 @@ public partial class ObjetosView : UserControl
     // el reparto "3*" y no cambia nada (la rejilla sigue ajustandose al alto real, H-C1). Equipamiento
     // no se toca (su franja es de la FASE D). Los valores dependen solo del ANCHO, asi que converge en un
     // paso (solo se escribe si cambia > 0,5px).
-    private bool _libreriaSinTope;
-
+    //
+    // FASE D del responsive global (28-sep-2026):
+    //  - El panel Editar ya no vive en esta fila (barra lateral de alto completo, Grid.RowSpan=2, sin
+    //    ScrollViewer): el tope ya no tiene que reservarle alto. RETIRADOS su termino y BuscarScrollEditar.
+    //  - RETIRADO el tope LibraryRowMaxHeight de la fila de la Libreria (y con el, el quitar/reponer su
+    //    binding que hacia este metodo): la Libreria se queda siempre con lo que Objetos no usa.
+    //  - Equipamiento entra en el mismo reparto (la "banda vacia" anotada en la FASE B: medido 130px a
+    //    1920x1080 y 346px a 2560x1440 entre su contenido y la Libreria). Su contenido no usa
+    //    AjusteAlViewport (sus rejillas dependen del ANCHO en ventana grande), asi que el alto util es la
+    //    propia extension de su pagina cuando cabe sin desplazar. Es estable: SlotGridPanel.AvailableHeight
+    //    es el alto de la pagina entera, y ninguna rejilla puede pedir celdas menores con la pagina a la
+    //    altura de su propio contenido; si al crecer la ventana el contenido ya no cabe, el tope se suelta
+    //    y se recalcula en la pasada siguiente.
     private void AjustarRepartoObjetosLibreria()
     {
         if (DataContext is not MainViewModel vm) return;
-        AjusteAlViewport? ajuste = vm.ObjetosSubTabIndex switch { 1 => AjusteInventario, 2 => AjusteAlmacenes, _ => null };
         double tope = double.PositiveInfinity;
-        if (ajuste != null && vm.IsLibraryVisible && ajuste.IsVisible && ajuste.AltoUtilMaximo > 0)
+        if (vm.IsLibraryVisible)
         {
-            double editar = EditarTarjeta.ActualHeight;
-            var svEditar = BuscarScrollEditar(EditarTarjeta);
-            if (svEditar != null) editar = EditarTarjeta.ActualHeight - svEditar.ViewportHeight + svEditar.ExtentHeight;
             // + 8 del Margin inferior de la rejilla de Objetos + 1px de holgura de redondeo.
-            tope = Math.Max(ajuste.AltoUtilMaximo, editar) + 9;
+            if (vm.ObjetosSubTabIndex is 1 or 2)
+            {
+                var ajuste = vm.ObjetosSubTabIndex == 1 ? AjusteInventario : AjusteAlmacenes;
+                if (ajuste.IsVisible && ajuste.AltoUtilMaximo > 0) tope = ajuste.AltoUtilMaximo + 9;
+            }
+            else if (vm.ObjetosSubTabIndex == 0)
+            {
+                var pag = ObjetosPaginaEquipamiento;
+                if (pag.IsVisible && pag.ExtentHeight > 0 && pag.ScrollableHeight < 0.5) tope = pag.ExtentHeight + 9;
+            }
         }
         if (Math.Abs(FilaObjetos.MaxHeight - tope) > 0.5 && !(double.IsInfinity(tope) && double.IsInfinity(FilaObjetos.MaxHeight)))
             FilaObjetos.MaxHeight = tope;
-
-        bool sinTope = !double.IsInfinity(tope);
-        // Se reaplica aunque ya estuviera quitado: el binding de LibraryRowMaxHeight vuelve a escribir su
-        // tope cuando cambia HeightClass (medido: a 2560x1440 la Libreria se quedaba en 640px).
-        if (sinTope && !double.IsInfinity(FilaLibreria.MaxHeight))
-        {
-            FilaLibreria.SetCurrentValue(RowDefinition.MaxHeightProperty, double.PositiveInfinity);
-            _libreriaSinTope = true;
-        }
-        else if (!sinTope && _libreriaSinTope)
-        {
-            // Devuelve el tope enlazado de siempre (LibraryRowMaxHeight).
-            System.Windows.Data.BindingOperations.GetBindingExpression(FilaLibreria, RowDefinition.MaxHeightProperty)?.UpdateTarget();
-            _libreriaSinTope = false;
-        }
-    }
-
-    private static ScrollViewer? BuscarScrollEditar(DependencyObject raiz)
-    {
-        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(raiz);
-        for (int i = 0; i < n; i++)
-        {
-            var hijo = System.Windows.Media.VisualTreeHelper.GetChild(raiz, i);
-            if (hijo is ScrollViewer sv) return sv;
-            var r = BuscarScrollEditar(hijo);
-            if (r != null) return r;
-        }
-        return null;
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;

@@ -99,6 +99,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
              xmlns:controls="clr-namespace:Terrakeep.App.Controls"
+             xmlns:views="clr-namespace:Terrakeep.App.Views"
              xmlns:conv="clr-namespace:Terrakeep.App.Converters"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
@@ -110,14 +111,20 @@
              TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
              Boveda/Loadouts por igual (pedido explicito 1-sep-2026). -->
         <DataTemplate x:Key="ItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
-            <!-- L-d (segunda auditoria de Opus, Fable): "sin ScrollViewer de seguridad - un
-                 objeto con muchos prefijos legales (varios Metas/Groups reales a la vez, ej.
-                 un arma Picaro real de Calamity) puede desbordar la altura real del panel en
-                 una ventana baja, y el contenido de mas arriba (Índice/Cantidad/Prefijo a mano)
-                 quedaria inalcanzable - DockPanel no recorta ni scrollea solo (mismo aviso real
-                 ya documentado en el proyecto para Panel). Mismo criterio ya establecido en el
-                 resto de la app ("ScrollViewer de seguridad" - MountsContainer, Almacenes...). -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <!-- FASE D del responsive global (28-sep-2026, s7/s13/s14/s34 - permiso aa5f7395 y known-diff
+                 570a3c9d): RETIRADOS los dos ScrollViewer propios de este panel - el "de seguridad" de L-d
+                 (segunda auditoria de Opus) que lo envolvia entero y el de la lista de prefijos (anidado
+                 dentro del primero, mismo eje). Medido ANTES con LIBRARY_RESPONSIVE_SOLO: a 1080x700 con la
+                 Libreria desplegada el panel desplazaba 194,2px con Cenit y 249,4px con el objeto de
+                 prefijos mas largo del catalogo (granadas Picaro de Calamity: grupo "Picaro", 17 prefijos),
+                 98-153px a 1520x860 y hasta 30,8px a 1920x1080; 7,3px con una pieza de armadura.
+                 Resuelto sin scroll y sin ocultar nada: (1) el panel pasa a ser una barra lateral de alto
+                 COMPLETO (Grid.RowSpan=2 en EditarTarjeta, junto a Objetos Y a la Libreria - como el
+                 sideCtr real de Terrasavr), no solo de la fila de Objetos, que es justo el eje escaso;
+                 (2) reflujo interno (s14 pasos 1-2): Indice y Cantidad comparten fila con sus botones
+                 +10/+100/MAX, y el nombre del prefijo actual va en la fila de su Id. El contenido crece en
+                 alto con naturalidad (DockPanel) y ya cabe entero con cualquier objeto en todos los tamaños
+                 medidos (ver LIBRARY_RESPONSIVE_SOLO: EDITAR-SCROLL/EDITAR-CLIP). -->
             <DockPanel>
                 <!-- FASE B del responsive global, H-01 (segunda revision visual, 28-sep-2026): los
                      botones de accion del slot (estrella de favorito + "Vaciar slot") suben a la
@@ -228,7 +235,22 @@
                         </StackPanel>
                     </DockPanel>
 
-                    <TextBlock Text="{Binding Loc[label_index_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <!-- FASE D (s7, reflujo): Indice | Cantidad + controles rapidos de stack en UNA fila de
+                         etiquetas y UNA de campos (antes 5 filas apiladas: etiqueta, Indice, etiqueta,
+                         Cantidad, botones). Mismos TextBox, mismos bindings, mismos botones. -->
+                    <Grid x:Name="EditarIndiceCantidad" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="64" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc[label_index_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Loc[label_quantity], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="6,0,0,3" />
                     <!-- Auditoria de Opus (octava pasada, T-17) - BUG REAL encontrado y
                          arreglado: con PropertyChanged, escribir "100" pasaba de verdad por
                          Id=1 y Id=10 antes de llegar a 100 - CADA digito colocaba un objeto
@@ -238,36 +260,39 @@
                          defecto (LostFocus) - confirma al salir del campo; OnCommitTextOnEnter
                          (code-behind) fuerza el mismo commit real al pulsar Intro, sin tener
                          que hacer clic fuera. -->
-                    <TextBox Text="{Binding Slot.ItemId}" Padding="6,4" Margin="0,0,0,8" KeyDown="OnCommitTextOnEnter"
+                    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding Slot.ItemId}" Padding="6,4" KeyDown="OnCommitTextOnEnter"
                              Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                    <!-- Restriccion de slot (consulta a Opus, sexta pasada): el unico camino
-                         de los tres (Libreria filtrada/arrastrar y soltar/Indice a mano) donde
-                         el silencio confunde de verdad - aqui SI hace falta una linea real,
-                         nada modal. Collapsed no reserva espacio, no cambia el espaciado
-                         normal cuando no hay mensaje. -->
-                    <TextBlock Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
-                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
-                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
-
-                    <TextBlock Text="{Binding Loc[label_quantity], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,6"
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Width="54" Margin="6,0,0,0"
                              Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                     <!-- Controles rapidos de stack (encargo Keep 25-sep-2026): "+10"/"+100"/"MAX"
                          junto a la Cantidad, sin sustituir la edicion manual de arriba. Mismo
                          lenguaje visual ya usado en los botones de Prefijo (Tag="Ghost", misma
                          Padding/FontSize que "Quitar" un poco mas abajo) - MaxStack real de cada
                          objeto (ItemSlotViewModel.MaxStack), nunca un tope fijo. -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
                         <Button Content="{Binding Loc[action_add_ten], Mode=OneWay}" Command="{Binding Slot.AddTenToCountCommand}"
-                                ToolTip="{Binding Loc[tt_add_ten_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" FontSize="11" />
+                                ToolTip="{Binding Loc[tt_add_ten_stack], Mode=OneWay}" Tag="Ghost" Padding="5,2" FontSize="11" />
                         <Button Content="{Binding Loc[action_add_hundred], Mode=OneWay}" Command="{Binding Slot.AddHundredToCountCommand}"
-                                ToolTip="{Binding Loc[tt_add_hundred_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                                ToolTip="{Binding Loc[tt_add_hundred_stack], Mode=OneWay}" Tag="Ghost" Padding="5,2" Margin="2,0,0,0" FontSize="11" />
                         <Button Content="{Binding Loc[action_set_max], Mode=OneWay}" Command="{Binding Slot.SetCountToMaxCommand}"
-                                ToolTip="{Binding Loc[tt_set_max_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                                ToolTip="{Binding Loc[tt_set_max_stack], Mode=OneWay}" Tag="Ghost" Padding="5,2" Margin="2,0,0,0" FontSize="11" />
                     </StackPanel>
+                    <!-- Restriccion de slot (consulta a Opus, sexta pasada): el unico camino
+                         de los tres (Libreria filtrada/arrastrar y soltar/Indice a mano) donde
+                         el silencio confunde de verdad - aqui SI hace falta una linea real,
+                         nada modal. Collapsed no reserva espacio, no cambia el espaciado
+                         normal cuando no hay mensaje. -->
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
+                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
+                    </Grid>
 
                     <TextBlock Text="{Binding Loc[label_prefix_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <!-- FASE D (s7, reflujo): el nombre del prefijo actual (PrefixDisplay) va en la misma fila
+                         que su Id y sus botones, a la derecha, envolviendo si es largo (s34) - antes una fila
+                         propia debajo. -->
+                    <DockPanel Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Top">
                         <!-- Mismo arreglo real que "Índice" de arriba (T-17) - PrefixId tambien
                              ejecuta una accion inmediata (SetPrefix) en cada cambio. -->
                         <TextBox Text="{Binding Slot.PrefixId}" Width="50" Padding="6,4" KeyDown="OnCommitTextOnEnter"
@@ -283,8 +308,9 @@
                         <Button Content="{Binding Loc[action_remove], Mode=OneWay}" Command="{Binding ClearPrefixCommand}" ToolTip="{Binding Loc[tt_remove_current_prefix], Mode=OneWay}"
                                 Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"
+                    <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="8,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center"
                                Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                    </DockPanel>
 
                     <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
                                Margin="0,4,0,10" Visibility="{Binding CanHavePrefix, Converter={StaticResource ObjetosBoolToVis}}" />
@@ -320,7 +346,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <!-- FASE D: lista de prefijos SIN ScrollViewer propio (era el segundo scroll vertical
+                         anidado del panel) - envuelve y crece en alto. -->
                         <ItemsControl ItemsSource="{Binding Prefixes}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -352,76 +379,15 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
                 </StackPanel>
             </DockPanel>
-            </ScrollViewer>
         </DataTemplate>
 
 
-        <DataTemplate x:Key="ObjetosCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel>
-                <!-- Auditoria de redimensionado, R-06/H-06: HorizontalAlignment="Stretch" para que
-                     el Button ocupe todo el ancho real disponible de la columna (herencia hasta
-                     el DockPanel de dentro, ver mas abajo) - sin esto el DockPanel interior mide
-                     su propio ancho natural y el TextBlock nunca sabe cuanto sitio tiene de
-                     verdad. -->
-                <Button Command="{Binding SelectCommand}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch"
-                        Padding="4,3" Margin="0,0,0,1"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                </Trigger>
-                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                </DataTrigger>
-                                <!-- Modo compacto (17-sep-2026): fila mas baja para el arbol de
-                                     categorias de la Libreria (Settings.IsCompactMode, nunca
-                                     activo por defecto). -->
-                                <DataTrigger Binding="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter Property="Padding" Value="4,1" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <!-- Auditoria de redimensionado, R-06/H-06: DockPanel en vez de StackPanel
-                         Horizontal. El MaxWidth="165" de abajo (arreglo real de 2-sep-2026, "hay
-                         nombres cortados") solo funcionaba para el PRIMER nivel del arbol - cada
-                         nivel de profundidad añade su propio Margin="16,0,0,0" (ver el
-                         ItemsControl recursivo mas abajo), asi que a partir del 2º nivel 165 ya
-                         no cabia en el hueco real (columna fija de 210px menos sangria menos
-                         icono) y el nombre se recortaba, hasta el 100% en el 3er nivel. Un
-                         DockPanel SI da al ultimo hijo el ancho restante REAL (a diferencia de un
-                         StackPanel horizontal, que mide con infinito), asi que TextWrapping
-                         funciona solo, a cualquier profundidad y cualquier ancho de columna - sin
-                         ninguna constante que mantener. -->
-                    <DockPanel>
-                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
-                             exactamente"): los nombres reales YA llevan su propio "(N)" cuando
-                             el propio Terrasavr lo pone (carpetas calculadas por predicado,
-                             ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
-                             Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
-                             llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   TextWrapping="Wrap" />
-                    </DockPanel>
-                </Button>
-                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
-                              ItemTemplate="{DynamicResource ObjetosCategoryNodeTemplate}"
-                              Visibility="{Binding IsExpanded, Converter={StaticResource ObjetosBoolToVis}}" />
-            </StackPanel>
-        </DataTemplate>
+        <!-- FASE D del responsive global (28-sep-2026): RETIRADA ObjetosCategoryNodeTemplate, el nodo
+             recursivo del arbol lateral de categorias de la Libreria (columna fija de 210px con ScrollViewer
+             propio). La navegacion de categorias es ahora Views/NavegadorCategorias.xaml, compartida con la
+             Libreria de buffs e Investigacion. -->
 
         <!-- Tarjeta compacta de slot (todos los contenedores reales) - pregunta a Opus sobre
              el diseño 2-sep-2026. Reutiliza los MISMOS handlers de drag&drop que la tarjeta
@@ -818,20 +784,30 @@
                                      (AjustarRepartoObjetosLibreria) ceda a la Libreria el alto que
                                      Inventario/Almacenes ya no pueden usar (rejilla en MaxCell). -->
                                 <RowDefinition x:Name="FilaObjetos" Height="3*" MinHeight="216" />
+                                <!-- FASE D del responsive global (28-sep-2026, s17/s28): RETIRADO el tope
+                                     MaxHeight="{Binding LibraryRowMaxHeight}" (460/640 segun HeightClass, H5-08).
+                                     Existia para que la Libreria no le robara alto a los contenedores en ventanas
+                                     altas; desde la FASE C (Inventario/Almacenes) y ahora tambien Equipamiento, la
+                                     fila de Objetos se limita a lo que su pagina puede usar de verdad
+                                     (AjustarRepartoObjetosLibreria) y el resto es de la Libreria - el tope ya solo
+                                     dejaba bandas vacias (medido: 130px a 1920x1080 y 346px a 2560x1440 bajo
+                                     Equipamiento). -->
                                 <RowDefinition x:Name="FilaLibreria" Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
-                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
-                                               MaxHeight="{Binding LibraryRowMaxHeight}" />
+                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}" />
                             </Grid.RowDefinitions>
+                            <!-- FASE D (s7): dos columnas en la rejilla EXTERIOR - Objetos y Libreria a la izquierda,
+                                 el panel Editar a la derecha ocupando el alto COMPLETO de las dos filas (antes vivia
+                                 solo en la fila de Objetos, el eje escaso: ver ItemEditTemplate). -->
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="300" />
+                            </Grid.ColumnDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
                                  de app.TabInventory.initSide: sideCtr con las pestañas Edit/Library reales -
                                  aqui Library ya vive fijo abajo, ver Grid.Row=1, y Editar sigue al slot
                                  SELECCIONADO sea cual sea el contenedor activo). -->
-                            <Grid Grid.Row="0" Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="300" />
-                                </Grid.ColumnDefinitions>
+                            <Grid Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
 
                                 <!-- Antes: 21 pestañas planas en una sola fila (9 contenedores + 12 de
                                      loadout puesto/1/2/3 x armadura/vanidad/tintes) - se amontonaba
@@ -1310,12 +1286,19 @@
                                                      quedaban con ~227px a 1080 y se partian en 3 filas: Forja y Camara del vacio caian
                                                      debajo, lejos de Banco/Caja fuerte, y la cabecera se comia ~25px mas de alto. -->
                                                 <!-- Correccion Low del revisor (mismo criterio de UN eje que N-03): el bloque de
-                                                     pildoras+acciones va centrado sobre la rejilla, no pegado a la izquierda. -->
-                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6" HorizontalAlignment="Center">
+                                                     pildoras+acciones va centrado sobre la rejilla, no pegado a la izquierda.
+                                                     FASE D, R2-L1 (Low de la segunda revision de la FASE C): un WrapPanel centra el
+                                                     BLOQUE pero no cada una de sus lineas - a 1080 la linea de acciones quedaba 66,5px
+                                                     a la izquierda del eje (y la de pildoras 8,5px). Ahora son DOS WrapPanel apilados y
+                                                     centrados cada uno: pildoras arriba, acciones debajo, las dos en el eje de la
+                                                     rejilla en todos los tamaños. Las 4 pildoras siguen siempre juntas. -->
+                                                <StackPanel x:Name="AlmacenesCabecera" DockPanel.Dock="Top" Margin="0,0,0,6">
                                                     <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
                                                          que pulsar su pildora y contar" - DisplayLabel ya trae el
                                                          recuento real en vivo ("Banco (38/40)"). -->
-                                                    <ItemsControl x:Name="AlmacenesSelector" ItemsSource="{Binding Options}" Margin="0,0,12,0">
+                                                    <!-- Margin izquierdo 5 = el margen derecho que PrefixMetaButton deja tras la ultima
+                                                         pildora: la linea queda simetrica sobre el eje. -->
+                                                    <ItemsControl x:Name="AlmacenesSelector" ItemsSource="{Binding Options}" Margin="5,0,0,0" HorizontalAlignment="Center">
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                                         </ItemsControl.ItemsPanel>
@@ -1329,7 +1312,7 @@
                                                     </ItemsControl>
                                                     <!-- Auditoria de redimensionado, R-01: WrapPanel por el mismo motivo que la
                                                          cabecera de Inventario (H-08). -->
-                                                    <WrapPanel VerticalAlignment="Center">
+                                                    <WrapPanel x:Name="AlmacenesAcciones" HorizontalAlignment="Center" Margin="0,1,0,0">
                                                         <!-- H5-03: mismos 3 botones reales que Inventario, operando sobre
                                                              el almacen SELECCIONADO ahora mismo (Current) - igual que
                                                              Ordenar/Vaciar contenedor ya hacen aqui al lado. -->
@@ -1347,7 +1330,7 @@
                                                         <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding Current.ClearAllCommand}"
                                                                 ToolTip="{Binding Loc[tt_empty_storage], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
                                                     </WrapPanel>
-                                                </WrapPanel>
+                                                </StackPanel>
                                                 <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
                                             </DockPanel>
                                         </Border>
@@ -1431,142 +1414,116 @@
                                 </Grid>
                                 </Grid>
 
-                                <Border x:Name="EditarTarjeta" Grid.Column="1" Style="{StaticResource SidePanelCard}">
-                                    <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
-                                </Border>
                             </Grid>
 
-                            <!-- Libreria: arbol de carpetas real (vanilla + Calamity, ver
-                                 LibraryViewModel.BuildCategoryTree) + buscador, SIEMPRE visible aqui abajo. -->
-                            <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
+                            <!-- FASE D (s7): panel Editar como barra lateral de alto completo (Grid.RowSpan=2), sin
+                                 ScrollViewer propio - ver ItemEditTemplate. -->
+                            <Border x:Name="EditarTarjeta" Grid.Column="1" Grid.RowSpan="2" Style="{StaticResource SidePanelCard}">
+                                <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
+                            </Border>
+
+                            <!-- Libreria de objetos. FASE D del responsive global (28-sep-2026, PDF "Arreglo familia keep"
+                                 bloque 2, s9/s11-s14/s17/s23/s26/s28): misma arquitectura que la Libreria de buffs y que
+                                 Investigacion (familia "catalogo con categorias", s11).
+                                 RETIRADO: la columna fija de 210px con el arbol de categorias dentro de su propio
+                                 ScrollViewer, el ScrollViewer propio de las tarjetas de carpeta raiz y la fila de
+                                 buscador aparte. NUEVO, de arriba abajo:
+                                   - cabecera en UNA fila: plegar/desplegar + buscador + Filtros (antes 2 filas; el alto
+                                     es el eje escaso en el minimo);
+                                   - NavegadorCategorias: categorias principales siempre visibles + ruta/subcategorias;
+                                   - pildora de restriccion de slot y resumen;
+                                   - UN solo scroll owner vertical (LibreriaResultados) para tarjetas raiz o resultados,
+                                     con columnas adaptativas (s8: la rejilla ya no deja media franja vacia). -->
+                            <Border x:Name="LibreriaObjetosPanel" Grid.Row="1" Grid.Column="0" Margin="0,0,10,0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8,6">
                                 <DockPanel>
-                                    <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño,
-                                         2-sep-2026: plegar la Libreria es la mayor ganancia de
-                                         espacio real de toda la pantalla, mas que optimizar las
-                                         pestañas) - se puede plegar/desplegar a mano, y se
-                                         auto-despliega sola al elegir "Elegir..."/"Cambiar" en
-                                         cualquier slot (MainViewModel.RequestPickForSlot), para que
-                                         nunca quede escondida justo cuando hace falta. -->
-                                    <!-- T-H/F1: Ctrl+F ya salta aqui Y despliega esta Libreria (OnWindowKeyDown) -
-                                         no se anunciaba en ningun sitio. -->
-                                    <Button DockPanel.Dock="Top" Command="{Binding ToggleLibraryCollapsedCommand}"
-                                            Style="{StaticResource BarButton}" ToolTip="{Binding Loc[tt_ctrlf_library], Mode=OneWay}"
-                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                    <Grid x:Name="LibreriaCabecera" DockPanel.Dock="Top" Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" MaxWidth="360" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño, 2-sep-2026: plegar la
+                                             Libreria es la mayor ganancia de espacio real de toda la pantalla) - se puede
+                                             plegar/desplegar a mano, y se auto-despliega sola al elegir "Elegir..."/"Cambiar"
+                                             en cualquier slot (MainViewModel.RequestPickForSlot). T-H/F1: Ctrl+F salta al
+                                             buscador y despliega. Plegada, ocupa la fila entera (ColumnSpan 3). -->
+                                        <Button Grid.Column="0" Command="{Binding ToggleLibraryCollapsedCommand}"
+                                                ToolTip="{Binding Loc[tt_ctrlf_library], Mode=OneWay}"
+                                                HorizontalContentAlignment="Stretch" Padding="8,3">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource BarButton}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLibraryVisible}" Value="False">
+                                                            <Setter Property="Grid.ColumnSpan" Value="3" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <!-- Ronda de Libreria/Builds del 6-sep-2026: rotulos por Loc, nunca texto fijo. -->
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
+                                                                    <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Loc[library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                        </Button>
+                                        <!-- H4-01 (cuarta auditoria de Opus): el buscador se estira (columna "*" con MaxWidth=360,
+                                             el mismo techo de siempre) - nunca mide a su contenido. Marcador de posicion real. -->
+                                        <Grid Grid.Column="1" Margin="8,0,0,0" Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                            <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                     FontSize="12" VerticalContentAlignment="Center"
+                                                     ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
+                                            <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                       Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                        </Grid>
+                                        <!-- Boton "Filtros" (encargo del usuario, 13-sep-2026: "amplia la busqueda con filtros
+                                             combinables") - junto al buscador, como siempre. -->
+                                        <Button x:Name="LibraryFiltersButton" Grid.Column="2" Margin="6,0,0,0" Padding="9,5" FontSize="11"
+                                                Command="{Binding Library.ToggleFiltersOpenCommand}"
+                                                ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}"
+                                                Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                            <Setter Property="Tag" Value="AccentSoft" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <TextBlock>
                                                 <TextBlock.Style>
-                                                    <!-- Ronda de Libreria/Builds del 6-sep-2026: los dos rotulos eran
-                                                         texto ESPAÑOL FIJO ("▲ Plegar"/"▼ Desplegar") desde que se
-                                                         creo la cabecera plegable - con la app en ingles se quedaban
-                                                         en español para siempre. No lo cazo A10-IDIOMA-BARRIDO
-                                                         porque su heuristica busca palabras funcionales españolas
-                                                         ("la", "de", "versión"...) y estos dos rotulos son una sola
-                                                         palabra sin ninguna. Un Binding SI vale dentro de un
-                                                         Setter.Value (se evalua contra el DataContext heredado, aqui
-                                                         MainViewModel, que ya expone Loc). -->
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                        <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
-                                                                <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                            <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                <Setter Property="Text">
+                                                                    <Setter.Value>
+                                                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                                                            <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
+                                                                            <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
+                                                                        </MultiBinding>
+                                                                    </Setter.Value>
+                                                                </Setter>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding Loc[library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" />
-                                        </DockPanel>
-                                    </Button>
-
-                                    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
-                                            Visibility="{Binding Library.IsPicking, Converter={StaticResource ObjetosBoolToVis}}">
-                                        <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="{Binding Loc[action_cancel], Mode=OneWay}" Command="{Binding Library.CancelPickCommand}"
-                                                    Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" ToolTip="{Binding Loc[shortcut_esc], Mode=OneWay}" />
-                                            <TextBlock Text="{Binding Loc[library_pick_item_placeholder], Mode=OneWay}"
-                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
-                                        </DockPanel>
-                                    </Border>
-
-                                    <Grid Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="210" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
-                                                Padding="5" Margin="0,0,8,0">
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Top" Content="{Binding Loc[action_view_all], Mode=OneWay}" HorizontalAlignment="Left"
-                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
-                                                        Command="{Binding Library.ClearCategoryCommand}" />
-                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                    <ItemsControl ItemsSource="{Binding Library.RootCategories}"
-                                                                  ItemTemplate="{StaticResource ObjetosCategoryNodeTemplate}" />
-                                                </ScrollViewer>
-                                            </DockPanel>
-                                        </Border>
-
-                                        <DockPanel Grid.Column="1">
-                                            <!-- H4-01 (cuarta auditoria de Opus, Fable): MaxWidth CON
-                                                 HorizontalAlignment="Left" mide al contenido (colapsaba a
-                                                 ~30px vacio, crecia letra a letra al escribir) - quitado
-                                                 Left, el DockPanel ya estira este hijo a lo ancho por
-                                                 omision (igual que el TextBlock de resumen de debajo),
-                                                 MaxWidth solo pone un techo en ventanas grandes. Marcador
-                                                 de posicion real (Grid con TextBlock superpuesto,
-                                                 IsHitTestVisible=False) para que se reconozca como
-                                                 buscador de un vistazo, sin esperar a escribir. -->
-                                            <!-- Fila de busqueda + boton "Filtros" (encargo del usuario, 13-sep-2026:
-                                                 "amplia la busqueda con filtros combinables"). DockPanel en vez de
-                                                 agrandar el Grid de abajo: el boton (ancho fijo, a la derecha) y el
-                                                 buscador (el resto, MISMO MaxWidth=360 de siempre, ver H4-01) tienen
-                                                 que repartirse el ancho, no superponerse - un Grid con columnas fijas
-                                                 hubiera exigido medir el boton a mano. -->
-                                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                                <Button x:Name="LibraryFiltersButton" DockPanel.Dock="Right" Margin="6,0,0,0" Padding="9,5" FontSize="11"
-                                                        Command="{Binding Library.ToggleFiltersOpenCommand}"
-                                                        ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}">
-                                                    <Button.Style>
-                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
-                                                                    <Setter Property="Tag" Value="AccentSoft" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Button.Style>
-                                                    <TextBlock>
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
-                                                                        <Setter Property="Text">
-                                                                            <Setter.Value>
-                                                                                <MultiBinding Converter="{StaticResource LocFormat}">
-                                                                                    <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
-                                                                                    <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
-                                                                                </MultiBinding>
-                                                                            </Setter.Value>
-                                                                        </Setter>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Button>
-                                                <Grid MaxWidth="360">
-                                                    <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                             Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                             FontSize="12"
-                                                             ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
-                                                    <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                               Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
-                                                               Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
-                                                </Grid>
-                                            </DockPanel>
+                                        </Button>
+                                    </Grid>
 
                                             <!-- Popup real de filtros (mismo mecanismo que WhereIsItPopup: anclado
                                                  al boton, StaysOpen=False lo cierra con un clic fuera). Tres grupos
@@ -1638,6 +1595,19 @@
                                                     </StackPanel>
                                                 </Border>
                                             </Popup>
+
+                                    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                                            Visibility="{Binding Library.IsPicking, Converter={StaticResource ObjetosBoolToVis}}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="{Binding Loc[action_cancel], Mode=OneWay}" Command="{Binding Library.CancelPickCommand}"
+                                                    Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" ToolTip="{Binding Loc[shortcut_esc], Mode=OneWay}" />
+                                            <TextBlock Text="{Binding Loc[library_pick_item_placeholder], Mode=OneWay}"
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
+                                        </DockPanel>
+                                    </Border>
+
+                                    <DockPanel Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                        <views:NavegadorCategorias x:Name="LibreriaNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding Library}" Margin="0,0,0,2" />
                                             <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
@@ -1657,85 +1627,26 @@
                                                     </TextBlock.Text>
                                                 </TextBlock>
                                             </Border>
-                                            <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
-                                                 sigue sin tener las rejillas como en inventario... no debe tener scroll a
-                                                 menos que sea una categoria que logicamente tiene muchos ítems"). Misma
-                                                 SlotGridPanel que el resto de la app - con estos parametros reales
-                                                 (medidos contra la franja real de ~772x186px) no aparece scroll hasta
-                                                 ~48 resultados (4 filas x 12 columnas a MinCell=40), y con pocos
-                                                 resultados la celda crece hasta MaxCell=96 topada por ReferenceColumns=10
-                                                 (~73px aqui) - ni vacio ni deforme. MinCell=40 en vez de 44 a proposito:
-                                                 con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
-                                                 contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
-                                                 infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
-                                            <!-- H5-13 (quinta auditoria de Opus): "el estado vacio de la Libreria...
-                                                 es un rectangulo en blanco - sin busqueda/carpeta/restriccion de
-                                                 slot, la mitad derecha del panel es superficie muerta". Mismo
-                                                 mecanismo real ya en produccion en Investigacion (H4-07 punto 3,
-                                                 ShowRootCategoryCards - subido a la base compartida por H5-15) -
-                                                 tarjetas grandes (NavCardButton) a las carpetas RAIZ reales, un
-                                                 atajo mas grande al mismo arbol de la izquierda. -->
-                                            <!-- imagen2/LIBCARD_CLIP_SOLO (24/25-sep-2026, revision-correccion-integral-
-                                                 familia-Keep): sin clearance real la fila 1 quedaba pegada a Y=0 del
-                                                 ScrollViewer, y el TranslateTransform "BdLift" de NavCardButton
-                                                 (Theme.xaml, Trigger IsMouseOver, -3px) caia fuera del area que el
-                                                 ScrollViewer recorta - 3,00px de recorte real medidos por el canario.
-                                                 IMPORTANTE: el Padding va en el CONTENIDO (este ItemsControl), NUNCA en
-                                                 el propio ScrollViewer - Padding ahi se traduce en Margin del
-                                                 ScrollContentPresenter (plantilla por defecto de WPF), que desplaza a
-                                                 la vez la CAJA que recorta Y el contenido que lleva dentro (medido:
-                                                 mismo 3px de recorte, solo trasladado en bloque, cero mejora real).
-                                                 Con el Margin en el ItemsControl la caja de recorte NO se mueve y el
-                                                 contenido si queda mas abajo dentro de ella - clearance real. Arreglo
-                                                 estructural (NO bajar el lift a 0 ni tapar con Clip/Effect). -->
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource ObjetosBoolToVis}}">
-                                                <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Library.RootCategories}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
-                                                            <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
-                                                                    Command="{Binding SelectCommand}" CommandParameter="{Binding}">
-                                                                <StackPanel>
-                                                                    <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - el
-                                                                         MISMO bug que CategoryNodeTemplate ya documenta arriba
-                                                                         (R-06/H-06), que se quedo sin arreglar en las tarjetas de
-                                                                         carpeta raiz. Un StackPanel horizontal mide a sus hijos con
-                                                                         ancho INFINITO, asi que el TextWrapping del nombre no se
-                                                                         aplicaba NUNCA: el texto tomaba su ancho natural y se salia
-                                                                         de la tarjeta (Width=200 fija), cortado en seco contra el
-                                                                         borde del Button y sin ningun scroll horizontal con el que
-                                                                         alcanzarlo. Medido a 1080x700: "Mascotas, Monturas,
-                                                                         Herramientas" pedia 221px en una tarjeta de 200 y perdia
-                                                                         89px. Un DockPanel SI da al ultimo hijo el ancho restante
-                                                                         real, y el Wrap funciona solo a cualquier ancho. -->
-                                                                    <DockPanel Margin="0,0,0,6">
-                                                                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
-                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
-                                                                                   VerticalAlignment="Center" />
-                                                                    </DockPanel>
-                                                                    <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
-                                                                               Style="{StaticResource CaptionText}" />
-                                                                </StackPanel>
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </ScrollViewer>
-                                            <!-- Auditoria de Opus, L-7: x:Name muerto, sin ningun uso real en el
-                                                 codigo-behind - limpieza real, no cambio de comportamiento. -->
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">
-                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
+                                            <!-- FASE D: el resumen (ResultsSummary) vive ahora en la linea de ruta de NavegadorCategorias. -->
+                                        <!-- Unico scroll owner vertical de la Libreria (s13: Library.Results -> results owner).
+                                             Tarjetas de carpeta raiz (H5-13, estado sin carpeta ni busqueda) y resultados comparten
+                                             el MISMO ScrollViewer; imagen2/LIBCARD_CLIP_SOLO: el Margin superior va en el
+                                             contenido (las tarjetas suben 3px en hover), nunca Padding en el ScrollViewer. -->
+                                        <ScrollViewer x:Name="LibreriaResultados" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <Grid>
+                                                <!-- FASE D: tarjetas de carpeta raiz compartidas (Views/TarjetasCategoriasRaiz.xaml), con sus
+                                                     subcarpetas de primer nivel - antes una copia de plantilla por superficie. -->
+                                                <views:TarjetasCategoriasRaiz Margin="0,4,0,0" DataContext="{Binding Library}"
+                                                                              Visibility="{Binding ShowRootCategoryCards, Converter={StaticResource ObjetosBoolToVis}}" />
+                                                <!-- Rejilla de resultados SIN columnas semanticas (s8): AdaptiveColumns + PreferirCeldaGrande
+                                                     (SlotGridPanel.cs) - con muchos resultados llena el ancho con el maximo de columnas a
+                                                     MinCell y el scroll owner absorbe el resto; si todos caben, elige las columnas que dan
+                                                     la celda mas grande. Columns=60 es solo el techo (maximumColumns). -->
+                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}"
+                                                              Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de
-                                                                 SlotGridPanel (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
-                                                            <controls:SlotGridPanel Columns="12"
+                                                            <controls:SlotGridPanel Columns="60" AdaptiveColumns="True" PreferirCeldaGrande="True"
                                                                                      MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
                                                                                      MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
                                                                                      Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
@@ -1744,9 +1655,9 @@
                                                         </ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
                                                 </ItemsControl>
-                                            </ScrollViewer>
-                                        </DockPanel>
-                                    </Grid>
+                                            </Grid>
+                                        </ScrollViewer>
+                                    </DockPanel>
                                 </DockPanel>
                             </Border>
                         </Grid>
