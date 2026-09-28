@@ -316,6 +316,21 @@ internal static partial class Program
                 }
             }
 
+            // Cierre real del known-diff d7a5a6ef (29-sep-2026, aplicador-fix-apariencia-29sep2026):
+            // geometria de REFERENCIA medida contra afe51344 (worktree limpio, arnes libre) antes de
+            // tocar nada - MainViewModel.AppearanceCompactFactor da 0 exacto en >=768 de alto, asi
+            // que estos 8 valores (ext de columna 0/1 a los 4 tamaños que NO son el minimo) tienen
+            // que seguir IDENTICOS byte a byte (s34: "en tamaños mayores debe verse EXACTAMENTE
+            // igual que ahora"). scr(1366,col1)=66,1 es residuo YA conocido y aceptado del propio
+            // ancho de columna, sin relacion con esta ronda (Apariencia no toca AppearanceContentMaxWidth).
+            var extReferenciaAfe51344 = new Dictionary<(double w, double h, int col), double>
+            {
+                [(1366, 768, 0)] = 553.7, [(1366, 768, 1)] = 626.8,
+                [(1520, 860, 0)] = 553.7, [(1520, 860, 1)] = 626.8,
+                [(1920, 1080, 0)] = 563.0, [(1920, 1080, 1)] = 480.2,
+                [(2560, 1440, 0)] = 563.0, [(2560, 1440, 1)] = 480.2,
+            };
+
             void MedirApariencia(double w, double h, string idioma)
             {
                 vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabApariencia; DoEvents(); DoEvents(); WaitForDispatcher(80);
@@ -325,18 +340,71 @@ internal static partial class Program
                     var s = svs[i];
                     string cab = $"Apariencia[{i}] {w:0}x{h:0} idioma={idioma}";
                     Console.WriteLine($"PERSONAJE {cab}: {Nombre(s)} vp={s.ViewportHeight:0.#} ext={s.ExtentHeight:0.#} scr={s.ScrollableHeight:0.#}");
-                    // Limite del permiso (medido tras el arreglo de esta ronda, worst case 1080x700 ES):
-                    // columna 0 (preview) 60,9px, columna 1 (editable) 284,7px. Fallo() si se DUPLICA -
-                    // señal de una regresion real, no de una variacion de idioma/DPI menor.
-                    double limite = i == 0 ? 130 : 580;
-                    if (s.ScrollableHeight > limite)
-                        Fallo("APARIENCIA", $"{cab}: {Nombre(s)} desplaza {s.ScrollableHeight:0.#}px, por encima del limite del permiso ({limite}px) - ver known-diff de Apariencia en el requirement");
+                    if (w == 1080 && h == 700)
+                    {
+                        // Objetivo medible del encargo (29-sep-2026): SIN scroll de pagina ni de
+                        // columna en el minimo real, ES y EN - HARD FAIL, ya no un limite/AVISO.
+                        if (s.ScrollableHeight > 0.5)
+                            Fallo("APARIENCIA-MINIMO", $"{cab}: {Nombre(s)} desplaza {s.ScrollableHeight:0.#}px en el minimo real - el objetivo del encargo es 0 (known-diff d7a5a6ef, cerrado)");
+                    }
+                    else if (extReferenciaAfe51344.TryGetValue((w, h, i), out double extEsperado))
+                    {
+                        // Geometria congelada (s34): idioma no participa aqui a proposito (el
+                        // contenido de esta columna no depende del idioma, confirmado en afe51344:
+                        // mismo ext en ES/EN a 1080x700) - solo se compara en ES para no duplicar.
+                        if (idioma == "es" && Math.Abs(s.ExtentHeight - extEsperado) > 1.0)
+                            Fallo("APARIENCIA-GEOMETRIA", $"{cab}: ext={s.ExtentHeight:0.#}px, esperado {extEsperado:0.#}px (referencia afe51344) - la columna cambio en un tamaño que el encargo exige dejar intacto");
+                    }
                 }
-                if (w == 1080)
+                // Encargo (29-sep-2026): capturas en los 3 tamaños pedidos (1080/1366/1920), no solo
+                // el minimo - las otras 2 pestañas (SpawnPoints/Desbloqueos/Version/Comparar) siguen
+                // con solo 1080 (sin cambios de codigo esta ronda, no hace falta mas evidencia ahi).
+                if (w == 1080 || w == 1366 || w == 1920)
                 {
                     string shot = Path.Combine(outDir, $"personaje-{etiqueta}-apariencia-{w:0}x{h:0}-{idioma}.png");
                     File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
                 }
+            }
+
+            // Tamaño de letra minimo (s34, §14.7): los 3 estilos reales que usa toda la pestaña
+            // Apariencia (SectionText/BodyText/CaptionText, Theme.xaml) no pueden bajar de su
+            // FontSize de siempre - AppearanceCompactFactor solo toca Padding/Margin/Height de
+            // contenedor, nunca FontSize (ver el comentario real de MainViewModel.
+            // AppearanceCompactFactor). Comprobado contra el recurso REAL de la app (no un numero
+            // copiado a mano), asi que si algun dia Theme.xaml cambiara estos valores el canario
+            // lo notaria igual.
+            void ComprobarTamañoDeLetraMinimo()
+            {
+                double FontSizeDe(string clave)
+                {
+                    var estilo = (Style)window.FindResource(clave);
+                    var setter = estilo.Setters.OfType<Setter>().FirstOrDefault(s => s.Property == TextBlock.FontSizeProperty);
+                    return setter != null ? (double)setter.Value : -1;
+                }
+                double sectionText = FontSizeDe("SectionText"), bodyText = FontSizeDe("BodyText"), captionText = FontSizeDe("CaptionText");
+                Console.WriteLine($"PERSONAJE APARIENCIA FONTSIZE: SectionText={sectionText} BodyText={bodyText} CaptionText={captionText}");
+                if (sectionText < 14) Fallo("FONTSIZE", $"SectionText bajo a {sectionText} (minimo real 14) - Apariencia usa este estilo (Genero/Peinado/Tinte/Estadisticas)");
+                if (bodyText < 12.5) Fallo("FONTSIZE", $"BodyText bajo a {bodyText} (minimo real 12.5) - Apariencia lo usa en la etiqueta de cada tarjeta de color");
+                if (captionText < 11) Fallo("FONTSIZE", $"CaptionText bajo a {captionText} (minimo real 11) - Apariencia lo usa en el texto de ayuda y las etiquetas de estadisticas");
+            }
+
+            // Muñeco escalado nitido (s34: "escalado entero o NearestNeighbor para que no se vea
+            // borroso"). AppearancePreviewImage es el Image real del preview (240x336/6x en
+            // >=768px de alto, 200x280/5x en el minimo real de 700 - PlayerPreviewRenderer.Width/
+            // Height=40x56 reales).
+            void ComprobarMuñecoNitido(double w, double h)
+            {
+                FijarTamaño(window, w, h); vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabApariencia; DoEvents(); DoEvents(); WaitForDispatcher(80);
+                var img = window.FindName("AppearancePreviewImage") as System.Windows.Controls.Image;
+                if (img == null) { Fallo("MUÑECO", "no se encuentra AppearancePreviewImage"); return; }
+                var modo = RenderOptions.GetBitmapScalingMode(img);
+                double escalaW = img.Width / 40.0, escalaH = img.Height / 56.0;
+                Console.WriteLine($"PERSONAJE APARIENCIA MUÑECO {w:0}x{h:0}: Width={img.Width:0.#} Height={img.Height:0.#} escala={escalaW:0.00}x/{escalaH:0.00}x modo={modo}");
+                if (modo != BitmapScalingMode.NearestNeighbor)
+                    Fallo("MUÑECO", $"{w:0}x{h:0}: BitmapScalingMode={modo}, se esperaba NearestNeighbor (sprite pixel art, s34)");
+                bool escalaEntera = Math.Abs(escalaW - Math.Round(escalaW)) < 0.01 && Math.Abs(escalaH - Math.Round(escalaH)) < 0.01 && Math.Abs(escalaW - escalaH) < 0.01;
+                if (!escalaEntera)
+                    Fallo("MUÑECO", $"{w:0}x{h:0}: escala no entera/no uniforme ({escalaW:0.00}x/{escalaH:0.00}x) - se veria borroso o distorsionado (s34)");
             }
 
             foreach (var (w, h) in new[] { (1080.0, 700.0), (1366.0, 768.0), (1520.0, 860.0), (1920.0, 1080.0), (2560.0, 1440.0) })
@@ -357,7 +425,20 @@ internal static partial class Program
             MedirPaginaSimple(TabDesbloqueos, "Desbloqueos", 1080, 700, "en");
             MedirPaginaSimple(TabVersion, "Version", 1080, 700, "en");
             MedirComparar(1080, 700, "en");
+            // Capturas EN en los otros 2 tamaños pedidos (1366/1920) - solo Apariencia, geometria ya
+            // congelada arriba en ES (el contenido de esta columna no depende del idioma).
+            FijarTamaño(window, 1366, 768); DoEvents(); DoEvents();
+            MedirApariencia(1366, 768, "en");
+            FijarTamaño(window, 1920, 1080); DoEvents(); DoEvents();
+            MedirApariencia(1920, 1080, "en");
             vm.Settings.Language = "es"; DoEvents(); DoEvents();
+
+            ComprobarTamañoDeLetraMinimo();
+            // 5x (200x280) en el minimo real, 6x (240x336, "de siempre") en 768+ - los dos escalones
+            // reales de AppearanceCompactFactor (1.0 y 0.0).
+            ComprobarMuñecoNitido(1080, 700);
+            ComprobarMuñecoNitido(1366, 768);
+            FijarTamaño(window, 1180, 860); DoEvents(); // vuelve al tamaño de siempre antes de seguir
 
             {
                 vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabComparar; DoEvents(); DoEvents();
