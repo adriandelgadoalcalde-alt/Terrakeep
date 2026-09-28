@@ -31844,3 +31844,116 @@ encontraron): su contenido actual apunta a `Terrakeep.App.Tests\bin\Debug\...\co
 295372\Eldelgas.plr`, es decir, lo escribió el canario de arrastre de otro agente (arnés Debug, antes
 de que existiera el aislamiento). El valor previo del usuario no se puede reconstruir desde aquí
 (solo guardé su hash, `f314e82d…`); queda anotado para el coordinador.
+
+## 28-sep-2026 - FASE C del responsive global: Inventario y Almacenes (aplicador-fix-responsive-faseC-28sep2026)
+
+Encargo: PDF "Arreglo familia keep", bloque 2 (changeMode REPLACE), FASE C: Inventario/Almacenes + remates
+Low de la FASE B + bug del salto al pulsar un slot + aislamiento de mundos reales en el arnés. Requirement
+`6b59710e` (NO DONE: quedan D-G). MinWidth/MinHeight sin tocar (§31).
+
+### 0. Remates de la FASE B (`c7e2ab66`)
+- N-01: nombre del objeto en Editar (`MaxWidth=220`) desplazado ~7px a la derecha -> `HorizontalAlignment=Left`.
+- N-03: a 1520 la rejilla (centrada por `SlotGridPanel`, pedido del usuario) quedaba ~170px desalineada de
+  Loadout/Vista (a la izquierda). Criterio: un solo eje, el central, en todos los tamaños (en Extra las 3
+  subvistas ya iban centradas): pildoras centradas y Defensa/bono con `TextAlignment=Center`.
+- Log del arnés: "carpeta real"/"personaje real" (HOME-SCAN, H6-01, KEEPQA_EQUIPINV) -> "copia aislada" + ruta.
+
+### 1. Salto de la rejilla al pulsar un slot (hallazgo de `020fde86`)
+Causa confirmada en el WPF real (`ilspycmd` sobre PresentationFramework 10.0.3): `ScrollViewer.
+OnMouseLeftButtonDown` hace `Focus()` y `FrameworkElement.OnGotFocus` llama a `BringIntoView()`. El
+ScrollViewer propio de `ContainerCompactTemplate` cogía el foco y el de la página se desplazaba para
+enseñarlo entero. Medido (eventos de ratón enrutados de WPF, sin SendInput): 74,6px en Inventario y 84,3px en
+Almacenes a 1080x700 con la Librería desplegada; foco de teclado en el ScrollViewer (también en Equipamiento,
+ahí sin salto). Arreglo: `SlotCompactTemplate` `MouseLeftButtonDown="OnItemSlotMouseLeftButtonDown"`
+(`ObjetosView.xaml.cs`): el slot toma el foco y marca el evento, igual que un Button. Después: 0px y foco en
+el slot en Inventario, Almacenes y Equipamiento (página arriba y ya desplazada).
+
+### 2. FASE C - Inventario y Almacenes (`0900908b`)
+Canario nuevo `INVALM_RESPONSIVE_SOLO=1` (`Terrakeep.App.Tests/CanarioResponsiveInventarioAlmacenes.cs`):
+colecciones llenas (50/50 y 4x40/40), 1080x700/1366x768 plegada-desplegada, 1520x860, 1920x1080, 2560x1440,
+maximizado, los 4 almacenes en el mínimo, EN, modo compacto, banner "Deshacer", clic en slot, navegación
+etiquetada, resize en caliente y negative acceptance. Capturas antes/después en
+`docs/evidencia/responsive-global/faseC/invalm-{antes,despues}-*.png` (54).
+
+**ANTES: 58 FALLO.** 26 SCROLL-ANIDADO (el ScrollViewer de `ContainerCompactTemplate` dentro de la página en
+todos los tamaños), 8 CLIC-SCROLL, 3 NAV-ETIQUETA, 2 VIEJO. La celda estaba CONGELADA en 57,1px de 1080 a
+2576px (`AvailableHeight` enlazado al ScrollViewer interior, que recibía alto infinito y medía su propio
+contenido): rejilla 607/1412px (43%) a 1920 y 607/2068 (29%) maximizado. A 1080x700 con la Librería
+desplegada: Inventario scr=94,5px y 30/50 casillas enteras; Almacenes scr=96,3px y 20/40 (las 4 píldoras
+partidas en 3 filas porque los botones, a la derecha de un DockPanel, se medían primero).
+
+**Qué se cambió (mecanismo viejo RETIRADO):**
+- `ContainerCompactTemplate` eliminada; Inventario y Almacenes usan `ContainerFlowTemplate` (única plantilla).
+- `Controls/AjusteAlViewport.cs` (nuevo): decorador que mide la página con el alto REAL del viewport de su
+  ScrollViewer (`AltoViewport` <- `ViewportHeight`); la rejilla encoge/crece la celda hasta caber
+  (MinCell..MaxCell) y, si ni a MinCell cabe, la página crece lo justo y la desplaza su único owner (§14 paso 8).
+- `SlotGridPanel.DeficitAlto`: alto que le falta con alto finito (WPF recorta el DesiredSize, el exceso no
+  sube solo) y aviso al decorador cuando cambia por algo externo. Iteración real: la primera versión no
+  avisaba y con el banner "Deshacer" la última fila quedó recortada 36px sin scroll (canario: CLIP-V).
+- `ObjetosView.xaml`: páginas con `AjusteAlViewport` + DockPanel (antes StackPanel, que daba alto infinito);
+  marcos `VerticalAlignment=Top`, margen 6->2 y relleno vertical 10->8 (§14 paso 7: con 10 quedaban 4px de
+  scroll a 1080x700 desplegada). Almacenes: píldoras y botones en un WrapPanel (píldoras siempre juntas).
+- Navegación 1/2/3 -> icono real del juego (Cota de malla de hierro / Cofre / Hucha) + nombre + tooltip, a la
+  izquierda como encabezado; se retira el título de página duplicado. Mismos RadioButton/Tag/Click/IsChecked.
+- `AdaptiveColumns` NO: las 10 columnas son las del juego (fila 1 = barra rápida) y el eje escaso es el alto;
+  la celda nunca baja de MinCell. 2+ almacenes a la vez en grande descartado con medida: 4 en 2x2 a 1920 dan
+  ~43px de celda (agrandar la ventana encogería los iconos, lo que la FASE B ya rechazó); un almacén + selector
+  siempre visible en todos los tamaños.
+
+**DESPUÉS: 0 FALLO.** 0 ScrollViewer dentro de las páginas (visibles o no), `ContainerCompactTemplate` no
+existe. Todas las casillas enteras sin desplazar en todos los tamaños (50/50, 40/40); scroll de página 0 salvo
+con el banner "Deshacer" visible (36px, lo absorbe el owner, sin recorte). Celda Inventario/Almacén:
+1080x700 plegada 59,1/59,1, desplegada 40/44,1; 1366 plegada 80,1/80,1, desplegada 48,2/54,3; 1520 59,2/73,1;
+1920 85,4/90; 2560x1440 90/90. Resize 1920->1366->1080->1920 conserva página, almacén (Forja), slot de Editar,
+Librería y búsqueda, mismos ViewModels. ES/EN y compacto sin FALLO. N-02: la estrella de favorito de Editar
+con un slot de Inventario mide 22,2x22px en la fila del título y se ve entera en todos los tamaños.
+
+**Puntos abiertos para el revisor/coordinador:**
+- §17: a 2560x1440 la rejilla topa en MaxCell 90 (escala 2,00x exacta del pixel art, `ContainerViewModel`) y
+  usa el 46% del ancho (a 1920, 62-66%; antes 43%/29%). Subir MaxCell rompe la escala entera; dos regiones a
+  la vez (p.ej. Inventario + Almacén) sería un cambio de UX a decidir.
+- Maximizado real INCONCLUSIVE en esta sesión: a mitad de la ronda el único monitor conectado pasó a ser uno
+  vertical (1440x2872 físicos -> maximiza a 1080x1162 DIP); el ANTES sí se midió en 2576x1408. Cubierto con
+  el caso fijo 2560x1440 (§2).
+- Panel Editar (permiso `aa5f7395`, aplazado a la FASE D por el usuario): escenario del permiso (armadura,
+  1080x700 desplegada) 7,3px (antes 9,6) - no empeora. Con un ARMA de Inventario (Cénit, prefijos largos):
+  138,9px a 1080x700 desplegada (antes de esta fase 141,2), 98,1 a 1366x768 desplegada, 42,9 a 1520; con un
+  slot de Almacén, 0. Preexistente y dependiente del contenido; solo informado.
+
+### 3. Aislamiento de mundos reales en el arnés (`dcd5b152`)
+No eran ~15 sitios sino 49 literales en 14 ficheros. Mismo patrón que H-04: `CharacterFileService.
+CarpetasMundosDePrueba` (solo con `App.ModoDiagnostico`) sustituye las carpetas de mundos (extras de Ajustes
+solo si son temporales, para AJU-03); `RaicesMundosPermitidasDePrueba` + `ComprobarMundoDePrueba` vigilan
+`ExplorationViewModel.LoadFromPathAsync/ScanWorlds`, `WorldCompareViewModel`, `GlobalSearchViewModel` y
+`WorldFileService.WriteAtomic`. `AislamientoPartidasReales.cs` copia los .wld/.twld (11) a la carpeta
+temporal, activa la guarda (`FALLO: AISLAMIENTO-MUNDO` + salida 5) y `MundoAislado(ruta)` da la copia a los
+49 literales. Negative acceptance real: `AISLAMIENTO_MUNDO_NEGATIVO_SOLO=1` intenta abrir `roca_negra.wld`
+REAL -> FALLO + código 5 antes de leerlo. Tests `CarpetasMundosDePruebaTests` (3).
+Ejecutados sobre copias los 29 modos del arnés que usan mundos (COFRES_INSPECTOR, FLUJOCOFRES, MRK,
+EXPLORATION_LAYOUT, GUIA, GUIA_JEFES_TARDIOS, VERIF_3FUNC, EX3, EXPTOOLBAR, IDEA5/7/1B/1C/8, GUIACHIP, BADGES,
+T6, BESTIARIO, HOMECARDS, BLANDO_RIO, BESTIARY_DPI, NPC_ZORDER, KEEPQA_VIEWPORT, FALLO3, A11, WORLDEDIT,
+SCREENSHOTS, AR_EX_HSCROLL, README_SHOTS): ninguno toca la guarda. FALLO que salen: AR-MRK-CLIC x1 +
+AR-MRK-OTROS x5 y AR-LAY x1 (los preexistentes documentados), y 4 comprobaciones de UI que buscan piezas que
+el rediseño de Exploración ya retiró (IDEA1B: Expander "Editar mundo"; BESTIARIO: Expander del Bestiario;
+GUIACHIP: color del chip; IDEA7: marcador de mazmorra) - no dependen de la ruta del mundo (los datos se leen
+y guardan bien sobre la copia). No se pudo hacer el diferencial con el código viejo: abriría los mundos reales.
+README_SHOTS reescribe `docs/screenshots/` del repo: restaurado con `git checkout` tras ejecutarlo.
+
+### Verificación
+- `dotnet build Terrakeep.slnx -c Release` 0/0. `Terrakeep.Core.Tests` 782/782. `Terrakeep.App.ViewModels.Tests`
+  785/785 (777 + 5 `AjusteAlViewportTests` + 3 `CarpetasMundosDePruebaTests`).
+- `INVALM_RESPONSIVE_SOLO` 0 FALLO; `EQUIP_RESPONSIVE_SOLO`, `NAV123_SOLO`, `AR14_SOLO`, `KEEPQA_EQUIPINV_SOLO`
+  0 FALLO; `ARLAY_CANARIO_SOLO` OK (sobre `dcd5b152`, con el aislamiento de mundos activo).
+- NO ejecutados (BLOQUEADO por la regla de seguridad del encargo, "no SendInput sobre el escritorio"):
+  `DRAG_GHOST_LIBRERIA_SOLO` (SetCursorPos/mouse_event reales) y la pasada completa por defecto del arnés
+  (RealClickAt, Supr/Intro/Esc reales en 6 bloques). El clic en slot del canario nuevo usa eventos enrutados
+  de WPF, no entrada del SO.
+- Partidas reales: SHA256 de las 23 `.plr/.tplr/.wld/.twld` (tModLoader y vainilla) IDÉNTICOS al inicio y al
+  final, comprobados tras cada tanda. `session.json`: su hash cambió entre el inicio de la sesión
+  (`761abfc7…`) y las 14:40 (`6514bf5d…`, apunta a `Eldelgas.plr` real, `ObjetosSubTabIndex=1`); desde
+  entonces NINGUNA ejecución (arnés, 29 modos, canarios, suites xunit) lo cambia (comprobado una a una). No
+  identifiqué qué proceso lo reescribió antes; no guardé una copia del original (solo su hash) - error mío,
+  anotado para el coordinador. Lección: guardar COPIA de `session.json`, no solo el hash, antes de empezar.
+- Obstáculo resuelto: una tanda larga pasó a segundo plano por un `fork` fallido de bash (lanzador `py` que
+  interpretó el shebang del script); no llegó a ejecutar nada. Se esperó con `controladorEspera.js` y se
+  relanzó en tandas cortas.
