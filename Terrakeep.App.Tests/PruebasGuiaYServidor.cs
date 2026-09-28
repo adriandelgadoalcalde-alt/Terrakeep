@@ -238,6 +238,17 @@ internal static partial class Program
                 ("Deerclops (opcional)", "Derrotarlo (opcional)", "Jefe (Deerclops, jefe=668, hoja en rejilla)"),
                 ("La Reina Abeja (opcional)", "Derrotarla (opcional)", "Jefe (Reina Abeja, jefe=222)"),
                 ("Plantera", "Derrotarla", "Jefe (Plantera, jefe=262)"),
+                // Auditoria Guia-Sprites (28-sep-2026): hueco de cobertura real cerrado aqui - el
+                // usuario reporto en directo que "la maldad de tu mundo" (Devorador de
+                // Mundos/Cerebro de Cthulhu) no tenia sprite. Causa real confirmada: BossIconResolver
+                // y Assets/boss_icons/13.png ya existian desde Encargo4, pero guia_progresion.json
+                // (autorado en TerrakeepMod) nunca traia "jefe": 13 en los pasos de este tramo -
+                // un hueco de DATOS que ningun canario existente cubria (ningun elemento de este
+                // array probaba MaldadDelMundo). Corregido en TerrakeepMod/Assets/guia_progresion.json
+                // + re-sincronizado aqui via scripts/sync-guia-desde-terrakeepmod.ps1. Fila nueva
+                // para que un futuro retroceso de datos (p.ej. una resincronizacion que vuelva a
+                // perder el campo "jefe") lo detecte en el mismo bucle generico de siempre.
+                ("La maldad de tu mundo", "Derrotarlo", "Jefe (Devorador de Mundos/Cerebro de Cthulhu, jefe=13, bandera compartida downedBoss2)"),
                 // GuiaCalamity Encargo B (25-sep-2026): cinco filas de jefe de CALAMITY reales,
                 // CalamityBossIconResolver nuevo - dos que siguen la convencion directa
                 // (DesertScourgeHead, Crabulon) y los TRES casos de mapeo manual confirmados contra

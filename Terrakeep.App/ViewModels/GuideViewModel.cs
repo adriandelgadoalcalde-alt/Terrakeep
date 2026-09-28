@@ -142,10 +142,23 @@ public sealed partial class GuidePasoViewModel : ObservableObject
     //    scripts/extraer-sprites-jefes-calamity.js), que cubre 27 de los 29 pids
     //    jefeMod/jefeFinalMod REALMENTE usados en guia_progresion.json (los 2 restantes,
     //    HiveMind/PerforatorHive, solo aparecen como jefeFinalMod de TRAMO, sin ningun paso
-    //    propio - null es el resultado honesto para ellos, igual que jefeFinal=13 en Encargo4).
-    //    Nunca se cae al siguiente escalon si el pid no resuelve (mezclar "el jefe de este paso"
-    //    con "el primer objeto que pide" seria enganoso, no un fallback razonable) - mismo
-    //    criterio que el caso 1.
+    //    propio ni sprite extraible de la instalacion - LIMITE REAL de datos, null es el
+    //    resultado honesto para ellos). Nunca se cae al siguiente escalon si el pid no resuelve
+    //    (mezclar "el jefe de este paso" con "el primer objeto que pide" seria enganoso, no un
+    //    fallback razonable) - mismo criterio que el caso 1.
+    //    Auditoria Guia-Sprites (28-sep-2026): el caso paso.Jefe=13 (Devorador de
+    //    Mundos/MaldadDelMundo) SI tenia sprite real ya extraido (Assets/boss_icons/13.png,
+    //    desde Encargo4) pero nunca llegaba a usarse - guia_progresion.json (autorado en
+    //    TerrakeepMod, sincronizado aqui via scripts/sync-guia-desde-terrakeepmod.ps1) nunca
+    //    traia "jefe": 13 en los pasos ArmaContraLaMaldad/VencerLaMaldad de ese tramo (a
+    //    diferencia de TODOS los demas tramos vanilla con jefe real, que si lo traen en cada
+    //    paso) - un hueco de DATOS, no de codigo. Corregido anadiendo "jefe": 13 a los dos pasos
+    //    (mismo id que ya usa jefeFinal por defecto del tramo, y misma bandera compartida
+    //    downedBoss2 para Corrupcion/Carmesi - no hay sprite de Cerebro de Cthulhu extraido, ni
+    //    falta: NPC.downedBoss2 ya trata ambas variantes como intercambiables). Auditados TODOS
+    //    los demas tramos vanilla/Calamity del catalogo: es el UNICO caso real de este tipo de
+    //    hueco (mapeo incompleto con sprite ya disponible) - el resto, o ya tenian "jefe"/
+    //    "jefeMod" puestos, o son limites reales de datos (HiveMind/PerforatorHive, arriba).
     // 3) Si no hay jefe: el primer requisito Objeto/ObjetoCualquiera del paso (por orden real del
     //    catalogo) via LibraryCategoryTreeBuilder.ResolveIconPath - el MISMO resolver que ya usa la
     //    Libreria/Investigacion para vanilla (Assets/vanilla/icons) y Calamity (Assets/calamity/
