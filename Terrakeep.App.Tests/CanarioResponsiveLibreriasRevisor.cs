@@ -60,11 +60,13 @@ internal static partial class Program
         foreach (var r in vm.Library.RootCategories) Rec(r, 1);
         Console.WriteLine($"LIB REVISOR ARBOL: nivel2='{nivel2?.FullPath}' nivel3='{nivel3?.FullPath}' mas profundo (nivel {maxProf})='{profundo?.FullPath}' mas hijos='{masHijos?.FullPath}' ({masHijos?.Children.Count})");
 
-        // --- D-01: 2 filas enteras de resultados + ruta en una linea (1080x700, ES/EN) ---
+        // --- D-01: 2 filas enteras de resultados + ruta en una linea (ES/EN) en el minimo 1080x700 y en el alto
+        //     minimo de la clase Normal (1320x700) y 1366x768 - tambien ahi la Libreria es el eje escaso. ---
+        foreach (var (tam, tw, th) in new[] { ("1080x700", 1080.0, 700.0), ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0) })
         foreach (var idioma in new[] { "es", "en" })
         {
             vm.Settings.Language = idioma; DoEvents(); DoEvents();
-            window.WindowState = WindowState.Normal; FijarTamaño(window, 1080, 700); vm.IsLibraryCollapsed = false;
+            window.WindowState = WindowState.Normal; FijarTamaño(window, tw, th); vm.IsLibraryCollapsed = false;
             IrA(0, 1); vm.Library.SearchText = ""; WaitForDispatcher(250);
             foreach (var (etq, nodo) in new[] { ("nivel2", nivel2), ("nivel3", nivel3), ("profundo", profundo), ("mashijos", masHijos) })
             {
@@ -79,12 +81,12 @@ internal static partial class Program
                 var enteras = celdas.Where(EnteroEnAmbosEjes).ToList();
                 int filasEnteras = enteras.Select(c => Math.Round(RectCompleto(c, window).Top)).Distinct().Count();
                 int plegadas = ruta?.GetType().GetProperty("MigasPlegadas")?.GetValue(ruta) is int p ? p : -1;
-                string cab = $"[ruta-{etq}-1080x700-{idioma}] '{nodo.FullPath}' migas={vm.Library.MigasCategoria.Count}";
+                string cab = $"[ruta-{etq}-{tam}-{idioma}] '{nodo.FullPath}' migas={vm.Library.MigasCategoria.Count}";
                 Console.WriteLine($"LIB REVISOR D-01 {cab}: linea de ruta alto={altoRuta:0.#}px (migas plegadas en '...'={plegadas}) | resultados vp={resultados.ViewportHeight:0.#}px, celdas={celdas.Count}, enteras={enteras.Count} en {filasEnteras} fila(s) | navegador alto={nav.ActualHeight:0.#}px | composicion Editar={ModoComposicion() ?? "(sin la propiedad: codigo anterior)"}");
                 if (altoRuta > 32) Fallo("RUTA-UNA-LINEA", $"{cab}: la linea de ruta mide {altoRuta:0.#}px (mas de una linea de 24px)");
                 if (celdas.Count > 0 && filasEnteras < Math.Min(2, (int)Math.Ceiling(celdas.Count / 5.0)))
                     Fallo("RESULTADOS-2FILAS", $"{cab}: el viewport de resultados ({resultados.ViewportHeight:0.#}px) enseña {filasEnteras} fila(s) entera(s) - se exigen 2");
-                Shot($"revisor-ruta-{etq}-1080x700-{idioma.ToUpperInvariant()}");
+                Shot($"revisor-ruta-{etq}-{tam}-{idioma.ToUpperInvariant()}");
 
                 if (ReferenceEquals(nodo, masHijos))
                 {
@@ -107,7 +109,7 @@ internal static partial class Program
                     Console.WriteLine($"LIB REVISOR D-03 {cab}: desplegable {rp.Width:0.#}x{rp.Height:0.#} DIP en pantalla ({rp.Left:0},{rp.Top:0}) | ventana {rw.Width:0}x{rw.Height:0} en ({rw.Left:0},{rw.Top:0}) | area de trabajo {wa} | dentro del area={dentroTrabajo} cabe en el alto de la ventana={cabeVentana} | scroll local={(svPop == null ? "no" : $"vp={svPop.ViewportHeight:0.#} ext={svPop.ExtentHeight:0.#}")} | pastillas={pills.Count} alto min/max={(pills.Count == 0 ? 0 : pills.Min(x => x.ActualHeight)):0.#}/{(pills.Count == 0 ? 0 : pills.Max(x => x.ActualHeight)):0.#} | etiquetas con el prefijo '{baseMadre} - ' repetido={repetidas.Count}{(repetidas.Count > 0 ? " (p.ej. '" + repetidas[0] + "')" : "")}");
                     if (!dentroTrabajo || !cabeVentana) Fallo("POPUP-SUBCAT", $"{cab}: el desplegable mide {rp.Width:0.#}x{rp.Height:0.#} DIP (ventana {window.ActualHeight:0}px de alto, dentro del area de trabajo={dentroTrabajo})");
                     if (repetidas.Count > 0) Fallo("POPUP-PREFIJO-REPETIDO", $"{cab}: {repetidas.Count} subcategoria(s) repiten '{baseMadre} - ' delante (p.ej. '{repetidas[0]}')");
-                    File.WriteAllBytes(Path.Combine(outDir, $"lib-{etiqueta}-revisor-popup-mashijos-1080x700-{idioma.ToUpperInvariant()}.png"), CapturarPng(b, b.ActualWidth, b.ActualHeight));
+                    File.WriteAllBytes(Path.Combine(outDir, $"lib-{etiqueta}-revisor-popup-mashijos-{tam}-{idioma.ToUpperInvariant()}.png"), CapturarPng(b, b.ActualWidth, b.ActualHeight));
                     pop.IsOpen = false; DoEvents();
                 }
             }
@@ -116,7 +118,7 @@ internal static partial class Program
         vm.Settings.Language = "es"; DoEvents(); DoEvents();
 
         // --- D-02: primera fila de tarjetas raiz ENTERA en "Ver todo" (las 3 superficies) ---
-        foreach (var (tid, w, h, idioma) in new[] { ("1080x700", 1080.0, 700.0, "es"), ("1080x700", 1080.0, 700.0, "en"), ("1366x768", 1366.0, 768.0, "es"), ("1520x860", 1520.0, 860.0, "es") })
+        foreach (var (tid, w, h, idioma) in new[] { ("1080x700", 1080.0, 700.0, "es"), ("1080x700", 1080.0, 700.0, "en"), ("1320x700", 1320.0, 700.0, "es"), ("1366x768", 1366.0, 768.0, "es"), ("1520x860", 1520.0, 860.0, "es") })
         {
             vm.Settings.Language = idioma; DoEvents();
             window.WindowState = WindowState.Normal; FijarTamaño(window, w, h); vm.IsLibraryCollapsed = false; vm.IsBuffLibraryCollapsed = false;
@@ -225,7 +227,7 @@ internal static partial class Program
         //     la combinacion mas larga: los 17 botones enteros y la tarjeta dentro de su rejilla, ES/EN. Directo, sin
         //     depender de la heuristica de "peor holgura" de la seccion 3 (con Editar alto segun su contenido la
         //     holgura interna ya no discrimina). ---
-        foreach (var (tid, w, h) in new[] { ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0), ("1920x1080", 1920.0, 1080.0) })
+        foreach (var (tid, w, h) in new[] { ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0), ("1520x860", 1520.0, 860.0), ("1920x1080", 1920.0, 1080.0) })
             foreach (var idioma in new[] { "es", "en" })
             {
                 vm.Settings.Language = idioma; DoEvents(); DoEvents();
@@ -267,9 +269,11 @@ internal static partial class Program
             }
         vm.Settings.Language = "es"; DoEvents();
 
-        // --- Selector de prefijo en desplegable (Compacto, 1080x700): sin scroll y dentro del area de trabajo ---
+        // --- Selector de prefijo en desplegable (Editar en la fila de contenido): sin scroll y dentro del area de
+        //     trabajo, en los tamaños donde se usa ---
+        foreach (var (ptid, pw, ph) in new[] { ("1080x700", 1080.0, 700.0), ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0) })
         {
-            FijarTamaño(window, 1080, 700); vm.IsLibraryCollapsed = false; IrA(0, 1);
+            FijarTamaño(window, pw, ph); vm.IsLibraryCollapsed = false; IrA(0, 1);
             var slot = vm.InventoryContainer!.Slots[9]; int idOrig = slot.ItemId;
             foreach (var idioma in new[] { "es", "en" })
             {
@@ -284,7 +288,7 @@ internal static partial class Program
                 var editar = objetosView.FindName("EditarTarjeta") as FrameworkElement;
                 var popup = editar == null ? null : Descendientes<Popup>(editar).FirstOrDefault(p => p.Name == "PopupPrefijo");
                 var boton = editar == null ? null : Descendientes<ButtonBase>(editar).FirstOrDefault(b => b.Name == "BotonPrefijoDesplegable");
-                string cab = $"[prefijo-desplegable-1080x700-{idioma}] prefijos={ie.Prefixes.Count}";
+                string cab = $"[prefijo-desplegable-{ptid}-{idioma}] prefijos={ie.Prefixes.Count}";
                 if (popup == null || boton == null || !boton.IsVisible)
                 {
                     Console.WriteLine($"LIB REVISOR PREFIJO {cab}: sin desplegable de prefijo visible (composicion={ModoComposicion() ?? "codigo anterior"}) - selector en linea");
@@ -299,8 +303,8 @@ internal static partial class Program
                 var prefBtns = Descendientes<ButtonBase>(b).Where(x => x.IsVisible && x.DataContext is PrefixCatalogEntryViewModel).ToList();
                 Console.WriteLine($"LIB REVISOR PREFIJO {cab}: desplegable {rp.Width:0.#}x{rp.Height:0.#} DIP en ({rp.Left:0},{rp.Top:0}) | area de trabajo {wa} dentro={dentro} | ScrollViewer dentro={svs} | botones de prefijo visibles={prefBtns.Count}/{ie.Prefixes.Count}");
                 if (!dentro || svs > 0 || prefBtns.Count < ie.Prefixes.Count) Fallo("PREFIJO-DESPLEGABLE", $"{cab}: desplegable {rp.Width:0.#}x{rp.Height:0.#}, dentro del area={dentro}, ScrollViewer={svs}, prefijos visibles {prefBtns.Count}/{ie.Prefixes.Count}");
-                File.WriteAllBytes(Path.Combine(outDir, $"lib-{etiqueta}-revisor-prefijo-desplegable-1080x700-{idioma.ToUpperInvariant()}.png"), CapturarPng(b, b.ActualWidth, b.ActualHeight));
-                Shot($"revisor-editar-compacto-1080x700-{idioma.ToUpperInvariant()}");
+                File.WriteAllBytes(Path.Combine(outDir, $"lib-{etiqueta}-revisor-prefijo-desplegable-{ptid}-{idioma.ToUpperInvariant()}.png"), CapturarPng(b, b.ActualWidth, b.ActualHeight));
+                Shot($"revisor-editar-fila-contenido-{ptid}-{idioma.ToUpperInvariant()}");
                 popup.IsOpen = false; DoEvents();
             }
             vm.Settings.Language = "es"; DoEvents();

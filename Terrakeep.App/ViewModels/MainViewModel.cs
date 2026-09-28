@@ -620,16 +620,20 @@ public partial class MainViewModel : ObservableObject
     // Correccion D-01/D-05 del revisor visual de la FASE D (28-sep-2026, s7/s10/s14): UNA sola regla de
     // composicion del panel Editar para Objetos Y para Buffs (antes Objetos lo tenia como barra lateral de
     // alto completo y Buffs solo en la fila de contenido - dos arquitecturas sin motivo).
-    //   - Normal/Amplio/Extra (true): barra lateral de alto completo (fila de contenido + fila de la
+    //   - Amplio/Extra (true): barra lateral de alto completo (fila de contenido + fila de la
     //     Libreria), alta segun su contenido (D-07), con el selector de prefijo de 3 niveles en linea.
-    //   - Compacto (false): Editar vive SOLO en la fila de contenido, junto a Inventario/Equipamiento/
+    //   - Compacto/Normal (false): Editar vive SOLO en la fila de contenido, junto a Inventario/Equipamiento/
     //     Almacenes/rejilla de buffs, y la Libreria ocupa el ANCHO COMPLETO debajo. El selector de prefijo
     //     pasa a un desplegable "Prefijo" dentro de Editar (s7 permite drawer/subpagina) - asi Editar cabe
     //     sin scroll en la fila de contenido. Medido a 1080x700 con la Libreria desplegada: con Editar a
     //     alto completo la Libreria perdia 310px de ancho, las categorias principales ocupaban 3 lineas, la
     //     ruta 2, y el viewport de resultados bajaba a 37,5-39,1px (menos de una celda de 40px) mientras
     //     Editar sin seleccion dejaba ~390px vacios.
-    public bool IsEditarBarraCompleta => SizeClass != WindowSizeClass.Compacto;
+    // Umbral Amplio, no Normal, por MEDIDA (LIBRARY_RESPONSIVE_SOLO) y como pide s7 ("AMPLIO: Editar puede ser
+    // sidebar; COMPACTO/NORMAL: debajo/subpagina/drawer"): con la barra lateral desde Normal, a 1320x700 (Normal en
+    // su alto minimo) la Libreria perdia 310px de ancho, las categorias ocupaban 3 lineas y el viewport de
+    // resultados se quedaba en 62,8px (1 fila) con 0/3 tarjetas raiz enteras.
+    public bool IsEditarBarraCompleta => SizeClass >= WindowSizeClass.Amplio;
 
     // FASE B del responsive global (28-sep-2026, changeMode REPLACE): IsEquipmentExpanded
     // (Auditoria de Opus E-2, "SizeClass >= Amplio" -> las 3 vistas de Equipamiento a la vez y SIN

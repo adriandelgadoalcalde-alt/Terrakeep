@@ -14,11 +14,11 @@ public sealed class CorreccionesRevisorFaseDTests
     // --- D-01/D-05: una sola regla de composicion para Editar (Objetos y Buffs). ---
     [Theory]
     [InlineData(1080, false)] // Compacto: Editar solo en la fila de contenido, Libreria a ancho completo
-    [InlineData(1319, false)]
-    [InlineData(1320, true)]  // Normal: barra lateral de alto completo
-    [InlineData(1520, true)]
+    [InlineData(1320, false)] // Normal: igual (s7; a 1320x700 la barra lateral dejaba 1 fila de resultados)
+    [InlineData(1519, false)]
+    [InlineData(1520, true)]  // Amplio: barra lateral de alto completo
     [InlineData(2560, true)]
-    public void EditarEsBarraCompletaSalvoEnCompacto(double ancho, bool esperado)
+    public void EditarEsBarraCompletaSoloDesdeAmplio(double ancho, bool esperado)
     {
         var vm = new MainViewModel();
         vm.UpdateSizeClass(ancho, 800);
@@ -29,10 +29,10 @@ public sealed class CorreccionesRevisorFaseDTests
     public void CambiarDeClaseDeTamañoAvisaDeLaComposicionDeEditar()
     {
         var vm = new MainViewModel();
-        vm.UpdateSizeClass(1366, 768);
+        vm.UpdateSizeClass(1920, 1080);
         var avisos = new List<string?>();
         vm.PropertyChanged += (_, e) => avisos.Add(e.PropertyName);
-        vm.UpdateSizeClass(1080, 700);
+        vm.UpdateSizeClass(1366, 768);
         Assert.Contains(nameof(MainViewModel.IsEditarBarraCompleta), avisos);
         Assert.False(vm.IsEditarBarraCompleta);
     }

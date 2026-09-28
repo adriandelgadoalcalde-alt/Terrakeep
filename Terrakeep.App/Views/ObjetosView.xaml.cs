@@ -99,7 +99,7 @@ public partial class ObjetosView : UserControl
                 var pag = ObjetosPaginaEquipamiento;
                 if (pag.IsVisible && pag.ExtentHeight > 0 && pag.ScrollableHeight < 0.5) tope = pag.ExtentHeight + 9;
             }
-            // Correccion D-01 del revisor visual de la FASE D: en Compacto el panel Editar vuelve a vivir SOLO en
+            // Correccion D-01 del revisor visual de la FASE D: en Compacto/Normal el panel Editar vuelve a vivir SOLO en
             // esta fila (MainViewModel.IsEditarBarraCompleta=false) - el tope nunca puede quedar por debajo de su
             // alto natural (contenido + Padding/Border de la tarjeta + su Margin inferior de 8 + 1px de redondeo),
             // o Editar recortaria. Con el selector de prefijo en desplegable ese alto es de ~250-290px.

@@ -637,8 +637,7 @@ internal static partial class Program
             {
                 ("1080x700-libplegada", 1080, 700, true), ("1080x700-libdesplegada", 1080, 700, false),
                 ("1366x768-libplegada", 1366, 768, true), ("1366x768-libdesplegada", 1366, 768, false),
-                // Normal en su alto minimo: Editar ya es barra lateral con el selector de prefijo en linea (el caso mas
-                // justo de la composicion "barra completa").
+                // Normal en su alto minimo (Editar en la fila de contenido con el desplegable de prefijo, como Compacto).
                 ("1320x700-libdesplegada", 1320, 700, false),
                 ("1520x860", 1520, 860, false), ("1920x1080", 1920, 1080, false), ("2560x1440", 2560, 1440, false),
             };

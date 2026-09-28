@@ -1182,10 +1182,10 @@
     <!-- FASE D del responsive global, correcciones D-01/D-05/D-07 del revisor visual (28-sep-2026): UNA sola
          regla de composicion para el panel Editar de Objetos y el de Buffs (s10: "no mantener dos
          arquitecturas diferentes sin motivo"), dentro de su rejilla de 2 filas (contenido / Libreria) x 2
-         columnas (* / 300). MainViewModel.IsEditarBarraCompleta (SizeClass != Compacto):
+         columnas (* / 300). MainViewModel.IsEditarBarraCompleta (SizeClass >= Amplio, s7):
            - true: barra lateral de alto completo (RowSpan 2), alta SEGUN SU CONTENIDO (VerticalAlignment Top;
              D-07: sin seleccion a 2560x1440 era una caja de 300x1245 con solo la leyenda);
-           - false (Compacto): solo la fila de contenido, a su mismo alto (Margin inferior 8 como la rejilla
+           - false (Compacto/Normal): solo la fila de contenido, a su mismo alto (Margin inferior 8 como la rejilla
              de al lado) y la Libreria a ancho completo debajo (LibreriaComposicion). -->
     <Style x:Key="EditarTarjetaComposicion" TargetType="Border" BasedOn="{StaticResource SidePanelCard}">
         <Setter Property="Grid.Column" Value="1" />

@@ -410,8 +410,8 @@
                 <!-- Correccion D-01 del revisor visual de la FASE D (28-sep-2026, s7): el selector de prefijo de 3
                      niveles (SelectorPrefijoTemplate, una sola definicion) se compone segun
                      MainViewModel.IsEditarBarraCompleta:
-                       - barra lateral de alto completo (Normal/Amplio/Extra): en linea, como siempre;
-                       - Compacto (Editar solo en la fila de contenido, la Libreria a ancho completo debajo): en
+                       - barra lateral de alto completo (Amplio/Extra): en linea, como siempre;
+                       - Compacto/Normal (Editar solo en la fila de contenido, la Libreria a ancho completo debajo): en
                          un desplegable "Elegir prefijo" dentro de Editar. Mismas metas/grupos/prefijos, mismos
                          comandos, un clic mas; nada se oculta (s16). Sin el, Editar no cabe sin scroll en la
                          fila de contenido (granadas Picaro de Calamity: 17 prefijos, ~180px de selector). -->
@@ -1481,9 +1481,9 @@
                             <!-- FASE D (s7): panel Editar sin ScrollViewer propio - ver ItemEditTemplate. Correccion D-01/D-05/D-07
                                  del revisor visual: composicion por SizeClass con UNA regla compartida con Buffs
                                  (EditarTarjetaComposicion en Theme.xaml, MainViewModel.IsEditarBarraCompleta): barra lateral de
-                                 alto completo y alta segun su contenido en Normal+; solo la fila de contenido en Compacto, con la
-                                 Libreria a ancho completo debajo. AltoNaturalEditar: alto natural del contenido, para que el
-                                 reparto de filas (AjustarRepartoObjetosLibreria) nunca deje a Editar mas bajo que el en Compacto. -->
+                                 alto completo y alta segun su contenido en Amplio/Extra; solo la fila de contenido en Compacto/Normal,
+                                 con la Libreria a ancho completo debajo. AltoNaturalEditar: alto natural del contenido, para que el
+                                 reparto de filas (AjustarRepartoObjetosLibreria) nunca deje a Editar mas bajo que el en esa composicion. -->
                             <Border x:Name="EditarTarjeta" Style="{StaticResource EditarTarjetaComposicion}">
                                 <controls:AltoNatural x:Name="AltoNaturalEditar">
                                     <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
