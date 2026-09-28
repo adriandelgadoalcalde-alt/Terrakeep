@@ -42,8 +42,17 @@ using Terrakeep.Core.WldFormat;
 internal static partial class Program
 {
     [STAThread]
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
     private static void Main()
     {
+        // Opt-in: con la escala del sistema alta (225 %) y el monitor bajado a 100 %, solo un proceso
+        // Per-Monitor-V2 ve 96 DPI; el System-aware por defecto conserva el DPI de inicio de sesion y
+        // su ventana no cabe en pantalla para las pruebas con raton real.
+        if (Environment.GetEnvironmentVariable("TERRAKEEP_ARNES_DPI_POR_MONITOR") == "1")
+            Console.WriteLine("DPI-POR-MONITOR: " + SetProcessDpiAwarenessContext(new IntPtr(-4)));
+
         // R2-L2 (28-sep-2026): estado real de la sesion de Windows + sonda de render + revision de
         // capturas en blanco al salir - ANTES de cualquier uso de WPF. Ver ValidacionCapturasSesion.cs.
         PrepararValidacionCapturas();
