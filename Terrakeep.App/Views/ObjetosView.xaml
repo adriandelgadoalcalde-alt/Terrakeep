@@ -204,7 +204,11 @@
                         <StackPanel VerticalAlignment="Center">
                             <!-- Auditoria de Opus, D-3: color real de rareza (null = color de
                                  texto normal, ver VanillaRarityColorCatalog). -->
+                            <!-- FASE C, remate N-01 de la FASE B: con MaxWidth=220 y el Stretch por defecto
+                                 en una columna de ~234px, WPF centraba el bloque de 220px en el hueco y el
+                                 nombre salia ~7px desplazado a la derecha respecto al subtitulo. -->
                             <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220"
+                                       HorizontalAlignment="Left"
                                        Foreground="{Binding Slot.RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
                             <!-- FASE B, correccion V-02 del revisor visual: sin TextWrapping el subtitulo
                                  salia cortado ("Loadout 1 - armadura/accesoric") y el numero de slot
@@ -983,7 +987,13 @@
                                                   <StackPanel x:Name="EquipamientoCentro" Grid.Column="1" VerticalAlignment="Top">
                                                   <StackPanel x:Name="EquipamientoCabecera" Margin="0,0,0,6"
                                                               DataContext="{Binding EquipmentGroup}">
-                                                      <WrapPanel Margin="0,0,0,3">
+                                                      <!-- FASE C, remate N-03 de la FASE B: la rejilla se centra en su columna
+                                                           (SlotGridPanel.ArrangeOverride, pedido explicito del usuario) y en Extra
+                                                           las 3 subvistas tambien van centradas; la cabecera iba a la izquierda y a
+                                                           1520px quedaba ~170px desalineada de la rejilla. Criterio: UN solo eje, el
+                                                           central, en todos los tamaños - filas de pildoras centradas y textos con
+                                                           TextAlignment=Center (el bono largo sigue envolviendo, s34). -->
+                                                      <WrapPanel Margin="0,0,0,3" HorizontalAlignment="Center">
                                                           <TextBlock Text="{Binding Loc[char_loadout_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                                      VerticalAlignment="Center" Margin="0,0,8,5" />
                                                           <ItemsControl ItemsSource="{Binding LoadoutOptions}">
@@ -1008,7 +1018,7 @@
                                                            puede volver a pasar (ni al reves: antes, desde Amplio, era el
                                                            selector el que desaparecia). x:Name para el canario
                                                            EQUIP_RESPONSIVE_SOLO. -->
-                                                      <WrapPanel x:Name="EquipamientoSelectorVista">
+                                                      <WrapPanel x:Name="EquipamientoSelectorVista" HorizontalAlignment="Center">
                                                           <TextBlock Text="{Binding Loc[char_view_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                                      VerticalAlignment="Center" Margin="0,0,8,5" />
                                                           <ItemsControl ItemsSource="{Binding KindOptions}">
@@ -1026,12 +1036,12 @@
                                                       </WrapPanel>
                                                       <!-- Auditoria de Opus, E-4: defensa real sumada de este loadout y el
                                                            bono de set REALMENTE activo (VanillaArmorSetCatalog.BonusForEquipped). -->
-                                                      <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap">
+                                                      <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center">
                                                           <Run Text="{Binding Loc[char_total_defense], Mode=OneWay}" />
                                                           <Run Text="{Binding TotalDefense, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                                                       </TextBlock>
                                                       <TextBlock Text="{Binding ActiveSetBonusText}" Style="{StaticResource CaptionText}"
-                                                                 Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                                 Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,2,0,0"
                                                                  Visibility="{Binding ActiveSetBonusText, Converter={StaticResource NullToVis}}" />
                                                   </StackPanel>
 

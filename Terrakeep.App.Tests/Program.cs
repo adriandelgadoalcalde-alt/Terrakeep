@@ -763,7 +763,10 @@ internal static partial class Program
         // al construirse (constructor de MainViewModel, antes de este punto) la carpeta REAL de
         // tModLoader de esta maquina - sin sintetizar nada, se comprueban los .plr reales que
         // ya existen ahi.
-        Console.WriteLine($"HOME-SCAN: {vm.Home.Characters.Count} personaje(s) encontrado(s) en la carpeta real");
+        // FASE C (remate del log de la FASE B): desde H-04 el escaneo NO ve la carpeta real, sino las
+        // COPIAS que AislamientoPartidasReales.cs dejo en la carpeta temporal del arnes - el texto
+        // anterior ("en la carpeta real") hacia creer a quien leia el log que se abrian partidas reales.
+        Console.WriteLine($"HOME-SCAN: {vm.Home.Characters.Count} personaje(s) encontrado(s) en la carpeta AISLADA del arnes (copias de los .plr reales en {RaizPersonajesAislada}, nunca los originales)");
         foreach (var entry in vm.Home.Characters)
             Console.WriteLine($"  - {entry.Name} | {entry.DifficultyLabel} | Vanilla={entry.IsVanilla} tModLoader={entry.IsTModLoader} Calamity={entry.IsCalamity} | mods='{entry.UsedModsTooltip}' | {entry.LastModifiedText}");
 
@@ -984,7 +987,7 @@ internal static partial class Program
                     previewH6.CopyPixels(pixelesH6, previewH6.PixelWidth * 4, 0);
                     for (int i = 3; i < pixelesH6.Length; i += 4) if (pixelesH6[i] != 0) opacosH6++;
                 }
-                Console.WriteLine($"H6-01-DOLL: personaje real '{vm.CharacterName}', IsMale={vm.Appearance.IsMale}, HairStyle={vm.Appearance.HairStyle}, pixeles opacos={opacosH6}/2240 (esperado > 700)");
+                Console.WriteLine($"H6-01-DOLL: copia aislada del personaje real '{vm.CharacterName}' ({vm.LoadedFilePath}), IsMale={vm.Appearance.IsMale}, HairStyle={vm.Appearance.HairStyle}, pixeles opacos={opacosH6}/2240 (esperado > 700)");
                 if (previewH6 == null) Console.WriteLine("FALLO: H6-01 - Appearance.PreviewImage es null tras cargar un personaje real");
                 else if (opacosH6 <= 700) Console.WriteLine("FALLO: H6-01 - muy pocos pixeles opacos, los brazos/torso no se estan componiendo de verdad");
 
@@ -994,7 +997,7 @@ internal static partial class Program
                 var encH6 = new System.Windows.Media.Imaging.PngBitmapEncoder();
                 encH6.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbH6));
                 using (var fsH6 = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-doll-personaje-real.png"))) encH6.Save(fsH6);
-                Console.WriteLine("Captura doll con brazos, personaje real -> h6-doll-personaje-real.png");
+                Console.WriteLine("Captura doll con brazos, copia aislada del personaje real -> h6-doll-personaje-real.png");
 
                 vm.SelectedTabIndex = 0; // deja la navegacion como estaba para el resto del arnes
                 DoEvents();

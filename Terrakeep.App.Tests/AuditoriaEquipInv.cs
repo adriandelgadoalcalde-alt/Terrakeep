@@ -40,7 +40,7 @@ internal static partial class Program
                 Console.WriteLine("KEEPQA_EQUIPINV_SOLO: FALLO - no hay ningun personaje real cargado (llamar ANTES de vm.LoadFromPath(tempPlr))");
                 return;
             }
-            Console.WriteLine($"KEEPQA_EQUIPINV_SOLO: personaje real '{vm.CharacterName}'");
+            Console.WriteLine($"KEEPQA_EQUIPINV_SOLO: copia aislada del personaje real '{vm.CharacterName}' ({vm.LoadedFilePath})");
 
             // Tamaño de ARRANQUE por defecto, explicito para no depender de que nada anterior en
             // Program.cs haya dejado la ventana en otro tamaño - nunca MinWidth/MinHeight (eso ya
