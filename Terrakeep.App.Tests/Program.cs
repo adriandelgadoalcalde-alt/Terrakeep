@@ -41,17 +41,27 @@ using Terrakeep.Core.WldFormat;
 // que es justo lo que T-21 pedia: seguir acumulando en el arnes, no montar otro aparte.
 internal static partial class Program
 {
-    [STAThread]
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr value);
+
+    [STAThread]
     private static void Main()
     {
         // Opt-in: con la escala del sistema alta (225 %) y el monitor bajado a 100 %, solo un proceso
         // Per-Monitor-V2 ve 96 DPI; el System-aware por defecto conserva el DPI de inicio de sesion y
-        // su ventana no cabe en pantalla para las pruebas con raton real.
+        // su ventana no cabe en pantalla para las pruebas con raton real. Si el proceso ya tiene un
+        // modo fijado (la llamada devuelve False), se aplica al hilo de UI, que es donde se crean
+        // todas las ventanas del arnes.
         if (Environment.GetEnvironmentVariable("TERRAKEEP_ARNES_DPI_POR_MONITOR") == "1")
-            Console.WriteLine("DPI-POR-MONITOR: " + SetProcessDpiAwarenessContext(new IntPtr(-4)));
+        {
+            bool proceso = SetProcessDpiAwarenessContext(new IntPtr(-4));
+            int error = proceso ? 0 : Marshal.GetLastWin32Error();
+            IntPtr anteriorHilo = proceso ? IntPtr.Zero : SetThreadDpiAwarenessContext(new IntPtr(-4));
+            Console.WriteLine($"DPI-POR-MONITOR: proceso={proceso} error={error} hilo={(proceso ? "n/a" : (anteriorHilo != IntPtr.Zero).ToString())}");
+        }
 
         // R2-L2 (28-sep-2026): estado real de la sesion de Windows + sonda de render + revision de
         // capturas en blanco al salir - ANTES de cualquier uso de WPF. Ver ValidacionCapturasSesion.cs.
@@ -169,6 +179,8 @@ internal static partial class Program
         app.MainWindow = window;
         window.Show();
         DoEvents();
+        if (Environment.GetEnvironmentVariable("TERRAKEEP_ARNES_DPI_POR_MONITOR") == "1")
+            Console.WriteLine($"DPI-POR-MONITOR: ventana PixelsPerDip={System.Windows.Media.VisualTreeHelper.GetDpi(window).PixelsPerDip} (esperado 1 con el monitor al 100 %)");
 
         // ARLAY_CANARIO_SOLO=1 (16-sep-2026, KeepQA/H6): ejercita SOLO el canario de AR-LAY
         // (ComprobarCanarioArLay, ver AuditoriaMaquetacion.cs) sin cargar personaje/mundo reales -
