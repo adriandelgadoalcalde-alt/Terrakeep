@@ -78,7 +78,7 @@ public partial class ItemEditViewModel : ObservableObject
     // prefijos por ese motivo seria el mismo parpadeo sin sentido que T-I ya cerro arriba.
     private void OnSlotPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
+        if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage) or nameof(ItemSlotViewModel.ContainerName)) return; // ContainerName (V-03): cambio de idioma, no un dato del personaje
         Refresh();
     }
 

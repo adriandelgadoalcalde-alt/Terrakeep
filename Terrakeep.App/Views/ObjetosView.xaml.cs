@@ -76,6 +76,42 @@ public partial class ObjetosView : UserControl
             ViewModel.RequestObjetosSection(indice);
     }
 
+    // FASE B del responsive global, correccion V-01 (28-sep-2026): con las 3 subvistas lado a lado
+    // (Extra) el selector Armadura/Vanidad/Tintes no cambia lo que se ve - marca la
+    // subvista ENFOCADA (el Command ya actualiza SelectedKind/resaltado) y aqui lleva el foco de
+    // teclado al primer slot de esa columna, para que el selector siga teniendo un efecto real y
+    // coherente. En Compacto/Normal no hace nada extra: el Command ya cambia la subvista visible.
+    private void OnEquipmentKindClick(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.IsEquipmentSideBySide || sender is not FrameworkElement { DataContext: EquipmentOptionViewModel opcion }) return;
+        string? columna = (EquipmentKind)opcion.Value switch
+        {
+            EquipmentKind.Dyes => "EquipamientoColumnaTintes",
+            EquipmentKind.Social => "EquipamientoColumnaVanidad",
+            EquipmentKind.Items => "EquipamientoColumnaArmadura",
+            _ => null,
+        };
+        if (columna == null || FindName(columna) is not DependencyObject raiz) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            var primero = BuscarPrimerEnfocable(raiz);
+            if (primero != null) Keyboard.Focus(primero);
+        }, System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    private static IInputElement? BuscarPrimerEnfocable(DependencyObject raiz)
+    {
+        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(raiz);
+        for (int i = 0; i < n; i++)
+        {
+            var hijo = System.Windows.Media.VisualTreeHelper.GetChild(raiz, i);
+            if (hijo is UIElement { Focusable: true, IsVisible: true } ui && hijo is not Control) return ui; // el hueco real es un Border enfocable (SlotCompactTemplate)
+            var nieto = BuscarPrimerEnfocable(hijo);
+            if (nieto != null) return nieto;
+        }
+        return null;
+    }
+
     // H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de objetos" - el dialogo real
     // de fichero vive aqui (MainViewModel es headless de verdad, mismo criterio ya establecido
     // en OnLoadClick/OnLoadWorldClick). Alcance de esta pasada: Inventario y Almacenes (el

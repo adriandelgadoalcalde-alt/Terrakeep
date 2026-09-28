@@ -35,6 +35,10 @@ using Terrakeep.App.ViewModels;
 
 internal static partial class Program
 {
+    // V-01/V-04: umbral de uso del ancho de la fila en ventanas grandes (>= 1900px). El modelo de
+    // una sola subvista de la primera version de la FASE B daba ~54% a 1920 y ~37% maximizado.
+    private const double UsoAnchoMinimoGrande = 0.60;
+
     private static void EjecutarEquipResponsiveSolo(MainWindow window, MainViewModel vm)
     {
         int fallos = 0;
@@ -43,6 +47,7 @@ internal static partial class Program
         try
         {
             var personajeReal = vm.Home.Characters.FirstOrDefault();
+            vm.IsDirty = false; // salvaguarda: abrir otro personaje nunca debe ofrecer guardar el anterior
             if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
             if (vm.EquipmentGroup == null) { Fallo("PREPARACION", "no hay EquipmentGroup (¿personaje sin cargar?)"); return; }
 
@@ -252,6 +257,63 @@ internal static partial class Program
                     Console.WriteLine($"EQUIP-RESP {cab} | Editar: {editar.ActualWidth:0.#}x{editar.ActualHeight:0.#} scrollPropio vp={svEditar?.ViewportHeight:0.#} ext={svEditar?.ExtentHeight:0.#} scr={svEditar?.ScrollableHeight:0.#} slotSeleccionado={(vm.ItemEdit.Slot != null)}");
                 }
 
+                // --- V-02: textos del panel Editar recortados (clipH de la pagina no lo veia: Editar
+                //     es hermano de la pagina). Recorte() lee el clip de layout del propio TextBlock
+                //     (texto sin envolver mas ancho que su hueco) y ZonaVisible el de sus ancestros. ---
+                if (editar != null)
+                {
+                    int textosCortados = 0; var ejEditar = new List<string>();
+                    foreach (var tb in Descendientes<TextBlock>(editar).Where(t => t.IsVisible && t.ActualWidth > 0))
+                    {
+                        double propio = Recorte(tb).x;
+                        var rcT = RectCompleto(tb, window); var zT = ZonaVisible(tb, window);
+                        double faltaXT = zT.IsEmpty ? rcT.Width : Math.Max(0, zT.Left - rcT.Left) + Math.Max(0, rcT.Right - zT.Right);
+                        double peorT = Math.Max(propio, faltaXT);
+                        if (peorT > 1) { textosCortados++; if (ejEditar.Count < 3) ejEditar.Add($"{Describir(tb)} {peorT:0.#}px"); }
+                    }
+                    var subtitulo = Descendientes<TextBlock>(editar).FirstOrDefault(t => t.Name == "EditarSubtituloSlot" && t.IsVisible);
+                    string numeroSlot = vm.ItemEdit.Slot?.SlotIndex.ToString() ?? "";
+                    // Texto real de los Run (TextBlock.Text no siempre refleja Inlines enlazados).
+                    string textoSubtitulo = subtitulo == null ? "" : string.Concat(subtitulo.Inlines.OfType<System.Windows.Documents.Run>().Select(r => r.Text));
+                    bool numeroVisible = subtitulo == null || (textoSubtitulo.Contains(numeroSlot) && Recorte(subtitulo).x <= 1 && Recorte(subtitulo).y <= 1);
+                    Console.WriteLine($"EQUIP-RESP {cab} | Editar: textos recortados={textosCortados} {(ejEditar.Count > 0 ? "ej: " + string.Join(" | ", ejEditar) : "")} | subtitulo='{textoSubtitulo}' ({subtitulo?.ActualWidth:0.#}x{subtitulo?.ActualHeight:0.#}) numeroSlotVisible={numeroVisible}");
+                    if (textosCortados > 0) Fallo("EDITAR-CLIP", $"{cab}: {textosCortados} texto(s) del panel Editar recortados ({string.Join(" | ", ejEditar)})");
+                    if (!numeroVisible) Fallo("EDITAR-CLIP", $"{cab}: el numero de slot del subtitulo de Editar no se ve entero");
+                }
+
+                // --- V-01 (s17): uso real del ancho de la fila de Equipamiento: ancho de las dos
+                //     cajas laterales + tramo horizontal realmente ocupado por las celdas de la
+                //     columna central, dividido por el ancho de la fila. ---
+                var fila = Descendientes<SlotRowHost>(pagina).FirstOrDefault(h => h.IsVisible);
+                double usoAncho = -1;
+                if (fila != null && fila.ActualWidth > 0)
+                {
+                    var celdasCentro = Descendientes<SlotGridPanel>(pagina)
+                        .Where(p => p.IsVisible && grupo.AllContainers.Contains(p.DataContext as ContainerViewModel))
+                        .SelectMany(p => p.Children.OfType<FrameworkElement>()).Select(c => RectCompleto(c, window)).ToList();
+                    double lateralIzq = Descendientes<FrameworkElement>(pagina).FirstOrDefault(f => f.Name == "CajaMascotasTintes")?.ActualWidth ?? 0;
+                    double lateralDer = Descendientes<FrameworkElement>(pagina).FirstOrDefault(f => f.Name == "CajaMonedasMunicion")?.ActualWidth ?? 0;
+                    double tramoCentro = celdasCentro.Count == 0 ? 0 : celdasCentro.Max(r => r.Right) - celdasCentro.Min(r => r.Left);
+                    usoAncho = (lateralIzq + lateralDer + tramoCentro) / fila.ActualWidth;
+                }
+                int subvistas = Descendientes<SlotGridPanel>(pagina).Count(p => p.IsVisible && grupo.AllContainers.Contains(p.DataContext as ContainerViewModel));
+                Console.WriteLine($"EQUIP-RESP {cab} | usoAnchoFila={usoAncho:P0} subvistasVisibles={subvistas} ladoALado={vm.IsEquipmentSideBySide}");
+                if (window.ActualWidth >= 1900 && usoAncho >= 0 && usoAncho < UsoAnchoMinimoGrande)
+                    Fallo("ANCHO", $"{cab}: la fila de Equipamiento solo usa {usoAncho:P0} de su ancho (umbral {UsoAnchoMinimoGrande:P0} en ventanas >= 1900px, s17)");
+
+                // --- V-04: varias subvistas a la vez SOLO con el selector visible y coherente:
+                //     los 3 botones enteros, exactamente UNA columna resaltada y es la de SelectedKind. ---
+                if (subvistas > 1)
+                {
+                    var resaltadas = new[] { "EquipamientoColumnaTintes", "EquipamientoColumnaVanidad", "EquipamientoColumnaArmadura" }
+                        .Select(n => objetosView.FindName(n) as Border).Where(b => b != null && b.IsVisible
+                            && b.BorderBrush is SolidColorBrush sc && sc.Color.A > 0).ToList();
+                    bool coherente = vistaEnteros == 3 && resaltadas.Count == 1 && resaltadas[0]!.Tag is string tag && tag == grupo.SelectedKind.ToString();
+                    Console.WriteLine($"EQUIP-RESP {cab} | {subvistas} subvistas a la vez: selector entero={vistaEnteros}/3, columnas resaltadas={resaltadas.Count} ({string.Join(",", resaltadas.Select(b => b!.Tag))}), SelectedKind={grupo.SelectedKind} -> coherente={coherente}");
+                    if (!coherente)
+                        Fallo("VIEJO", $"{cab}: {subvistas} subvistas a la vez SIN selector visible y coherente (el defecto real del modelo viejo IsEquipmentExpanded)");
+                }
+
                 // --- Resumen de composicion ---
                 var host = Descendientes<SlotRowHost>(pagina).FirstOrDefault(h => h.IsVisible);
                 string cols = host == null ? "(sin SlotRowHost)" : string.Join("/", host.ColumnDefinitions.Select(c => $"{c.ActualWidth:0.#}"));
@@ -280,6 +342,7 @@ internal static partial class Program
                 ("min-1080x700-libdesplegada", 1080, 700, false),
                 ("medio-1366x768-libplegada", 1366, 768, true),
                 ("medio-1366x768-libdesplegada", 1366, 768, false),
+                ("amplio-1520x860-libdesplegada", 1520, 860, false),
                 ("grande-1920x1080-libdesplegada", 1920, 1080, false),
             };
             foreach (var (id, w, h, plegada) in casos)
@@ -311,6 +374,46 @@ internal static partial class Program
             vm.IsLibraryCollapsed = false; IrAEquipamiento();
             Medir("min-1080x700-EN-libdesplegada");
             vm.Settings.Language = "es"; DoEvents(); DoEvents();
+
+            // V-03: nombres de contenedor que siguen al idioma EN VIVO y en ARRANQUE EN FRIO.
+            {
+                var loc = Terrakeep.App.Services.LocalizationService.Instance;
+                SeleccionarVista(EquipmentKind.Items);
+                var slotArm = vm.EquipmentGroup.Current.Slots.First();
+                vm.SelectSlot(slotArm); DoEvents();
+                string monedasEs = vm.CoinsContainer!.DisplayName, municionEs = vm.AmmoContainer!.DisplayName, cont = slotArm.ContainerName;
+                // Cambiar de idioma NO es editar el personaje: si marcara IsDirty, el siguiente
+                // "abrir personaje" mostraria el dialogo de cambios sin guardar (y con "Si"
+                // escribiria el .plr REAL del usuario - paso de verdad en una version previa de
+                // esta correccion, ver bitacora).
+                vm.IsDirty = false;
+                vm.Settings.Language = "en"; DoEvents(); DoEvents();
+                bool suciedadPorIdioma = vm.IsDirty;
+                Console.WriteLine($"EQUIP-RESP IDIOMA: IsDirty tras cambiar de idioma en vivo = {suciedadPorIdioma} (esperado False)");
+                if (suciedadPorIdioma) Fallo("IDIOMA", "cambiar de idioma en vivo marca el personaje como modificado (IsDirty)");
+                string monedasEn = vm.CoinsContainer.DisplayName, municionEn = vm.AmmoContainer.DisplayName, contEn = slotArm.ContainerName;
+                bool vivoOk = monedasEn != monedasEs && monedasEn.StartsWith(loc["storage_coins"]) && municionEn != municionEs
+                              && municionEn.StartsWith(loc["storage_ammo"]) && contEn != cont && vm.EquipmentGroup.Current.DisplayName.StartsWith(contEn);
+                Console.WriteLine($"EQUIP-RESP IDIOMA EN VIVO es->en: '{monedasEs}'->'{monedasEn}', '{municionEs}'->'{municionEn}', subtitulo Editar '{cont}'->'{contEn}' -> ok={vivoOk}");
+                if (!vivoOk) Fallo("IDIOMA", "al cambiar a ingles en vivo los nombres de Monedas/Municion/loadout no se traducen");
+                Medir("min-1080x700-EN-envivo");
+                // Arranque en frio en EN: se vuelve a abrir el personaje con el idioma ya en ingles.
+                var personaje = vm.Home.Characters.FirstOrDefault();
+                // Salvaguarda de datos reales: este canario trabaja sobre el personaje REAL del
+                // usuario y nunca debe poder guardarlo - IsDirty=false antes de reabrir (nada que
+                // guardar = sin dialogo ConfirmDiscardChanges).
+                vm.IsDirty = false;
+                if (personaje != null) { vm.Home.OpenCommand.Execute(personaje); DoEvents(); DoEvents(); }
+                IrAEquipamiento(); SeleccionarVista(EquipmentKind.Items);
+                bool frioOk = vm.CoinsContainer!.DisplayName.StartsWith(loc["storage_coins"]) && vm.AmmoContainer!.DisplayName.StartsWith(loc["storage_ammo"])
+                              && vm.EquipmentGroup!.Current.Slots.First().ContainerName != cont;
+                Console.WriteLine($"EQUIP-RESP IDIOMA FRIO en: '{vm.CoinsContainer.DisplayName}', '{vm.AmmoContainer.DisplayName}', '{vm.EquipmentGroup.Current.Slots.First().ContainerName}' -> ok={frioOk}");
+                if (!frioOk) Fallo("IDIOMA", "al abrir el personaje con la app ya en ingles los nombres de contenedor salen en español");
+                vm.Settings.Language = "es"; DoEvents(); DoEvents();
+                bool vueltaOk = vm.CoinsContainer.DisplayName.StartsWith(loc["storage_coins"]) && vm.EquipmentGroup.Current.Slots.First().ContainerName == cont;
+                Console.WriteLine($"EQUIP-RESP IDIOMA en->es en vivo: '{vm.CoinsContainer.DisplayName}', '{vm.EquipmentGroup.Current.Slots.First().ContainerName}' -> ok={vueltaOk}");
+                if (!vueltaOk) Fallo("IDIOMA", "al volver a español en vivo los nombres no vuelven");
+            }
 
             // ---------------------------------------------------------------------------------
             // 3) Redimensionado en caliente (s24): grande -> normal -> minimo -> grande sin perder
@@ -356,13 +459,34 @@ internal static partial class Program
             var todosSv = Descendientes<ScrollViewer>(pagina).Where(sv => sv.TemplatedParent is not TextBoxBase).ToList();
             Console.WriteLine($"EQUIP-RESP VIEJO: ScrollViewer en el arbol de Equipamiento (visibles o no) = {todosSv.Count} (esperado 0, antes 5 niveles: fila, lateral, cabecera, centro y el de ContainerCompactTemplate)");
             if (todosSv.Count > 0) Fallo("VIEJO", $"quedan {todosSv.Count} ScrollViewer en el arbol de Equipamiento aunque esten ocultos - el mecanismo viejo sigue presente por debajo del nuevo");
-            // La rejilla "Amplio" de 3 columnas (Items/Social/Dyes simultaneos, Visibility ligada a
-            // IsEquipmentExpanded): en 1920 era la que se mostraba. Si existe un contenedor que
-            // enseñe CurrentItems y CurrentSocial a la vez, el modelo viejo sigue vivo.
-            var contenedoresMostrados = Descendientes<SlotGridPanel>(pagina).Select(p => p.DataContext).OfType<ContainerViewModel>().ToList();
-            bool tresALaVez = contenedoresMostrados.Contains(vm.EquipmentGroup.CurrentItems) && contenedoresMostrados.Contains(vm.EquipmentGroup.CurrentSocial);
-            Console.WriteLine($"EQUIP-RESP VIEJO: a 1920x1080 Armadura y Vanidad renderizadas a la vez = {tresALaVez} (esperado False - una sola subvista, misma navegacion en todos los tamaños)");
-            if (tresALaVez) Fallo("VIEJO", "a 1920x1080 sigue existiendo la rejilla 'Amplio' de 3 subvistas simultaneas (modelo que cambia la arquitectura con el tamaño)");
+            // V-04 (revisor visual): ya NO se exige "una sola subvista" - s16/s4 permiten varias a
+            // la vez en tamaños grandes. Lo que el modelo viejo hacia mal era quitar el selector: eso
+            // lo vigila Medir() en cada tamaño (Fallo VIEJO si hay >1 subvista sin selector visible y
+            // coherente). Aqui, ademas, la coherencia ACTIVA a 1920: pulsar un boton del selector
+            // mueve el resaltado y el foco de teclado a su columna, y seleccionar un slot de otra
+            // columna mueve el selector a esa columna.
+            if (vm.IsEquipmentSideBySide)
+            {
+                var botonVanidad = Descendientes<ButtonBase>(pagina).FirstOrDefault(b => b.DataContext is EquipmentOptionViewModel o && o.Value == (int)EquipmentKind.Social && vm.EquipmentGroup.KindOptions.Contains(o));
+                botonVanidad?.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                botonVanidad?.Command?.Execute(botonVanidad.CommandParameter);
+                DoEvents(); DoEvents(); WaitForDispatcher(100);
+                var colVanidad = objetosView.FindName("EquipamientoColumnaVanidad") as DependencyObject;
+                var foco = System.Windows.Input.Keyboard.FocusedElement as DependencyObject;
+                bool focoEnVanidad = false;
+                for (var d = foco; d != null; d = VisualTreeHelper.GetParent(d)) if (ReferenceEquals(d, colVanidad)) { focoEnVanidad = true; break; }
+                Console.WriteLine($"EQUIP-RESP COHERENCIA 1920: clic en Vanidad -> SelectedKind={vm.EquipmentGroup.SelectedKind}, foco de teclado en la columna Vanidad={focoEnVanidad}");
+                if (vm.EquipmentGroup.SelectedKind != EquipmentKind.Social || !focoEnVanidad)
+                    Fallo("VIEJO", "a 1920 el selector no enfoca la subvista pulsada (resaltado/foco de teclado)");
+                var slotTinte = vm.EquipmentGroup.CurrentDyes.Slots.FirstOrDefault();
+                if (slotTinte != null) { vm.SelectSlot(slotTinte); DoEvents(); }
+                Console.WriteLine($"EQUIP-RESP COHERENCIA 1920: seleccionar un slot de Tintes -> SelectedKind={vm.EquipmentGroup.SelectedKind} (esperado Dyes)");
+                if (vm.EquipmentGroup.SelectedKind != EquipmentKind.Dyes)
+                    Fallo("VIEJO", "a 1920 seleccionar un slot de otra columna no mueve el selector a esa columna");
+                Medir("grande-1920x1080-coherencia-tintes");
+                SeleccionarVista(EquipmentKind.Items);
+            }
+            else Fallo("ANCHO", "a 1920x1080 Equipamiento no muestra las subvistas lado a lado (IsEquipmentSideBySide=False)");
             bool propiedadVieja = typeof(MainViewModel).GetProperty("IsEquipmentExpanded") != null;
             Console.WriteLine($"EQUIP-RESP VIEJO: MainViewModel.IsEquipmentExpanded existe = {propiedadVieja} (esperado False)");
             if (propiedadVieja) Fallo("VIEJO", "MainViewModel.IsEquipmentExpanded sigue existiendo (modelo visual que cambia con el tamaño)");

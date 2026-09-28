@@ -67,6 +67,23 @@ public sealed class EquipamientoUmbralAmplioTests
         Assert.Equal(WindowSizeClass.Extra, vm.SizeClass);
     }
 
+    // Correccion V-01 del revisor visual (28-sep-2026): desde Extra (1920) las 3 subvistas se
+    // muestran lado a lado (el selector sigue visible y marca la enfocada, eso lo mide el canario
+    // EQUIP_RESPONSIVE_SOLO); por debajo, una sola subvista. No desde Amplio: medido a 1520, las 3
+    // a la vez caian a 40px de celda frente a 72px de una sola (ver MainViewModel).
+    [Theory]
+    [InlineData(1080, false)]
+    [InlineData(1520, false)]
+    [InlineData(1919, false)]
+    [InlineData(1920, true)]
+    [InlineData(2560, true)]
+    public void LasTresSubvistasLadoALadoSoloDesdeExtra(double ancho, bool esperado)
+    {
+        var vm = new MainViewModel();
+        vm.UpdateSizeClass(ancho);
+        Assert.Equal(esperado, vm.IsEquipmentSideBySide);
+    }
+
     // La cuenta real de la que sale el umbral, escrita como test para que no se pierda: las 3
     // vistas solo caben si cada una recibe al menos el ancho que SlotGridPanel devuelve cuando ya
     // no puede encoger mas. Si algun dia cambian MinCell, Gap o el numero de columnas de

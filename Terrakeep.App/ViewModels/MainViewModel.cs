@@ -108,14 +108,26 @@ public partial class MainViewModel : ObservableObject
     // refresquen - mismo resultado visible para el usuario, sin la lista de listeners creciendo.
     private void OnIdiomaCambiadoSlots(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        foreach (var container in Containers)
-            foreach (var slot in container.Slots)
-                slot.RefreshLocalizedText();
-        if (EquipmentGroup != null)
-            foreach (var container in EquipmentGroup.AllContainers)
+        // FASE B del responsive global (28-sep-2026, encontrado por EQUIP_RESPONSIVE_SOLO y
+        // NombreContenedorIdiomaEnVivoTests): RefreshLocalizedText emite PropertyChanged de textos
+        // (DisplayName, StatsTooltip...) y HookSlotEditing los tomaba por ediciones reales -
+        // cambiar de idioma marcaba el personaje como modificado (y hacia parpadear cada slot), asi
+        // que el siguiente "abrir otro personaje"/cerrar ofrecia guardarlo. Re-traducir no es editar.
+        _refrescandoIdiomaSlots = true;
+        try
+        {
+            foreach (var container in Containers)
                 foreach (var slot in container.Slots)
                     slot.RefreshLocalizedText();
+            if (EquipmentGroup != null)
+                foreach (var container in EquipmentGroup.AllContainers)
+                    foreach (var slot in container.Slots)
+                        slot.RefreshLocalizedText();
+        }
+        finally { _refrescandoIdiomaSlots = false; }
     }
+
+    private bool _refrescandoIdiomaSlots;
 
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
     // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
@@ -366,7 +378,8 @@ public partial class MainViewModel : ObservableObject
             // Sin excluirla aqui, un intento de colocar un objeto invalido marcaba el personaje
             // como "sin guardar" (sin nada real que guardar) Y disparaba el flash de "acabo de
             // editarme" - la señal contraria de lo que paso de verdad.
-            if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
+            if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage) or nameof(ItemSlotViewModel.ContainerName)) return; // ContainerName (V-03): cambio de idioma, no un dato del personaje
+            if (_refrescandoIdiomaSlots) return; // re-traduccion de textos, ver OnIdiomaCambiadoSlots
             MarkDirty();
             if (!_suppressDirty) slot.TriggerEditFlash();
         };
@@ -563,6 +576,22 @@ public partial class MainViewModel : ObservableObject
         HeightClass = actualHeight >= AltoMinHeight ? WindowHeightClass.Alto : WindowHeightClass.Bajo;
     }
 
+    // FASE B, correccion V-01 del revisor visual (28-sep-2026): en ventanas grandes, Equipamiento
+    // enseña las 3 subvistas A LA VEZ (Tinte | Vanidad | Armadura, orden del juego) para
+    // aprovechar el ancho (s17) - s16 permite cambiar la cantidad visible simultanea y s4 permite
+    // varias subvistas en tamaños grandes SIEMPRE QUE el selector siga existiendo. A diferencia
+    // del IsEquipmentExpanded retirado (de abajo), esto NO toca el selector: sigue visible en
+    // todos los tamaños y marca la subvista enfocada (resaltada; destino del foco de teclado al
+    // pulsarla; y sigue al slot que se selecciona en cualquier columna, SyncKindWithSlot).
+    //
+    // Umbral Extra (>= 1920), no Amplio, por MEDIDA (EQUIP_RESPONSIVE_SOLO, 28-sep-2026): con las
+    // 3 subvistas desde Amplio, a 1520x860 las celdas caian a 40,1-41,3px (el MinCell) mientras
+    // que a 1366 (una subvista) eran de 72px - agrandar la ventana ENCOGIA los iconos un 44%, lo
+    // contrario de s17/s32. Las 3 subvistas a >= 56px (el tamaño de Mascota/Monedas) necesitan
+    // ~936px de columna central, que solo hay desde ~1750px; a 1920 salen a 66,8-68px. Entre 1520
+    // y 1919 se queda una subvista a 72px (uso de ancho de la fila medido: 77-79%).
+    public bool IsEquipmentSideBySide => SizeClass >= WindowSizeClass.Extra;
+
     // FASE B del responsive global (28-sep-2026, changeMode REPLACE): IsEquipmentExpanded
     // (Auditoria de Opus E-2, "SizeClass >= Amplio" -> las 3 vistas de Equipamiento a la vez y SIN
     // selector) queda RETIRADO, no desactivado. Hacia que la arquitectura visual de Equipamiento
@@ -736,6 +765,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
+        OnPropertyChanged(nameof(IsEquipmentSideBySide));
         OnPropertyChanged(nameof(IsVitalsStripExpanded));
         OnPropertyChanged(nameof(VitalsStripMaxWidth));
         OnPropertyChanged(nameof(IsStorageExpanded));
@@ -1195,6 +1225,9 @@ public partial class MainViewModel : ObservableObject
         // cualquier propiedad que cambien tras cargar un personaje es una edicion real.
         Appearance.PropertyChanged += (_, e) =>
         {
+            // Un cambio de idioma solo re-traduce textos (HairDyeDisplayName, DifficultyLabel...),
+            // no es una edicion del personaje - ver AppearanceViewModel.RefrescandoIdioma.
+            if (Appearance.RefrescandoIdioma) return;
             MarkDirty();
             // Oleada del 6-sep-2026 (Personaje > Apariencia/Investigacion): el aviso "investigar
             // solo sirve en Modo Viaje" se calculaba UNA vez, al cargar, y la dificultad se edita
@@ -1329,6 +1362,7 @@ public partial class MainViewModel : ObservableObject
         if (ItemEdit.Slot != null) ItemEdit.Slot.IsSelected = false;
         slot.IsSelected = true;
         ItemEdit.Slot = slot;
+        EquipmentGroup?.SyncKindWithSlot(slot); // FASE B V-01: el selector sigue a la columna del slot
     }
 
     // Mismo patron que SelectSlot de arriba, para el panel "Editar buff seleccionado" (pregunta
@@ -1871,11 +1905,11 @@ public partial class MainViewModel : ObservableObject
         // claves "storage_bank"/"storage_safe" existian desde la ronda anterior sin enchufar.
         // Este DisplayName sale en el titulo del panel Editar, en los mensajes de "conjunto
         // cargado en X" y en el selector de almacen.
-        InventoryContainer = AddContainer("inventory", LocalizationService.Instance["char_tab_inventory"], _loaded.MergedContainers["inventory"]);
-        var bank = AddContainer("bank", LocalizationService.Instance["storage_bank"], _loaded.MergedContainers["bank"]);
-        var bank2 = AddContainer("bank2", LocalizationService.Instance["storage_safe"], _loaded.MergedContainers["bank2"]);
-        var bank3 = AddContainer("bank3", LocalizationService.Instance["storage_forge"], _loaded.MergedContainers["bank3"]);
-        var bank4 = AddContainer("bank4", LocalizationService.Instance["storage_void"], _loaded.MergedContainers["bank4"]);
+        InventoryContainer = AddContainer("inventory", () => LocalizationService.Instance["char_tab_inventory"], _loaded.MergedContainers["inventory"]);
+        var bank = AddContainer("bank", () => LocalizationService.Instance["storage_bank"], _loaded.MergedContainers["bank"]);
+        var bank2 = AddContainer("bank2", () => LocalizationService.Instance["storage_safe"], _loaded.MergedContainers["bank2"]);
+        var bank3 = AddContainer("bank3", () => LocalizationService.Instance["storage_forge"], _loaded.MergedContainers["bank3"]);
+        var bank4 = AddContainer("bank4", () => LocalizationService.Instance["storage_void"], _loaded.MergedContainers["bank4"]);
         // columns: 1 (pregunta a Opus sobre el diseño, quinta pasada: "mascotas etc mejor en
         // vertical") - laterales de la Equipamiento fusionada, una sola columna de 5 filas.
         // Orden real de los 5 slots (Player.miscEquips, confirmado por Opus contra Player.cs
@@ -1894,12 +1928,12 @@ public partial class MainViewModel : ObservableObject
         // medido con el arnes: sin techo propio, esta columna UNICA crecia sin limite hacia
         // el techo universal (90) en cuanto sobraba alto, robandole sitio real a la columna
         // central "Auto"+"*" de Armadura/Accesorios - ver ContainerViewModel.MaxCell).
-        MountsContainer = AddContainer("miscEquips", LocalizationService.Instance["storage_misc_equips"], _loaded.MergedContainers["miscEquips"], columns: 1,
+        MountsContainer = AddContainer("miscEquips", () => LocalizationService.Instance["storage_misc_equips"], _loaded.MergedContainers["miscEquips"], columns: 1,
             slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts, minCell: 32, maxCell: 56);
         // Los 5 tintes van emparejados 1:1 con los 5 slots de arriba, pero un tinte SIEMPRE
         // es solo un tinte (dye>0) sea cual sea el equipo al que este emparejado - mismo
         // SlotKind.Dye y mismo ghost "dye" en los 5, a diferencia del contenedor de arriba.
-        DyesContainer = AddContainer("miscDyes", LocalizationService.Instance["storage_misc_dyes"], _loaded.MergedContainers["miscDyes"], columns: 1,
+        DyesContainer = AddContainer("miscDyes", () => LocalizationService.Instance["storage_misc_dyes"], _loaded.MergedContainers["miscDyes"], columns: 1,
             slotKinds: [SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye],
             ghostIcons: ["dye", "dye", "dye", "dye", "dye"], minCell: 32, maxCell: 56);
 
@@ -1916,7 +1950,7 @@ public partial class MainViewModel : ObservableObject
         // ancho real de la fila (recortada contra ClipToBounds, 6 elementos, ES y EN) mientras la
         // rejilla de Armadura se quedaba en 40px. En columna, 4 filas caben dentro del alto que ya
         // marcan las 5 filas del lateral de Mascotas: la fila no crece y el centro recupera ancho.
-        CoinsContainer = AddContainer("coins", LocalizationService.Instance["storage_coins"], _loaded.Character.Coins.ToGameItems(), columns: 1,
+        CoinsContainer = AddContainer("coins", () => LocalizationService.Instance["storage_coins"], _loaded.Character.Coins.ToGameItems(), columns: 1,
             slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin], minCell: 32, maxCell: 56);
         // H5-10 (quinta auditoria de Opus): "Dinero total - hoy hay que hacer la cuenta a
         // mano". Por ID real (71/72/73/74 = cobre/plata/oro/platino, IsACoin real ya
@@ -1925,7 +1959,7 @@ public partial class MainViewModel : ObservableObject
         foreach (var slot in CoinsContainer.Slots)
             slot.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(ItemSlotViewModel.ItemId) or nameof(ItemSlotViewModel.Count)) RefreshMoneyText(); };
         RefreshMoneyText();
-        AmmoContainer = AddContainer("ammo", LocalizationService.Instance["storage_ammo"], _loaded.Character.Ammo.ToGameItems(), columns: 1,
+        AmmoContainer = AddContainer("ammo", () => LocalizationService.Instance["storage_ammo"], _loaded.Character.Ammo.ToGameItems(), columns: 1,
             slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo], minCell: 32, maxCell: 56);
 
         StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);
@@ -2361,9 +2395,12 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
-    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10,
+    // V-03 (FASE B del responsive global): displayName es un resolvedor, no un texto fijo - ver
+    // ContainerViewModel(string, Func<string>, ...): el nombre sigue al idioma en vivo.
+    private ContainerViewModel AddContainer(string key, Func<string> displayNameResolver, GameItem[] items, int columns = 10,
         SlotKind[]? slotKinds = null, string?[]? ghostIcons = null, double minCell = 40, double maxCell = 90)
     {
+        string displayName = displayNameResolver();
         var slots = new ObservableCollection<ItemSlotViewModel>();
         bool soportaFavorito = ContainerSupportsFavorite(key);
         for (int i = 0; i < items.Length; i++)
@@ -2375,7 +2412,7 @@ public partial class MainViewModel : ObservableObject
             HookSlotEditing(slot);
             slots.Add(slot);
         }
-        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell, MaxCell = maxCell };
+        var container = new ContainerViewModel(key, displayNameResolver, slots) { Columns = columns, MinCell = minCell, MaxCell = maxCell };
         Containers.Add(container);
         return container;
     }

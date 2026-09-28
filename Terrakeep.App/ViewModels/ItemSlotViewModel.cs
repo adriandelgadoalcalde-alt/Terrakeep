@@ -33,7 +33,16 @@ public partial class ItemSlotViewModel : ObservableObject
     // - lo muestra el panel "Editar" compartido para saber sobre que esta editando, ya que ese
     // panel vive fuera del TabControl de contenedores (pedido explicito 1-sep-2026: el panel
     // debe "acompañar desde Equipamiento hasta Forja del Vacio").
-    public string ContainerName { get; }
+    public string ContainerName { get; private set; }
+
+    // V-03 (FASE B del responsive global): ContainerViewModel lo llama al cambiar de idioma en vivo
+    // para que el subtitulo del panel Editar ("Loadout 1 - armadura/accesorios") siga al idioma.
+    internal void RefreshContainerName(string containerName)
+    {
+        if (ContainerName == containerName) return;
+        ContainerName = containerName;
+        OnPropertyChanged(nameof(ContainerName));
+    }
     // true solo para los slots que vienen de EquipmentGroupViewModel (armadura/accesorios/
     // vanidad/tintes de un loadout - genuinamente "puesto" en el personaje) - pedido explicito
     // 2-sep-2026: contorno verde real en vez de solo un hueco de separacion. Los slots de

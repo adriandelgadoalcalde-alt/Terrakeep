@@ -244,9 +244,13 @@ public partial class EquipmentGroupViewModel : ObservableObject
         // El contenedor 0 solo se llama "Equipo puesto" en un personaje ANTIGUO sin loadouts; en
         // uno moderno ES el loadout numero ActiveLoadout+1 y su nombre (el que muestra "¿Donde lo
         // tengo?") tiene que decirlo.
-        (string armorName, string vanityName, string dyeName) = realLoadoutCount > 0
-            ? (loc.Format("equip_loadout_armor", ActiveLoadout + 1), loc.Format("equip_loadout_vanity", ActiveLoadout + 1), loc.Format("equip_loadout_dyes", ActiveLoadout + 1))
-            : (loc["equip_worn_armor"], loc["equip_worn_vanity"], loc["equip_worn_dyes"]);
+        // V-03 (FASE B del responsive global): resolvedores, no textos fijos - el nombre del
+        // contenedor (y el subtitulo del panel Editar) sigue al idioma en vivo, ver
+        // ContainerViewModel(string, Func<string>, ...).
+        int numeroActivo = ActiveLoadout + 1;
+        (Func<string> armorName, Func<string> vanityName, Func<string> dyeName) = realLoadoutCount > 0
+            ? ((Func<string>)(() => loc.Format("equip_loadout_armor", numeroActivo)), (Func<string>)(() => loc.Format("equip_loadout_vanity", numeroActivo)), (Func<string>)(() => loc.Format("equip_loadout_dyes", numeroActivo)))
+            : ((Func<string>)(() => loc["equip_worn_armor"]), (Func<string>)(() => loc["equip_worn_vanity"]), (Func<string>)(() => loc["equip_worn_dyes"]));
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, armorName, mergedContainers["loadout0Items"], onItemChanged);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, vanityName, mergedContainers["loadout0Social"], onItemChanged);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, dyeName, mergedContainers["loadout0Dyes"], onItemChanged);
@@ -258,9 +262,10 @@ public partial class EquipmentGroupViewModel : ObservableObject
         // Loadouts[i-1]) - en un archivo sano esta vacio y no aparece en ninguna busqueda.
         for (int i = 1; i <= realLoadoutCount; i++)
         {
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, loc.Format("equip_loadout_armor", i), mergedContainers[$"loadout{i}Items"], onItemChanged);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, loc.Format("equip_loadout_vanity", i), mergedContainers[$"loadout{i}Social"], onItemChanged);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, loc.Format("equip_loadout_dyes", i), mergedContainers[$"loadout{i}Dyes"], onItemChanged);
+            int n = i; // copia local: el lambda no debe capturar la variable del bucle
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, () => loc.Format("equip_loadout_armor", n), mergedContainers[$"loadout{i}Items"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, () => loc.Format("equip_loadout_vanity", n), mergedContainers[$"loadout{i}Social"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, () => loc.Format("equip_loadout_dyes", n), mergedContainers[$"loadout{i}Dyes"], onItemChanged);
         }
 
         if (realLoadoutCount > 0)
@@ -302,7 +307,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
                 // sentido y romperia la simetria con MainViewModel.HookSlotEditing/BuffsViewModel.
                 slot.PropertyChanged += (_, e) =>
                 {
-                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
+                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage) or nameof(ItemSlotViewModel.ContainerName)) return; // ContainerName (V-03): cambio de idioma, no un dato del personaje
                     RecomputeDefenseAndBonus();
                 };
         }
@@ -377,9 +382,10 @@ public partial class EquipmentGroupViewModel : ObservableObject
          SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory];
 
     private void AddSlotSet(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
-        int loadout, EquipmentKind kind, string displayName, GameItem[] items,
+        int loadout, EquipmentKind kind, Func<string> displayNameResolver, GameItem[] items,
         Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
     {
+        string displayName = displayNameResolver();
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
         {
@@ -416,7 +422,10 @@ public partial class EquipmentGroupViewModel : ObservableObject
         // Columns=5: PlrLoadout.Items/Social/Dyes son siempre 10 slots reales en forma 5x2 -
         // sin esto SlotGridPanel usaria el default de 10 columnas y organizaria una tira larga
         // y fina de 10x1 en vez del bloque compacto real.
-        _byKey[(loadout, kind)] = new ContainerViewModel(key, displayName, slots) { Columns = 5 };
+        // MaxCell 72 (FASE B, correccion V-01 del revisor visual): con las 3 subvistas lado a lado
+        // en Extra, 90px ampliaba demasiado el pixel art y chocaba con los 56px de
+        // Mascota/Monedas; 72 = 2.0x exacto de un lienzo de 36px, dentro del rango 64-72 pedido.
+        _byKey[(loadout, kind)] = new ContainerViewModel(key, displayNameResolver, slots) { Columns = 5, MaxCell = 72 };
     }
 
     [RelayCommand]
@@ -427,6 +436,22 @@ public partial class EquipmentGroupViewModel : ObservableObject
         foreach (var o in LoadoutOptions) o.IsSelected = o == option;
         OnPropertyChanged(nameof(CurrentSlots));
         OnPropertyChanged(nameof(Current));
+    }
+
+    // FASE B, correccion V-01: con las 3 subvistas lado a lado (Extra) el selector marca
+    // la subvista ENFOCADA - seleccionar un slot de otra columna (clic, teclado, soltar un
+    // arrastre) mueve el foco del selector a esa columna, para que selector y slot en edicion
+    // nunca se contradigan. Devuelve true si el slot pertenece a una subvista del loadout actual.
+    public bool SyncKindWithSlot(ItemSlotViewModel slot)
+    {
+        foreach (var kind in new[] { EquipmentKind.Items, EquipmentKind.Social, EquipmentKind.Dyes })
+        {
+            if (!_byKey[(SelectedLoadout, kind)].Slots.Contains(slot)) continue;
+            if (kind != SelectedKind)
+                SelectKind(KindOptions.First(o => o.Value == (int)kind));
+            return true;
+        }
+        return false;
     }
 
     [RelayCommand]

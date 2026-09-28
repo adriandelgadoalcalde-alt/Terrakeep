@@ -121,7 +121,7 @@ internal static partial class Program
                     else if (hijo.Name == "CajaMascotasTintes") cajaMascotas = hijo;
                     else if (col == 1) // FASE B: cabecera + subvista viven juntas en EquipamientoCentro (una sola fila)
                     {
-                        foreach (var sgp in Descendientes<SlotGridPanel>(hijo))
+                        foreach (var sgp in Descendientes<SlotGridPanel>(hijo).Where(p => p.IsVisible)) // FASE B: la rejilla lado a lado (Extra) y la de una subvista conviven en la columna; la oculta conserva posiciones viejas
                         {
                             // El ScrollViewer que de verdad RECORTA esta rejilla (el de
                             // ContainerCompactTemplate) - es el que decide si un slot que se sale
@@ -391,7 +391,7 @@ internal static partial class Program
                 if (celdaCentral == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no se encuentra la columna central (col1) de SlotRowHost"); continue; }
 
                 int cortados = 0; double peor = 0;
-                foreach (var sgp in Descendientes<SlotGridPanel>(celdaCentral))
+                foreach (var sgp in Descendientes<SlotGridPanel>(celdaCentral).Where(p => p.IsVisible))
                     foreach (var celda in sgp.Children.OfType<FrameworkElement>())
                     {
                         var rc = RectCompleto(celda, window);

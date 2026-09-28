@@ -191,7 +191,10 @@
                                  texto normal, ver VanillaRarityColorCatalog). -->
                             <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220"
                                        Foreground="{Binding Slot.RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
-                            <TextBlock Style="{StaticResource CaptionText}">
+                            <!-- FASE B, correccion V-02 del revisor visual: sin TextWrapping el subtitulo
+                                 salia cortado ("Loadout 1 - armadura/accesoric") y el numero de slot
+                                 no se veia en ningun tamaño. Envolver, nunca recortar (s34). -->
+                            <TextBlock x:Name="EditarSubtituloSlot" Style="{StaticResource CaptionText}" TextWrapping="Wrap">
                                 <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
                                 <Run Text="{Binding Loc[label_dot_slot], Mode=OneWay}" />
                                 <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
@@ -1000,7 +1003,7 @@
                                                                   <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
                                                                       <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
                                                                               Command="{Binding DataContext.EquipmentGroup.SelectKindCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                              CommandParameter="{Binding}" />
+                                                                              CommandParameter="{Binding}" Click="OnEquipmentKindClick" />
                                                                   </DataTemplate>
                                                               </ItemsControl.ItemTemplate>
                                                           </ItemsControl>
@@ -1016,14 +1019,76 @@
                                                                  Visibility="{Binding ActiveSetBonusText, Converter={StaticResource NullToVis}}" />
                                                   </StackPanel>
 
-                                                  <!-- Subvista activa (FINITE_PAGEABLE): UNA de Armadura/Vanidad/Tintes, la
-                                                       que diga el selector de arriba - misma navegacion en todos los tamaños
-                                                       (s4/s16). En ventanas grandes aprovecha el espacio creciendo la celda
-                                                       (hasta MaxCell, mismo tamaño de icono que Inventario via
-                                                       ReferenceColumns), no cambiando de arquitectura. -->
+                                                  <!-- Subvista(s) FINITE_PAGEABLE (s4/s16/s17, correccion V-01 del revisor visual):
+                                                       - Compacto/Normal: UNA subvista, la que diga el selector de arriba.
+                                                       - Extra (IsEquipmentSideBySide, >= 1920 - umbral medido, ver MainViewModel): las 3 a la vez en columnas iguales,
+                                                         en el orden del propio juego (Tinte | Vanidad | Armadura), alineadas por
+                                                         fila de slot (mismo ancho de columna -> misma celda en las 3; cada columna se ciñe a su
+                                                         rejilla y se centra, asi etiqueta y resaltado quedan pegados a sus slots). El
+                                                         selector NO desaparece: marca la subvista enfocada con el borde de acento,
+                                                         pulsarlo lleva el foco de teclado a esa columna (OnEquipmentKindClick) y
+                                                         seleccionar un slot de otra columna mueve el selector ahi
+                                                         (EquipmentGroupViewModel.SyncKindWithSlot). -->
                                                   <ContentControl x:Name="EquipamientoSubvistaActual"
                                                                   Content="{Binding EquipmentGroup.Current}"
-                                                                  ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                                  ContentTemplate="{StaticResource ContainerFlowTemplate}"
+                                                                  Visibility="{Binding IsEquipmentSideBySide, Converter={StaticResource InverseBoolToVis}}" />
+                                                  <Grid x:Name="EquipamientoSubvistasLadoALado"
+                                                        Visibility="{Binding IsEquipmentSideBySide, Converter={StaticResource ObjetosBoolToVis}}">
+                                                      <Grid.ColumnDefinitions>
+                                                          <ColumnDefinition Width="*" />
+                                                          <ColumnDefinition Width="*" />
+                                                          <ColumnDefinition Width="*" />
+                                                      </Grid.ColumnDefinitions>
+                                                      <Border x:Name="EquipamientoColumnaTintes" HorizontalAlignment="Center" Grid.Column="0" Margin="0,0,6,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Dyes">
+                                                          <Border.Style>
+                                                              <Style TargetType="Border">
+                                                                  <Setter Property="BorderBrush" Value="Transparent" />
+                                                                  <Style.Triggers>
+                                                                      <DataTrigger Binding="{Binding EquipmentGroup.SelectedKind}" Value="Dyes">
+                                                                          <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                                      </DataTrigger>
+                                                                  </Style.Triggers>
+                                                              </Style>
+                                                          </Border.Style>
+                                                          <StackPanel>
+                                                              <TextBlock Text="{Binding EquipmentGroup.KindOptions[2].Label}" Style="{StaticResource CaptionText}" Margin="2,0,0,4" />
+                                                              <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
+                                                      </Border>
+                                                      <Border x:Name="EquipamientoColumnaVanidad" HorizontalAlignment="Center" Grid.Column="1" Margin="0,0,6,0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Social">
+                                                          <Border.Style>
+                                                              <Style TargetType="Border">
+                                                                  <Setter Property="BorderBrush" Value="Transparent" />
+                                                                  <Style.Triggers>
+                                                                      <DataTrigger Binding="{Binding EquipmentGroup.SelectedKind}" Value="Social">
+                                                                          <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                                      </DataTrigger>
+                                                                  </Style.Triggers>
+                                                              </Style>
+                                                          </Border.Style>
+                                                          <StackPanel>
+                                                              <TextBlock Text="{Binding EquipmentGroup.KindOptions[1].Label}" Style="{StaticResource CaptionText}" Margin="2,0,0,4" />
+                                                              <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
+                                                      </Border>
+                                                      <Border x:Name="EquipamientoColumnaArmadura" HorizontalAlignment="Center" Grid.Column="2" Margin="0" Padding="4" CornerRadius="8" BorderThickness="2" Tag="Items">
+                                                          <Border.Style>
+                                                              <Style TargetType="Border">
+                                                                  <Setter Property="BorderBrush" Value="Transparent" />
+                                                                  <Style.Triggers>
+                                                                      <DataTrigger Binding="{Binding EquipmentGroup.SelectedKind}" Value="Items">
+                                                                          <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                                      </DataTrigger>
+                                                                  </Style.Triggers>
+                                                              </Style>
+                                                          </Border.Style>
+                                                          <StackPanel>
+                                                              <TextBlock Text="{Binding EquipmentGroup.KindOptions[0].Label}" Style="{StaticResource CaptionText}" Margin="2,0,0,4" />
+                                                              <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerFlowTemplate}" />
+                                                          </StackPanel>
+                                                      </Border>
+                                                  </Grid>
                                                   </StackPanel>
 
                                                   <!-- Lateral derecho Monedas/Municion. Historial completo: ADR-TERRAKEEP-005. -->

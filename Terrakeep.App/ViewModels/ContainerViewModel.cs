@@ -13,7 +13,17 @@ public sealed partial class ContainerViewModel : ObservableObject
     // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
-    private readonly string _baseName;
+    private string _baseName;
+    // FASE B del responsive global, correccion V-03 del revisor visual (28-sep-2026): el nombre
+    // base se resolvia UNA vez al construir (LocalizationService["storage_coins"]...) y se quedaba
+    // en el idioma de ese momento - al cambiar a ingles en vivo "Monedas (4/4)", "Municion (4/4)"
+    // y "Loadout 1 - armadura/accesorios" (este ultimo via ItemSlotViewModel.ContainerName, el
+    // subtitulo del panel Editar) seguian en español. Con un resolvedor, el contenedor escucha el
+    // cambio real de idioma (LocalizationService emite "Item[]") y recalcula su nombre y el de sus
+    // slots. Suscripcion DEBIL (PropertyChangedEventManager): los contenedores se recrean en cada
+    // carga de personaje y el servicio es un singleton - una suscripcion fuerte los mantendria
+    // vivos para siempre.
+    private readonly Func<string>? _baseNameResolver;
 
     public string Key { get; }
     public ObservableCollection<ItemSlotViewModel> Slots { get; }
@@ -35,6 +45,22 @@ public sealed partial class ContainerViewModel : ObservableObject
         foreach (var slot in slots)
             slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayName)); };
         _undoClearTimer.Tick += OnUndoClearTimerTick;
+    }
+
+    // Variante localizable (V-03): el nombre se vuelve a resolver en cada cambio real de idioma.
+    public ContainerViewModel(string key, Func<string> baseNameResolver, ObservableCollection<ItemSlotViewModel> slots)
+        : this(key, baseNameResolver(), slots)
+    {
+        _baseNameResolver = baseNameResolver;
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(Services.LocalizationService.Instance, OnLanguageChanged, "Item[]");
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_baseNameResolver == null) return;
+        _baseName = _baseNameResolver();
+        foreach (var slot in Slots) slot.RefreshContainerName(_baseName);
+        OnPropertyChanged(nameof(DisplayName));
     }
 
     // Nº de columnas reales de la cuadricula compacta (SlotGridPanel, ver
