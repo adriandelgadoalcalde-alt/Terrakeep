@@ -173,7 +173,8 @@ internal static partial class Program
                 catch (InvalidOperationException) { return false; }
             }
 
-            FrameworkElement? PanelEditar() => Descendientes<Border>(objetosView).FirstOrDefault(b => b.IsVisible && b.Style == (Style)window.FindResource("SidePanelCard"));
+            // Por nombre (FASE D, D-01/D-05: el Style de Editar es ahora EditarTarjetaComposicion, BasedOn SidePanelCard).
+            FrameworkElement? PanelEditar() => objetosView.FindName("EditarTarjeta") as FrameworkElement is { IsVisible: true } ed ? ed : null;
 
             var resumen = new List<string>();
 

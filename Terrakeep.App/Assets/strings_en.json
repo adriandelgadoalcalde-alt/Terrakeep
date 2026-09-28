@@ -61,6 +61,7 @@
   "action_add_hundred": "+100",
   "action_set_max": "MAX",
   "action_remove": "Remove",
+  "action_choose_prefix": "Choose prefix",
   "action_remove_all_research": "Remove all research",
   "action_research_all": "Research all",
   "action_research_folder": "Research this folder",

@@ -97,7 +97,11 @@ public static class LibraryCategoryTreeBuilder
             ItemCount = data.ItemIdSet.Count,
         };
         foreach (var child in data.Children)
-            vm.Children.Add(ToViewModel(child));
+        {
+            var hijo = ToViewModel(child);
+            hijo.Padre = vm; // FASE D, D-03: NombreEnRuta (subcarpeta sin el prefijo repetido de su madre)
+            vm.Children.Add(hijo);
+        }
         return vm;
     }
 }

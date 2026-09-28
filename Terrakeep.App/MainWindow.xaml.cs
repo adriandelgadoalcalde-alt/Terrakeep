@@ -42,6 +42,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // FASE D del responsive global, D-01/D-04: cabeceras (buscador...) de la Libreria de buffs y de
+        // Investigacion dentro del flujo de sus categorias principales - ver NavegadorCategorias.AdoptarCabecera.
+        LibreriaBuffsNavegadorCategorias.AdoptarCabecera(this, SoporteCabeceraLibreriaBuffs);
+        InvestigacionNavegadorCategorias.AdoptarCabecera(this, SoporteCabeceraInvestigacion, SoporteAccionesInvestigacion);
         DataContext = _viewModel;
         // NAV123 (25-sep-2026): T3 PASO 3 suscribia aqui la Vista al evento ObjetosSectionRequested
         // para medir/mover un ScrollViewer real - ya no hace falta, RequestObjetosSection solo

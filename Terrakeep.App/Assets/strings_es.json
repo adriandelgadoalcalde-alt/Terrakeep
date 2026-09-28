@@ -61,6 +61,7 @@
   "action_add_hundred": "+100",
   "action_set_max": "MAX",
   "action_remove": "Quitar",
+  "action_choose_prefix": "Elegir prefijo",
   "action_remove_all_research": "Quitar toda la investigación",
   "action_research_all": "Investigar todo",
   "action_research_folder": "Investigar esta carpeta",

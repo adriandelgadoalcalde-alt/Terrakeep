@@ -44,6 +44,7 @@ public sealed partial class CategoryNodeViewModel : ObservableObject
     private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(NombreEnRuta));
         OnPropertyChanged(nameof(ItemCountLabel));
         OnPropertyChanged(nameof(BuffCountLabel));
     }
@@ -60,6 +61,31 @@ public sealed partial class CategoryNodeViewModel : ObservableObject
 
     public string FullPath { get; }
     public ObservableCollection<CategoryNodeViewModel> Children { get; } = [];
+
+    // Correccion D-03 del revisor visual de la FASE D (28-sep-2026): las subcarpetas de Calamity llevan el
+    // nombre de su carpeta madre delante ("Colocables - Muebles de Cosmilite (22)" dentro de "Colocables
+    // (1047)"; en ingles "Placeables - ..."), repetido 49 veces en el desplegable de subcategorias. Donde la
+    // carpeta se ve DEBAJO de su madre (desplegable, migas de la ruta, pastillas de las tarjetas "Ver
+    // todo") se enseña sin ese prefijo: "Muebles de Cosmilite (22)". Name sigue siendo el nombre completo
+    // (resumen de resultados, busqueda, tooltips). Padre lo fija LibraryCategoryTreeBuilder.ToViewModel.
+    public CategoryNodeViewModel? Padre { get; set; }
+
+    public string NombreEnRuta => QuitarPrefijoDeMadre(Name, Padre?.Name);
+
+    // "Colocables (1047)" -> base "Colocables"; "Colocables - Abismo (9)" -> "Abismo (9)". Solo quita el
+    // prefijo si va seguido de " - " y deja algo detras (una carpeta que se llama igual que su madre, p.ej.
+    // "Colocables (71)", se queda tal cual).
+    public static string QuitarPrefijoDeMadre(string nombre, string? nombreMadre)
+    {
+        if (string.IsNullOrEmpty(nombreMadre)) return nombre;
+        string madre = nombreMadre;
+        int parentesis = madre.LastIndexOf(" (", StringComparison.Ordinal);
+        if (parentesis > 0 && madre.EndsWith(')')) madre = madre[..parentesis];
+        string prefijo = madre + " - ";
+        return nombre.Length > prefijo.Length && nombre.StartsWith(prefijo, StringComparison.Ordinal)
+            ? nombre[prefijo.Length..]
+            : nombre;
+    }
 
     // Ids reales que caen bajo este nodo - el propio conjunto si es una carpeta hoja, o la
     // union de todos sus descendientes si es una carpeta intermedia. Pertenencia MULTIPLE de

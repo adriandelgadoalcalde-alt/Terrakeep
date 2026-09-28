@@ -1179,6 +1179,43 @@
         <Setter Property="Padding" Value="12" />
     </Style>
 
+    <!-- FASE D del responsive global, correcciones D-01/D-05/D-07 del revisor visual (28-sep-2026): UNA sola
+         regla de composicion para el panel Editar de Objetos y el de Buffs (s10: "no mantener dos
+         arquitecturas diferentes sin motivo"), dentro de su rejilla de 2 filas (contenido / Libreria) x 2
+         columnas (* / 300). MainViewModel.IsEditarBarraCompleta (SizeClass != Compacto):
+           - true: barra lateral de alto completo (RowSpan 2), alta SEGUN SU CONTENIDO (VerticalAlignment Top;
+             D-07: sin seleccion a 2560x1440 era una caja de 300x1245 con solo la leyenda);
+           - false (Compacto): solo la fila de contenido, a su mismo alto (Margin inferior 8 como la rejilla
+             de al lado) y la Libreria a ancho completo debajo (LibreriaComposicion). -->
+    <Style x:Key="EditarTarjetaComposicion" TargetType="Border" BasedOn="{StaticResource SidePanelCard}">
+        <Setter Property="Grid.Column" Value="1" />
+        <Setter Property="Grid.Row" Value="0" />
+        <Setter Property="Grid.RowSpan" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                <Setter Property="Grid.RowSpan" Value="2" />
+                <Setter Property="VerticalAlignment" Value="Top" />
+                <Setter Property="Margin" Value="0" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="LibreriaComposicion" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="Margin" Value="0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                <Setter Property="Grid.ColumnSpan" Value="1" />
+                <Setter Property="Margin" Value="0,0,10,0" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- REAPERTURA (25-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): el "Style"
          unico "StatusPillCaption" (24-sep-2026, ver historial mas abajo en bitacora.md) resolvia
          la inconsistencia de GEOMETRIA (Padding/CornerRadius distintos sin criterio) pero el
@@ -1309,10 +1346,15 @@
                Ruta    TextPrimary #f0f1f8 sobre AccentMuted #2a2856 + borde de acento  ~12:1
                Sel     blanco sobre #4834d4 (AccentDeep, misma familia del acento)  ~7,7:1
              (antes: AccentBrush #6C63FF sobre AccentMuted #2a2856 = 3,17:1). -->
+        <!-- Correccion D-06 del revisor visual de la FASE D: alto UNICO de 24px para todas las pastillas de
+             la familia (antes 20px con icono y 18,6px sin el - "Ver todo", subpastillas de las tarjetas,
+             desplegable), objetivo de clic comodo y filas alineadas. MinHeight, no Height: un nombre largo
+             que envuelva sigue creciendo (s34). -->
         <Style x:Key="PastillaCategoriaBase" TargetType="Button">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Padding" Value="7,1" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="8,1" />
             <Setter Property="Margin" Value="0,0,4,3" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -1320,7 +1362,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{StaticResource BgElevatedBrush}" BorderBrush="Transparent" BorderThickness="1"
-                                CornerRadius="11" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                                CornerRadius="12" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>

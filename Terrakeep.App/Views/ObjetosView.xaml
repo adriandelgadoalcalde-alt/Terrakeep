@@ -110,6 +110,99 @@
              SELECCIONADO (ItemEditViewModel.Slot), no a uno fijo, para poder vivir fuera del
              TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
              Boveda/Loadouts por igual (pedido explicito 1-sep-2026). -->
+        <!-- Selector de prefijo real de 3 niveles (equivalente exacto de los botones btMeta/btGroups/btPrefix
+             reales de app.TabEdit, ya filtrados por lo que es legal de verdad para este objeto - ver
+             PrefixGroupCatalog/PrefixRulesCatalog). FASE D, correccion D-01: UNA sola definicion para las dos
+             composiciones de Editar (en linea / desplegable de Compacto). Los comandos se resuelven contra el
+             ItemsControl de la propia plantilla (DataContext = ItemEditViewModel) y no contra la Window: dentro
+             de un Popup no hay Window ancestra. -->
+        <DataTemplate x:Key="SelectorPrefijoTemplate" DataType="{x:Type vm:ItemEditViewModel}">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Metas}" Margin="0,0,0,6">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
+                            <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                    Command="{Binding DataContext.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
+                            <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                    Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- FASE D: lista de prefijos SIN ScrollViewer propio (era el segundo scroll vertical
+                     anidado del panel) - envuelve y crece en alto. -->
+                    <ItemsControl ItemsSource="{Binding Prefixes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                <!-- Auditoria de Opus, D-6: antes una lista de 20 nombres
+                                     opacos - el efecto real ya se sabe calcular
+                                     (PrefixEffectCatalog), solo faltaba mostrarlo aqui. -->
+                                <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
+                                        Command="{Binding DataContext.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
+                                        Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+        <Style x:Key="EditarPrefijoEnLineaVis" TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding CanHavePrefix}" Value="True" />
+                        <Condition Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="EditarPrefijoDesplegableVis" TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding CanHavePrefix}" Value="True" />
+                        <Condition Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
         <DataTemplate x:Key="ItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
             <!-- FASE D del responsive global (28-sep-2026, s7/s13/s14/s34 - permiso aa5f7395 y known-diff
                  570a3c9d): RETIRADOS los dos ScrollViewer propios de este panel - el "de seguridad" de L-d
@@ -312,73 +405,41 @@
                                Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
                     </DockPanel>
 
-                    <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
-                               Margin="0,4,0,10" Visibility="{Binding CanHavePrefix, Converter={StaticResource ObjetosBoolToVis}}" />
                 </StackPanel>
 
-                <!-- Selector de prefijo real de 3 niveles (equivalente exacto de los botones
-                     btMeta/btGroups/btPrefix reales de app.TabEdit, ya filtrados por lo que es
-                     legal de verdad para este objeto - ver PrefixGroupCatalog/PrefixRulesCatalog). -->
-                <StackPanel Visibility="{Binding CanHavePrefix, Converter={StaticResource ObjetosBoolToVis}}">
-                    <ItemsControl ItemsSource="{Binding Metas}" Margin="0,0,0,6">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
-                                <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
-                                        Command="{Binding DataContext.ItemEdit.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
-                                <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
-                                        Command="{Binding DataContext.ItemEdit.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <!-- FASE D: lista de prefijos SIN ScrollViewer propio (era el segundo scroll vertical
-                         anidado del panel) - envuelve y crece en alto. -->
-                        <ItemsControl ItemsSource="{Binding Prefixes}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
-                                    <!-- Auditoria de Opus, D-6: antes una lista de 20 nombres
-                                         opacos - el efecto real ya se sabe calcular
-                                         (PrefixEffectCatalog), solo faltaba mostrarlo aqui. -->
-                                    <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
-                                            Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
-                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                <!-- Correccion D-01 del revisor visual de la FASE D (28-sep-2026, s7): el selector de prefijo de 3
+                     niveles (SelectorPrefijoTemplate, una sola definicion) se compone segun
+                     MainViewModel.IsEditarBarraCompleta:
+                       - barra lateral de alto completo (Normal/Amplio/Extra): en linea, como siempre;
+                       - Compacto (Editar solo en la fila de contenido, la Libreria a ancho completo debajo): en
+                         un desplegable "Elegir prefijo" dentro de Editar. Mismas metas/grupos/prefijos, mismos
+                         comandos, un clic mas; nada se oculta (s16). Sin el, Editar no cabe sin scroll en la
+                         fila de contenido (granadas Picaro de Calamity: 17 prefijos, ~180px de selector). -->
+                <StackPanel x:Name="EditarPrefijoEnLinea" Style="{StaticResource EditarPrefijoEnLineaVis}">
+                    <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
+                               TextWrapping="Wrap" Margin="0,4,0,10" />
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SelectorPrefijoTemplate}" Focusable="False" IsTabStop="False" />
+                </StackPanel>
+                <StackPanel x:Name="EditarPrefijoDesplegable" Style="{StaticResource EditarPrefijoDesplegableVis}" Margin="0,4,0,0">
+                    <Button x:Name="BotonPrefijoDesplegable" controls:Desplegable.Popup="{Binding ElementName=PopupPrefijo}"
+                            Tag="AccentSoft" Padding="10,5" FontSize="11.5" HorizontalContentAlignment="Stretch"
+                            ToolTip="{Binding CategoriesLabel}" AutomationProperties.Name="{Binding Loc[action_choose_prefix], Mode=OneWay}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="&#9662;" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Loc[action_choose_prefix], Mode=OneWay}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Button>
+                    <Popup x:Name="PopupPrefijo" PlacementTarget="{Binding ElementName=BotonPrefijoDesplegable}" Placement="Bottom"
+                           StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                        <Border x:Name="MarcoPrefijoDesplegable" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                BorderThickness="1" CornerRadius="8" Padding="10,10,6,6" Width="340" Effect="{StaticResource CardShadow}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SelectorPrefijoTemplate}" Focusable="False" IsTabStop="False" />
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </StackPanel>
             </DockPanel>
         </DataTemplate>
@@ -1416,10 +1477,16 @@
 
                             </Grid>
 
-                            <!-- FASE D (s7): panel Editar como barra lateral de alto completo (Grid.RowSpan=2), sin
-                                 ScrollViewer propio - ver ItemEditTemplate. -->
-                            <Border x:Name="EditarTarjeta" Grid.Column="1" Grid.RowSpan="2" Style="{StaticResource SidePanelCard}">
-                                <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
+                            <!-- FASE D (s7): panel Editar sin ScrollViewer propio - ver ItemEditTemplate. Correccion D-01/D-05/D-07
+                                 del revisor visual: composicion por SizeClass con UNA regla compartida con Buffs
+                                 (EditarTarjetaComposicion en Theme.xaml, MainViewModel.IsEditarBarraCompleta): barra lateral de
+                                 alto completo y alta segun su contenido en Normal+; solo la fila de contenido en Compacto, con la
+                                 Libreria a ancho completo debajo. AltoNaturalEditar: alto natural del contenido, para que el
+                                 reparto de filas (AjustarRepartoObjetosLibreria) nunca deje a Editar mas bajo que el en Compacto. -->
+                            <Border x:Name="EditarTarjeta" Style="{StaticResource EditarTarjetaComposicion}">
+                                <controls:AltoNatural x:Name="AltoNaturalEditar">
+                                    <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
+                                </controls:AltoNatural>
                             </Border>
 
                             <!-- Libreria de objetos. FASE D del responsive global (28-sep-2026, PDF "Arreglo familia keep"
@@ -1434,96 +1501,95 @@
                                    - pildora de restriccion de slot y resumen;
                                    - UN solo scroll owner vertical (LibreriaResultados) para tarjetas raiz o resultados,
                                      con columnas adaptativas (s8: la rejilla ya no deja media franja vacia). -->
-                            <Border x:Name="LibreriaObjetosPanel" Grid.Row="1" Grid.Column="0" Margin="0,0,10,0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8,6">
+                            <Border x:Name="LibreriaObjetosPanel" Grid.Row="1" Style="{StaticResource LibreriaComposicion}">
                                 <DockPanel>
-                                    <Grid x:Name="LibreriaCabecera" DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" MaxWidth="360" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño, 2-sep-2026: plegar la
-                                             Libreria es la mayor ganancia de espacio real de toda la pantalla) - se puede
-                                             plegar/desplegar a mano, y se auto-despliega sola al elegir "Elegir..."/"Cambiar"
-                                             en cualquier slot (MainViewModel.RequestPickForSlot). T-H/F1: Ctrl+F salta al
-                                             buscador y despliega. Plegada, ocupa la fila entera (ColumnSpan 3). -->
-                                        <Button Grid.Column="0" Command="{Binding ToggleLibraryCollapsedCommand}"
-                                                ToolTip="{Binding Loc[tt_ctrlf_library], Mode=OneWay}"
-                                                HorizontalContentAlignment="Stretch" Padding="8,3">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource BarButton}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsLibraryVisible}" Value="False">
-                                                            <Setter Property="Grid.ColumnSpan" Value="3" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <!-- FASE D, correccion D-01/D-04: la cabecera (plegar + buscador + Filtros) va DENTRO del flujo de
+                                         las categorias principales (NavegadorCategorias.Cabecera), mismo orden en las 3 superficies:
+                                         cabecera con buscador -> pastillas -> ruta/resumen. Plegada, solo queda la cabecera. -->
+                                    <views:NavegadorCategorias x:Name="LibreriaNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding Library}" Margin="0,0,0,2"
+                                                               MostrarNavegacion="{Binding DataContext.IsLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <!-- La cabecera se declara aqui y NavegadorCategorias.AdoptarCabecera (code-behind del host) la mueve a su
+                                         flujo al construir la vista: WPF no deja poner x:Name (LibrarySearchBox, LibraryFiltersButton...) en el
+                                         contenido que se le da a un UserControl con nombres propios (MC3093), y esos nombres los usan el
+                                         code-behind, el Popup de filtros y el arnes. -->
+                                    <Decorator x:Name="SoporteCabeceraLibreria" DockPanel.Dock="Top" Visibility="Collapsed">
+                                        <StackPanel x:Name="LibreriaCabecera" Orientation="Horizontal">
+                                            <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño, 2-sep-2026: plegar la
+                                                 Libreria es la mayor ganancia de espacio real de toda la pantalla) - se puede
+                                                 plegar/desplegar a mano, y se auto-despliega sola al elegir "Elegir..."/"Cambiar"
+                                                 en cualquier slot (MainViewModel.RequestPickForSlot). T-H/F1: Ctrl+F salta al
+                                                 buscador y despliega. Plegada, ocupa la fila entera (ColumnSpan 3). -->
+                                            <Button Command="{Binding ToggleLibraryCollapsedCommand}" Style="{StaticResource BarButton}"
+                                                    ToolTip="{Binding Loc[tt_ctrlf_library], Mode=OneWay}"
+                                                    HorizontalContentAlignment="Stretch" Padding="8,3" VerticalAlignment="Center">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <!-- Ronda de Libreria/Builds del 6-sep-2026: rotulos por Loc, nunca texto fijo. -->
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
+                                                                        <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Loc[library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Button>
+                                            <!-- H4-01 (cuarta auditoria de Opus): el buscador nunca mide a su contenido. FASE D, D-01: ancho
+                                                 fijo de 260px (antes columna "*" con techo 360) - en el flujo de la cabecera no hay columna
+                                                 que estirar, y 260 deja sitio a las primeras categorias en la misma linea. -->
+                                            <Grid Width="260" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                                <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                         FontSize="12" VerticalContentAlignment="Center"
+                                                         ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
+                                                <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                           Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                            </Grid>
+                                            <!-- Boton "Filtros" (encargo del usuario, 13-sep-2026: "amplia la busqueda con filtros
+                                                 combinables") - junto al buscador, como siempre. -->
+                                            <Button x:Name="LibraryFiltersButton" Margin="6,0,0,0" Padding="9,5" FontSize="11" VerticalAlignment="Center"
+                                                    Command="{Binding Library.ToggleFiltersOpenCommand}"
+                                                    ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}"
+                                                    Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                <Setter Property="Tag" Value="AccentSoft" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                                <TextBlock>
                                                     <TextBlock.Style>
-                                                        <!-- Ronda de Libreria/Builds del 6-sep-2026: rotulos por Loc, nunca texto fijo. -->
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                            <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
-                                                                    <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                                <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                    <Setter Property="Text">
+                                                                        <Setter.Value>
+                                                                            <MultiBinding Converter="{StaticResource LocFormat}">
+                                                                                <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
+                                                                                <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
+                                                                            </MultiBinding>
+                                                                        </Setter.Value>
+                                                                    </Setter>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Text="{Binding Loc[library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                        </Button>
-                                        <!-- H4-01 (cuarta auditoria de Opus): el buscador se estira (columna "*" con MaxWidth=360,
-                                             el mismo techo de siempre) - nunca mide a su contenido. Marcador de posicion real. -->
-                                        <Grid Grid.Column="1" Margin="8,0,0,0" Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
-                                            <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     FontSize="12" VerticalContentAlignment="Center"
-                                                     ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
-                                            <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
-                                                       Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
-                                        </Grid>
-                                        <!-- Boton "Filtros" (encargo del usuario, 13-sep-2026: "amplia la busqueda con filtros
-                                             combinables") - junto al buscador, como siempre. -->
-                                        <Button x:Name="LibraryFiltersButton" Grid.Column="2" Margin="6,0,0,0" Padding="9,5" FontSize="11"
-                                                Command="{Binding Library.ToggleFiltersOpenCommand}"
-                                                ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}"
-                                                Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
-                                                            <Setter Property="Tag" Value="AccentSoft" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                            <TextBlock>
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
-                                                                <Setter Property="Text">
-                                                                    <Setter.Value>
-                                                                        <MultiBinding Converter="{StaticResource LocFormat}">
-                                                                            <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
-                                                                            <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
-                                                                        </MultiBinding>
-                                                                    </Setter.Value>
-                                                                </Setter>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Button>
-                                    </Grid>
+                                            </Button>
+                                        </StackPanel>
+                                        
+                                    </Decorator>
 
                                             <!-- Popup real de filtros (mismo mecanismo que WhereIsItPopup: anclado
                                                  al boton, StaysOpen=False lo cierra con un clic fuera). Tres grupos
@@ -1607,7 +1673,6 @@
                                     </Border>
 
                                     <DockPanel Visibility="{Binding IsLibraryVisible, Converter={StaticResource ObjetosBoolToVis}}">
-                                        <views:NavegadorCategorias x:Name="LibreriaNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding Library}" Margin="0,0,0,2" />
                                             <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
@@ -1637,6 +1702,7 @@
                                                 <!-- FASE D: tarjetas de carpeta raiz compartidas (Views/TarjetasCategoriasRaiz.xaml), con sus
                                                      subcarpetas de primer nivel - antes una copia de plantilla por superficie. -->
                                                 <views:TarjetasCategoriasRaiz Margin="0,4,0,0" DataContext="{Binding Library}"
+                                                                              AltoDisponible="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
                                                                               Visibility="{Binding ShowRootCategoryCards, Converter={StaticResource ObjetosBoolToVis}}" />
                                                 <!-- Rejilla de resultados SIN columnas semanticas (s8): AdaptiveColumns + PreferirCeldaGrande
                                                      (SlotGridPanel.cs) - con muchos resultados llena el ancho con el maximo de columnas a

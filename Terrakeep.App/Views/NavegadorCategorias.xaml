@@ -1,4 +1,4 @@
-<!-- FASE D del responsive global (28-sep-2026, PDF "Arreglo familia keep" bloque 2, s9-s14/s16/s19/s26 C/s28).
+<!-- FASE D del responsive global (28-sep-2026, PDF "Arreglo familia keep" bloque 2, s9-s14/s16/s19/s26 C).
      Navegacion de categorias COMPARTIDA por la familia "catalogo con categorias": Libreria de objetos
      (ObjetosView), Libreria de buffs e Investigacion (MainWindow). UN solo control, no tres arreglos
      (s11). DataContext = el CatalogBrowserViewModel de cada superficie (Library/BuffLibrary/Research).
@@ -9,22 +9,29 @@
      Libreria y 5/8 de la Libreria de buffs se veian sin desplazar ese scroll lateral; 2 scroll owners
      verticales por superficie; la seleccion en 3,17:1 de contraste.
 
-     MODELO NUEVO:
-       1. Fila de categorias PRINCIPALES (STRUCTURAL_FINITE, s3 A): "Ver todo" + todas las raices como
-          pastillas en un WrapPanel - envuelve a otra linea si no caben, nunca se esconden detras de
-          un scroll.
-       2. UNA linea de ruta (s12, drill-down + flyout): migas de la ruta por debajo de la raiz ("> Pre-
-          Hardmode > Cobre y estaño", cada miga lleva a su nivel) y un desplegable "Subcategorias de X
-          (N)" con los hijos del nivel mas profundo que los tiene. Asi un arbol de 4 niveles con hasta
-          40 hijos por nodo (Placeables de Calamity) cuesta UNA linea de alto en cualquier tamaño, en vez
-          de un scroll propio.
-     Los resultados quedan como UNICO scroll owner vertical de la superficie (s13). -->
+     MODELO NUEVO, mismo orden en las 3 superficies (correccion D-04 del revisor visual):
+       1. CABECERA + CATEGORIAS PRINCIPALES en UN flujo (WrapPanel "CategoriasPrincipales"): la cabecera
+          propia de cada superficie (Cabecera: plegar + buscador + filtros en la Libreria; plegar + buscador
+          en la de buffs; buscador en Investigacion) y detras "Ver todo" + todas las raices como pastillas.
+          Envuelve a otra linea si no caben, nunca se esconden detras de un scroll (STRUCTURAL_FINITE, s3 A).
+          Correccion D-01: con la cabecera en una fila propia y las raices en otra, a 1080x700 la
+          navegacion ocupaba 4-5 lineas y el viewport de resultados bajaba a 37,5px; en un solo flujo la
+          cabecera usa el hueco que le sobraba a su derecha.
+       2. UNA linea de ruta (LineaRutaPanel, s12 drill-down + flyout) que NUNCA envuelve: migas de la ruta
+          por debajo de la raiz (las intermedias se pliegan en "..." con la ruta completa en el tooltip si
+          no caben), el desplegable "Subcategorias (N)" con los hijos del nivel mas profundo que los tiene,
+          las acciones de carpeta de la superficie (AccionesRuta, p.ej. Investigar carpeta/Quitar) y el
+          resumen de resultados.
+     Los resultados quedan como UNICO scroll owner vertical de la superficie (s13). MostrarNavegacion=False
+     (Libreria plegada) deja solo la cabecera. -->
 <UserControl x:Class="Terrakeep.App.Views.NavegadorCategorias"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:controls="clr-namespace:Terrakeep.App.Controls"
              xmlns:services="clr-namespace:Terrakeep.App.Services">
     <UserControl.Resources>
+        <!-- Pastilla de categoria (raices). -->
         <DataTemplate x:Key="PastillaCategoriaTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
             <Button Style="{StaticResource PastillaCategoria}" Command="{Binding SelectCommand}" CommandParameter="{Binding}"
                     AutomationProperties.Name="{Binding Name}">
@@ -36,44 +43,45 @@
                 </DockPanel>
             </Button>
         </DataTemplate>
+        <!-- Miga de la ruta: separador + pastilla con el nombre SIN el prefijo repetido de su madre (D-03). -->
+        <DataTemplate x:Key="MigaTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#8250;" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="2,0,5,3" VerticalAlignment="Center" />
+                <Button Style="{StaticResource PastillaCategoria}" Command="{Binding SelectCommand}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Name}" ToolTip="{Binding Name}">
+                    <DockPanel>
+                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,5,0" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <TextBlock Text="{Binding NombreEnRuta}" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <StackPanel>
-        <!-- 1. Categorias principales. "Ver todo" a la izquierda como cabeza de la fila; si las raices no
-             caben en una linea, envuelven debajo (nunca scroll). -->
-        <DockPanel x:Name="CategoriasPrincipales">
-            <Button x:Name="BotonVerTodo" DockPanel.Dock="Left" Style="{StaticResource PastillaVerTodo}" VerticalAlignment="Top"
+        <!-- 1. Cabecera + categorias principales en un solo flujo. Los hijos de las raices los añade el
+             code-behind detras de "Ver todo" (un WrapPanel no puede continuar el flujo de un ItemsControl
+             anidado). -->
+        <WrapPanel x:Name="CategoriasPrincipales">
+            <ContentPresenter x:Name="PresentadorCabecera" Margin="0,0,10,3" VerticalAlignment="Center"
+                              Content="{Binding Cabecera, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <Button x:Name="BotonVerTodo" Style="{StaticResource PastillaVerTodo}" VerticalAlignment="Center"
                     Command="{Binding ClearCategoryCommand}"
                     Content="{Binding Source={x:Static services:LocalizationService.Instance}, Path=[action_view_all], Mode=OneWay}" />
-            <ItemsControl x:Name="RaicesCategorias" ItemsSource="{Binding RootCategories}" ItemTemplate="{StaticResource PastillaCategoriaTemplate}"
-                          Focusable="False" IsTabStop="False">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-        </DockPanel>
+        </WrapPanel>
 
-        <!-- 2. Linea de estado de la superficie: ruta + subcategorias (solo si la carpeta elegida tiene nivel
-             por debajo o esta por debajo de una raiz) y el resumen de resultados (ResultsSummary, comun a las
-             3 superficies) en la MISMA linea - si no caben, el resumen baja solo (WrapPanel). Medido: a
-             1080x700 con la Libreria desplegada, ruta y resumen en filas separadas dejaban 23px de resultados. -->
-        <WrapPanel x:Name="RutaSubcategorias">
-            <ItemsControl ItemsSource="{Binding MigasCategoria}" Focusable="False" IsTabStop="False">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#8250;" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="2,0,5,4" VerticalAlignment="Center" />
-                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PastillaCategoriaTemplate}" Focusable="False" IsTabStop="False" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <!-- 2. Linea de ruta: una sola linea siempre (LineaRutaPanel). Las migas las inserta el code-behind
+             entre ElipsisRuta y BotonSubcategorias. -->
+        <controls:LineaRutaPanel x:Name="RutaSubcategorias" Margin="0,1,0,0">
+            <TextBlock x:Name="ElipsisRuta" controls:LineaRutaPanel.Rol="Elipsis" Text="&#8250; &#8230;" FontSize="13"
+                       Foreground="{StaticResource TextSecondaryBrush}" Margin="2,0,4,3" VerticalAlignment="Center"
+                       ToolTip=" " ToolTipOpening="OnElipsisToolTip" />
             <!-- "Subcategorias (N)": el nombre del nivel ya se ve en la miga/pastilla resaltada justo antes - repetirlo
                  aqui partia la linea en dos a 1080px (medido: 35px de resultados). El tooltip lo nombra igualmente. -->
-            <Button x:Name="BotonSubcategorias" Style="{StaticResource PastillaCategoriaBase}" Click="OnAbrirSubcategorias"
+            <Button x:Name="BotonSubcategorias" controls:LineaRutaPanel.Rol="Fijo" Style="{StaticResource PastillaCategoriaBase}"
+                    controls:Desplegable.Popup="{Binding ElementName=PopupSubcategorias}" Margin="4,0,4,3"
                     ToolTip="{Binding NodoSubcategorias.Name}"
                     Visibility="{Binding NodoSubcategorias, Converter={StaticResource NullToVis}}">
                 <TextBlock Foreground="{StaticResource AccentHoverBrush}">
@@ -85,10 +93,23 @@
                     </TextBlock.Text>
                 </TextBlock>
             </Button>
-            <Popup x:Name="PopupSubcategorias" PlacementTarget="{Binding ElementName=BotonSubcategorias}" Placement="Bottom"
-                   StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
-                <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
-                        CornerRadius="8" Padding="10,10,6,6" MaxWidth="480" Effect="{StaticResource CardShadow}">
+            <ContentPresenter x:Name="PresentadorAccionesRuta" controls:LineaRutaPanel.Rol="Fijo" Margin="4,0,4,3" VerticalAlignment="Center"
+                              Content="{Binding AccionesRuta, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <TextBlock x:Name="ResumenResultados" controls:LineaRutaPanel.Rol="Resumen" Text="{Binding ResultsSummary}"
+                       ToolTip="{Binding ResultsSummary}" TextTrimming="CharacterEllipsis"
+                       Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="4,0,0,3" />
+        </controls:LineaRutaPanel>
+
+        <!-- Desplegable de subcategorias (correccion D-03): con Calamity > Colocables (49 hijas) medía 476x708
+             DIP, mas que la ventana. Ahora (a) cada hija sin el prefijo repetido de su madre (NombreEnRuta),
+             (b) ancho hasta 720 (varias pastillas por linea) y (c) alto maximo ligado a la ventana y al area de
+             trabajo (OnSubcategoriasAbiertas) con UN unico scroll local dentro del flyout como ultimo recurso
+             (s12 lo permite: "un unico scroll local JUSTIFICADO"). -->
+        <Popup x:Name="PopupSubcategorias" PlacementTarget="{Binding ElementName=BotonSubcategorias}" Placement="Bottom"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Opened="OnSubcategoriasAbiertas">
+            <Border x:Name="MarcoSubcategorias" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="10,10,6,6" MaxWidth="720" Effect="{StaticResource CardShadow}">
+                <ScrollViewer x:Name="ScrollSubcategorias" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl x:Name="ListaSubcategorias" ItemsSource="{Binding NodoSubcategorias.Children}" Focusable="False" IsTabStop="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -101,15 +122,14 @@
                                         <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,5,0" Stretch="Uniform"
                                                RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center"
                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding NombreEnRuta}" VerticalAlignment="Center" TextWrapping="Wrap" />
                                     </DockPanel>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </Border>
-            </Popup>
-            <TextBlock x:Name="ResumenResultados" Text="{Binding ResultsSummary}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="2,0,0,3" />
-        </WrapPanel>
+                </ScrollViewer>
+            </Border>
+        </Popup>
     </StackPanel>
 </UserControl>

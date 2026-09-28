@@ -17,7 +17,16 @@ namespace Terrakeep.App.ViewModels;
 // (restriccion de slot en objetos, conteo investigado en Investigacion, universo mas pequeño de
 // buffs con su propio tope de 300 ya medido) - unificar eso tambien habria forzado un
 // comportamiento identico donde el proyecto ya decidio que NO debe serlo.
-public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject
+// FASE D, correccion D-01 (28-sep-2026): vista no generica de lo que NavegadorCategorias necesita del
+// catalogo (genera en code-behind las pastillas de las raices y las migas de la ruta).
+public interface ICatalogoNavegable
+{
+    ObservableCollection<CategoryNodeViewModel> RootCategories { get; }
+    ObservableCollection<CategoryNodeViewModel> RutaCategoria { get; }
+    ObservableCollection<CategoryNodeViewModel> MigasCategoria { get; }
+}
+
+public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject, ICatalogoNavegable
 {
     protected readonly DispatcherTimer SearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
 

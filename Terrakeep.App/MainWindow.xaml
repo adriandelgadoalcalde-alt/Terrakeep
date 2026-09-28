@@ -69,9 +69,9 @@
                                  566) mide a sus hijos con ancho INFINITO, asi que el TextBlock
                                  pedia su ancho natural completo y la tarjeta (BuildClassTemplate,
                                  Width=220) se limitaba a recortar la diferencia en silencio.
-                                 MISMO bug exacto que CategoryNodeTemplate ya documenta mas abajo
-                                 (buscar "TextWrapping no bastaba solo"), sin aplicar aqui hasta
-                                 ahora. 167 = 220 (tarjeta) - 6 (Margin de la fila, linea 552) - 16
+                                 MISMO bug exacto que documentaba la antigua CategoryNodeTemplate
+                                 (arbol lateral de categorias, retirado en la FASE D del responsive
+                                 global), sin aplicar aqui hasta ahora. 167 = 220 (tarjeta) - 6 (Margin de la fila, linea 552) - 16
                                  (Padding del Border, 553) - 24 (icono, 567) - 7 (su margen) -
                                  medido exacto contra el recorte real, ver
                                  ESPEC-auditoria-redimensionado.md#4.3. -->
@@ -1261,14 +1261,18 @@
                                                MinHeight="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}" />
                             </Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0" Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="300" />
-                                </Grid.ColumnDefinitions>
+                            <!-- FASE D del responsive global, correccion D-05 del revisor visual (s10): MISMA composicion que
+                                 Objetos (una sola arquitectura) - rejilla 2x2 (contenido / Libreria x * / 300) con el panel
+                                 Editar segun EditarTarjetaComposicion y la Libreria segun LibreriaComposicion (Theme.xaml,
+                                 MainViewModel.IsEditarBarraCompleta). Antes Editar buff vivia siempre solo en la fila de
+                                 contenido y Editar objeto siempre a alto completo. -->
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="300" />
+                            </Grid.ColumnDefinitions>
 
-                                <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0">
+                                <Border Grid.Row="0" Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,8">
                                     <DockPanel>
                                         <!-- H4-06 (cuarta auditoria de Opus, Fable): "la rejilla de Buffs no
                                              tiene contador ni operaciones en bloque, su gemela de objetos si" -
@@ -1299,10 +1303,9 @@
                                     </DockPanel>
                                 </Border>
 
-                                <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
+                                <Border x:Name="EditarBuffTarjeta" Style="{StaticResource EditarTarjetaComposicion}">
                                     <ContentControl Content="{Binding BuffEdit}" ContentTemplate="{StaticResource BuffEditTemplate}" />
                                 </Border>
-                            </Grid>
 
                             <!-- Libreria de buffs. FASE D del responsive global (28-sep-2026): MISMA arquitectura que la
                                  Libreria de objetos y que Investigacion (s10/s11 - "no mantener dos arquitecturas
@@ -1311,56 +1314,54 @@
                                  aparte. Cabecera en UNA fila (plegar + buscador), NavegadorCategorias (categorias
                                  principales siempre visibles + ruta/subcategorias), resumen y UN solo scroll owner
                                  vertical (LibreriaBuffsResultados) con columnas adaptativas. -->
-                            <Border x:Name="LibreriaBuffsPanel" Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8,6">
+                            <Border x:Name="LibreriaBuffsPanel" Grid.Row="1" Style="{StaticResource LibreriaComposicion}">
                                 <DockPanel>
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" MaxWidth="360" />
-                                        </Grid.ColumnDefinitions>
-                                        <!-- H4-13 (cuarta auditoria de Opus, Fable): mismo tooltip real que su gemela de objetos
-                                             (Ctrl+F es contextual, ver GoToContextualLibraryCommand). Plegada, ocupa la fila. -->
-                                        <Button Grid.Column="0" Command="{Binding ToggleBuffLibraryCollapsedCommand}"
-                                                ToolTip="{Binding Loc[tt_ctrlf_buff_library], Mode=OneWay}"
-                                                HorizontalContentAlignment="Stretch" Padding="8,3">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource BarButton}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsBuffLibraryVisible}" Value="False">
-                                                            <Setter Property="Grid.ColumnSpan" Value="2" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <!-- Mismo arreglo real que su gemela de objetos (rotulos por Loc). -->
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsBuffLibraryCollapsed}" Value="True">
-                                                                    <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Text="{Binding Loc[buff_library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                        </Button>
-                                        <!-- H4-01: mismo arreglo real que la Libreria de objetos (columna "*" con techo 360). -->
-                                        <Grid Grid.Column="1" Margin="8,0,0,0" Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
-                                            <TextBox x:Name="BuffLibrarySearchBox" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     FontSize="12" VerticalContentAlignment="Center"
-                                                     ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
-                                            <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
-                                                       Visibility="{Binding BuffLibrary.SearchText, Converter={StaticResource EmptyToVisible}}" />
-                                        </Grid>
-                                    </Grid>
+                                    <!-- FASE D, correccion D-01/D-04: cabecera (plegar + buscador) dentro del flujo de las categorias
+                                         principales, mismo orden que la Libreria de objetos e Investigacion. -->
+                                    <views:NavegadorCategorias x:Name="LibreriaBuffsNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding BuffLibrary}" Margin="0,0,0,2"
+                                                               MostrarNavegacion="{Binding DataContext.IsBuffLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <!-- La cabecera se declara aqui y NavegadorCategorias.AdoptarCabecera (code-behind del host) la mueve a su
+                                         flujo al construir la vista: WPF no deja poner x:Name (LibrarySearchBox, LibraryFiltersButton...) en el
+                                         contenido que se le da a un UserControl con nombres propios (MC3093), y esos nombres los usan el
+                                         code-behind, el Popup de filtros y el arnes. -->
+                                    <Decorator x:Name="SoporteCabeceraLibreriaBuffs" DockPanel.Dock="Top" Visibility="Collapsed">
+                                        <StackPanel x:Name="LibreriaBuffsCabecera" Orientation="Horizontal">
+                                            <!-- H4-13 (cuarta auditoria de Opus, Fable): mismo tooltip real que su gemela de objetos
+                                                 (Ctrl+F es contextual, ver GoToContextualLibraryCommand). Plegada, ocupa la fila. -->
+                                            <Button Command="{Binding ToggleBuffLibraryCollapsedCommand}" Style="{StaticResource BarButton}"
+                                                    ToolTip="{Binding Loc[tt_ctrlf_buff_library], Mode=OneWay}"
+                                                    HorizontalContentAlignment="Stretch" Padding="8,3" VerticalAlignment="Center">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <!-- Mismo arreglo real que su gemela de objetos (rotulos por Loc). -->
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsBuffLibraryCollapsed}" Value="True">
+                                                                        <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Loc[buff_library_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12.5" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </Button>
+                                            <!-- H4-01 / FASE D D-01: mismo arreglo real que la Libreria de objetos (260px en el flujo de la cabecera). -->
+                                            <Grid Width="260" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
+                                                <TextBox x:Name="BuffLibrarySearchBox" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                         FontSize="12" VerticalContentAlignment="Center"
+                                                         ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
+                                                <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                           Visibility="{Binding BuffLibrary.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                            </Grid>
+                                        </StackPanel>
+                                        
+                                    </Decorator>
 
                                     <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
                                             Visibility="{Binding BuffLibrary.IsPicking, Converter={StaticResource BoolToVis}}">
@@ -1376,7 +1377,6 @@
                                     </Border>
 
                                     <DockPanel Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
-                                        <views:NavegadorCategorias x:Name="LibreriaBuffsNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding BuffLibrary}" Margin="0,0,0,2" />
                                         <!-- FASE D: el resumen vive ahora en la linea de ruta de NavegadorCategorias. -->
                                         <!-- Unico scroll owner vertical (s13): tarjetas raiz (H5-13) o resultados en el MISMO
                                              ScrollViewer; imagen2/LIBCARD_CLIP_SOLO: Margin superior en el contenido. -->
@@ -1385,6 +1385,7 @@
                                                 <!-- FASE D: tarjetas de carpeta raiz compartidas (Views/TarjetasCategoriasRaiz.xaml), con sus
                                                      subcarpetas de primer nivel - antes una copia de plantilla por superficie. -->
                                                 <views:TarjetasCategoriasRaiz Margin="0,4,0,0" DataContext="{Binding BuffLibrary}" EsBuffs="True"
+                                                                              AltoDisponible="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
                                                                               Visibility="{Binding ShowRootCategoryCards, Converter={StaticResource BoolToVis}}" />
                                                 <!-- Rejilla sin columnas semanticas (s8): mismo AdaptiveColumns + PreferirCeldaGrande que
                                                      la Libreria de objetos. -->
@@ -1464,20 +1465,17 @@
                                  de investigacion ya se reparten solas por el ancho). -->
                             <Border x:Name="InvestigacionCatalogo" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
                                 <DockPanel>
+                                    <!-- FASE D, correccion D-04 del revisor visual: MISMO orden que las dos Librerias - cabecera con el
+                                         buscador (R-e/H4-01, misma gramatica real LibrarySearchGrammar) dentro del flujo de las
+                                         categorias principales, y las acciones de carpeta (Investigar carpeta / Quitar) en la linea de
+                                         ruta, junto a la carpeta sobre la que actuan (antes: categorias, luego buscador+acciones). -->
                                     <views:NavegadorCategorias x:Name="InvestigacionNavegadorCategorias" DockPanel.Dock="Top" DataContext="{Binding Research}" Margin="0,0,0,4" />
-                                    <!-- R-e (segunda auditoria de Opus, Fable): "sin buscador -
-                                         Libreria y Libreria de buffs si lo tienen... asimetria
-                                         pura". Misma gramatica real (LibrarySearchGrammar, L-a). -->
-                                    <!-- H4-01: mismo arreglo real que la Libreria de objetos, ver ahi el porque. -->
-                                    <!-- FASE D: buscador (columna "*" con techo 360, alineado a la izquierda como en las dos
-                                         Librerias) y acciones de carpeta en UNA fila. -->
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" MaxWidth="360" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid Grid.Column="0">
+                                    <!-- La cabecera se declara aqui y NavegadorCategorias.AdoptarCabecera (code-behind del host) la mueve a su
+                                         flujo al construir la vista: WPF no deja poner x:Name (LibrarySearchBox, LibraryFiltersButton...) en el
+                                         contenido que se le da a un UserControl con nombres propios (MC3093), y esos nombres los usan el
+                                         code-behind, el Popup de filtros y el arnes. -->
+                                    <Decorator x:Name="SoporteCabeceraInvestigacion" DockPanel.Dock="Top" Visibility="Collapsed">
+                                        <Grid x:Name="InvestigacionCabecera" Width="260" VerticalAlignment="Center">
                                             <TextBox Text="{Binding Research.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
@@ -1487,7 +1485,10 @@
                                                        Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
                                                        Visibility="{Binding Research.SearchText, Converter={StaticResource EmptyToVisible}}" />
                                         </Grid>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                        
+                                    </Decorator>
+                                    <Decorator x:Name="SoporteAccionesInvestigacion" DockPanel.Dock="Top" Visibility="Collapsed">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                     Visibility="{Binding Research.SelectedCategory, Converter={StaticResource NullToVis}}">
                                             <Button Content="{Binding Loc[action_research_folder], Mode=OneWay}" Tag="Ghost" Padding="6,2" FontSize="10.5"
                                                     Command="{Binding Research.ResearchFolderCommand}" Margin="0,0,6,0" />
@@ -1495,7 +1496,8 @@
                                                     Command="{Binding Research.ClearFolderCommand}"
                                                     ToolTip="{Binding Loc[tt_remove_folder_research], Mode=OneWay}" />
                                         </StackPanel>
-                                    </Grid>
+                                        
+                                    </Decorator>
                                     <!-- Unico scroll owner vertical de Investigacion (s13: Research.Results -> results owner).
                                          imagen2/LIBCARD_CLIP_SOLO: Margin superior en el contenido, nunca Padding aqui. -->
                                     <ScrollViewer x:Name="InvestigacionResultados" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -1503,6 +1505,7 @@
                                             <!-- FASE D: tarjetas de carpeta raiz compartidas (Views/TarjetasCategoriasRaiz.xaml), con sus
                                                  subcarpetas de primer nivel - antes una copia de plantilla por superficie. -->
                                             <views:TarjetasCategoriasRaiz Margin="0,4,0,0" DataContext="{Binding Research}"
+                                                                          AltoDisponible="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
                                                                           Visibility="{Binding ShowRootCategoryCards, Converter={StaticResource BoolToVis}}" />
                                             <ItemsControl ItemsSource="{Binding Research.Results}"
                                                           Visibility="{Binding Research.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">

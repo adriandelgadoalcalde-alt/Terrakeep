@@ -211,7 +211,9 @@ internal static partial class Program
                 Region("Cabecera Loadout/Vista/Defensa", cabecera);
                 var rejillasEquip = Descendientes<SlotGridPanel>(pagina).Where(p => p.IsVisible && grupo.AllContainers.Contains(p.DataContext as ContainerViewModel)).ToList();
                 foreach (var rj in rejillasEquip) Region($"Rejilla {(rj.DataContext as ContainerViewModel)?.DisplayName}", rj);
-                var editar = Descendientes<Border>(objetosView).FirstOrDefault(b => b.IsVisible && b.Style == (Style)window.FindResource("SidePanelCard"));
+                // Por nombre: desde la correccion D-01/D-05 de la FASE D el Style de Editar es EditarTarjetaComposicion
+                // (BasedOn SidePanelCard) y la busqueda por Style lo dejaba fuera de la comprobacion en silencio.
+                var editar = objetosView.FindName("EditarTarjeta") as FrameworkElement is { IsVisible: true } ed ? ed : null;
                 if (editar != null) regiones.Add(("Panel Editar", RectCompleto(editar, window)));
                 regiones.Add(("Pagina Equipamiento", RectCompleto(pagina, window)));
                 for (int i = 0; i < regiones.Count; i++)

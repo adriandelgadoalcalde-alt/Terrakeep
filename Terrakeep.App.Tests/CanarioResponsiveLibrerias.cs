@@ -343,9 +343,23 @@ internal static partial class Program
                 if (buscador != null) regiones.Add(("Buscador", RectCompleto(buscador, window)));
                 var ownerRes = contenido == null ? null : svV.FirstOrDefault(sv => sv.IsAncestorOf(contenido));
                 if (ownerRes != null) regiones.Add(("Resultados", RectVisible(ownerRes, window)));
+                // Correccion D-01/D-04 (28-sep-2026): la cabecera (buscador) comparte ahora la PRIMERA linea del
+                // flujo de las categorias principales, asi que el rectangulo que ENVUELVE a todas las pastillas
+                // contiene al buscador sin que nada se pise. Buscador frente a categorias se mide pastilla a
+                // pastilla (solape real); el resto de pares sigue con las zonas completas.
+                if (buscador != null)
+                {
+                    var rBus = RectCompleto(buscador, window);
+                    foreach (var rc in rCats)
+                    {
+                        double ix = Math.Min(rc.Right, rBus.Right) - Math.Max(rc.Left, rBus.Left), iy = Math.Min(rc.Bottom, rBus.Bottom) - Math.Max(rc.Top, rBus.Top);
+                        if (ix > 0.5 && iy > 0.5) { Fallo("OVERLAP", $"{cab}: una pastilla de categoria y el buscador se pisan {ix:0.#}x{iy:0.#}px"); break; }
+                    }
+                }
                 for (int i = 0; i < regiones.Count; i++)
                     for (int j = i + 1; j < regiones.Count; j++)
                     {
+                        if ((regiones[i].n, regiones[j].n) is ("Categorias", "Buscador") or ("Buscador", "Categorias")) continue;
                         var a = regiones[i].r; var b = regiones[j].r;
                         if (a.IsEmpty || b.IsEmpty) continue;
                         double ix = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left), iy = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
@@ -391,12 +405,15 @@ internal static partial class Program
             // ---------------------------------------------------------------------------------
             // Panel Editar (s7): sin scroll propio ni recortes.
             // ---------------------------------------------------------------------------------
-            FrameworkElement? PanelEditar() => Descendientes<Border>(objetosView).FirstOrDefault(b => b.IsVisible && b.Style == (Style)window.FindResource("SidePanelCard"));
+            // Por NOMBRE (x:Name="EditarTarjeta", el mismo en el codigo viejo y en el nuevo): desde la correccion
+            // D-01/D-05 su Style es EditarTarjetaComposicion (BasedOn SidePanelCard) y la busqueda por Style
+            // devolvia null en silencio ("Editar no encontrado" sin FALLO).
+            FrameworkElement? PanelEditar() => objetosView.FindName("EditarTarjeta") as FrameworkElement is { IsVisible: true } fe ? fe : null;
             (double scr, double clip, string txt, double holgura) MedirEditar(string id, bool silencioso = false)
             {
                 DoEvents(); DoEvents(); WaitForDispatcher(60);
                 var editar = PanelEditar();
-                if (editar == null) return (0, 0, "Editar no encontrado", 0);
+                if (editar == null) { Fallo("EDITAR-CLIP", $"[{id}] no se encuentra el panel Editar visible (x:Name EditarTarjeta)"); return (0, 0, "Editar no encontrado", 0); }
                 var svs = Descendientes<ScrollViewer>(editar).Where(sv => sv.TemplatedParent is not TextBoxBase).ToList();
                 double scr = svs.Where(sv => sv.IsVisible).Select(sv => sv.ScrollableHeight).DefaultIfEmpty(0).Max();
                 var re = RectCompleto(editar, window);
@@ -412,7 +429,17 @@ internal static partial class Program
                 double fondo = Descendientes<FrameworkElement>(editar).Where(f => f.IsVisible && f.ActualHeight > 0 && f is TextBlock or ButtonBase or TextBox or Image)
                     .Select(f => RectCompleto(f, window).Bottom).DefaultIfEmpty(re.Top).Max();
                 double holgura = re.Bottom - ((editar as Border)?.Padding.Bottom ?? 0) - ((editar as Border)?.BorderThickness.Bottom ?? 0) - fondo;
-                string txt = $"Editar {re.Width:0.#}x{re.Height:0.#} en y={re.Top:0.#} | holgura inferior={holgura:0.#}px | ScrollViewer dentro={svs.Count} (visibles {svs.Count(s => s.IsVisible)}) scr max={scr:0.#}px | recorte max={peorClip:0.#}px{(peorClip > 0.5 ? $" ({peorQue})" : "")} | slot={(vm.ItemEdit.Slot == null ? "ninguno" : $"{vm.ItemEdit.Slot.ContainerName}#{vm.ItemEdit.Slot.SlotIndex} '{vm.ItemEdit.Slot.DisplayName}'")} metas={vm.ItemEdit.Metas.Count} grupos={vm.ItemEdit.Groups.Count} prefijos={vm.ItemEdit.Prefixes.Count}";
+                // Correccion D-07: con Editar alto SEGUN SU CONTENIDO (barra lateral, VerticalAlignment=Top) la holgura
+                // interna es siempre la misma (su Padding); lo que puede agotarse es el sitio hasta el fondo de su rejilla
+                // (filas de contenido + Libreria), y esa es la holgura que cuenta: el peor objeto/combinacion es el Editar
+                // mas alto (negativa = se sale de su rejilla).
+                double margenFondo = double.NaN;
+                if (editar.VerticalAlignment == VerticalAlignment.Top && VisualTreeHelper.GetParent(editar) is FrameworkElement rejillaEditar)
+                {
+                    margenFondo = RectCompleto(rejillaEditar, window).Bottom - re.Bottom;
+                    holgura = margenFondo;
+                }
+                string txt = $"Editar {re.Width:0.#}x{re.Height:0.#} en y={re.Top:0.#} | holgura inferior={holgura:0.#}px{(double.IsNaN(margenFondo) ? "" : $" (margen hasta el fondo de su rejilla {margenFondo:0.#}px)")} | ScrollViewer dentro={svs.Count} (visibles {svs.Count(s => s.IsVisible)}) scr max={scr:0.#}px | recorte max={peorClip:0.#}px{(peorClip > 0.5 ? $" ({peorQue})" : "")} | slot={(vm.ItemEdit.Slot == null ? "ninguno" : $"{vm.ItemEdit.Slot.ContainerName}#{vm.ItemEdit.Slot.SlotIndex} '{vm.ItemEdit.Slot.DisplayName}'")} metas={vm.ItemEdit.Metas.Count} grupos={vm.ItemEdit.Groups.Count} prefijos={vm.ItemEdit.Prefixes.Count}";
                 if (!silencioso) Console.WriteLine($"LIB EDITAR [{id}] {window.ActualWidth:0}x{window.ActualHeight:0} libPlegada={vm.IsLibraryCollapsed} idioma={vm.Settings.Language} | {txt}");
                 if (holgura < -0.5 && peorClip <= 0.5) peorClip = -holgura;
                 return (scr, peorClip, txt, holgura);
@@ -483,8 +510,12 @@ internal static partial class Program
                     vm.Research.ClearCategoryCommand.Execute(null);
                 }
             }
-            Estados("es", tamaños);
-            Estados("en", tamaños.Where(t => t.id is "1080x700" or "1366x768" or "1920x1080"));
+            // LIBRARY_RESPONSIVE_RAPIDO=1: iteracion rapida durante una correccion (sin el barrido de tamaños x
+            // idioma ni el de Editar, ~8 de sus ~10 minutos). El cierre de cualquier ronda se hace SIN esta variable.
+            bool rapido = Environment.GetEnvironmentVariable("LIBRARY_RESPONSIVE_RAPIDO") == "1";
+            if (rapido) Console.WriteLine("LIB MODO RAPIDO: se omiten el barrido de tamaños x idioma y el del panel Editar (no vale para cerrar una ronda)");
+            if (!rapido) Estados("es", tamaños);
+            if (!rapido) Estados("en", tamaños.Where(t => t.id is "1080x700" or "1366x768" or "1920x1080"));
             vm.Settings.Language = "es"; DoEvents(); DoEvents();
 
             // Modo compacto (s15: preferencia del usuario, compatible con el responsive) en el minimo.
@@ -494,6 +525,12 @@ internal static partial class Program
             MedirCatalogo("Libreria", "lib-busqueda-amplia-1080x700-compacto", vm.Library.Results, vm.Library.RootCategories, vm.Library.ClearCategoryCommand);
             vm.Library.SearchText = ""; WaitForDispatcher(250);
             vm.Settings.IsCompactMode = false; DoEvents(); DoEvents();
+
+            // ---------------------------------------------------------------------------------
+            // 1b) Correcciones del revisor visual de la FASE D (D-01..D-07, 28-sep-2026). Solo nombres
+            //     (FindName) y reflexion: el mismo fichero tiene que compilar y medir contra fae1461a.
+            // ---------------------------------------------------------------------------------
+            MedirCorreccionesRevisorFaseD(window, vm, objetosView, Fallo, outDir, etiqueta, IrA, EnteroEnAmbosEjes);
 
             // ---------------------------------------------------------------------------------
             // 2) Contraste de la categoria seleccionada (hallazgo Low del revisor de la FASE C, visto con
@@ -538,7 +575,7 @@ internal static partial class Program
                 }
                 return filas * alto;
             }
-            var todos = (typeof(LibraryViewModel).GetField("_all", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(vm.Library) as System.Collections.IEnumerable)?.Cast<LibraryItemViewModel>().ToList() ?? [];
+            var todos = rapido ? new List<LibraryItemViewModel>() : (typeof(LibraryViewModel).GetField("_all", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(vm.Library) as System.Collections.IEnumerable)?.Cast<LibraryItemViewModel>().ToList() ?? [];
             var sw2 = System.Diagnostics.Stopwatch.StartNew();
             var puntuaciones = new List<(int id, string nombre, int meta, int grupo, double alto)>();
             foreach (var item in todos)
@@ -596,10 +633,13 @@ internal static partial class Program
             }
 
             IrA(0, 1);
-            var casosEditar = new (string id, double w, double h, bool plegada)[]
+            var casosEditar = rapido ? [] : new (string id, double w, double h, bool plegada)[]
             {
                 ("1080x700-libplegada", 1080, 700, true), ("1080x700-libdesplegada", 1080, 700, false),
                 ("1366x768-libplegada", 1366, 768, true), ("1366x768-libdesplegada", 1366, 768, false),
+                // Normal en su alto minimo: Editar ya es barra lateral con el selector de prefijo en linea (el caso mas
+                // justo de la composicion "barra completa").
+                ("1320x700-libdesplegada", 1320, 700, false),
                 ("1520x860", 1520, 860, false), ("1920x1080", 1920, 1080, false), ("2560x1440", 2560, 1440, false),
             };
             foreach (var idioma in new[] { "es", "en" })
@@ -607,7 +647,7 @@ internal static partial class Program
                 vm.Settings.Language = idioma; DoEvents(); DoEvents();
                 foreach (var (cid, w, h, plegada) in casosEditar)
                 {
-                    if (idioma == "en" && !cid.StartsWith("1080") && !cid.StartsWith("1366")) continue;
+                    if (idioma == "en" && !cid.StartsWith("1080") && !cid.StartsWith("1366") && !cid.StartsWith("1320")) continue;
                     window.WindowState = WindowState.Normal; FijarTamaño(window, w, h); vm.IsLibraryCollapsed = plegada; IrA(0, 1);
                     var rc = PeorEditar(Cenit, $"cenit-{cid}-{idioma}"); ExigirEditar($"cenit-{cid}-{idioma}", rc);
                     foreach (var p in peores)
