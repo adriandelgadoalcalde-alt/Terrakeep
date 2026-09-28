@@ -1264,7 +1264,7 @@
                             <!-- FASE D del responsive global, correccion D-05 del revisor visual (s10): MISMA composicion que
                                  Objetos (una sola arquitectura) - rejilla 2x2 (contenido / Libreria x * / 300) con el panel
                                  Editar segun EditarTarjetaComposicion y la Libreria segun LibreriaComposicion (Theme.xaml,
-                                 MainViewModel.IsEditarBarraCompleta). Antes Editar buff vivia siempre solo en la fila de
+                                 Editar siempre en la fila de contenido desde la revision r2). Antes Editar buff vivia siempre solo en la fila de
                                  contenido y Editar objeto siempre a alto completo. -->
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />

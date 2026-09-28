@@ -429,17 +429,19 @@ internal static partial class Program
                 double fondo = Descendientes<FrameworkElement>(editar).Where(f => f.IsVisible && f.ActualHeight > 0 && f is TextBlock or ButtonBase or TextBox or Image)
                     .Select(f => RectCompleto(f, window).Bottom).DefaultIfEmpty(re.Top).Max();
                 double holgura = re.Bottom - ((editar as Border)?.Padding.Bottom ?? 0) - ((editar as Border)?.BorderThickness.Bottom ?? 0) - fondo;
-                // Correccion D-07: con Editar alto SEGUN SU CONTENIDO (barra lateral, VerticalAlignment=Top) la holgura
-                // interna es siempre la misma (su Padding); lo que puede agotarse es el sitio hasta el fondo de su rejilla
-                // (filas de contenido + Libreria), y esa es la holgura que cuenta: el peor objeto/combinacion es el Editar
-                // mas alto (negativa = se sale de su rejilla).
+                // Correccion D-07: con Editar alto SEGUN SU CONTENIDO (VerticalAlignment=Top) la holgura interna es siempre
+                // la misma (su Padding); lo que puede agotarse es el sitio hasta el fondo de las FILAS que ocupa en su
+                // rejilla, y esa es la holgura que cuenta: el peor objeto/combinacion es el Editar mas alto (negativa = se
+                // sale de su fila).
                 double margenFondo = double.NaN;
-                if (editar.VerticalAlignment == VerticalAlignment.Top && VisualTreeHelper.GetParent(editar) is FrameworkElement rejillaEditar)
+                if (editar.VerticalAlignment == VerticalAlignment.Top && VisualTreeHelper.GetParent(editar) is Grid rejillaEditar && rejillaEditar.RowDefinitions.Count > 0)
                 {
-                    margenFondo = RectCompleto(rejillaEditar, window).Bottom - re.Bottom;
+                    int filaE = Grid.GetRow(editar), spanE = Math.Max(1, Grid.GetRowSpan(editar));
+                    var ultimaFila = rejillaEditar.RowDefinitions[Math.Min(rejillaEditar.RowDefinitions.Count - 1, filaE + spanE - 1)];
+                    margenFondo = RectCompleto(rejillaEditar, window).Top + ultimaFila.Offset + ultimaFila.ActualHeight - editar.Margin.Bottom - re.Bottom;
                     holgura = margenFondo;
                 }
-                string txt = $"Editar {re.Width:0.#}x{re.Height:0.#} en y={re.Top:0.#} | holgura inferior={holgura:0.#}px{(double.IsNaN(margenFondo) ? "" : $" (margen hasta el fondo de su rejilla {margenFondo:0.#}px)")} | ScrollViewer dentro={svs.Count} (visibles {svs.Count(s => s.IsVisible)}) scr max={scr:0.#}px | recorte max={peorClip:0.#}px{(peorClip > 0.5 ? $" ({peorQue})" : "")} | slot={(vm.ItemEdit.Slot == null ? "ninguno" : $"{vm.ItemEdit.Slot.ContainerName}#{vm.ItemEdit.Slot.SlotIndex} '{vm.ItemEdit.Slot.DisplayName}'")} metas={vm.ItemEdit.Metas.Count} grupos={vm.ItemEdit.Groups.Count} prefijos={vm.ItemEdit.Prefixes.Count}";
+                string txt = $"Editar {re.Width:0.#}x{re.Height:0.#} en y={re.Top:0.#} | holgura inferior={holgura:0.#}px{(double.IsNaN(margenFondo) ? "" : $" (margen hasta el fondo de sus filas {margenFondo:0.#}px)")} | ScrollViewer dentro={svs.Count} (visibles {svs.Count(s => s.IsVisible)}) scr max={scr:0.#}px | recorte max={peorClip:0.#}px{(peorClip > 0.5 ? $" ({peorQue})" : "")} | slot={(vm.ItemEdit.Slot == null ? "ninguno" : $"{vm.ItemEdit.Slot.ContainerName}#{vm.ItemEdit.Slot.SlotIndex} '{vm.ItemEdit.Slot.DisplayName}'")} metas={vm.ItemEdit.Metas.Count} grupos={vm.ItemEdit.Groups.Count} prefijos={vm.ItemEdit.Prefixes.Count}";
                 if (!silencioso) Console.WriteLine($"LIB EDITAR [{id}] {window.ActualWidth:0}x{window.ActualHeight:0} libPlegada={vm.IsLibraryCollapsed} idioma={vm.Settings.Language} | {txt}");
                 if (holgura < -0.5 && peorClip <= 0.5) peorClip = -holgura;
                 return (scr, peorClip, txt, holgura);

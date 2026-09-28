@@ -99,11 +99,11 @@ public partial class ObjetosView : UserControl
                 var pag = ObjetosPaginaEquipamiento;
                 if (pag.IsVisible && pag.ExtentHeight > 0 && pag.ScrollableHeight < 0.5) tope = pag.ExtentHeight + 9;
             }
-            // Correccion D-01 del revisor visual de la FASE D: en Compacto/Normal el panel Editar vuelve a vivir SOLO en
-            // esta fila (MainViewModel.IsEditarBarraCompleta=false) - el tope nunca puede quedar por debajo de su
-            // alto natural (contenido + Padding/Border de la tarjeta + su Margin inferior de 8 + 1px de redondeo),
-            // o Editar recortaria. Con el selector de prefijo en desplegable ese alto es de ~250-290px.
-            if (!vm.IsEditarBarraCompleta && !double.IsInfinity(tope))
+            // Correccion D-01 del revisor visual de la FASE D: el panel Editar vive SOLO en esta fila (revision r2,
+            // L-02: en todos los tamaños) - el tope nunca puede quedar por debajo de su alto natural (contenido +
+            // Padding/Border de la tarjeta + su Margin inferior de 8 + 1px de redondeo), o Editar recortaria. Con el
+            // selector de prefijo en desplegable ese alto es de ~250-290px.
+            if (!double.IsInfinity(tope))
             {
                 var t = EditarTarjeta;
                 double editar = AltoNaturalEditar.Alto + t.Padding.Top + t.Padding.Bottom + t.BorderThickness.Top + t.BorderThickness.Bottom + t.Margin.Bottom + 1;
@@ -112,6 +112,26 @@ public partial class ObjetosView : UserControl
         }
         if (Math.Abs(FilaObjetos.MaxHeight - tope) > 0.5 && !(double.IsInfinity(tope) && double.IsInfinity(FilaObjetos.MaxHeight)))
             FilaObjetos.MaxHeight = tope;
+
+        // Revisor r2, L-02: selector de prefijo en linea solo si la fila de contenido tiene sitio para el PEOR objeto
+        // (granadas Picaro de Calamity, 17 prefijos: Editar de 443,9px en ES y 416,2px en EN, medido con
+        // LIBRARY_RESPONSIVE_SOLO) - decision por el alto de la FILA, nunca por el objeto elegido: elegir un slot no
+        // cambia nada de sitio. Estable: pasar a "en linea" solo puede subir el tope de la fila (sigue >= umbral) y
+        // pasar a desplegable solo puede bajarlo (sigue < umbral).
+        bool enLinea = FilaObjetos.ActualHeight - EditarTarjeta.Margin.Bottom >= UmbralSelectorPrefijoEnLinea;
+        if (SelectorPrefijoEnLinea != enLinea) SelectorPrefijoEnLinea = enLinea;
+    }
+
+    private const double UmbralSelectorPrefijoEnLinea = 470;
+
+    public static readonly DependencyProperty SelectorPrefijoEnLineaProperty = DependencyProperty.Register(
+        nameof(SelectorPrefijoEnLinea), typeof(bool), typeof(ObjetosView), new PropertyMetadata(false));
+
+    /// <summary>true = el selector de prefijo de Editar va en linea; false = en el desplegable "Elegir prefijo".</summary>
+    public bool SelectorPrefijoEnLinea
+    {
+        get => (bool)GetValue(SelectorPrefijoEnLineaProperty);
+        set => SetValue(SelectorPrefijoEnLineaProperty, value);
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;

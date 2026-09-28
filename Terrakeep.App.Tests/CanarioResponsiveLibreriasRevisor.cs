@@ -38,7 +38,19 @@ internal static partial class Program
             var p = fe.PointToScreen(new Point(0, 0)); double e = Escala();
             return new Rect(p.X / e, p.Y / e, fe.ActualWidth, fe.ActualHeight);
         }
-        string? ModoComposicion() => typeof(MainViewModel).GetProperty("IsEditarBarraCompleta")?.GetValue(vm) is bool b ? (b ? "barra-completa" : "fila-contenido") : null;
+        // Composicion de Editar: revision r2 (L-02) -> siempre en la fila de contenido, selector de prefijo "en linea" o
+        // "desplegable" segun ObjetosView.SelectorPrefijoEnLinea; revision r1 -> MainViewModel.IsEditarBarraCompleta.
+        string? ModoComposicion() =>
+            objetosView.GetType().GetProperty("SelectorPrefijoEnLinea")?.GetValue(objetosView) is bool l ? (l ? "selector-en-linea" : "desplegable")
+            : typeof(MainViewModel).GetProperty("IsEditarBarraCompleta")?.GetValue(vm) is bool b ? (b ? "barra-completa" : "fila-contenido") : null;
+        // Fondo de las filas que ocupa un elemento dentro de su Grid (no el de la rejilla entera).
+        double FondoDeSusFilas(FrameworkElement fe)
+        {
+            if (VisualTreeHelper.GetParent(fe) is not Grid g || g.RowDefinitions.Count == 0) return double.NaN;
+            int fila = Grid.GetRow(fe), span = Math.Max(1, Grid.GetRowSpan(fe));
+            var ultima = g.RowDefinitions[Math.Min(g.RowDefinitions.Count - 1, fila + span - 1)];
+            return RectCompleto(g, window).Top + ultima.Offset + ultima.ActualHeight;
+        }
         var estilosPastilla = new[] { "PastillaCategoria", "PastillaCategoriaBase", "PastillaVerTodo" }.Select(k => window.TryFindResource(k) as Style).Where(s => s != null).ToList();
         bool EsPastilla(ButtonBase b) => b.Style != null && estilosPastilla.Contains(b.Style);
 
@@ -211,6 +223,25 @@ internal static partial class Program
             if (!mismaComp) Fallo("EDITAR-COMPOSICION", $"[{tid}] Editar objeto (RowSpan {co.span}, Libreria {co.anchoLib:0}/{co.anchoGrid:0}) y Editar buff (RowSpan {cb.span}, Libreria {cb.anchoLib:0}/{cb.anchoGrid:0}) no siguen la misma composicion");
         }
 
+        // --- L-02 (revisor r2, s17): la Libreria (objetos y buffs) usa TODO el ancho de su rejilla en Amplio/Extra (antes
+        //     se cortaba a la izquierda de una columna de 300px vacia bajo Editar). ---
+        foreach (var (tid, w, h) in new[] { ("1520x860", 1520.0, 860.0), ("1920x1080", 1920.0, 1080.0), ("2560x1440", 2560.0, 1440.0) })
+        {
+            FijarTamaño(window, w, h); vm.IsLibraryCollapsed = false; vm.IsBuffLibraryCollapsed = false;
+            foreach (var (sup, pest, nombre, ambito) in new (string, int, string, FrameworkElement)[] { ("Libreria", 0, "LibreriaObjetosPanel", objetosView), ("LibreriaBuffs", 1, "LibreriaBuffsPanel", window) })
+            {
+                IrA(pest, 1);
+                if (ambito.FindName(nombre) is not FrameworkElement lib || VisualTreeHelper.GetParent(lib) is not FrameworkElement g) continue;
+                var rl = RectCompleto(lib, window); var rg = RectCompleto(g, window);
+                var editarSup = pest == 0 ? objetosView.FindName("EditarTarjeta") as FrameworkElement
+                    : Descendientes<Border>(window).FirstOrDefault(b => b.IsVisible && Descendientes<ContentControl>(b).Any(c => ReferenceEquals(c.Content, vm.BuffEdit)) && b.Child is ContentControl);
+                double hueco = editarSup == null ? 0 : Math.Max(0, rg.Bottom - RectCompleto(editarSup, window).Bottom) * (rl.Right < rg.Right - 1 ? 1 : 0);
+                Console.WriteLine($"LIB REVISOR L-02 [{sup}-{tid}] Libreria x={rl.Left - rg.Left:0}..{rl.Right - rg.Left:0} de {rg.Width:0}px ({rl.Width / Math.Max(1, rg.Width):P0}) | alto sin uso bajo Editar en su columna={hueco:0}px | composicion={ModoComposicion() ?? "?"}");
+                if (rl.Width < rg.Width - 1) Fallo("LIBRERIA-ANCHO", $"[{sup}-{tid}] la Libreria usa {rl.Width:0} de {rg.Width:0}px y deja {hueco:0}px de alto sin uso bajo Editar");
+                if (sup == "Libreria") Shot($"revisor-l02-{tid}");
+            }
+        }
+
         // --- D-07: Editar sin seleccion a 2560x1440 ajustado a su contenido ---
         {
             FijarTamaño(window, 2560, 1440); vm.IsLibraryCollapsed = false; IrA(0, 1);
@@ -227,7 +258,7 @@ internal static partial class Program
         //     la combinacion mas larga: los 17 botones enteros y la tarjeta dentro de su rejilla, ES/EN. Directo, sin
         //     depender de la heuristica de "peor holgura" de la seccion 3 (con Editar alto segun su contenido la
         //     holgura interna ya no discrimina). ---
-        foreach (var (tid, w, h) in new[] { ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0), ("1520x860", 1520.0, 860.0), ("1920x1080", 1920.0, 1080.0) })
+        foreach (var (tid, w, h) in new[] { ("1320x700", 1320.0, 700.0), ("1366x768", 1366.0, 768.0), ("1520x860", 1520.0, 860.0), ("1920x1080", 1920.0, 1080.0), ("2560x1440", 2560.0, 1440.0) })
             foreach (var idioma in new[] { "es", "en" })
             {
                 vm.Settings.Language = idioma; DoEvents(); DoEvents();
@@ -258,11 +289,10 @@ internal static partial class Program
                 var botones = Descendientes<ButtonBase>(editar).Where(b => b.IsVisible && b.DataContext is PrefixCatalogEntryViewModel).ToList();
                 int enteros = botones.Count(EnteroEnAmbosEjes);
                 var re = RectCompleto(editar, window);
-                var rejilla = VisualTreeHelper.GetParent(editar) as FrameworkElement;
-                double margen = rejilla == null ? double.NaN : RectCompleto(rejilla, window).Bottom - re.Bottom;
+                double margen = FondoDeSusFilas(editar) - re.Bottom;
                 string cab = $"[editar-barra-peor-{tid}-{idioma}] '{slot.DisplayName}' {mejor} prefijos={ie.Prefixes.Count}";
-                Console.WriteLine($"LIB REVISOR EDITAR-BARRA {cab}: composicion={ModoComposicion() ?? "?"} | Editar {re.Width:0.#}x{re.Height:0.#} | botones de prefijo enteros={enteros}/{ie.Prefixes.Count} (visibles {botones.Count}) | margen hasta el fondo de su rejilla={margen:0.#}px | ScrollViewer dentro={Descendientes<ScrollViewer>(editar).Count(s => s.TemplatedParent is not System.Windows.Controls.Primitives.TextBoxBase)}");
-                if (ModoComposicion() == "barra-completa" && (enteros < ie.Prefixes.Count || margen < -0.5))
+                Console.WriteLine($"LIB REVISOR EDITAR-BARRA {cab}: composicion={ModoComposicion() ?? "?"} | Editar {re.Width:0.#}x{re.Height:0.#} | botones de prefijo enteros={enteros}/{ie.Prefixes.Count} (visibles {botones.Count}) | margen hasta el fondo de sus filas={margen:0.#}px | ScrollViewer dentro={Descendientes<ScrollViewer>(editar).Count(s => s.TemplatedParent is not System.Windows.Controls.Primitives.TextBoxBase)}");
+                if (ModoComposicion() is "barra-completa" or "selector-en-linea" && (enteros < ie.Prefixes.Count || margen < -0.5))
                     Fallo("EDITAR-CLIP", $"{cab}: {enteros}/{ie.Prefixes.Count} prefijos enteros, margen hasta el fondo {margen:0.#}px");
                 if (tid == "1320x700") Shot($"revisor-editar-barra-peor-1320x700-{idioma.ToUpperInvariant()}");
                 slot.PlaceItem(idOrig); vm.IsDirty = false;
@@ -304,12 +334,59 @@ internal static partial class Program
                 Console.WriteLine($"LIB REVISOR PREFIJO {cab}: desplegable {rp.Width:0.#}x{rp.Height:0.#} DIP en ({rp.Left:0},{rp.Top:0}) | area de trabajo {wa} dentro={dentro} | ScrollViewer dentro={svs} | botones de prefijo visibles={prefBtns.Count}/{ie.Prefixes.Count}");
                 if (!dentro || svs > 0 || prefBtns.Count < ie.Prefixes.Count) Fallo("PREFIJO-DESPLEGABLE", $"{cab}: desplegable {rp.Width:0.#}x{rp.Height:0.#}, dentro del area={dentro}, ScrollViewer={svs}, prefijos visibles {prefBtns.Count}/{ie.Prefixes.Count}");
                 File.WriteAllBytes(Path.Combine(outDir, $"lib-{etiqueta}-revisor-prefijo-desplegable-{ptid}-{idioma.ToUpperInvariant()}.png"), CapturarPng(b, b.ActualWidth, b.ActualHeight));
+                // L-04 (revisor r2): contraste REAL en pixeles del texto de un prefijo de Calamity sobre su fondo (>= 4,5:1).
+                if (ptid == "1080x700" && prefBtns.FirstOrDefault(x => x.DataContext is PrefixCatalogEntryViewModel { IsCalamity: true }) is FrameworkElement pc)
+                {
+                    var (ratio, fondoC, textoC) = ContrastePixelesRevisor(pc);
+                    Console.WriteLine($"LIB REVISOR L-04 [{idioma}] prefijo de Calamity '{((PrefixCatalogEntryViewModel)pc.DataContext).DisplayName}': fondo={fondoC} texto={textoC} -> {ratio:0.00}:1");
+                    if (ratio < 4.5) Fallo("CONTRASTE", $"[L-04-{idioma}] texto de prefijo de Calamity a {ratio:0.00}:1 (< 4,5:1)");
+                }
                 Shot($"revisor-editar-fila-contenido-{ptid}-{idioma.ToUpperInvariant()}");
+                // M-01 (revisor r2): con el desplegable ABIERTO la ventana crece hasta que el selector pasa a ir en linea
+                // (antes: cruzar de 1519 a 1520 con la barra lateral de Amplio) - el boton deja de verse y el desplegable
+                // tiene que cerrarse, no quedarse flotando sobre la lista en linea.
+                if (ptid == "1366x768")
+                {
+                    FijarTamaño(window, 1519, ph); DoEvents(); DoEvents();
+                    bool abiertoEn1519 = popup.IsOpen;
+                    FijarTamaño(window, 1520, ph); DoEvents(); DoEvents(); WaitForDispatcher(80);
+                    bool abiertoEn1520 = popup.IsOpen, botonEn1520 = boton.IsVisible;
+                    if (!popup.IsOpen && boton.IsVisible) { boton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); DoEvents(); DoEvents(); WaitForDispatcher(150); }
+                    bool abiertoAntesDeCrecer = popup.IsOpen;
+                    FijarTamaño(window, 1920, 1080); DoEvents(); DoEvents(); WaitForDispatcher(120);
+                    Console.WriteLine($"LIB REVISOR M-01 [{idioma}] 1519->1520: abierto {abiertoEn1519}->{abiertoEn1520} (boton visible={botonEn1520}) | abierto antes de crecer={abiertoAntesDeCrecer} -> a 1920x1080 composicion={ModoComposicion() ?? "?"} abierto={popup.IsOpen} boton visible={boton.IsVisible}");
+                    if (abiertoEn1520 && !botonEn1520) Fallo("PREFIJO-DESPLEGABLE", $"[M-01-{idioma}] el desplegable sigue abierto a 1520 sin su boton visible");
+                    if (popup.IsOpen && !boton.IsVisible) Fallo("PREFIJO-DESPLEGABLE", $"[M-01-{idioma}] el desplegable de prefijo sigue abierto a 1920x1080 sin su boton visible (flota sobre el selector en linea)");
+                    FijarTamaño(window, pw, ph); DoEvents();
+                }
                 popup.IsOpen = false; DoEvents();
             }
             vm.Settings.Language = "es"; DoEvents();
             slot.PlaceItem(idOrig); vm.IsDirty = false;
         }
+    }
+
+    // Fondo = color opaco mas frecuente; texto = pixel de mayor contraste contra el (mismo criterio que la seccion 2).
+    private static (double ratio, Color fondo, Color texto) ContrastePixelesRevisor(FrameworkElement el)
+    {
+        static double Lum(Color c) { static double C(byte v) { double s = v / 255.0; return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4); } return 0.2126 * C(c.R) + 0.7152 * C(c.G) + 0.0722 * C(c.B); }
+        static double Ct(Color a, Color b) { double x = Lum(a), y = Lum(b); return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05); }
+        int w = Math.Max(1, (int)Math.Round(el.ActualWidth)), h = Math.Max(1, (int)Math.Round(el.ActualHeight));
+        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32); rtb.Render(el);
+        var px = new byte[w * h * 4]; rtb.CopyPixels(px, w * 4, 0);
+        var cuenta = new Dictionary<uint, int>();
+        for (int i = 0; i < w * h; i++) if (px[i * 4 + 3] >= 250) { uint k = (uint)(px[i * 4] | px[i * 4 + 1] << 8 | px[i * 4 + 2] << 16); cuenta[k] = cuenta.GetValueOrDefault(k) + 1; }
+        if (cuenta.Count == 0) return (0, Colors.Transparent, Colors.Transparent);
+        uint kf = cuenta.OrderByDescending(kv => kv.Value).First().Key;
+        var fondo = Color.FromRgb((byte)(kf >> 16), (byte)(kf >> 8), (byte)kf);
+        double mejor = 1; Color texto = fondo;
+        for (int i = 0; i < w * h; i++)
+        {
+            if (px[i * 4 + 3] < 250) continue;
+            var c = Color.FromRgb(px[i * 4 + 2], px[i * 4 + 1], px[i * 4]);
+            double r = Ct(c, fondo); if (r > mejor) { mejor = r; texto = c; }
+        }
+        return (mejor, fondo, texto);
     }
 
     private static string CategoryBase(string nombre)

@@ -66,6 +66,11 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
     <SolidColorBrush x:Key="AccentMutedBrush" Color="{StaticResource AccentMutedColor}" />
     <SolidColorBrush x:Key="CalamityBrush" Color="{StaticResource CalamityColor}" />
+    <!-- Revisor visual r2 de la FASE D, L-04: CalamityBrush (#C0392B) como TEXTO de 11px sobre BgElevated
+         (#1e2233) daba 2,90:1. Rojo de la misma familia, mas claro, SOLO para texto sobre fondos oscuros:
+         6,25:1 sobre BgElevated y 5,42:1 sobre AccentMuted (prefijo actual). Los bordes/puntos/insignias
+         siguen con CalamityBrush. -->
+    <SolidColorBrush x:Key="CalamityTextBrush" Color="#FF7B72" />
     <SolidColorBrush x:Key="DebuffBrush" Color="{StaticResource DebuffColor}" />
     <SolidColorBrush x:Key="TealBrush" Color="{StaticResource TealColor}" />
     <SolidColorBrush x:Key="PinkBrush" Color="{StaticResource PinkColor}" />
@@ -1179,27 +1184,18 @@
         <Setter Property="Padding" Value="12" />
     </Style>
 
-    <!-- FASE D del responsive global, correcciones D-01/D-05/D-07 del revisor visual (28-sep-2026): UNA sola
-         regla de composicion para el panel Editar de Objetos y el de Buffs (s10: "no mantener dos
-         arquitecturas diferentes sin motivo"), dentro de su rejilla de 2 filas (contenido / Libreria) x 2
-         columnas (* / 300). MainViewModel.IsEditarBarraCompleta (SizeClass >= Amplio, s7):
-           - true: barra lateral de alto completo (RowSpan 2), alta SEGUN SU CONTENIDO (VerticalAlignment Top;
-             D-07: sin seleccion a 2560x1440 era una caja de 300x1245 con solo la leyenda);
-           - false (Compacto/Normal): solo la fila de contenido, a su mismo alto (Margin inferior 8 como la rejilla
-             de al lado) y la Libreria a ancho completo debajo (LibreriaComposicion). -->
+    <!-- FASE D del responsive global (28-sep-2026), revisores visuales r1 (D-01/D-05/D-07) y r2 (L-02): UNA sola
+         composicion para el panel Editar de Objetos y el de Buffs, dentro de su rejilla de 2 filas (contenido /
+         Libreria) x 2 columnas (* / 300): Editar SIEMPRE en la fila de contenido, alto segun su contenido (D-07), y la
+         Libreria SIEMPRE a ancho completo debajo. La barra lateral de alto completo (RowSpan 2 desde Amplio) se
+         retiro en r2: dejaba una columna de 300px vacia bajo Editar (507/719/1079px de alto a 1520/1920/2560) y
+         recortaba la Libreria. El alto de la fila se reparte en ObjetosView.AjustarRepartoObjetosLibreria. -->
     <Style x:Key="EditarTarjetaComposicion" TargetType="Border" BasedOn="{StaticResource SidePanelCard}">
         <Setter Property="Grid.Column" Value="1" />
         <Setter Property="Grid.Row" Value="0" />
         <Setter Property="Grid.RowSpan" Value="1" />
-        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Margin" Value="0,0,0,8" />
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                <Setter Property="Grid.RowSpan" Value="2" />
-                <Setter Property="VerticalAlignment" Value="Top" />
-                <Setter Property="Margin" Value="0" />
-            </DataTrigger>
-        </Style.Triggers>
     </Style>
     <Style x:Key="LibreriaComposicion" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
@@ -1208,12 +1204,6 @@
         <Setter Property="Grid.Column" Value="0" />
         <Setter Property="Grid.ColumnSpan" Value="2" />
         <Setter Property="Margin" Value="0" />
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                <Setter Property="Grid.ColumnSpan" Value="1" />
-                <Setter Property="Margin" Value="0,0,10,0" />
-            </DataTrigger>
-        </Style.Triggers>
     </Style>
 
     <!-- REAPERTURA (25-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): el "Style"

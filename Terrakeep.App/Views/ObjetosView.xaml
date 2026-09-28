@@ -164,7 +164,7 @@
                                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                    <Setter Property="Foreground" Value="{StaticResource CalamityTextBrush}" /> <!-- L-04: 6,25:1 -->
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
                                                     <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
@@ -185,7 +185,7 @@
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding CanHavePrefix}" Value="True" />
-                        <Condition Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                        <Condition Binding="{Binding SelectorPrefijoEnLinea, RelativeSource={RelativeSource AncestorType=views:ObjetosView}}" Value="True" />
                     </MultiDataTrigger.Conditions>
                     <Setter Property="Visibility" Value="Visible" />
                 </MultiDataTrigger>
@@ -197,7 +197,7 @@
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding CanHavePrefix}" Value="True" />
-                        <Condition Binding="{Binding DataContext.IsEditarBarraCompleta, RelativeSource={RelativeSource AncestorType=Window}}" Value="False" />
+                        <Condition Binding="{Binding SelectorPrefijoEnLinea, RelativeSource={RelativeSource AncestorType=views:ObjetosView}}" Value="False" />
                     </MultiDataTrigger.Conditions>
                     <Setter Property="Visibility" Value="Visible" />
                 </MultiDataTrigger>
@@ -409,9 +409,9 @@
 
                 <!-- Correccion D-01 del revisor visual de la FASE D (28-sep-2026, s7): el selector de prefijo de 3
                      niveles (SelectorPrefijoTemplate, una sola definicion) se compone segun
-                     MainViewModel.IsEditarBarraCompleta:
-                       - barra lateral de alto completo (Amplio/Extra): en linea, como siempre;
-                       - Compacto/Normal (Editar solo en la fila de contenido, la Libreria a ancho completo debajo): en
+                     ObjetosView.SelectorPrefijoEnLinea (alto real de la fila de contenido, revisor r2 L-02):
+                       - fila con sitio para el peor objeto (>= 470px): en linea, como siempre;
+                       - fila mas baja (Editar en la fila de contenido, la Libreria a ancho completo debajo): en
                          un desplegable "Elegir prefijo" dentro de Editar. Mismas metas/grupos/prefijos, mismos
                          comandos, un clic mas; nada se oculta (s16). Sin el, Editar no cabe sin scroll en la
                          fila de contenido (granadas Picaro de Calamity: 17 prefijos, ~180px de selector). -->
@@ -1480,9 +1480,8 @@
 
                             <!-- FASE D (s7): panel Editar sin ScrollViewer propio - ver ItemEditTemplate. Correccion D-01/D-05/D-07
                                  del revisor visual: composicion por SizeClass con UNA regla compartida con Buffs
-                                 (EditarTarjetaComposicion en Theme.xaml, MainViewModel.IsEditarBarraCompleta): barra lateral de
-                                 alto completo y alta segun su contenido en Amplio/Extra; solo la fila de contenido en Compacto/Normal,
-                                 con la Libreria a ancho completo debajo. AltoNaturalEditar: alto natural del contenido, para que el
+                                 (EditarTarjetaComposicion en Theme.xaml): siempre en la fila de contenido, alta segun su contenido,
+                                 con la Libreria a ancho completo debajo (la barra lateral de Amplio se retiro en la revision r2, L-02). AltoNaturalEditar: alto natural del contenido, para que el
                                  reparto de filas (AjustarRepartoObjetosLibreria) nunca deje a Editar mas bajo que el en esa composicion. -->
                             <Border x:Name="EditarTarjeta" Style="{StaticResource EditarTarjetaComposicion}">
                                 <controls:AltoNatural x:Name="AltoNaturalEditar">

@@ -11,31 +11,14 @@ namespace Terrakeep.App.ViewModels.Tests;
 // repetido de su madre). La geometria real la mide LIBRARY_RESPONSIVE_SOLO en el arnes.
 public sealed class CorreccionesRevisorFaseDTests
 {
-    // --- D-01/D-05: una sola regla de composicion para Editar (Objetos y Buffs). ---
-    [Theory]
-    [InlineData(1080, false)] // Compacto: Editar solo en la fila de contenido, Libreria a ancho completo
-    [InlineData(1320, false)] // Normal: igual (s7; a 1320x700 la barra lateral dejaba 1 fila de resultados)
-    [InlineData(1519, false)]
-    [InlineData(1520, true)]  // Amplio: barra lateral de alto completo
-    [InlineData(2560, true)]
-    public void EditarEsBarraCompletaSoloDesdeAmplio(double ancho, bool esperado)
-    {
-        var vm = new MainViewModel();
-        vm.UpdateSizeClass(ancho, 800);
-        Assert.Equal(esperado, vm.IsEditarBarraCompleta);
-    }
-
+    // --- D-01/D-05: la regla de composicion de Editar por SizeClass (MainViewModel.IsEditarBarraCompleta) se RETIRO en
+    //     la segunda revision visual (L-02): Editar vive siempre en la fila de contenido y lo que cambia es el selector
+    //     de prefijo (en linea / desplegable) segun el alto real de la fila - decision de la vista, medida por
+    //     LIBRARY_RESPONSIVE_SOLO (EDITAR-EN-LINEA, PREFIJO-DESPLEGABLE, LIBRERIA-ANCHO). Se comprueba aqui que la
+    //     propiedad vieja no vuelve (negative acceptance). ---
     [Fact]
-    public void CambiarDeClaseDeTamañoAvisaDeLaComposicionDeEditar()
-    {
-        var vm = new MainViewModel();
-        vm.UpdateSizeClass(1920, 1080);
-        var avisos = new List<string?>();
-        vm.PropertyChanged += (_, e) => avisos.Add(e.PropertyName);
-        vm.UpdateSizeClass(1366, 768);
-        Assert.Contains(nameof(MainViewModel.IsEditarBarraCompleta), avisos);
-        Assert.False(vm.IsEditarBarraCompleta);
-    }
+    public void LaBarraLateralDeEditarPorSizeClassYaNoExiste()
+        => Assert.Null(typeof(MainViewModel).GetProperty("IsEditarBarraCompleta"));
 
     // --- D-03: nombre de una subcarpeta debajo de su madre. ---
     [Theory]

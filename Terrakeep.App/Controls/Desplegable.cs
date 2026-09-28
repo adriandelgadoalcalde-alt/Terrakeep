@@ -25,10 +25,12 @@ public static class Desplegable
     {
         if (d is not ButtonBase boton) return;
         boton.Click -= OnClick;
+        boton.IsVisibleChanged -= OnBotonVisibilidad;
         if (e.OldValue is Popup viejo) viejo.Closed -= OnCerrado;
         if (e.NewValue is Popup nuevo)
         {
             boton.Click += OnClick;
+            boton.IsVisibleChanged += OnBotonVisibilidad;
             nuevo.Closed -= OnCerrado;
             nuevo.Closed += OnCerrado;
         }
@@ -36,6 +38,14 @@ public static class Desplegable
 
     // Solo cuenta un cierre provocado por un botón del raton pulsado (el clic "fuera" de StaysOpen=False):
     // un cierre por codigo (elegir una subcategoria, cambiar de tamaño...) no debe bloquear el siguiente clic.
+    // Revisor visual r2, M-01: con el desplegable abierto, si su boton deja de verse (p.ej. la ventana cruza a
+    // Amplio y Editar pasa a barra lateral con el selector en linea, o se pliega la Libreria), el Popup se quedaba
+    // abierto flotando sobre otra cosa. Un desplegable sin su boton visible se cierra.
+    private static void OnBotonVisibilidad(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is false && sender is DependencyObject d && GetPopup(d) is { IsOpen: true } popup) popup.IsOpen = false;
+    }
+
     private static void OnCerrado(object? sender, EventArgs e)
     {
         if (sender is not Popup p) return;
