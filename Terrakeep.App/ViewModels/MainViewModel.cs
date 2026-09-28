@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -599,6 +600,110 @@ public partial class MainViewModel : ObservableObject
             : actualWidth >= NormalMinWidth ? WindowSizeClass.Normal
             : WindowSizeClass.Compacto;
         HeightClass = actualHeight >= AltoMinHeight ? WindowHeightClass.Alto : WindowHeightClass.Bajo;
+        AppearanceCompactFactor = Math.Clamp(
+            (AppearanceCompactMaxHeight - actualHeight) / (AppearanceCompactMaxHeight - AppearanceCompactMinHeight),
+            0.0, 1.0);
+    }
+
+    // FASE E del responsive global, cierre real con el arnes libre (29-sep-2026, aplicador-fix-
+    // apariencia-29sep2026, known-diff d7a5a6ef): a 1080x700 quedaba un residuo real de 60,9px
+    // (columna preview) y 284,7px (columna editable) tras la compactacion de la ronda anterior -
+    // "contenido real que no cabe en ~493px de alto util sin recortar el preview (contenido util,
+    // no espaciado)". El usuario decidio EXPLICITAMENTE (29-sep-2026) no rediseñar: la MISMA
+    // distribucion (mismo doll, mismas 7 tarjetas en 3 columnas, mismos deslizadores/hex) se
+    // encoge lo justo para caber SOLO cuando el alto real de la ventana aprieta - en >=768px de
+    // alto (1366x768, el resto de los 5 tamaños del encargo) debe verse EXACTAMENTE igual que
+    // antes de esta ronda. Regla CONTINUA (no un salto de SizeClass, s24: "sin saltos bruscos al
+    // redimensionar") atada al ALTO real (la dimension que de verdad aprieta aqui, mismo criterio
+    // ya usado por WindowHeightClass/H5-08, no al ancho): 1.0 en el MinHeight=700 obligado de la
+    // ventana, 0.0 en 768 (el siguiente escalon real del encargo) - interpolada linealmente entre
+    // los dos. Los 3 tamaños siguientes (860/1080/1440) ya quedan a factor 0 sin necesitar mas
+    // puntos de control. NINGUN valor recortado toca FontSize (SectionText/BodyText/CaptionText
+    // intactos) ni el tamaño real del Thumb del Slider (SliderThumb sigue en 14/17px, Theme.xaml -
+    // solo se reduce el Height del contenedor del Slider y los margenes/paddings de alrededor,
+    // nunca la zona de agarre en si).
+    private const double AppearanceCompactMinHeight = 700; // MainWindow.xaml MinHeight="700"
+    private const double AppearanceCompactMaxHeight = 768; // 1366x768, el tamaño "medio" del encargo
+    [ObservableProperty] private double _appearanceCompactFactor;
+
+    private static double Lerp(double atExpandido, double atCompacto, double factor) => atExpandido + (atCompacto - atExpandido) * factor;
+    private double Lerp(double atExpandido, double atCompacto) => Lerp(atExpandido, atCompacto, AppearanceCompactFactor);
+    private static Thickness ThU(double atExpandido, double atCompacto, double factor)
+    { double v = Lerp(atExpandido, atCompacto, factor); return new Thickness(v); }
+    private Thickness ThBottom(double atExpandido, double atCompacto) => new(0, 0, 0, Lerp(atExpandido, atCompacto));
+    private Thickness ThVertical(double horizontal, double atExpandido, double atCompacto)
+    { double v = Lerp(atExpandido, atCompacto); return new Thickness(horizontal, v, horizontal, v); }
+    private Thickness ThTop(double atExpandido, double atCompacto) => new(0, Lerp(atExpandido, atCompacto), 0, 0);
+
+    // Columna izquierda (preview fijo, R-07/H-07): el doll de 40x56px reales (PlayerPreviewRenderer.
+    // Width/Height) se muestra a un escalado ENTERO (s34: "escalado entero o NearestNeighbor para
+    // que no se vea borroso") - 6x (240x336, el de siempre) en >=768, 5x (200x280) en el minimo
+    // real de 700. RenderOptions.BitmapScalingMode sigue en NearestNeighbor sin cambios (MainWindow.
+    // xaml), asi que los valores intermedios durante un resize en caliente tampoco se ven borrosos.
+    public double AppearancePreviewWidth => Lerp(240, 200);
+    public double AppearancePreviewHeight => Lerp(336, 280);
+    public Thickness AppearancePreviewBorderPadding => ThU(10, 6, AppearanceCompactFactor);
+    public Thickness AppearancePreviewBorderMargin => ThBottom(8, 4);
+    public Thickness AppearanceLeftControlsMargin => ThBottom(4, 2);
+
+    // Columna derecha (editable): cabecera Genero/Peinado/Tinte.
+    public Thickness AppearanceHeaderRowMargin => ThBottom(18, 4);
+    public Thickness AppearancePickerButtonPadding => new(8, Lerp(6, 2), 8, Lerp(6, 2));
+
+    // Las 7 tarjetas de color (Pelo/Piel/Ojos/Camisa/Camiseta interior/Pantalones/Zapatos) - MISMAS
+    // 3 columnas/orden siempre (pedido explicito del usuario, sin cambiar AppearanceContentMaxWidth
+    // ni el WrapPanel), solo se recorta el relleno interior/espacio entre ellas. Correccion real
+    // (primer pase, medido con el arnes): recortar el eje HORIZONTAL de Padding/Margin (ademas del
+    // vertical) encogia el ancho renderizado de cada tarjeta lo justo para que el WrapPanel metiera
+    // una 4ª columna a 1080x700 (measured: 3->4, "Camiseta interior" subia a la fila 1) - el eje
+    // horizontal se deja FIJO a proposito (10/8 de siempre) para que el numero de columnas nunca
+    // dependa de AppearanceCompactFactor, solo el vertical (lo unico que de verdad libera alto).
+    public Thickness AppearanceSwatchCardMargin => new(0, 0, 10, Lerp(10, 2));
+    public Thickness AppearanceSwatchCardPadding => new(8, Lerp(8, 2), 8, Lerp(8, 2));
+    public Thickness AppearanceSwatchLabelMargin => ThBottom(4, 1);
+    public Thickness AppearanceSwatchSliderMargin => new(0, Lerp(1, 0), 0, Lerp(1, 0));
+    // Solo el CONTENEDOR del Slider encoge (Theme.xaml fija Height=20 de base para toda la app,
+    // este override es LOCAL de esta instancia via binding, no toca el Style compartido) - el
+    // Thumb real (SliderThumb, Ellipse 14px/17px en hover) no cambia de tamaño, sigue siendo la
+    // zona de agarre de siempre (s34: "ni la zona de agarre de los deslizadores por debajo de lo
+    // comodo") - 14 es el SUELO real (el Thumb mide 14px, por debajo de eso se recortaria solo).
+    public double AppearanceSwatchSliderHeight => Lerp(20, 14);
+    public Thickness AppearanceSwatchHexMargin => ThTop(4, 1);
+    public Thickness AppearanceSwatchHexPadding => new(6, Lerp(4, 1), 6, Lerp(4, 1));
+
+    // Seccion de estadisticas (Dificultad/Vida/Mana, Pesca/Golf/Horas, Muertes PvE/PvP + el texto
+    // final de "recursos no trackeados").
+    public Thickness AppearanceStatsHeaderMargin => new(0, Lerp(12, 3), 0, Lerp(6, 1));
+    public Thickness AppearanceStatsRow1Margin => ThBottom(8, 1);
+    public Thickness AppearanceStatsRow2Margin => ThBottom(10, 1);
+    public Thickness AppearanceStatsRow3Margin => ThBottom(4, 1);
+    public Thickness AppearanceStatsLabelMargin => ThBottom(4, 1);
+    public Thickness AppearanceStatsFieldPadding => new(6, Lerp(4, 1), 6, Lerp(4, 1));
+    public Thickness AppearanceStatsFooterMargin => ThBottom(16, 1);
+
+    partial void OnAppearanceCompactFactorChanged(double value)
+    {
+        OnPropertyChanged(nameof(AppearancePreviewWidth));
+        OnPropertyChanged(nameof(AppearancePreviewHeight));
+        OnPropertyChanged(nameof(AppearancePreviewBorderPadding));
+        OnPropertyChanged(nameof(AppearancePreviewBorderMargin));
+        OnPropertyChanged(nameof(AppearanceLeftControlsMargin));
+        OnPropertyChanged(nameof(AppearanceHeaderRowMargin));
+        OnPropertyChanged(nameof(AppearancePickerButtonPadding));
+        OnPropertyChanged(nameof(AppearanceSwatchCardMargin));
+        OnPropertyChanged(nameof(AppearanceSwatchCardPadding));
+        OnPropertyChanged(nameof(AppearanceSwatchLabelMargin));
+        OnPropertyChanged(nameof(AppearanceSwatchSliderMargin));
+        OnPropertyChanged(nameof(AppearanceSwatchSliderHeight));
+        OnPropertyChanged(nameof(AppearanceSwatchHexMargin));
+        OnPropertyChanged(nameof(AppearanceSwatchHexPadding));
+        OnPropertyChanged(nameof(AppearanceStatsHeaderMargin));
+        OnPropertyChanged(nameof(AppearanceStatsRow1Margin));
+        OnPropertyChanged(nameof(AppearanceStatsRow2Margin));
+        OnPropertyChanged(nameof(AppearanceStatsRow3Margin));
+        OnPropertyChanged(nameof(AppearanceStatsLabelMargin));
+        OnPropertyChanged(nameof(AppearanceStatsFieldPadding));
+        OnPropertyChanged(nameof(AppearanceStatsFooterMargin));
     }
 
     // FASE B, correccion V-01 del revisor visual (28-sep-2026): en ventanas grandes, Equipamiento

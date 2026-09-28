@@ -1619,21 +1619,27 @@
                                  tenia, asi que en ventanas bajas (~700px de alto) la ultima linea
                                  del parrafo se recortaba SIN forma de alcanzarla (ni scroll ni
                                  nada). Mismo patron que el resto de la app. -->
-                            <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding 16->10 y los 3
-                                 margenes inferiores (CheckBox + 2 WrapPanel) 8->4 - medido con el arnes, recorta el
-                                 scroll real de esta columna (86,9px a 1080x700, 18,9 a 1366x768) sin tocar el
-                                 tamaño del preview (240x336, el contenido util, no espaciado). -->
+                            <!-- FASE E del responsive global (28-sep-2026, s14 paso 7; cierre 29-sep-2026 con el
+                                 arnes libre, known-diff d7a5a6ef): Padding/margenes YA NO son un numero fijo -
+                                 MainViewModel.AppearanceCompactFactor (regla continua atada al ALTO real de la
+                                 ventana, 1.0 en el minimo 700, 0.0 desde 768 - ver su comentario real) los
+                                 interpola entre el valor "de siempre" (>=768, identico a antes de esta ronda) y
+                                 el compactado (700). El doll tambien encoge (240x336 -> 200x280, escalado ENTERO
+                                 6x/5x del sprite real de 40x56, s34) SOLO en el minimo - libera el alto que le
+                                 falta a esta columna (60,9px de scroll medido antes de esta ronda). -->
                             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                             <StackPanel VerticalAlignment="Top" Margin="0,0,20,0">
-                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="10" Margin="0,0,0,8">
-                                    <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
+                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8"
+                                        Padding="{Binding AppearancePreviewBorderPadding}" Margin="{Binding AppearancePreviewBorderMargin}">
+                                    <Image x:Name="AppearancePreviewImage" Source="{Binding Appearance.PreviewImage}"
+                                           Width="{Binding AppearancePreviewWidth}" Height="{Binding AppearancePreviewHeight}"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
                                 <!-- H6-06 (sexta auditoria de Opus, Tanda D - "unificar con el doll de
                                      Inicio, que YA muestra la armadura/vanidad real puesta"): fiel al
                                      guardado real (PrimaryLoadout) por defecto, igual que Inicio - este
                                      toggle apaga el overlay para ver solo piel/pelo/colores base. -->
-                                <CheckBox IsChecked="{Binding Appearance.ShowEquipment}" Margin="0,0,0,4">
+                                <CheckBox IsChecked="{Binding Appearance.ShowEquipment}" Margin="{Binding AppearanceLeftControlsMargin}">
                                     <TextBlock Text="{Binding Loc[appearance_show_equipment], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </CheckBox>
                                 <!-- Catalogo de ideas Keep, idea 10 ("vista previa animada del
@@ -1647,14 +1653,14 @@
                                      AppearanceViewModel.WalkCycleRows - corregido 26-sep-2026,
                                      hallazgo ParidadPersonaje-Fase1); "Girar" es un espejo
                                      horizontal exacto del mismo fotograma. -->
-                                <WrapPanel Margin="0,0,0,4">
+                                <WrapPanel Margin="{Binding AppearanceLeftControlsMargin}">
                                     <Button Content="{Binding Appearance.WalkToggleLabel}"
                                             Command="{Binding Appearance.ToggleWalkAnimationCommand}"
                                             Padding="8,4" Margin="0,0,8,4" />
                                     <Button Content="{Binding Loc[action_turn_around], Mode=OneWay}" Command="{Binding Appearance.ToggleFacingCommand}"
                                             Padding="8,4" Margin="0,0,8,4" />
                                 </WrapPanel>
-                                <WrapPanel Margin="0,0,0,4">
+                                <WrapPanel Margin="{Binding AppearanceLeftControlsMargin}">
                                     <Button Content="{Binding Loc[action_export_preview], Mode=OneWay}" Click="OnExportPreviewClick"
                                             Padding="8,4" Margin="0,0,8,4" />
                                     <Button Content="{Binding Loc[action_export_preview_gif], Mode=OneWay}" Click="OnExportPreviewGifClick"
@@ -1671,7 +1677,7 @@
                                  negro en Amplio, donde las tarjetas de color (WrapPanel real) tienen
                                  sitio de sobra para repartirse en mas columnas. -->
                             <StackPanel MaxWidth="{Binding AppearanceContentMaxWidth}" HorizontalAlignment="Left">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                                <StackPanel Orientation="Horizontal" Margin="{Binding AppearanceHeaderRowMargin}">
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="{Binding Loc[appearance_gender], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
                                         <StackPanel Orientation="Horizontal">
@@ -1681,7 +1687,7 @@
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="{Binding Loc[appearance_hairstyle], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
-                                        <Button Command="{Binding Appearance.OpenHairPickerCommand}" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <Button Command="{Binding Appearance.OpenHairPickerCommand}" Padding="{Binding AppearancePickerButtonPadding}" HorizontalContentAlignment="Left">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock VerticalAlignment="Center" Margin="0,0,6,0">
                                                     <TextBlock.Text>
@@ -1697,7 +1703,7 @@
                                     </StackPanel>
                                     <StackPanel>
                                         <TextBlock Text="{Binding Loc[appearance_hair_dye], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
-                                        <Button Command="{Binding Appearance.OpenHairDyePickerCommand}" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <Button Command="{Binding Appearance.OpenHairDyePickerCommand}" Padding="{Binding AppearancePickerButtonPadding}" HorizontalContentAlignment="Left">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Appearance.HairDyeDisplayName}" VerticalAlignment="Center" Margin="0,0,6,0" />
                                                 <TextBlock Text="&#9998;" FontSize="11" VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
@@ -1784,27 +1790,42 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ColorSwatchViewModel}">
-                                            <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding/margenes recortados
-                                                 (10->8, 6->4, Slider 0,2->0,1) - medido con el arnes, ayuda a cerrar el scroll real
-                                                 de la columna editable a 1080x700/1366x768 sin cambiar el numero de columnas ni el
-                                                 tamaño util de cada tarjeta (sliders/hex siguen legibles igual). -->
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,10,10" Padding="8">
+                                            <!-- FASE E del responsive global (28-sep-2026, s14 paso 7; cierre 29-sep-2026, known-diff
+                                                 d7a5a6ef): Padding/margenes/Slider ya NO son un numero fijo - MainViewModel.
+                                                 AppearanceCompactFactor (regla continua por ALTO real, ver su comentario) los
+                                                 interpola entre el valor "de siempre" (>=768) y el compactado (700, el minimo real).
+                                                 DataContext aqui es el propio ColorSwatchViewModel (DataTemplate) - por eso el
+                                                 RelativeSource AncestorType=Window, mismo patron ya usado en los Command de picker
+                                                 de arriba. MISMAS 3 columnas/orden siempre (WrapPanel/AppearanceContentMaxWidth sin
+                                                 tocar, pedido explicito del usuario) - solo se recorta relleno/espacio. -->
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6"
+                                                    Margin="{Binding DataContext.AppearanceSwatchCardMargin, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Padding="{Binding DataContext.AppearanceSwatchCardPadding, RelativeSource={RelativeSource AncestorType=Window}}">
                                                 <StackPanel Width="150">
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Margin="{Binding DataContext.AppearanceSwatchLabelMargin, RelativeSource={RelativeSource AncestorType=Window}}">
                                                         <Border Width="20" Height="20" CornerRadius="3" Background="{Binding Preview}"
                                                                 BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1" Margin="0,0,7,0" />
                                                         <TextBlock Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
                                                     </StackPanel>
-                                                    <Slider Minimum="0" Maximum="255" Value="{Binding R}" Foreground="#E05555" Margin="0,1" />
-                                                    <Slider Minimum="0" Maximum="255" Value="{Binding G}" Foreground="#55C065" Margin="0,1" />
-                                                    <Slider Minimum="0" Maximum="255" Value="{Binding B}" Foreground="#5580E0" Margin="0,1" />
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding R}" Foreground="#E05555"
+                                                            Height="{Binding DataContext.AppearanceSwatchSliderHeight, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Margin="{Binding DataContext.AppearanceSwatchSliderMargin, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding G}" Foreground="#55C065"
+                                                            Height="{Binding DataContext.AppearanceSwatchSliderHeight, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Margin="{Binding DataContext.AppearanceSwatchSliderMargin, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding B}" Foreground="#5580E0"
+                                                            Height="{Binding DataContext.AppearanceSwatchSliderHeight, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Margin="{Binding DataContext.AppearanceSwatchSliderMargin, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                     <!-- Ap-c (segunda auditoria de Opus, Fable): "sin valor hexadecimal ni
                                                          paleta para los colores" - antes solo los 3 sliders en crudo, sin
                                                          ningun numero visible ni forma de pegar un color conocido de un
                                                          vistazo. Sin UpdateSourceTrigger=PropertyChanged a proposito (mismo
                                                          criterio real que "Índice (id)", T-17) - confirma al salir del
                                                          campo, no aplica un hex a medio escribir letra a letra. -->
-                                                    <TextBox Text="{Binding Hex}" Padding="6,4" Margin="0,4,0,0"
+                                                    <TextBox Text="{Binding Hex}"
+                                                             Padding="{Binding DataContext.AppearanceSwatchHexPadding, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                             Margin="{Binding DataContext.AppearanceSwatchHexMargin, RelativeSource={RelativeSource AncestorType=Window}}"
                                                              Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}"
                                                              BorderThickness="0" FontFamily="Consolas" HorizontalContentAlignment="Center"
                                                              ToolTip="{Binding Loc[tt_hex_color], Mode=OneWay}" />
@@ -1814,12 +1835,14 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): margenes de la seccion de
-                                     estadisticas recortados (20/8/14/20/4 -> 12/6/8/10/4) - medido con el arnes. -->
-                                <TextBlock Text="{Binding Loc[appearance_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,12,0,6" />
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7; cierre 29-sep-2026, known-diff
+                                     d7a5a6ef): margenes/Padding de toda la seccion ya NO son un numero fijo - ver el
+                                     comentario real de MainViewModel.AppearanceCompactFactor (regla continua por ALTO
+                                     real, identica a >=768 respecto a antes de esta ronda). -->
+                                <TextBlock Text="{Binding Loc[appearance_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="{Binding AppearanceStatsHeaderMargin}" />
+                                <StackPanel Orientation="Horizontal" Margin="{Binding AppearanceStatsRow1Margin}">
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBlock Text="{Binding Loc[appearance_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
                                         <!-- Oleada del 6-sep-2026: los 4 nombres venian de un string[] fijo en
                                              ingles (y con el nombre INTERNO "Softcore" en vez del "Classic"
                                              real del juego). Se enumeran aqui con su clave de idioma en vez
@@ -1828,7 +1851,7 @@
                                              escribe ese indice de vuelta en Appearance.Difficulty (con su
                                              entrada de Deshacer y su escritura al personaje). Con un binding
                                              por item, cambiar de idioma solo repinta el texto. -->
-                                        <ComboBox SelectedIndex="{Binding Appearance.Difficulty}" Width="120" Padding="6,4">
+                                        <ComboBox SelectedIndex="{Binding Appearance.Difficulty}" Width="120" Padding="{Binding AppearanceStatsFieldPadding}">
                                             <ComboBoxItem Content="{Binding Loc[difficulty_classic], Mode=OneWay}" />
                                             <ComboBoxItem Content="{Binding Loc[difficulty_mediumcore], Mode=OneWay}" />
                                             <ComboBoxItem Content="{Binding Loc[difficulty_hardcore], Mode=OneWay}" />
@@ -1836,40 +1859,40 @@
                                         </ComboBox>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_health], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBlock Text="{Binding Loc[appearance_health], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBox Text="{Binding Appearance.HealthNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                            <TextBox Text="{Binding Appearance.HealthNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="{Binding AppearanceStatsFieldPadding}"
                                                      Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                             <TextBlock Text="/" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextSecondaryBrush}" />
-                                            <TextBox Text="{Binding Appearance.HealthMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                            <TextBox Text="{Binding Appearance.HealthMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="{Binding AppearanceStatsFieldPadding}"
                                                      Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                         </StackPanel>
                                     </StackPanel>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Loc[appearance_mana], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBlock Text="{Binding Loc[appearance_mana], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBox Text="{Binding Appearance.ManaNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                            <TextBox Text="{Binding Appearance.ManaNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="{Binding AppearanceStatsFieldPadding}"
                                                      Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                             <TextBlock Text="/" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextSecondaryBrush}" />
-                                            <TextBox Text="{Binding Appearance.ManaMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                            <TextBox Text="{Binding Appearance.ManaMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="{Binding AppearanceStatsFieldPadding}"
                                                      Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" Margin="{Binding AppearanceStatsRow2Margin}">
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_fishing_quests], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.FishingQuestsCompleted, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                        <TextBlock Text="{Binding Loc[appearance_fishing_quests], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
+                                        <TextBox Text="{Binding Appearance.FishingQuestsCompleted, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="{Binding AppearanceStatsFieldPadding}"
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_golf_score], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.GolferScore, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                        <TextBlock Text="{Binding Loc[appearance_golf_score], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
+                                        <TextBox Text="{Binding Appearance.GolferScore, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="{Binding AppearanceStatsFieldPadding}"
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Loc[appearance_hours_played], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.PlayHours, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" Width="70" Padding="6,4"
+                                        <TextBlock Text="{Binding Loc[appearance_hours_played], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
+                                        <TextBox Text="{Binding Appearance.PlayHours, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" Width="70" Padding="{Binding AppearanceStatsFieldPadding}"
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                 </StackPanel>
@@ -1881,20 +1904,20 @@
                                      recolectados" NO se guarda en el .plr - se dice con
                                      claridad en vez de fingir un contador que el juego no
                                      lleva. -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal" Margin="{Binding AppearanceStatsRow3Margin}">
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_pve_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.PveDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                        <TextBlock Text="{Binding Loc[appearance_pve_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
+                                        <TextBox Text="{Binding Appearance.PveDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="{Binding AppearanceStatsFieldPadding}"
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="{Binding Loc[appearance_pvp_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.PvpDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                        <TextBlock Text="{Binding Loc[appearance_pvp_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="{Binding AppearanceStatsLabelMargin}" />
+                                        <TextBox Text="{Binding Appearance.PvpDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="{Binding AppearanceStatsFieldPadding}"
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Loc[appearance_resources_not_tracked], Mode=OneWay}" Style="{StaticResource CaptionText}"
-                                           FontSize="10.5" TextWrapping="Wrap" MaxWidth="420" Margin="0,0,0,16" />
+                                           FontSize="10.5" TextWrapping="Wrap" MaxWidth="420" Margin="{Binding AppearanceStatsFooterMargin}" />
                             </StackPanel>
                             </ScrollViewer>
                         </Grid>
