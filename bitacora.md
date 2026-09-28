@@ -31097,3 +31097,84 @@ verdad hace falta).
 
 **Commit local**: solo esta entrada de `bitacora.md`. Ningun otro archivo tocado, ningun `git
 push`.
+
+## 28-sep-2026 - Guia-Sprites: falta el sprite del Devorador de Mundos ("la maldad de tu mundo") -
+## hueco de DATOS, no de codigo (segundo agente, aplicador-fix)
+
+Encargo directo del usuario: reportó que la pestaña Guía no tenía el sprite del boss "Devorador de
+Mundos" en la sección de "maldad de tu mundo" (Corrupción/Cripta Carmesí), con petición explícita
+de auditar el resto de la Guía por el mismo problema.
+
+**Causa real confirmada** (lectura directa del código, no supuesta): `BossIconResolver.cs` y el
+sprite `Terrakeep.App/Assets/boss_icons/13.png` ya existían desde "Guia Encargo4" (25-sep-2026, ver
+esa misma entrada de esta bitácora más arriba) - el propio texto de aquella entrada ya documentaba
+sin resolver: *"13 (Devorador de Mundos, solo como `jefeFinal` de tramo, no como `paso.jefe` en
+ningún paso - `BossIconResolver` lo cubre para el futuro pero hoy `ResolverIconoDelHito` no lo
+consume)"*. `GuidePasoViewModel.ResolverIconoDelHito` (`Terrakeep.App/ViewModels/GuideViewModel.cs`)
+solo consulta `paso.Jefe`, nunca `tramo.JefeFinal` - y `guia_progresion.json` (autorado en
+TerrakeepMod, sincronizado a Terrakeep vía `scripts/sync-guia-desde-terrakeepmod.ps1`) nunca traía
+`"jefe": 13` en los dos pasos del tramo `MaldadDelMundo` (`ArmaContraLaMaldad`/`VencerLaMaldad`), a
+diferencia de TODOS los demás tramos vanilla con jefe real del catálogo, que sí lo traen en cada
+paso.
+
+**Auditoría completa del resto de la Guía** (pedida explícitamente): iterado con un script Node de
+una línea sobre los 46 tramos/60+ pasos reales de `guia_progresion.json`, listando `jefeFinal`/
+`jefeFinalMod` de cada tramo contra `jefe`/`jefeMod` de cada uno de sus pasos. `MaldadDelMundo` es
+el **ÚNICO** caso real de "sprite ya extraído pero nunca consumido por falta de dato" - todos los
+demás tramos vanilla con jefe real ya traían `"jefe"` en sus pasos, y todos los tramos Calamity con
+jefe real ya traían `"jefeMod"` salvo `HiveMindOPerforator` (`ArmaParaHiveMindOPerforator`/
+`VencerAHiveMindOPerforator`), que es un **LIMITE REAL distinto**: ese jefe combinado
+(HiveMind/Perforator, según Corrupción/Carmesí) no tiene NPC type vanilla ni `.xnb`/`.rawimg`
+extraíble de la instalación real (ya documentado así en Encargo4/GuiaCalamity Encargo B) - `null`
+sigue siendo el resultado honesto ahí, no se tocó.
+
+**Arreglo real**: `"jefe": 13` añadido a los dos pasos de `MaldadDelMundo` en
+`TerrakeepMod\Assets\guia_progresion.json` (la fuente real donde se autora la Guía, no la copia) y
+resincronizado a Terrakeep vía el script real del proyecto
+(`scripts/sync-guia-desde-terrakeepmod.ps1`, paso 1/3 - los pasos 2/3-3/3 de textos hjson fallaron
+por un `node_modules/hjson` ausente en la instalación global de `dev-tools\node-v24.20.0-win-x64\`,
+sin relación con este cambio de datos, no se tocó ningún texto). `jefe=13` (Devorador de Mundos) es
+el mismo id que ya usaba `jefeFinal` del tramo por defecto, y la bandera real de completitud
+(`NPC.downedBoss2`) ya es compartida por Corrupción/Carmesí en vanilla (confirmado en el propio
+`_fuente` del requisito, línea real del JSON) - representar el tramo con este sprite no introduce
+ninguna inconsistencia nueva frente al Cerebro de Cthulhu (sin sprite extraído, y sin falta real:
+la propia bandera ya los trata como intercambiables). Comentario de
+`GuideViewModel.cs:ResolverIconoDelHito` actualizado (ya no dice "null es el resultado honesto,
+igual que jefeFinal=13" - eso era justo el bug, no un caso análogo legítimo).
+
+**Canario real**: no existía ningún elemento del array `objetivos` de
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (`EjecutarGuiaReal`, harness `GUIA_SOLO=1`) que
+probara `MaldadDelMundo` - hueco de cobertura real cerrado con una fila nueva ("La maldad de tu
+mundo"/"Derrotarlo"). Verificado con `GUIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c
+Debug`: `IconPath` resuelto a `pack://siteoforigin:,,,/Assets/boss_icons/13.png`, geometría real
+medida sin recorte/overflow, **14/14** filas del árbol con icono visible (antes 13/14 reales +
+este caso sin cubrir), **0 `FALLO`**, captura real guardada en
+`keepqa-evidencia\guia-fila-icono-lamaldaddetumundo-derrotarlo.png`.
+
+**Gates**: `dotnet build Terrakeep.slnx -c Debug` 0/0. `Terrakeep.Core.Tests` 782/782.
+`Terrakeep.App.ViewModels.Tests` 763/764 - único fallo en
+`ActualizacionEnUnClicTests.ActualizarAhora_FlujoCompletoReal_DescargaLanzaInstaladorFalsoYCierra`
+(flujo de auto-actualización vía `HttpListener`, sin ninguna relación con la Guía), con decenas de
+procesos `dotnet`/`testhost` de otros agentes en paralelo corriendo a la vez en esta misma máquina
+durante la pasada (confirmado con `Get-Process` real) - mismo patrón de intermitencia por
+contención ya documentado repetidas veces en esta bitácora, no una regresión de este cambio.
+
+### Recompilación/redespliegue real
+
+`Terrakeep.exe` NO estaba en ejecución (verificado antes de copiar). `dotnet build Terrakeep.App/
+Terrakeep.App.csproj -c Release` + `dotnet publish ... -p:PublishProfile=win-x64` en verde, generó
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe` (139 304 065 bytes).
+Copiado con `robocopy /MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\
+Local\Programs\Terrakeep\` (único destino real, barra de tareas y Menú Inicio apuntan los dos ahí) -
+hash SHA256 idéntico entre publicado e instalado
+(`CF853DE67EB71F61AC1780529892022D32B8C5A81E44815A5BE0BC555C328332`), y `guia_progresion.json`
+instalado confirmado con `"jefe": 13` real en disco.
+
+**Commits reales** (dos repos, sin `git push` en ninguno):
+- `TerrakeepMod` (`6ff88f5`): `Assets/guia_progresion.json` (fuente real del dato).
+- `Terrakeep`/Terrasavr-Native (`8f4515fc`): `Terrakeep.App/Assets/guia/guia_progresion.json` (copia
+  sincronizada), `Terrakeep.App/ViewModels/GuideViewModel.cs` (comentario actualizado),
+  `Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (canario nuevo). El repo tenía en el working tree
+  bastantes otros ficheros modificados/nuevos de rondas en paralelo de otros agentes (p.ej.
+  `MainWindow.xaml`, `ExplorationViewModel.cs`, varios `Terrakeep.Core.Tests/Data/*`) - ninguno se
+  tocó ni se incluyó en este commit, solo los 3 ficheros reales de este arreglo.
