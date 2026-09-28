@@ -31829,3 +31829,18 @@ subvistas solo desde Extra, aceptado). Correcciones aplicadas (aplicador-fix-res
   `Terrakeep.App.ViewModels.Tests` 777/777.
 - `EQUIP_RESPONSIVE_SOLO` 0 FALLO; `NAV123_SOLO`/`AR14_SOLO`/`KEEPQA_EQUIPINV_SOLO`/`ARLAY_CANARIO_SOLO`
   0 FALLO. Capturas "despues" regeneradas en `docs/evidencia/responsive-global/faseB/`.
+
+### Despliegue real y control final (segunda corrección de la FASE B)
+
+Publicado desde un `git worktree` limpio en `0fa6c3d0` (en ese checkout limpio `Terrakeep.App.Tests`
+compila 0 errores: H-06 comprobado) y copiado con `robocopy /MIR` (sin `unins000.*`) a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\`; Terrakeep no estaba abierto. SHA256 publicado =
+instalado = `76dbdc9d33c7dd92730686c7d17fea641c699d5631d56ba702612878c7447920`; el exe instalado
+contiene `EquipamientoSubvistasLadoALado`, `EditarAccionesSlot` y `CarpetasPersonajesDePrueba`.
+Binario Debug de `herramientas.json` recompilado 0/0 (el trabajo del otro agente ya estaba comiteado).
+Partidas reales: los 23 `.plr/.tplr/.wld/.twld` con el mismo hash al empezar (13:23) y al terminar.
+`session.json` cambió entre 13:23 y 13:33 FUERA de mis ejecuciones (todas lo dejaron igual que lo
+encontraron): su contenido actual apunta a `Terrakeep.App.Tests\bin\Debug\...\copia-personaje-drag\
+295372\Eldelgas.plr`, es decir, lo escribió el canario de arrastre de otro agente (arnés Debug, antes
+de que existiera el aislamiento). El valor previo del usuario no se puede reconstruir desde aquí
+(solo guardé su hash, `f314e82d…`); queda anotado para el coordinador.
