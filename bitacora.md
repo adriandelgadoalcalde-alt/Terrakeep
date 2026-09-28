@@ -32443,3 +32443,122 @@ resto del working tree seguia con cambios de otros agentes en paralelo, sin toca
 5. Capturas antes/despues en `docs/evidencia/responsive-global/faseE/`.
 6. Desplegar desde worktree limpio a `%LocalAppData%\Programs\Terrakeep\` (Terrakeep cerrado,
    verificar hash) y recompilar el Debug de `herramientas.json`.
+
+## 29-sep-2026 - FASE E del responsive global: cierre con el arnes libre ("via libre")
+
+Agente: aplicador-fix-responsive-faseE-28sep2026. Base `1433d61e`/`662e4641`. El coordinador dio via
+libre para `Terrakeep.App.Tests` (el otro agente que usaba el raton real en DST habia terminado).
+Ejecutada la lista pendiente completa (sin `SendInput`, con `TERRAKEEP_FORCE_SOFTWARE_RENDER=1`).
+
+### 1. `PERSONAJE_RESPONSIVE_SOLO`: rojo/verde reales
+Worktree limpio en `7a18ae7d` (`Keep\Terrasavr-Win\TKfe`, retirado despues): copiado el canario
+`CanarioResponsivePersonajeResto.cs` (SOLO para medir, nunca comiteado ahi) - **FALLO:
+PERSONAJE_RESPONSIVE_SOLO-PREPARACION** (no existe `BuffsPaginaContenedor`, el mecanismo nuevo no esta
+en ese commit). Un probe temporal aparte (`PERSONAJE_BUFFS_ROJO_SOLO`, tambien solo en el worktree)
+midio el sintoma real del codigo viejo con las 44 celdas llenas: **0px de scroll en TODOS los casos**
+(1080x700 libreria plegada/desplegada/con banner, hasta 2560x1440) - el ScrollViewer propio de
+`BuffContainerCompactTemplate` nunca llegaba a desplazar de verdad (Row0 no vivia dentro de ningun
+ScrollViewer con alto infinito, a diferencia del bug original de Equipamiento/Inventario/Almacenes que
+arreglo la FASE C) y la celda SI se ajustaba con el tamaño (53,1px a 1080x700, 90px/MaxCell a
+2560x1440) - **correccion honesta de mi propia justificacion inicial** ("celda congelada"): el
+verdadero defecto no era un scroll activo sino la arquitectura divergente en si (ScrollViewer sin
+`reason`/`semanticRegion`/`waiver`/`evidence`, s13), que el arreglo de esta fase sigue cerrando
+correctamente (mismo patron que Inventario/Almacenes, "no mantener dos arquitecturas sin motivo").
+En HEAD (`662e4641`): **`PERSONAJE_RESPONSIVE_SOLO`: 0 fallo(s)** (todas las mediciones, ver abajo).
+
+### 2. Apariencia, medida de verdad
+Primera pasada (antes de tocar nada): **86,9px** (columna preview) y **352,7px** (columna editable) de
+scroll a 1080x700; 18,9/284,7 a 1366x768; 0/28,1 a 1520x860; 0/0 desde 1920x1080. Causa real
+(confirmada, no adivinada): `AppearanceContentMaxWidth` topaba en 640px en Compacto/Normal - MAS
+ESTRECHO que el ancho real que la columna `*` del Grid exterior ya daba (~780-1000px segun tamaño),
+asi que las 7 tarjetas de color (150px cada una) usaban menos columnas de las que cabian de verdad.
+Subido a 1200 (`MainViewModel.AppearanceContentMaxWidth`, rama Compacto/Normal - Amplio/Extra sin
+tocar): a 1366x768 cerro 218,6px de los 284,7 (686,8->626,8 de extension). A 1080x700 no cambio nada
+(el ancho real disponible ya era ~640-680, el tope de 1200 nunca fue el limite ahi). Con eso mas
+Padding/margenes compactados (s14 paso 7, MainWindow.xaml: Border del preview 16->10, CheckBox/2
+WrapPanel 8->4, tarjetas de color Padding 10->8 + margenes internos 6->4 + Sliders 0,2->0,1 + TextBox
+hex 6->4, seccion de estadisticas 20/8/14/20->12/6/8/10): **60,9px / 284,7px** a 1080x700 (ES, antes
+86,9/352,7), **0px / 66,1px** a 1366x768 (antes 18,9/284,7), **0/0** desde 1520x860. En EN 1080x700:
+46,3/284,7 (similar). Registrado como known-diff `d7a5a6ef` (Medium, NO aceptado por el usuario -
+pendiente de su decision) con las medidas exactas: el residuo es contenido real (7 selectores de color
+con 3 sliders+hex cada uno + 3 filas de estadisticas) que no cabe en ~493px de alto util sin recortar
+el preview 240x336 (contenido util, no espaciado) - candidato real a que la FASE G suba
+`MINIMUM_COMFORTABLE_VIEWPORT` por encima de 1080x700, o a un rediseño mas profundo de la columna
+editable (fuera de alcance de esta ronda, s28).
+
+### 3. Puntos de aparicion / Desbloqueos / Version / Comparar, geometria real en los 5 tamaños x ES/EN
+- **Desbloqueos**: 20,5px de scroll a 1080x700 (0 en el resto) - misma causa que Apariencia:
+  `DetailContentMaxWidth` topaba en 760px, menos que el ancho real disponible. Subido a 900: **0px en
+  los 5 tamaños x ES/EN**.
+- **Version**: 59,2px de scroll a 1080x700 (0 en el resto) - mismo tope compartido (`DetailContentMaxWidth`),
+  cerrado por el mismo cambio: **0px en los 5 tamaños x ES/EN**. (El personaje de prueba SI tenia
+  diagnosticos reales - "Prefijos ilegales encontrados", 6 objetos - visibles en la captura, confirma
+  que la medicion es realista, no un caso vacio.)
+- **Puntos de aparicion**: 0px de scroll en los 5 tamaños x ES/EN desde el principio (ya cumplia el
+  contrato - un solo ScrollViewer, cabecera+boton "Añadir" fuera de el). Sin cambios de codigo.
+- **Comparar**: el canario anterior media con `vp=0 ext=0` (sin personajes elegidos, no media nada de
+  verdad) - corregido para elegir 2 personajes reales de `Compare.AvailableCharacters`. Con resultados
+  reales: selectores (Personaje A/B) y resumen "N diferencia(s)" SIEMPRE fuera del scroll (Grid.Row=1,
+  confirmado en la captura); el scroll de RESULTADOS (940,9px a 1080x700, bajando a 105,5px a
+  2560x1440) es legitimo y esperado (familia UNBOUNDED_COLLECTION, s23 - estadisticas+equipo+2x50
+  inventario). Resize en caliente (grande->minimo->grande) sin perder la seleccion de los 2
+  personajes. Sin cambios de codigo (ya cumplia el contrato).
+
+### 4. Canario `PERSONAJE_RESPONSIVE_SOLO` reforzado
+Las mediciones de SpawnPoints/Desbloqueos/Version pasan de INFORME a **Fallo() real** si desplazan
+(contenido finito, s3/s22); Apariencia con limite vigilado (AVISO por debajo, Fallo() si se DUPLICA -
+señal de regresion real); Comparar con los 2 personajes reales seleccionados + resize en caliente
+propio; EN añadido en el minimo para las 5 pestañas; capturas de las 5 (antes solo Buffs). Commit
+`662e4641`.
+
+### 5. Sin regresion
+- `EQUIP_RESPONSIVE_SOLO`: 0 FALLO. `INVALM_RESPONSIVE_SOLO`: 0 FALLO. `LIBRARY_RESPONSIVE_SOLO`: 0
+  FALLO (137 capturas revisadas, 0 en blanco).
+- `Terrakeep.Core.Tests`: 789/789. `Terrakeep.App.ViewModels.Tests`: 807/807.
+- Build `Terrakeep.slnx -c Debug`: 0/0.
+
+### 6. Capturas revisadas de verdad (no solo generadas)
+`docs/evidencia/responsive-global/faseE/personaje-despues-visual-*.png` (31 capturas, 0 en blanco por
+`CAPTURAS-VALIDACION`) - miradas una a una: Buffs (44/44 celdas visibles sin scrollbar, Editar al
+lado, Libreria con su propio scroll de siempre), Desbloqueos (3 columnas, 4 grupos completos sin
+scroll), Version (4 grupos + el bloque real de "Prefijos ilegales" en una sola vista), Comparar
+(selectores siempre visibles, resultados con su scroll propio), Apariencia (confirma visualmente el
+residuo: el texto de ayuda bajo los botones se corta en la columna izquierda, la seccion de
+estadisticas queda fuera de la columna derecha sin bajar el scroll - coincide exacto con los numeros).
+**Hallazgo fuera de alcance, NO corregido** (no es responsive, es un bug de localizacion): en EN, las
+etiquetas de las 7 tarjetas de color de Apariencia ("Pelo/Piel/Ojos/Camisa/Camiseta interior/
+Pantalones/Zapatos") se quedan en español, y el texto de ayuda dice "iust the idle dose" (typo real,
+probablemente "just the idle pose"). Anotado para el coordinador, no tocado (scope de esta fase es
+solo responsive).
+
+### 7. Hashes antes/despues (seguridad de partidas reales)
+Script `hash-faseE.ps1` (scratchpad): 55 lineas de `.plr/.tplr/.wld/.twld` reales (tModLoader +
+vainilla) + los 4 JSON de `%LOCALAPPDATA%\Terrakeep`, mas el listado de las 20 carpetas de `Backups`.
+Comparado ANTES de arrancar el arnes vs. DESPUES de toda la ronda (EQUIP+INVALM+LIBRARY+PERSONAJE x
+varias pasadas, ~15 ejecuciones reales): **`diff` vacio en los dos ficheros** - ni un solo hash de
+partida/JSON cambio, ni una carpeta de `Backups` se creo/borro. Confirmado tambien por
+`AISLAMIENTO-ESTADO` de cada ejecucion (0 escrituras bloqueadas: nadie intento escribir fuera de la
+carpeta de estado redirigida).
+
+### 8. Despliegue: PENDIENTE (Terrakeep abierto de verdad)
+`tasklist`/`Get-Process` confirman `Terrakeep.exe` corriendo desde
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (PID 291940, arrancado 29-sep-2026
+0:15:28 - la copia INSTALADA, no un build de desarrollo). Regla fija del encargo: nunca forzar el
+cierre de la ventana del usuario. **No se ha desplegado** a `%LocalAppData%\Programs\Terrakeep\` esta
+ronda - queda pendiente de que el usuario cierre Terrakeep. El Debug de `herramientas.json`
+(`terrakeep_native`, `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`) SI esta recompilado 0/0
+y al dia con `662e4641` (no es el mismo proceso que el instalado, no hacia falta cerrarlo).
+
+### Commits de esta ronda
+`1433d61e` (arreglo Buffs), `60c17a41` (bitacora), `662e4641` (Desbloqueos/Version/Apariencia +
+canario reforzado + evidencia). Requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`: sigue OPEN (quedan
+F-G), evidencia `aplicador-fix`/`aplicador-fix-responsive-faseE-28sep2026` registrada, known-diff
+`d7a5a6ef` (Apariencia, Medium, no aceptado) pendiente de decision del usuario.
+
+### Pendiente real para el usuario/coordinador
+1. Decidir sobre el known-diff `d7a5a6ef` (residuo de Apariencia) - aceptar tal cual, pedir un
+   rediseño mas profundo de la columna editable, o esperar a la FASE G (MINIMUM_COMFORTABLE_VIEWPORT).
+2. Cerrar Terrakeep real cuando pueda para completar el despliegue pendiente (worktree limpio, hash
+   verificado, ya con el arreglo completo de esta fase).
+3. (Fuera de esta fase) el bug de localizacion de las tarjetas de color de Apariencia en EN y el typo
+   "iust"/"just" del texto de ayuda, anotados arriba, sin tocar.
