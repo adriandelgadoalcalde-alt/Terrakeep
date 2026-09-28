@@ -34,4 +34,13 @@
     <PackageReference Include="Verify.ImageSharp" Version="5.0.1" />
   </ItemGroup>
 
+  <!-- R2-L2 (28-sep-2026): con la sesion de Windows DESCONECTADA (sin dispositivos de pantalla) WPF
+       no renderiza nada en un proceso de escritorio y todo RenderTargetBitmap sale a 0 - medido y
+       explicado en ValidacionCapturasSesion.cs (MediaContext..cctor de PresentationCore). Este switch
+       documentado de WPF lo reactiva SOLO para el arnes (va a su runtimeconfig.json, nunca a
+       Terrakeep.App); con pantallas presentes no cambia nada. -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable" Value="true" />
+  </ItemGroup>
+
 </Project>

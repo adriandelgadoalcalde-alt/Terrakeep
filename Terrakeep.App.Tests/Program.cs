@@ -44,6 +44,10 @@ internal static partial class Program
     [STAThread]
     private static void Main()
     {
+        // R2-L2 (28-sep-2026): estado real de la sesion de Windows + sonda de render + revision de
+        // capturas en blanco al salir - ANTES de cualquier uso de WPF. Ver ValidacionCapturasSesion.cs.
+        PrepararValidacionCapturas();
+
         // Deuda real cerrada el 17-sep-2026 (mismo bug ya visto y arreglado en Starvekeep): TODA
         // ejecucion de este arnes es diagnostico/prueba, nunca produccion real - fijar esto lo
         // primero de todo, antes de "new MainWindow()" mas abajo, para que
@@ -2588,6 +2592,25 @@ internal static partial class Program
         // (CharacterFileService.ComprobarMundoDePrueba, primera linea de LoadFromPathAsync) tiene que
         // abortar el proceso con "FALLO: AISLAMIENTO-MUNDO" y codigo 5 ANTES de leer un solo byte. Si
         // se llega a la linea siguiente, la guarda no funciona.
+        // AISLAMIENTO_EXCEPCION_SOLO=1 (28-sep-2026, R2-L2 b): carga la COPIA de un personaje (MainWindow
+        // reescribe session.json con la ruta temporal) y lanza una excepcion SIN capturar desde Main.
+        // ProcessExit no corre en ese caso; session.json tiene que volver igualmente a sus bytes
+        // originales via AppDomain.UnhandledException (comprobar el SHA256 desde fuera).
+        if (Environment.GetEnvironmentVariable("AISLAMIENTO_EXCEPCION_SOLO") == "1")
+        {
+            int espera = 0;
+            while (vm.Home.IsScanning && espera < 200) { DoEvents(); System.Threading.Thread.Sleep(50); espera++; }
+            var copia = vm.Home.Characters.FirstOrDefault();
+            if (copia == null) { Console.WriteLine("FALLO: AISLAMIENTO_EXCEPCION_SOLO - no hay ninguna copia de personaje"); Environment.Exit(1); }
+            vm.LoadFromPath(copia!.FilePath);
+            DoEvents(); DoEvents();
+            ComprobarPersonajeAislado(vm, "AISLAMIENTO_EXCEPCION_SOLO");
+            vm.IsDirty = false;
+            string sj = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
+            string hashTrasCargar = File.Exists(sj) ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sj))) : "(no existe)";
+            Console.WriteLine($"AISLAMIENTO_EXCEPCION_SOLO: session.json tras cargar la copia SHA256={hashTrasCargar}; se lanza una excepcion sin capturar");
+            throw new InvalidOperationException("AISLAMIENTO_EXCEPCION_SOLO: excepcion provocada a proposito");
+        }
         if (Environment.GetEnvironmentVariable("AISLAMIENTO_MUNDO_NEGATIVO_SOLO") == "1")
         {
             string real = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Terraria", "tModLoader", "Worlds", "roca_negra.wld");

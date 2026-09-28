@@ -16,7 +16,9 @@
 //   2. CharacterFileService.CarpetasPersonajesDePrueba = esas dos carpetas: SUSTITUYE (no suma) las
 //      carpetas reales, incluidas las extra de Ajustes.
 //   3. Guarda %LOCALAPPDATA%\Terrakeep\session.json y lo restaura al salir (ProcessExit): el arnes
-//      carga personajes y MainWindow reescribe ese fichero con rutas temporales.
+//      carga personajes y MainWindow reescribe ese fichero con rutas temporales. Desde R2-L2 (b)
+//      tambien ante una excepcion no capturada y Ctrl+C (RestaurarAislamiento, idempotente), con
+//      los bytes exactos; AISLAMIENTO_EXCEPCION_SOLO=1 lo prueba lanzando una excepcion a proposito.
 //   4. Al salir borra la carpeta temporal.
 // Ademas expone ComprobarPersonajeAislado(vm, contexto): los canarios la llaman tras cargar un
 // personaje; si el .plr cargado esta FUERA de la carpeta temporal imprime FALLO y aborta el proceso
@@ -41,7 +43,8 @@ using Terrakeep.App.ViewModels;
 internal static partial class Program
 {
     private static string? _raizAislada;
-    private static string? _sessionJsonGuardado;
+    private static byte[]? _sessionJsonGuardado;
+    private static string? _rutaSessionJson;
     private static bool _sessionJsonExistia;
 
     internal static string RaizPersonajesAislada => _raizAislada ?? throw new InvalidOperationException("Aislamiento no preparado");
@@ -103,20 +106,27 @@ internal static partial class Program
             Environment.Exit(5);
         };
 
-        string sessionJson = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
-        _sessionJsonExistia = File.Exists(sessionJson);
-        _sessionJsonGuardado = _sessionJsonExistia ? File.ReadAllText(sessionJson) : null;
-        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        _rutaSessionJson = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
+        _sessionJsonExistia = File.Exists(_rutaSessionJson);
+        // Bytes exactos (no texto): la restauracion tiene que dejar el MISMO SHA256, BOM incluido.
+        _sessionJsonGuardado = _sessionJsonExistia ? File.ReadAllBytes(_rutaSessionJson) : null;
+        // R2-L2 (b): ProcessExit NO se dispara si el proceso muere por una excepcion no capturada -
+        // session.json se quedaba con las rutas temporales del arnes. La restauracion (idempotente)
+        // se engancha tambien a AppDomain.UnhandledException y a Ctrl+C. No hace falta un manejador
+        // propio de Dispatcher.UnhandledException: Program.Main ya marca Handled=true en
+        // app.DispatcherUnhandledException (el arnes sigue vivo y ProcessExit restaurara al final), y
+        // una excepcion del dispatcher que nadie maneje se relanza y acaba en
+        // AppDomain.UnhandledException. Suscribirse aqui seria ANTES que la Application (se crea
+        // despues) y veria Handled=false aunque luego se manejase - restauraria a destiempo.
+        // Un "taskkill /F" sigue sin poder interceptarse (limite real del SO).
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => RestaurarAislamiento("ProcessExit");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
-            try
-            {
-                if (_sessionJsonExistia) File.WriteAllText(sessionJson, _sessionJsonGuardado!);
-                else if (File.Exists(sessionJson)) File.Delete(sessionJson);
-            }
-            catch (Exception ex) { Console.WriteLine("AISLAMIENTO: AVISO - no se pudo restaurar session.json: " + ex.Message); }
-            try { if (_raizAislada != null && Directory.Exists(_raizAislada)) Directory.Delete(_raizAislada, recursive: true); }
-            catch { /* un fichero aun abierto no debe tapar la salida real del arnes */ }
+            Console.WriteLine($"AISLAMIENTO: excepcion no capturada ({(e.ExceptionObject as Exception)?.GetType().Name}); se restaura session.json antes de morir");
+            RestaurarAislamiento("UnhandledException");
+            ValidarCapturasDeEstaEjecucion();
         };
+        Console.CancelKeyPress += (_, _) => RestaurarAislamiento("CancelKeyPress");
 
         // Guarda de configuracion: si por lo que sea el servicio siguiera viendo una carpeta real,
         // el arnes NO sigue.
@@ -133,6 +143,24 @@ internal static partial class Program
                 Environment.Exit(3);
             }
         Console.WriteLine($"AISLAMIENTO: {copiados} .plr/.tplr y {mundosCopiados} .wld/.twld reales COPIADOS a {_raizAislada}; carpetas reales de personajes y mundos sustituidas; session.json guardado (existia={_sessionJsonExistia}) y se restaurara al salir.");
+    }
+
+    private static int _aislamientoRestaurado; // 0/1, Interlocked: una sola restauracion
+
+    /// <summary>Devuelve session.json a sus bytes originales y borra la carpeta temporal. Idempotente:
+    /// la primera via que llegue (ProcessExit, excepcion no capturada, Ctrl+C) la hace.</summary>
+    internal static void RestaurarAislamiento(string via)
+    {
+        if (_rutaSessionJson == null || Interlocked.Exchange(ref _aislamientoRestaurado, 1) == 1) return;
+        try
+        {
+            if (_sessionJsonExistia) File.WriteAllBytes(_rutaSessionJson, _sessionJsonGuardado!);
+            else if (File.Exists(_rutaSessionJson)) File.Delete(_rutaSessionJson);
+            Console.WriteLine($"AISLAMIENTO: session.json restaurado ({via})");
+        }
+        catch (Exception ex) { Console.WriteLine($"AISLAMIENTO: AVISO - no se pudo restaurar session.json ({via}): " + ex.Message); }
+        try { if (_raizAislada != null && Directory.Exists(_raizAislada)) Directory.Delete(_raizAislada, recursive: true); }
+        catch { /* un fichero aun abierto no debe tapar la salida real del arnes */ }
     }
 
     // (6) Ruta de la COPIA aislada de un mundo real. Solo acepta rutas bajo Documents\My Games\Terraria\
