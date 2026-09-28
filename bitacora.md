@@ -32094,3 +32094,94 @@ y equivale a SoftwareOnly, que ya se midió que no sirve (el problema no es la a
   devolvió `session.json` a su contenido real de las 16:12:55 (`Eldelgas.plr` real). La "foto" inicial de esta
   tarea había capturado el estado intermedio de ese otro arnés (`uia-harness-test.plr` temporal), así que no se
   restaura esa copia a propósito.
+
+## 28-sep-2026 - FASE D del responsive global: Libreria + Libreria de buffs + Investigacion como familia (aplicador-fix-responsive-faseD-28sep2026)
+
+Encargo: PDF "Arreglo familia keep", bloque 2 (REPLACE), FASE D (s7-s17, s19, s22-s26, s28-s29, s34) + pendientes
+asignados: scroll de Editar (permiso `aa5f7395` y known-diff `570a3c9d`), contraste de la categoria seleccionada,
+R2-L1 de Almacenes, banda vacia bajo Equipamiento y "Ver todo" a 2560. Requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`
+(sigue OPEN: quedan E-G). MinWidth/MinHeight sin tocar (s31). Commit del arreglo: `9c3df863`.
+
+### Canario nuevo `LIBRARY_RESPONSIVE_SOLO=1` (`Terrakeep.App.Tests/CanarioResponsiveLibrerias.cs`)
+Asserts reales (FALLO: ...), primera entrada con el VM recien creado, 5 tamaños (1080x700 .. 2560x1440) x ES/EN,
+compacto, colecciones grandes (busqueda `#1-99999999`: 100 objetos / 300 buffs en pantalla; la categoria raiz mas
+grande), resize en caliente, contraste (pinceles + pixeles renderizados), panel Editar con Cenit y con el objeto de
+prefijos mas largo (barrido de los 8903 objetos por el propio ItemEditViewModel, todas las combinaciones meta x grupo),
+banda de Equipamiento, eje de Almacenes y negative acceptance (VIEJO).
+- **ANTES**, codigo de `0ae13a26` en worktree limpio (`Keep\Terrasavr-Win\TKfd`, misma profundidad que el repo para
+  `..\..\..\ServidorKeep`; retirado despues): **261 FALLO** - SCROLL-ANIDADO 64 (arbol + tarjetas/resultados: 2 scroll
+  owners V por superficie), CATEGORIAS 74 (a 1080x700 solo 4/10 raices de la Libreria y 5/8 de Buffs sin desplazar),
+  COLUMNAS 29 (12 columnas fijas: 524/1482px = 35% a 1920, 780/2139 a 2560), EDITAR-SCROLL 35 + EDITAR-CLIP 35,
+  CONTRASTE 6, BANDA-EQUIP 2, ALM-EJE 6, VIEJO 10. (La primera medida, con el arnes de hoy y la produccion vieja,
+  dio 251: su busqueda amplia "a" no devolvia nada - la gramatica exige 2 letras -; corregido a rango de ids.)
+- **DESPUES**, `9c3df863`: **0 FALLO**. Validacion de capturas del arnes: 84/84 con contenido real.
+
+### Que se cambio (mecanismo viejo RETIRADO)
+- `Views/NavegadorCategorias.xaml(.cs)` (NUEVO, un control para las 3 superficies, s11): fila de categorias
+  PRINCIPALES siempre visible ("Ver todo" + raices en WrapPanel, envuelven, nunca scroll) y UNA linea con las migas de la
+  ruta, un desplegable "Subcategorias (N)" (Popup con los hijos del nivel mas profundo que los tiene) y el resumen de
+  resultados (s12: drill-down + flyout; un arbol de 4 niveles con hasta 40 hijos cuesta una linea).
+- `ViewModels/CatalogBrowserViewModel.cs`: `RutaCategoria`/`MigasCategoria`/`NodoSubcategorias`/`HaySubnavegacion`
+  (una vez para las 3); `CategoryNodeViewModel.IsInSelectedPath`.
+- RETIRADOS: columna fija de 210px con el arbol y su ScrollViewer (Libreria, Buffs, Investigacion), las plantillas
+  `CategoryNodeTemplate` (MainWindow) y `ObjetosCategoryNodeTemplate` (ObjetosView), y el ScrollViewer propio de las
+  tarjetas raiz. Cada superficie tiene UN scroll owner vertical: `LibreriaResultados`, `LibreriaBuffsResultados`,
+  `InvestigacionResultados` (tarjetas raiz o resultados dentro del mismo).
+- `Views/TarjetasCategoriasRaiz.xaml(.cs)` (NUEVO, compartido): la tarjeta de cada raiz (mismo NavCardButton) con sus
+  subcarpetas de primer nivel como pastillas debajo. "Ver todo" a 2560x1440: antes 1 fila de 132px en un viewport de
+  584px; ahora un mapa de 2 niveles en 2 filas que usa el alto (captura `lib-despues-lib-vertodo-2560x1440-ES.png`).
+- `Controls/SlotGridPanel.cs`: `PreferirCeldaGrande` (opt-in, con AdaptiveColumns; la semantica de la FASE A no cambia):
+  si todo cabe en el alto elige las columnas de la celda mas grande, si no, el maximo de columnas a MinCell. Resultados
+  de Libreria y Buffs con `Columns=60 AdaptiveColumns PreferirCeldaGrande`: uso del ancho 99-100% en todos los tamaños.
+- Contraste de la seleccion: pastillas con plantilla propia (estilos `PastillaCategoria*` en Theme.xaml, ya no el
+  cromo Aero por defecto): seleccionada blanco sobre #4834D4 = **7,73:1** (antes #6C63FF sobre #2A2856 = **3,17:1**);
+  ruta TextPrimary sobre AccentMuted ~12:1.
+- Cabeceras de las dos Librerias en UNA fila (plegar + buscador + Filtros); Investigacion: buscador + acciones de
+  carpeta en una fila. Necesario por el alto: a 1080x700 la Libreria de objetos tiene 202px en total.
+- **Panel Editar (s7)**: `EditarTarjeta` pasa a barra lateral de alto COMPLETO (`Grid.RowSpan=2` en la rejilla exterior
+  de ObjetosView, junto a Objetos y a la Libreria, como el sideCtr de Terrasavr) y `ItemEditTemplate` pierde sus DOS
+  ScrollViewer (el de seguridad L-d y el anidado de la lista de prefijos). Reflujo: Indice | Cantidad | +10/+100/MAX en
+  una fila y el nombre del prefijo en la fila de su Id. Por que asi y no "debajo"/subpagina: el eje escaso en el minimo
+  es el ALTO (fila de Objetos 296px con la Libreria desplegada); debajo costaria alto justo ahi y una subpagina
+  quitaria el slot de la vista al editarlo. La columna de 300px ya existia; solo gana el alto de la fila de la Libreria.
+  Medido con el peor objeto del catalogo (granadas Picaro de Calamity, grupo Picaro, 17 prefijos) y Cenit, todas las
+  combinaciones meta x grupo, 7 escenarios x ES/EN: 0 scroll, 0 recorte, holgura inferior minima 67,7px (ES) / 95,3px
+  (EN) a 1080x700 desplegada. Antes: 249,4px / 194,2px / 7,3px (armadura) de scroll a ese tamaño.
+- **Banda bajo Equipamiento / tope de la Libreria**: RETIRADO `MainViewModel.LibraryRowMaxHeight` y sus dos bindings;
+  `ObjetosView.AjustarRepartoObjetosLibreria` ya no reserva alto para Editar y mete Equipamiento en el reparto (su pagina
+  se limita a su extension cuando cabe). Banda: 130,2px -> 1px (1920x1080), 346,2px -> 1px (2560x1440).
+- **R2-L1 Almacenes**: `AlmacenesCabecera` = pildoras (`AlmacenesSelector`) y acciones (`AlmacenesAcciones`) en dos
+  WrapPanel apilados y centrados: desviacion 0px en las dos lineas a 1080/1366/1920 (antes -8,5 y -66,5px a 1080).
+- Cadena nueva `library_subcategories` (ES/EN).
+
+### Tests y verificacion
+- Tests nuevos `NavegacionCategoriasFaseDTests` (ruta en las 3 superficies, Ver todo limpia, PreferirCeldaGrande en
+  los dos regimenes) y `HeightClassTests.ElTopeDeAltoDeLaLibreriaYaNoExiste` (sustituye a las 2 aserciones 460/640
+  que fijaban el mecanismo retirado).
+- `dotnet build Terrakeep.slnx -c Release` 0/0. `Terrakeep.Core.Tests` 782/782. `Terrakeep.App.ViewModels.Tests`
+  793/793 (786 + 7).
+- Sin regresion: `EQUIP_RESPONSIVE_SOLO`, `INVALM_RESPONSIVE_SOLO`, `NAV123_SOLO`, `AR14_SOLO`, `KEEPQA_EQUIPINV_SOLO`
+  0 FALLO; `ARLAY_CANARIO_SOLO` OK.
+- Partidas reales: SHA256 de las 123 `.plr/.tplr/.wld/.twld` de `Documents\My Games\Terraria` identicos al inicio
+  (16:30) y al final; `session/settings/window/world_view_state.json` identicos (copia guardada antes de empezar).
+- Evidencia: `docs/evidencia/responsive-global/faseD/` (80 `lib-antes-*` + 80 `lib-despues-*`, y los logs
+  `lib-antes.log`, `lib-rojo-0ae13a26.log`, `lib-despues.log`). Requirement: evidencias aplicador-fix, mecanismos
+  viejo/nuevo, known-diffs `570a3c9d` y `aa5f7395` resueltos con `9c3df863`.
+
+### Incidentes y obstaculos
+- Un script mio de sustitucion de XAML cerro el bloque de tarjetas de Investigacion por SANGRIA y se comio el resto de
+  la pestaña hasta Apariencia (error MC3000 al compilar, nunca comiteado). `MainWindow.xaml` no tenia cambios de nadie
+  mas: se reconstruyo desde HEAD y se reaplico con un corte por ANIDAMIENTO real (verificado con el diff por trozos).
+- La compilacion aislada (`-p:BaseOutputPath=bin_faseD/`) deja tambien `ServidorKeep\ServidorKeep.Core\bin_faseD\`
+  (salida del proyecto referenciado; mismo patron que los `bin_*` ya existentes). No se pudo borrar desde aqui
+  (permiso denegado): es solo salida de build, se puede borrar sin riesgo.
+- `LIB-05-ARBOL` (pasada completa del arnes, no ejecutable hoy por SendInput) sigue encontrando el ItemsControl de
+  `Library.RootCategories` (ahora las pastillas); su nombre y comentario hablan del arbol retirado.
+
+### Despliegue real (FASE D)
+Publicado desde un `git worktree` limpio en `9c3df863` (`Keep\Terrasavr-Win\TKfd`, retirado despues) con
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` y `robocopy /MIR` (sin
+`unins000.*`) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\`; Terrakeep no estaba abierto (`tasklist`). SHA256
+publicado = instalado = `edfa7612d2e4fe71c647edd7c4f434996bfc75e2946cf4ad9265a8c431c6ed7c`; el exe contiene
+`NavegadorCategorias`, `TarjetasCategoriasRaiz`, `PreferirCeldaGrande`, `MigasCategoria` y NO `LibraryRowMaxHeight`.
+Debug de `herramientas.json` (`terrakeep_native`) recompilado 0/0 a las 17:31 con el cambio.
