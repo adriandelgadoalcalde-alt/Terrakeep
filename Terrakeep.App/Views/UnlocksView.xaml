@@ -80,10 +80,14 @@
                  la tarjeta. Contenido explicito con TextBlock TextWrapping="Wrap" en
                  vez de Content="..." plano en los 13 CheckBox de este bloque. -->
             <WrapPanel>
-                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="14" Margin="0,0,10,10" Width="280">
+                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding 14->12,8 y el margen
+                     inferior de cada CheckBox 8->5 - medido con el arnes, cierra el scroll real de 20,5px
+                     que quedaba a 1080x700 (la tarjeta mas alta, 6 casillas, marcaba la fila) sin tocar
+                     ancho/legibilidad del texto (el wrap sigue en MaxWidth=210, sin cambios). -->
+                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="12,8" Margin="0,0,10,10" Width="280">
                     <StackPanel>
                         <TextBlock Text="{Binding Loc[flag_difficulty_mode], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                        <CheckBox IsChecked="{Binding Flags.ExtraAccessory}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.ExtraAccessory}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_extra_accessory], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
                         <!-- D-e (segunda auditoria de Opus, Fable): "sin aviso si el flag no
@@ -96,13 +100,17 @@
                     </StackPanel>
                 </Border>
 
-                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="14" Margin="0,0,10,10" Width="280">
+                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding 14->12,8 y el margen
+                     inferior de cada CheckBox 8->5 - medido con el arnes, cierra el scroll real de 20,5px
+                     que quedaba a 1080x700 (la tarjeta mas alta, 6 casillas, marcaba la fila) sin tocar
+                     ancho/legibilidad del texto (el wrap sigue en MaxWidth=210, sin cambios). -->
+                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="12,8" Margin="0,0,10,10" Width="280">
                     <StackPanel>
                         <TextBlock Text="{Binding Loc[flag_biome_torches_group], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                        <CheckBox IsChecked="{Binding Flags.UnlockedBiomeTorches}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.UnlockedBiomeTorches}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_biome_torch_unlocked], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.UsingBiomeTorches}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.UsingBiomeTorches}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_biome_torch_active], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
                         <TextBlock Text="{Binding Loc[version_warning_1_4_0_5], Mode=OneWay}"
@@ -111,28 +119,32 @@
                     </StackPanel>
                 </Border>
 
-                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="14" Margin="0,0,10,10" Width="280">
+                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding 14->12,8 y el margen
+                     inferior de cada CheckBox 8->5 - medido con el arnes, cierra el scroll real de 20,5px
+                     que quedaba a 1080x700 (la tarjeta mas alta, 6 casillas, marcaba la fila) sin tocar
+                     ancho/legibilidad del texto (el wrap sigue en MaxWidth=210, sin cambios). -->
+                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="12,8" Margin="0,0,10,10" Width="280">
                     <StackPanel>
                         <TextBlock Text="{Binding Loc[flag_permanent_consumables_group], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                        <CheckBox IsChecked="{Binding Flags.ArtisanBread}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.ArtisanBread}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_workbench_range], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.VitalCrystal}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.VitalCrystal}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_life_regen], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.AegisFruit}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.AegisFruit}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_defense_boost], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.ArcaneCrystal}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.ArcaneCrystal}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_mana_regen], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.GalaxyPearl}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.GalaxyPearl}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_luck_boost], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.GummyWorm}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.GummyWorm}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_fishing_power], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.Ambrosia}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.Ambrosia}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_mining_speed], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
                         <TextBlock Text="{Binding Loc[version_warning_1_4_4_0], Mode=OneWay}"
@@ -141,19 +153,23 @@
                     </StackPanel>
                 </Border>
 
-                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="14" Margin="0,0,10,10" Width="280">
+                <!-- FASE E del responsive global (28-sep-2026, s14 paso 7): Padding 14->12,8 y el margen
+                     inferior de cada CheckBox 8->5 - medido con el arnes, cierra el scroll real de 20,5px
+                     que quedaba a 1080x700 (la tarjeta mas alta, 6 casillas, marcaba la fila) sin tocar
+                     ancho/legibilidad del texto (el wrap sigue en MaxWidth=210, sin cambios). -->
+                <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="12,8" Margin="0,0,10,10" Width="280">
                     <StackPanel>
                         <TextBlock Text="{Binding Loc[flag_events_group], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                        <CheckBox IsChecked="{Binding Flags.FinishedDD2Event}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.FinishedDD2Event}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_dd2_event], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
                         <TextBlock Text="{Binding Loc[version_warning_1_3_4], Mode=OneWay}"
                                    Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
                                    Visibility="{Binding Flags.FinishedDD2EventBelowVersion, Converter={StaticResource UnlocksBoolToVis}}" />
-                        <CheckBox IsChecked="{Binding Flags.UnlockedSuperMinecart}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.UnlockedSuperMinecart}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_super_minecart_unlocked], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding Flags.UsingSuperMinecart}" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Flags.UsingSuperMinecart}" Margin="0,0,0,5">
                             <TextBlock Text="{Binding Loc[flag_super_minecart_active], Mode=OneWay}" TextWrapping="Wrap" MaxWidth="210" Foreground="{StaticResource TextPrimaryBrush}" />
                         </CheckBox>
                         <TextBlock Text="{Binding Loc[version_warning_below_253], Mode=OneWay}"

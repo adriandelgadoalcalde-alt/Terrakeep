@@ -752,11 +752,18 @@ public partial class MainViewModel : ObservableObject
     // repartir mas columnas, no rehacer el layout.
     // Auditoria de redimensionado, R-10: 1400 en Extra - 8 muestras de color de 150+10 en fila
     // real = 1280px.
+    // FASE E del responsive global (28-sep-2026, s14 paso 3/adaptive columns, s34): 640->1200 en
+    // Compacto/Normal - medido con el arnes: a 1080x700 el tope de 640px era MAS ESTRECHO que el
+    // ancho real que la columna "*" del Grid exterior ya le daba (~780-800px), asi que forzaba menos
+    // columnas de las que cabian de verdad en las tarjetas de color (WrapPanel, 150px+margen cada
+    // una) y sobraba una fila entera de scroll (352,7px de los 845,5px de contenido). 1200 deja de
+    // ser el limite real en Compacto/Normal (lo sigue siendo la columna "*", que ya se adapta sola
+    // por SizeClass/ancho de ventana) - en Amplio/Extra no cambia nada (ramas separadas).
     public double AppearanceContentMaxWidth => SizeClass switch
     {
         WindowSizeClass.Extra => 1400,
         WindowSizeClass.Amplio => 1000,
-        _ => 640,
+        _ => 1200,
     };
 
     // H5-08 (quinta auditoria de Opus) convirtio el MaxHeight=460 fijo de la fila de la Libreria (Objetos
@@ -776,11 +783,17 @@ public partial class MainViewModel : ObservableObject
     // Desbloqueos, grupos de Version, tarjetas de Novedades/Acerca de - ver MainWindow.xaml).
     // Auditoria de redimensionado, R-10: 1700 en Extra - 6 tarjetas reales de Desbloqueos de
     // 280+10 = 1740px.
+    // FASE E del responsive global (28-sep-2026, s14 paso 3/adaptive columns): 760->900 en
+    // Compacto/Normal - medido con el arnes, a 1080x700 el WrapPanel de grupos de Version (el
+    // grupo 1.4.x, el mas largo, 6 opciones) y el de Desbloqueos ganan una columna mas y dejan de
+    // desplazar la pagina (760 dejaba scr=59,2px en Version); a 1366x768 ya cabia de sobra (scr=0),
+    // asi que no cambia nada ahi. 900 sigue dejando margen real dentro del ancho de la ventana
+    // minima (1080 menos el marco de la app).
     public double DetailContentMaxWidth => SizeClass switch
     {
         WindowSizeClass.Extra => 1700,
         WindowSizeClass.Amplio => 1200,
-        _ => 760,
+        _ => 900,
     };
 
     // H5-09: numero real de columnas para las listas de tarjetas de version (Novedades x2,

@@ -267,38 +267,108 @@ internal static partial class Program
             foreach (var r in resumen) Console.WriteLine("  " + r);
 
             // ===================================================================================
-            // El resto de Personaje (Apariencia/SpawnPoints/Desbloqueos/Version/Comparar): sin
-            // codigo de produccion tocado esta ronda (ver el comentario de cabecera). Solo se
-            // INFORMA geometria real - nunca Fallo() - para dejar el terreno medido de cara a la
-            // siguiente ronda con el arnes libre.
+            // Resto de Personaje (Apariencia/SpawnPoints/Desbloqueos/Version/Comparar) - medido de
+            // verdad con el arnes (vía libre, 28-sep-2026). SpawnPoints/Desbloqueos/Version/Comparar:
+            // UN solo ScrollViewer por pagina, con la cabecera/selectores/botones estructurales
+            // fuera de el - Fallo() real si aparece scroll (contenido finito, s3/s22). Apariencia:
+            // DOS ScrollViewer hermanos con proposito real distinto (P-1, preview fijo) - tras el
+            // arreglo de esta ronda (Padding/margenes compactados, s14 paso 7) el residuo a 1080x700
+            // es de 60,9px (columna preview) y 284,7px (columna editable, 7 selectores de color +
+            // genero/peinado/tinte/estadisticas - contenido real, no espaciado sobrante) - se vigila
+            // con un LIMITE (AVISO si crece, Fallo() si se DUPLICA) en vez de exigir 0, igual que el
+            // permiso aa5f7395 de la FASE C/D.
             // ===================================================================================
-            void InformarPaginaSimple(int tab, string nombre, string svName)
+            void MedirPaginaSimple(int tab, string nombre, double w, double h, string idioma)
             {
                 vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = tab; DoEvents(); DoEvents(); WaitForDispatcher(80);
-                var sv = Descendientes<ScrollViewer>(window).Where(s => s.IsVisible && s.Name == svName).FirstOrDefault();
-                var todos = Descendientes<ScrollViewer>(window).Where(s => s.IsVisible && s.TemplatedParent is not TextBoxBase).ToList();
-                Console.WriteLine($"PERSONAJE INFO {nombre} {window.ActualWidth:0}x{window.ActualHeight:0}: ScrollViewer visibles en la ventana={todos.Count} (incluye los de otras pestañas ocultas por Visibility=Collapsed, no cuentan) | '{svName}' encontrado={sv != null} vp={sv?.ViewportHeight:0.#} ext={sv?.ExtentHeight:0.#} scr={sv?.ScrollableHeight:0.#}");
+                var sv = Descendientes<ScrollViewer>(window).Where(s => s.IsVisible && s.TemplatedParent is not System.Windows.Controls.Primitives.TextBoxBase).FirstOrDefault();
+                string cab = $"{nombre} {w:0}x{h:0} idioma={idioma}";
+                Console.WriteLine($"PERSONAJE {cab}: vp={sv?.ViewportHeight:0.#} ext={sv?.ExtentHeight:0.#} scr={sv?.ScrollableHeight:0.#}");
+                if (sv != null && sv.ScrollableHeight > 0.5)
+                    Fallo(nombre.ToUpperInvariant(), $"{cab}: la pagina desplaza {sv.ScrollableHeight:0.#}px (ext {sv.ExtentHeight:0.#} en vp {sv.ViewportHeight:0.#}) - contenido finito, no deberia necesitar scroll (s3/s22)");
+                if (w == 1080)
+                {
+                    string shot = Path.Combine(outDir, $"personaje-{etiqueta}-{nombre.ToLowerInvariant()}-{w:0}x{h:0}-{idioma}.png");
+                    File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+                }
+            }
+
+            // Comparar necesita dos personajes reales elegidos para tener resultados que medir.
+            var dosPersonajes = vm.Compare.AvailableCharacters.Take(2).ToList();
+            if (dosPersonajes.Count == 2) { vm.Compare.SelectedA = dosPersonajes[0]; vm.Compare.SelectedB = dosPersonajes[1]; DoEvents(); DoEvents(); }
+            else Console.WriteLine($"PERSONAJE COMPARAR: INCONCLUSIVE - solo {dosPersonajes.Count} personaje(s) disponible(s) en Compare.AvailableCharacters, hacen falta 2");
+
+            void MedirComparar(double w, double h, string idioma)
+            {
+                var compareView = window.FindName("CompareView") as FrameworkElement;
+                var svCompare = compareView?.FindName("CompareResultsScrollViewer") as ScrollViewer;
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabComparar; DoEvents(); DoEvents(); WaitForDispatcher(80);
+                string cab = $"Comparar {w:0}x{h:0} idioma={idioma}";
+                Console.WriteLine($"PERSONAJE {cab}: ShowResults={vm.Compare.ShowResults} vp={svCompare?.ViewportHeight:0.#} ext={svCompare?.ExtentHeight:0.#} scr={svCompare?.ScrollableHeight:0.#}");
+                if (vm.Compare.ShowResults && svCompare == null)
+                    Fallo("COMPARAR", $"{cab}: ShowResults=True y no se encuentra CompareResultsScrollViewer");
+                // Comparar es la familia UNBOUNDED_COLLECTION (resultados de la comparacion, s23) - su
+                // propio scroll de RESULTADOS es legitimo y esperado, solo se informa (nunca Fallo()).
+                if (w == 1080)
+                {
+                    string shot = Path.Combine(outDir, $"personaje-{etiqueta}-comparar-{w:0}x{h:0}-{idioma}.png");
+                    File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+                }
+            }
+
+            void MedirApariencia(double w, double h, string idioma)
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabApariencia; DoEvents(); DoEvents(); WaitForDispatcher(80);
+                var svs = Descendientes<ScrollViewer>(window).Where(s => s.IsVisible && s.TemplatedParent is not System.Windows.Controls.Primitives.TextBoxBase).ToList();
+                for (int i = 0; i < svs.Count; i++)
+                {
+                    var s = svs[i];
+                    string cab = $"Apariencia[{i}] {w:0}x{h:0} idioma={idioma}";
+                    Console.WriteLine($"PERSONAJE {cab}: {Nombre(s)} vp={s.ViewportHeight:0.#} ext={s.ExtentHeight:0.#} scr={s.ScrollableHeight:0.#}");
+                    // Limite del permiso (medido tras el arreglo de esta ronda, worst case 1080x700 ES):
+                    // columna 0 (preview) 60,9px, columna 1 (editable) 284,7px. Fallo() si se DUPLICA -
+                    // señal de una regresion real, no de una variacion de idioma/DPI menor.
+                    double limite = i == 0 ? 130 : 580;
+                    if (s.ScrollableHeight > limite)
+                        Fallo("APARIENCIA", $"{cab}: {Nombre(s)} desplaza {s.ScrollableHeight:0.#}px, por encima del limite del permiso ({limite}px) - ver known-diff de Apariencia en el requirement");
+                }
+                if (w == 1080)
+                {
+                    string shot = Path.Combine(outDir, $"personaje-{etiqueta}-apariencia-{w:0}x{h:0}-{idioma}.png");
+                    File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+                }
             }
 
             foreach (var (w, h) in new[] { (1080.0, 700.0), (1366.0, 768.0), (1520.0, 860.0), (1920.0, 1080.0), (2560.0, 1440.0) })
             {
                 FijarTamaño(window, w, h); DoEvents(); DoEvents();
+                MedirApariencia(w, h, "es");
+                MedirPaginaSimple(TabSpawnPoints, "SpawnPoints", w, h, "es");
+                MedirPaginaSimple(TabDesbloqueos, "Desbloqueos", w, h, "es");
+                MedirPaginaSimple(TabVersion, "Version", w, h, "es");
+                MedirComparar(w, h, "es");
+            }
 
-                // Apariencia: DOS ScrollViewer hermanos reales (preview fijo + editable) - se
-                // informan los dos por separado, nunca se cuentan como "anidados" (no hay relacion
-                // ancestro/descendiente entre ellos).
-                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabApariencia; DoEvents(); DoEvents(); WaitForDispatcher(80);
-                var svsApariencia = Descendientes<ScrollViewer>(window).Where(s => s.IsVisible && s.TemplatedParent is not TextBoxBase).ToList();
-                foreach (var s in svsApariencia)
-                    Console.WriteLine($"PERSONAJE INFO Apariencia {w:0}x{h:0}: {Nombre(s)} vp={s.ViewportHeight:0.#} ext={s.ExtentHeight:0.#} scr={s.ScrollableHeight:0.#} (scr>0 = necesita el 'ScrollViewer de seguridad' a este tamaño)");
+            // --- EN (s25) en el minimo, con resize en caliente grande->minimo->grande (s24) ---
+            vm.Settings.Language = "en"; DoEvents(); DoEvents();
+            FijarTamaño(window, 1080, 700); DoEvents(); DoEvents();
+            MedirApariencia(1080, 700, "en");
+            MedirPaginaSimple(TabSpawnPoints, "SpawnPoints", 1080, 700, "en");
+            MedirPaginaSimple(TabDesbloqueos, "Desbloqueos", 1080, 700, "en");
+            MedirPaginaSimple(TabVersion, "Version", 1080, 700, "en");
+            MedirComparar(1080, 700, "en");
+            vm.Settings.Language = "es"; DoEvents(); DoEvents();
 
-                InformarPaginaSimple(TabSpawnPoints, "SpawnPoints", "");
-                InformarPaginaSimple(TabDesbloqueos, "Desbloqueos", "");
-                InformarPaginaSimple(TabVersion, "Version", "");
-                var compareView = window.FindName("CompareView") as FrameworkElement;
-                var svCompare = compareView?.FindName("CompareResultsScrollViewer") as ScrollViewer;
-                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabComparar; DoEvents(); DoEvents(); WaitForDispatcher(80);
-                Console.WriteLine($"PERSONAJE INFO Comparar {w:0}x{h:0}: CompareResultsScrollViewer encontrado={svCompare != null} vp={svCompare?.ViewportHeight:0.#} ext={svCompare?.ExtentHeight:0.#} scr={svCompare?.ScrollableHeight:0.#} (sin los dos personajes elegidos no hay resultados que medir)");
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = TabComparar; DoEvents(); DoEvents();
+                var selAAntes = vm.Compare.SelectedA; var selBAntes = vm.Compare.SelectedB;
+                foreach (var (paso, w, h) in new[] { ("grande", 1920.0, 1080.0), ("minimo", 1080.0, 700.0), ("grande-vuelta", 1920.0, 1080.0) })
+                {
+                    FijarTamaño(window, w, h); DoEvents(); DoEvents();
+                    bool ok = vm.PersonajeInnerTabIndex == TabComparar && ReferenceEquals(vm.Compare.SelectedA, selAAntes) && ReferenceEquals(vm.Compare.SelectedB, selBAntes);
+                    Console.WriteLine($"PERSONAJE RESIZE-COMPARAR {paso} {w:0}x{h:0}: pestaña={vm.PersonajeInnerTabIndex} personajesIguales={ok}");
+                    if (!ok) Fallo("RESIZE", $"Comparar en el paso '{paso}' ({w:0}x{h:0}) perdio la seleccion de personajes");
+                }
             }
 
             vm.Settings.Language = idiomaOriginal;
