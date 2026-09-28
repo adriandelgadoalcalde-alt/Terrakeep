@@ -31713,3 +31713,63 @@ SHA256 publicado = instalado = `9646e5bd0640a0baf959252aba4efc1291a68c3cd85338ea
 exe instalado contiene `EquipamientoSubvistasLadoALado`/`EditarSubtituloSlot`/`IsEquipmentSideBySide`.
 El binario Debug de `herramientas.json` NO se recompiló: en este momento compilaría el trabajo a medias
 del otro agente.
+
+## 28-sep-2026 - Arrastre: mano que agarra, sin el recuadro OLE, sprite centrado en la palma
+
+Pedido del usuario con foto real: "cuando coges algo, que cambie de ratón a una mano, hacer que esa
+mano haga que lo agarra por el centro el objeto... Y hay que ocultar ese pequeño cuadrado que hay al
+lado del ratón". Ampliado por el coordinador a TODOS los arrastres de la página.
+
+**Orígenes y destinos** (grep de `DoDragDrop`/`DragDrop.`/`MouseMove`/`AllowDrop` en `Terrakeep.App`):
+los 4 únicos orígenes ya pasaban por `DragDropSupport.StartCardDrag`: tarjeta de la Librería de
+objetos (`ObjetosView.xaml.cs:181`), slots de objeto (`ObjetosView.xaml.cs:253`, una sola plantilla
+`SlotCompactTemplate` para Equipamiento armadura/vanidad/tintes, Monturas/Mascotas, Monedas,
+Munición, Inventario y Almacenes), slots de buff (`MainWindow.xaml.cs:951`) y Librería de buffs
+(`MainWindow.xaml.cs:973`). `ChestInspectorView` no arrastra (`AllowDrop=False`). Destinos:
+`OnItemSlotDragOver`/`OnBuffSlotDragOver` (Move/None) y la ventana (`AllowDrop=True` solo para
+`.plr`/`.wld`, sin DragOver: devolvía el efecto permitido y el cursor anunciaba "se puede soltar" en
+el fondo). Todo se resolvió en el mecanismo central, sin tocar vistas.
+
+**Arreglo** (`Terrakeep.App/Controls/DragDropSupport.cs`):
+- `StartCardDrag`: `GiveFeedback` -> `DragCursors.AplicarFeedback` (`UseDefaultCursors=false`,
+  `Mouse.SetCursor` mano / mano "no se puede" si el efecto es None, `Handled`); DragOver temporal en la
+  ventana que pone None donde ningún slot lo marcó `Handled` (nunca toca FileDrop); `finally` ->
+  `DragCursors.Restaurar()` (flecha + `Mouse.UpdateCursor`) al soltar, con Esc o fuera de la ventana.
+  El camino sin AdornerLayer también lleva el cursor propio.
+- `DragCursors`: `Assets/cursors/mano-agarrar(.cur|-no.cur)` como EmbeddedResource
+  (`Terrakeep.Cursores.*`), 32/40/48/64/96 px, 32bpp con alfa, hotspot en el centro de la palma
+  (16,18 en 32 px), elegidos por `GetSystemMetricsForDpi(SM_CXCURSOR)` y cargados con
+  `CreateIconFromResourceEx` (conserva el HCURSOR para el arnés). Generador reproducible:
+  `scripts/generar-cursor-mano/` (geometría vectorial WPF, contorno negro y relleno blanco).
+- `DragGhost.CalcularRectGhost`: el CENTRO del sprite en el hotspot + `OffsetSobreHotspot` (0,0).
+  Se mantienen x1,5, mínimo 48 px, vecino más cercano y opacidad 0,85.
+
+**Verificación**: `DRAG_GHOST_LIBRERIA_SOLO=1` -> `DRAG_GHOST_ASPECTO` OK en Librería (48x48) y slot
+de inventario (45,2x48), centro desviado (0,0) px. Nuevo `CanarioDragCursorMano.cs`: 5 arrastres
+reales (Librería->Inventario+Esc, Inventario->Inventario soltando, Inventario->fondo, Equipamiento->
+slot->fuera de la ventana, Almacén->Almacén+Esc): `UseDefaultCursors=True` en 0 de ~1.000
+`GiveFeedback`, `GetCursor()` distinto del esperado en 0, centro sprite-hotspot máx. 0 px, cursor
+global (`GetCursorInfo`) = mano sobre slots que aceptan, = "no se puede" sobre fondo, slot que
+rechaza y fuera de la ventana, y `0x10003` (flecha del sistema) al terminar -> OK.
+`DRAG_GHOST_ZORDER_LIBRERIA_SOLO` sigue OK. `dotnet build Terrakeep.slnx -c Release` 0/0;
+ViewModels.Tests 775/775; Core.Tests 782/782. PNG en `docs/evidencia/drag-ghost/` (`cursor-mano-*`,
+`drag-ghost-*-mano*`).
+
+**Seguridad (tras el incidente del .plr de hoy)**: el canario carga una COPIA del personaje en
+`bin\...\copia-personaje-drag\<PID>\`, solo inyecta si la ventana de prueba está en primer plano y
+habilitada (sin diálogo modal) y si `WindowFromPoint` en origen/destino es la propia ventana; fuera de
+la ventana nunca suelta sobre otro programa (cancela con Esc y suelta de vuelta dentro). SHA256 de los
+13 `.plr`/`.wld` reales idénticos antes y después.
+
+**Obstáculos**: (1) el mouse-down real sobre un slot desplaza el ScrollViewer ~37 px ANTES de que
+arranque el arrastre (el foco acaba en el ScrollViewer) - ajeno a este cambio, el canario hace un
+clic previo; queda como hallazgo aparte. (2) La captura de pantalla en vivo salió dos veces tapada
+por una capa siempre visible transparente a la entrada (fondo blanco con el cursor); se paró ahí y
+se retiraron esas PNG (`a72c0f7d`). La que sí salió limpia (13:14) mostraba mano y sprite centrado.
+
+**Despliegue**: worktree limpio `Keep\Terrasavr-Win\TKcur` en `a72c0f7d`, `dotnet publish -c Release
+-p:PublishProfile=win-x64`, `robocopy /MIR` (sin `unins000.*`) a `%LocalAppData%\Programs\Terrakeep\`
+con Terrakeep cerrado; SHA256 publicado = instalado =
+`6af239950723966d8fd81c3d25088118c5ef90dbbe9b3dace263f94541cbbd7b`. Worktree retirado. Debug de
+`herramientas.json` compilado a las 13:17 con el arreglo (contiene `Terrakeep.Cursores.mano-agarrar`).
+Commits: `020fde86`, `a72c0f7d`.
