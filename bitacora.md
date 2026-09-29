@@ -33603,3 +33603,67 @@ responsive-global/final/` del propio verificador). Sin `git push`.
    explicitas por tamaño, no un array compartido) - anotado para el coordinador.
 4. `revisor-visual`/`verificador-qa` independientes + `requirement precheck` - lo lanza el coordinador
    antes de marcar DONE el requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`.
+
+## 29-sep-2026 - Cierre del Hallazgo 1 (Medium) de la auditoria s3: x:Name en los 9 ScrollViewer sin registrar
+
+Aplicador de fix del hallazgo ya investigado en `docs/evidencia/responsive-global/
+clasificacion-regiones-s3.md` (Hallazgo 1): 6 contextos/9 `ScrollViewer` (Personaje>Apariencia
+x2 columnas, Puntos de aparicion, Desbloqueos, Version, Builds x2 subtabs, Novedades x2 subtabs)
+ya se comportaban como scroll owner unico en produccion (0 FALLO en los canarios reales), pero
+sin `x:Name` ni registro en `scrollOwnership` de KeepQA - `check14` no podia detectar una
+regresion futura de scroll anidado en esas zonas.
+
+### 1. Arreglo aplicado (cambio minimo, sin tocar layout/estilos/bindings)
+9 `x:Name` anadidos, uno por `ScrollViewer`:
+- `MainWindow.xaml:1630` -> `AppearancePreviewScroll` (columna 0, Personaje>Apariencia)
+- `MainWindow.xaml:1674` -> `AppearanceEditableScroll` (columna 1, Personaje>Apariencia)
+- `Views/SpawnpointsView.xaml:67` -> `SpawnPointsContentScroll`
+- `Views/UnlocksView.xaml:45` -> `UnlocksContentScroll`
+- `Views/VersionView.xaml:42` -> `VersionContentScroll`
+- `Views/BuildsView.xaml:51`/`:56` -> `BuildsVanillaScroll` / `BuildsCalamityScroll`
+- `Views/WhatsNewView.xaml:34`/`:45` -> `WhatsNewTerrariaScroll` / `WhatsNewCalamityScroll`
+
+Sin colision de nombres verificada con grep antes de escribir (ninguno de los 9 existia ya en
+el repo). El registro correspondiente de `scrollOwnership` (9 entradas nuevas, 15 -> 24
+contextos) vive en KeepQA - ver su propia bitacora para el detalle, incluido un ajuste real de
+`contratoScrollOwnership.js` (celda de Grid distinta = no competidor, mismo criterio que
+`reglasScroll.js` Regla B ya aplicaba al caso real de Apariencia) necesario para que declarar
+los 2 owners de Apariencia no diera un falso positivo.
+
+### 2. Verificacion
+- `dotnet build Terrakeep.slnx -c Debug` -> **0 Advertencias, 0 Errores**.
+- `Terrakeep.App.ViewModels.Tests` -> **825/825** (base intacta, sin regresion). No se ejecuto
+  `Terrakeep.App.Tests` (restriccion explicita del encargo: agente en paralelo probando
+  tModLoader en el escritorio real).
+- `handoffGate.check12('Terrakeep')` -> PASS ("sin hallazgos de scroll activos").
+- `handoffGate.check14('Terrakeep')` -> PASS ("los 24 contexto(s) declarados de Scroll
+  Ownership Contract de Terrakeep respetan su propietario unico").
+- Prueba negativa real (fuera del repo, en el scratchpad de la sesion, nunca aplicada a
+  produccion): copia mutada de `SpawnpointsView.xaml` con un `ScrollViewer` anidado dentro de
+  `SpawnPointsContentScroll` -> `contratoScrollOwnership.analizarArchivos` pasa de no evaluar
+  el contexto a **FAIL** real (competidor detectado en la linea del `ScrollViewer` anidado).
+  Confirma que la red de seguridad automatizada ahora detecta de verdad el patron que el
+  hallazgo denunciaba como hueco de cobertura.
+
+### 3. Commit y Task Context
+Commit `f21e1c7a` (6 archivos, 9 insertions/9 deletions, exactamente los 9 `x:Name` - sin
+`git add -A`, los cambios ajenos de `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`,
+`Terrakeep.Core.Tests/*`, 2 scripts, `Terrasavr-Native.zip` y `docs/evidencia/responsive-global/
+final/` de otro agente en paralelo quedaron intactos sin comitear). Task Context: evidencia
+fresca anadida al criterio `d24b1ac9fd` del requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`
+(`--fuente aplicador-fix --agente aplicador-fix-perfil-s3-29sep2026`); la evidencia vieja del
+mismo criterio (auditoria original, commit `8f09e68e` ya ANCESTRO del HEAD real) se marco
+HISTORICAL con `scopePaths` sobre el propio documento de la auditoria (nunca tocado por estos
+commits, confirmado con `git diff --stat 8f09e68e f21e1c7a`). `task.js validate` -> `ok:true`.
+
+### 4. Requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`: sigue en VERIFYING, NO se paso a DONE
+`requirement precheck 6b59710e-e57b-4677-89a1-2c4c58c29b5a DONE` -> **`ok:false`**: 17 de los 19
+criterios de aceptacion (todos los que NO son `d24b1ac9fd`/`845e8dce1a`, el par que tocaba esta
+ronda) siguen en `EVIDENCE_ONLY` en vez de `PROVEN` porque nunca se les vinculo un test con
+`--criterio` (oracle `USER_SPEC`, exige `PROVEN` o `EVIDENCE_ONLY`... la lista de `razones` del
+precheck lista los 17 codigos igualmente - motivo real: falta de test-linkage historico, no un
+defecto de esta ronda). Confirmado ademas que no queda ningun hallazgo Medium+ ABIERTO en el
+requirement (los 4 `knownDifferences` Medium estan `RESOLVED`, solo quedan 3 `Low` `OPEN` sin
+relacion con Hallazgo 1/2 de la clasificacion s3). El cierre completo del requirement (vincular
+test-por-criterio a los 17 restantes) queda **fuera del alcance de este encargo** - anotado para
+el coordinador, igual que el punto 4 de "Pendiente real" de la entrada anterior.
