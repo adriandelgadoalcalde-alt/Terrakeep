@@ -25,6 +25,17 @@
 // el hilo de UI en ContextLayoutManager.fireAutomationEvents): cada pasada de layout recorre ademas
 // todo el arbol de peers, lo que convierte cualquier bucle en un consumo de CPU mucho mayor.
 //
+// ENTRADA REAL DEL RATON (29-sep-2026, 5 FALLO de 0529c3e2 sin cambios de codigo desde el verde): un
+// movimiento del raton FISICO sobre el mapa de Exploracion es una pasada de layout legitima (tooltip +
+// barra de estado, WorldMapView.OnWorldMapMouseMove) - 126/s con un raton de 125 Hz, ScrollChanged=0.
+// Cada medida cuenta los movimientos reales sobre la ventana (MouseMove con posicion distinta; los
+// sinteticos de WPF tras una pasada repiten posicion y no cuentan) y, si los hubo, repite la medida:
+// solo una ventana SIN movimiento decide el veredicto. Si el raton no para -> INCONCLUSIVE (no verde).
+// Al superar el umbral se vuelca la FIRMA: elementos que cambian de tamaño (y entre que valores),
+// operaciones del Dispatcher, posicion del raton real y los 4 segundos siguientes (bucle vs transitorio).
+// LAYOUT_REPOSO_INYECTAR_RATON=1: demuestra el filtro moviendo el cursor sobre el mapa en la primera
+// medida de Cofres-CofreACofre (solo con el PC >= 120 s sin uso; sin clics ni teclas; se restaura).
+//
 // LAYOUT_REPOSO_RAPIDO=1: solo el estado del volcado + su matriz de offsets, para iterar.
 // LAYOUT_REPOSO_SIN_UIA=1: sin el cliente UIA externo.
 using System;
@@ -46,6 +57,78 @@ internal static partial class Program
     private static long _latidoReposoMs;
     private static volatile string _pasoReposo = "";
     private static readonly ConcurrentQueue<string> _registroScrollReposo = new();
+
+    // --- Diagnostico de la FIRMA de un exceso de pasadas (solo se imprime tras superar el umbral) ---
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct PuntoReposo { public int X, Y; }
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetCursorPos")]
+    private static extern bool GetCursorPosReposo(out PuntoReposo p);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "WindowFromPoint")]
+    private static extern IntPtr WindowFromPointReposo(PuntoReposo p);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetAncestor")]
+    private static extern IntPtr GetAncestorReposo(IntPtr hwnd, uint flags);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetCursorPos")]
+    private static extern bool SetCursorPosReposo(int x, int y);
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct UltimaEntradaReposo { public uint cbSize; public uint dwTime; }
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetLastInputInfo")]
+    private static extern bool GetLastInputInfoReposo(ref UltimaEntradaReposo p);
+
+    private static bool _diagReposoActivo;
+    private static readonly Dictionary<FrameworkElement, (int n, Size primero, Size ultimo, double minH, double maxH, double minW, double maxW)> _tamañosReposo = new();
+    private static readonly Dictionary<string, int> _operacionesReposo = new();
+
+    private static string DescribirElementoReposo(DependencyObject? d)
+    {
+        var partes = new List<string>();
+        for (int i = 0; d != null && i < 6; i++, d = System.Windows.Media.VisualTreeHelper.GetParent(d) as DependencyObject ?? LogicalTreeHelper.GetParent(d))
+        {
+            string nombre = d is FrameworkElement fe && !string.IsNullOrEmpty(fe.Name) ? "#" + fe.Name : "";
+            partes.Add(d.GetType().Name + nombre);
+        }
+        return string.Join(" < ", partes);
+    }
+
+    private static void RegistrarDiagnosticoReposo()
+    {
+        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.SizeChangedEvent, new SizeChangedEventHandler((s, e) =>
+        {
+            if (!_diagReposoActivo || s is not FrameworkElement fe || !ReferenceEquals(e.OriginalSource, fe)) return;
+            if (_tamañosReposo.TryGetValue(fe, out var t))
+                _tamañosReposo[fe] = (t.n + 1, t.primero, e.NewSize, Math.Min(t.minH, e.NewSize.Height), Math.Max(t.maxH, e.NewSize.Height), Math.Min(t.minW, e.NewSize.Width), Math.Max(t.maxW, e.NewSize.Width));
+            else
+                _tamañosReposo[fe] = (1, e.PreviousSize, e.NewSize, Math.Min(e.PreviousSize.Height, e.NewSize.Height), Math.Max(e.PreviousSize.Height, e.NewSize.Height), Math.Min(e.PreviousSize.Width, e.NewSize.Width), Math.Max(e.PreviousSize.Width, e.NewSize.Width));
+        }), true);
+        var d = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        var campoMetodo = typeof(System.Windows.Threading.DispatcherOperation).GetField("_method", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        d.Hooks.OperationCompleted += (_, e) =>
+        {
+            if (!_diagReposoActivo) return;
+            string metodo = campoMetodo?.GetValue(e.Operation) is Delegate del ? $"{del.Method.DeclaringType?.Name}.{del.Method.Name}" : "?";
+            string clave = $"{e.Operation.Priority}:{metodo}";
+            _operacionesReposo[clave] = _operacionesReposo.GetValueOrDefault(clave) + 1;
+        };
+    }
+
+    private static void IniciarDiagnosticoReposo() { _tamañosReposo.Clear(); _operacionesReposo.Clear(); _diagReposoActivo = true; }
+
+    private static void VolcarDiagnosticoReposo(Window window)
+    {
+        _diagReposoActivo = false;
+        var top = _tamañosReposo.OrderByDescending(kv => kv.Value.n).Take(6).ToList();
+        foreach (var (fe, t) in top)
+            Console.WriteLine($"LAYOUT-REPOSO   SizeChanged x{t.n}: {DescribirElementoReposo(fe)} alto {t.minH:0.##}<->{t.maxH:0.##} ancho {t.minW:0.##}<->{t.maxW:0.##} (de {t.primero.Width:0.##}x{t.primero.Height:0.##} a {t.ultimo.Width:0.##}x{t.ultimo.Height:0.##})");
+        if (top.Count == 0) Console.WriteLine("LAYOUT-REPOSO   SizeChanged: ninguno (las pasadas no cambian el tamaño de ningun elemento)");
+        Console.WriteLine("LAYOUT-REPOSO   operaciones del Dispatcher: " + string.Join(" | ", _operacionesReposo.OrderByDescending(kv => kv.Value).Take(8).Select(kv => $"{kv.Key} x{kv.Value}")));
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (GetCursorPosReposo(out var p))
+        {
+            var bajo = WindowFromPointReposo(p);
+            bool encima = bajo != IntPtr.Zero && GetAncestorReposo(bajo, 2 /*GA_ROOT*/) == hwnd;
+            Console.WriteLine($"LAYOUT-REPOSO   raton real: pantalla=({p.X},{p.Y}) encimaDeLaVentanaDelArnes={encima} ventana=({window.Left:0},{window.Top:0} {window.ActualWidth:0}x{window.ActualHeight:0}) " +
+                              $"IsMouseOver={window.IsMouseOver} DirectlyOver={DescribirElementoReposo(System.Windows.Input.Mouse.DirectlyOver as DependencyObject)}");
+        }
+    }
 
     // Cliente UIA EXTERNO (proceso hijo = este mismo exe con LAYOUT_REPOSO_CLIENTE_UIA_HWND). WPF solo
     // recorre el arbol de peers tras CADA pasada de layout (GetNameCore/IsOffscreenCore/GetChildrenCore
@@ -166,6 +249,7 @@ internal static partial class Program
         void Fallo(string codigo, string msg) { fallos++; Console.WriteLine($"FALLO: LAYOUT_REPOSO_SOLO-{codigo} - {msg}"); }
 
         IniciarVigilanteBloqueo();
+        RegistrarDiagnosticoReposo();
 
         int pasadas = 0;
         EventHandler contador = (_, _) => pasadas++;
@@ -186,6 +270,59 @@ internal static partial class Program
 
         void Paso(string paso) { _pasoReposo = paso; }
 
+        // Movimientos REALES del raton sobre la ventana del arnes (posicion distinta a la anterior). Los
+        // MouseMove sinteticos que WPF lanza tras una pasada de layout con el cursor quieto repiten la
+        // misma posicion y NO cuentan: un bucle de layout sin entrada nunca suma aqui.
+        int movimientosRaton = 0, inconclusas = 0;
+        Point? ultimaPosRaton = null;
+        System.Windows.Input.MouseEventHandler contadorRaton = (_, e) =>
+        {
+            var p = e.GetPosition(window);
+            if (ultimaPosRaton is { } u && (Math.Abs(u.X - p.X) > 0.01 || Math.Abs(u.Y - p.Y) > 0.01)) movimientosRaton++;
+            ultimaPosRaton = p;
+        };
+        window.PreviewMouseMove += contadorRaton;
+
+        // LAYOUT_REPOSO_INYECTAR_RATON=1 (demostracion del filtro de arriba): mueve el cursor sobre el
+        // mapa durante la primera ventana de medida de Exploracion/Cofres-CofreACofre, como hizo el
+        // usuario. Solo con el PC SIN USO (>= 120 s sin entrada) y restaurando la posicion del cursor;
+        // nunca clics ni teclas.
+        bool inyectarRaton = false;
+        if (Environment.GetEnvironmentVariable("LAYOUT_REPOSO_INYECTAR_RATON") == "1")
+        {
+            var lii = new UltimaEntradaReposo { cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<UltimaEntradaReposo>() };
+            long inactivoMs = GetLastInputInfoReposo(ref lii) ? Environment.TickCount - (int)lii.dwTime : 0;
+            inyectarRaton = inactivoMs >= 120_000;
+            Console.WriteLine($"LAYOUT-REPOSO: inyeccion de movimiento de raton {(inyectarRaton ? "ACTIVA" : "DESCARTADA")} (PC sin entrada desde hace {inactivoMs / 1000} s, minimo 120)");
+        }
+
+        (int pasadas, int movimientos, double cpuMs) VentanaDeMedida(bool moverCursor)
+        {
+            PuntoReposo original = default;
+            Point centroMapa = default;
+            if (moverCursor)
+            {
+                GetCursorPosReposo(out original);
+                var mapa = window.FindName("WorldMapScroll") as FrameworkElement ?? Descendientes<ScrollViewer>(window).First(s => s.Name == "WorldMapScroll");
+                centroMapa = mapa.PointToScreen(new Point(mapa.ActualWidth * 0.4, mapa.ActualHeight * 0.5));
+            }
+            pasadas = 0; scrollChanged = 0; movimientosRaton = 0; ultimaPosRaton = null;
+            IniciarDiagnosticoReposo();
+            var cpu0 = System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime;
+            if (!moverCursor) EsperarConLatido(1000);
+            else
+            {
+                try
+                {
+                    long fin = Environment.TickCount64 + 1000;
+                    for (int k = 0; Environment.TickCount64 < fin; k++) { SetCursorPosReposo((int)centroMapa.X + k % 200, (int)centroMapa.Y + k % 50); EsperarConLatido(8); }
+                }
+                finally { SetCursorPosReposo(original.X, original.Y); }
+            }
+            double cpu = (System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime - cpu0).TotalMilliseconds;
+            return (pasadas, movimientosRaton, cpu);
+        }
+
         void MedirReposo(string cab)
         {
             Paso(cab);
@@ -195,16 +332,57 @@ internal static partial class Program
             // legitimas mientras dura el hover, no un bucle. Se apaga aqui para medir reposo de verdad.
             foreach (var c in vm.Home.Characters) c.SetHovering(false);
             EsperarConLatido(450); // asentar la maquetacion tras el cambio de estado
-            pasadas = 0; scrollChanged = 0;
-            var cpu0 = System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime;
-            EsperarConLatido(1000);
-            double cpuMs = (System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime - cpu0).TotalMilliseconds;
+            bool inyectar = inyectarRaton && cab.StartsWith("Exploracion/Cofres-CofreACofre", StringComparison.Ordinal);
+            var (p0, mov0, cpuMs) = VentanaDeMedida(inyectar);
             medidas++;
             string extra = sidebarScroll != null && sidebarScroll.IsVisible
                 ? $" barraLateral: ScrollChanged={scrollChanged} vp={sidebarScroll.ViewportHeight:0.##} ext={sidebarScroll.ExtentHeight:0.##} off={sidebarScroll.VerticalOffset:0.##}"
                 : "";
-            Console.WriteLine($"LAYOUT-REPOSO {cab}: pasadas/s={pasadas} cpu={cpuMs:0}ms/s{extra}");
-            if (pasadas <= UMBRAL_PASADAS_REPOSO) return;
+            Console.WriteLine($"LAYOUT-REPOSO {cab}: pasadas/s={p0} cpu={cpuMs:0}ms/s{extra}{(mov0 > 0 ? $" MOVIMIENTOS-RATON-REAL={mov0}{(inyectar ? " (inyectados a proposito)" : "")}" : "")}");
+            if (p0 <= UMBRAL_PASADAS_REPOSO) { _diagReposoActivo = false; return; }
+            // ENTRADA REAL, NO REPOSO (29-sep-2026, 5 FALLO de 0529c3e2): el raton FISICO se movio por
+            // encima de la ventana del arnes durante la medida. Cada movimiento sobre el mapa de
+            // Exploracion actualiza el tooltip y la barra de estado (WorldMapView.OnWorldMapMouseMove) =
+            // una pasada de layout legitima por evento (126/s con un raton de 125 Hz). Medido con el
+            // cursor QUIETO encima del mapa y de la lista: 0-1 pasadas/s; MOVIENDOSE: una por paso,
+            // ScrollChanged=0. Se vuelca la firma y se REPITE la medida; solo una ventana SIN
+            // movimiento real decide el veredicto (el bucle original no necesita raton: sigue en FALLO
+            // o BLOQUEO). Si el raton no para en 3 reintentos -> INCONCLUSIVE, nunca un verde.
+            if (mov0 > 0)
+            {
+                VolcarDiagnosticoReposo(window);
+                for (int intento = 1; ; intento++)
+                {
+                    foreach (var c in vm.Home.Characters) c.SetHovering(false);
+                    EsperarConLatido(300);
+                    var (p1, mov1, cpu1) = VentanaDeMedida(false);
+                    Console.WriteLine($"LAYOUT-REPOSO {cab} (reintento {intento} por movimiento real del raton): pasadas/s={p1} cpu={cpu1:0}ms/s movimientos={mov1}");
+                    if (p1 <= UMBRAL_PASADAS_REPOSO) { _diagReposoActivo = false; return; }
+                    if (mov1 == 0) { pasadas = p1; break; } // exceso SIN raton: veredicto normal con la firma de ESTA ventana
+                    if (intento == 3)
+                    {
+                        _diagReposoActivo = false;
+                        inconclusas++;
+                        Console.WriteLine($"LAYOUT-REPOSO {cab}: INCONCLUSIVE - el raton real se sigue moviendo sobre la ventana del arnes en cada reintento; no es reposo");
+                        return;
+                    }
+                }
+            }
+            VolcarDiagnosticoReposo(window);
+            // Diagnostico (no cambia el veredicto): ¿el exceso sigue en los segundos siguientes o decae?
+            {
+                int pasadasMedidas = pasadas;
+                var serie = new List<string>();
+                for (int s = 0; s < 4; s++)
+                {
+                    pasadas = 0; scrollChanged = 0;
+                    var c0 = System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime;
+                    EsperarConLatido(1000);
+                    serie.Add($"{pasadas}({(System.Diagnostics.Process.GetCurrentProcess().TotalProcessorTime - c0).TotalMilliseconds:0}ms,sc={scrollChanged})");
+                }
+                Console.WriteLine($"LAYOUT-REPOSO   segundos siguientes (pasadas(cpu,ScrollChanged)): {string.Join(" ", serie)}");
+                pasadas = pasadasMedidas;
+            }
             string temporizadores = DescribirTemporizadoresActivos();
             Console.WriteLine($"LAYOUT-REPOSO   temporizadores activos: {temporizadores}");
             // Unica fuente periodica = animacion de hover de una tarjeta de personaje (70 ms): el raton
@@ -447,9 +625,12 @@ internal static partial class Program
         {
             try { if (clienteUia != null && !clienteUia.HasExited) clienteUia.Kill(); } catch (Exception) { }
             window.LayoutUpdated -= contador;
+            window.PreviewMouseMove -= contadorRaton;
             if (sidebarScroll != null) sidebarScroll.ScrollChanged -= contadorScroll;
         }
-        Console.WriteLine($"LAYOUT_REPOSO_SOLO: {medidas} medida(s), {fallos} fallo(s)");
+        Console.WriteLine($"LAYOUT_REPOSO_SOLO: {medidas} medida(s), {fallos} fallo(s), {inconclusas} inconclusa(s) por movimiento real del raton");
+        if (inconclusas > 0 && fallos == 0)
+            Console.WriteLine($"LAYOUT_REPOSO_SOLO: INCONCLUSIVE - {inconclusas} medida(s) sin ninguna ventana de reposo real (raton moviendose); NO cuenta como verde, repetir con el raton quieto");
         return fallos;
     }
 }
