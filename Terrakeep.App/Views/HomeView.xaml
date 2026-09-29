@@ -290,7 +290,12 @@
             </Border>
         </DataTemplate>
     </UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
+    <!-- Responsive global s33 condicion 15 (29-sep-2026): x:Name real anadido para que
+         __perfiles-responsive__/Terrakeep.json (KeepQA) pueda declarar scrollOwnership sin
+         inventar nombres - unico ScrollViewer de la vista, contenido UNBOUNDED_COLLECTION real
+         (tarjetas de personaje, potencialmente muchas), scroll legitimo (s23). Cambio de solo
+         nombre, sin tocar layout. -->
+    <ScrollViewer x:Name="HomeContentScroll" VerticalScrollBarVisibility="Auto" Margin="14">
         <!-- I-c (segunda auditoria de Opus, Fable): MaxWidth dependiente de SizeClass -
              en una ventana Amplia el WrapPanel de tarjetas de abajo tiene sitio real
              para repartirse en una fila mas ancha en vez de dejar ~1000px negros. -->

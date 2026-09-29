@@ -56,7 +56,11 @@
          el comentario real de GuideView.xaml (mismo Grid de 2 columnas, mismo bug real: un Grid
          alineado a la izquierda nunca estira su columna "*", MaxWidth se queda como un tope que
          nunca se alcanza de verdad). -->
-    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+    <!-- Responsive global s33 condicion 15 (29-sep-2026): x:Name real anadido para que
+         __perfiles-responsive__/Terrakeep.json (KeepQA) pueda declarar scrollOwnership sin
+         inventar nombres - unico ScrollViewer de la vista, lista de instancias/servidores real,
+         scroll legitimo (s23). Cambio de solo nombre, sin tocar layout. -->
+    <ScrollViewer x:Name="HostingContentScroll" Margin="14" VerticalScrollBarVisibility="Auto">
         <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />

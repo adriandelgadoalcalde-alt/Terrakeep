@@ -56,7 +56,11 @@
          Style/DataTrigger sobre Grid.Row/Grid.Column (sin duplicar el ItemsControl). En
          Compacto/Normal sigue apilado debajo, igual que siempre (columna derecha colapsa a Auto/0
          via BoolToGridLength, ya usado en el resto del repo). -->
-    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+    <!-- Responsive global s33 condicion 15 (29-sep-2026): x:Name real anadido para que
+         __perfiles-responsive__/Terrakeep.json (KeepQA) pueda declarar scrollOwnership sin
+         inventar nombres - unico ScrollViewer de la vista, arbol de Guia real, potencialmente
+         largo, scroll legitimo (s23). Cambio de solo nombre, sin tocar layout. -->
+    <ScrollViewer x:Name="GuideContentScroll" Margin="14" VerticalScrollBarVisibility="Auto">
         <!-- FASE G (hallazgo propio, segunda vuelta): HorizontalAlignment="Left" en este Grid
              (copiado del StackPanel original que sustituye) es INCOMPATIBLE con una columna "*" -
              un Grid alineado a la izquierda se auto-dimensiona a su contenido NATURAL (measure con

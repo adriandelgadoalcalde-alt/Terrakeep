@@ -43,7 +43,11 @@
          siempre. -->
     <!-- FASE G (hallazgo propio, segunda vuelta): SIN HorizontalAlignment="Left" en este Grid - ver
          el comentario real de GuideView.xaml (mismo Grid de 2 columnas, mismo bug real). -->
-    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+    <!-- Responsive global s33 condicion 15 (29-sep-2026): x:Name real anadido para que
+         __perfiles-responsive__/Terrakeep.json (KeepQA) pueda declarar scrollOwnership sin
+         inventar nombres - unico ScrollViewer de la vista, incluye el Changelog (s34, contenido
+         documental real), scroll legitimo. Cambio de solo nombre, sin tocar layout. -->
+    <ScrollViewer x:Name="AboutContentScroll" Margin="14" VerticalScrollBarVisibility="Auto">
         <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
