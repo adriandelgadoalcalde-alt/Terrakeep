@@ -2665,6 +2665,15 @@ internal static partial class Program
             Console.WriteLine("DONE (PERSONAJE_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // RESTO_RESPONSIVE_SOLO=1 (29-sep-2026, FASE F del responsive global): las 6 pestañas de
+        // primer nivel que no son Personaje ni Exploracion (Inicio/Builds/Guia/Hosting/Novedades/
+        // AcercaDe) - ver CanarioResponsiveRestoTabs.cs.
+        if (Environment.GetEnvironmentVariable("RESTO_RESPONSIVE_SOLO") == "1")
+        {
+            EjecutarRestoResponsiveSolo(window, vm);
+            Console.WriteLine("DONE (RESTO_RESPONSIVE_SOLO)");
+            Environment.Exit(0);
+        }
         // INICIO_AJUSTES_SOLO=1 (28-sep-2026): solo el bloque de Inicio/Ajustes/Novedades/Acerca de
         // (INI-*, PruebasInicioAjustes.cs) - sin la pasada completa, que usa entrada real de raton. Sirve
         // para comprobar las carpetas extra de prueba (INI-03/05/07/08/09) con el aislamiento del arnes.

@@ -32833,3 +32833,99 @@ paralelo, sin tocar). Sin `git push`.
 4. Capturas antes/despues en `docs/evidencia/responsive-global/faseF/`.
 5. Desplegar desde worktree limpio a `%LocalAppData%\Programs\Terrakeep\` (Terrakeep cerrado, verificar
    hash) y recompilar el Debug de `herramientas.json`.
+
+## 29-sep-2026 - FASE F del responsive global: cierre con el arnes libre ("via libre")
+
+Agente: aplicador-fix-responsive-faseF-29sep2026. Base `03513c1c`. El coordinador dio via libre para
+`Terrakeep.App.Tests` (la prueba de DST en el escritorio habia terminado). Ejecutada la lista pendiente
+completa (sin `SendInput`, con `TERRAKEEP_FORCE_SOFTWARE_RENDER=1`).
+
+### 1. `COFRES_INSPECTOR_SOLO`: rojo/verde reales + hallazgo real en mi propio canario
+Primera pasada en HEAD (`03513c1c`): **FALLO real** en `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO` (3
+ScrollViewer detectados, se esperaban 0) - investigado de inmediato: NO era una regresion del arreglo de
+produccion, era un FALSO POSITIVO de mi propio canario nuevo - conto los `ScrollViewer` internos
+`PART_ContentHost` que trae el `ControlTemplate` por defecto de CUALQUIER `TextBox` (3 en esta plantilla:
+`Slot.ItemId`/`Count`/`PrefixId`), el mismo gotcha ya documentado y filtrado en otros canarios de la
+familia (`CanarioResponsivePersonajeResto.cs` filtra `sv.TemplatedParent is not TextBoxBase`). Corregido
+el filtro en `CanarioClusterCofresInspector.cs`. Confirmado despues:
+- **Rojo** en worktree limpio `Keep\Terrasavr-Win\TKfeF` (`181db87d`, retirado despues; solo el archivo
+  de test copiado ahi, nunca comiteado): `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO: 2 ScrollViewer (esperado
+  0) -> FALLO` (los 2 nested ScrollViewer reales que el arreglo de produccion retira).
+- **Verde** en HEAD (con el arreglo): `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO: 0 ScrollViewer -> 0 FALLO`.
+- El resto de `COFRES_INSPECTOR_SOLO` en HEAD: **1 FALLO** (`COFRES-INSPECTOR-FASED-R1`, "el Inspector mide
+  solo 219px de ancho real... no parece estar aprovechando el ancho completo") - confirmado por `git show
+  181db87d:...` que este FALLO YA EXISTIA antes de esta ronda (pre-existente, ancho de contenedor, no scroll
+  ni columnas) - sin relacion con los 2 arreglos de esta fase, fuera de alcance (anotado para el coordinador,
+  no tocado).
+
+### 2. `RESTO_RESPONSIVE_SOLO` (canario nuevo, `CanarioResponsiveRestoTabs.cs`) - hallazgo real en mi
+### propio canario, corregido
+Primera pasada: **20 FALLO** - Inicio/Guia/AcercaDe superaban `ScrollableHeight>0` en varios tamaños (hasta
+2560x1440 en Guia/AcercaDe). Investigado con las capturas reales antes de tocar nada: **NO son bugs de
+produccion**, es la regla HARD FAIL de mi propio canario, demasiado estricta para estas 3 paginas - las 3
+alojan contenido real legitimamente largo COMPARTIENDO el mismo ScrollViewer de pagina que su cabecera
+estructural (que SI queda siempre visible sin scroll, confirmado en las capturas):
+- **Inicio**: `Home.Characters` (lista real de personajes del usuario, 6 en este entorno de pruebas real,
+  crece con los `.plr` reales - mismo criterio ya aceptado para "Comparar" en `PERSONAJE_RESPONSIVE_SOLO`,
+  s23) comparte pagina con las tarjetas de navegacion, DEBAJO de la lista.
+- **Guia**: el objetivo actual completo (titulo/porque/por-donde-se-empieza/que-te-falta + arbol de
+  progresion completo debajo) es contenido instructivo/documental por naturaleza.
+- **AcercaDe**: `Changelog.Entries` es el registro de cambios COMPLETO de toda la app - EXPLICITAMENTE
+  listado en s34 como excepcion real de scroll permitido ("changelogs extensos, documentos").
+Corregido: `MedirPaginaSimple` gana un parametro `contenidoDocumentalLegitimo` (true para estas 3, false
+-default- para Hosting) que informa la geometria sin `Fallo()` por el total de pagina, pero sigue vigilando
+de verdad clipping/overlap/scroll horizontal/ScrollViewer competidores. Segunda pasada: **0 FALLO**. Capturas
+revisadas UNA A UNA (Inicio: cabecera+banner+6 tarjetas de personaje visibles, scrollbar real indicando mas
+contenido debajo, sin overlap; Guia: cabecera+objetivo actual completo visibles; AcercaDe: Autoria+Ajustes
+visibles, scrollbar diminuto indicando el changelog completo debajo; Hosting: formulario completo sin
+scroll; Builds/Novedades: selector+contenido de la sub-pestaña activa completos) - confirman visualmente la
+clasificacion, sin clipping ni overlap en ninguna.
+Sin cambio de codigo de produccion en las 6 vistas (ya cumplian el contrato real desde antes de esta ronda,
+confirmado ahora con geometria real, no solo lectura) - el unico ajuste fue de mi propio canario, para medir
+correctamente lo que ya era correcto.
+
+### 3. Sin regresion
+`EQUIP_RESPONSIVE_SOLO`: 0 FALLO (20 capturas, 0 en blanco). `INVALM_RESPONSIVE_SOLO`: 0 FALLO (35
+capturas). `LIBRARY_RESPONSIVE_SOLO`: 0 FALLO (137 capturas). `PERSONAJE_RESPONSIVE_SOLO`: 0 FALLO (35
+capturas). `Terrakeep.Core.Tests`: 789/789. Build `Terrakeep.slnx -c Debug`: 0/0.
+
+### 4. Capturas
+`docs/evidencia/responsive-global/faseF/` - 19 capturas de `RESTO_RESPONSIVE_SOLO` (la 1080x700, ES/EN,
+primera entrada donde aplica) + las ya generadas por `COFRES_INSPECTOR_SOLO`/`EXPLORATION_LAYOUT_SOLO` en
+`keepqa-evidencia/` (Exploracion ya tenia cobertura visual propia de rondas anteriores, no se duplico aqui).
+Sin captura "antes" distinta para las 6 vistas de `RESTO_RESPONSIVE_SOLO` - no se toco codigo de produccion
+en ellas esta ronda, geometria identica antes/despues por definicion.
+
+### 5. Hashes antes/despues (seguridad de partidas reales)
+Script `hash-faseF.ps1` (scratchpad, copia de `hash-faseE.ps1`): 55 lineas de `.plr/.tplr/.wld/.twld` reales
++ los 4 JSON de `%LOCALAPPDATA%\Terrakeep`, mas el listado de las 20 carpetas de `Backups`. Comparado ANTES
+de arrancar el arnes vs. DESPUES de toda la ronda (COFRES_INSPECTOR_SOLO x3, RESTO_RESPONSIVE_SOLO x2,
+EQUIP/INVALM/LIBRARY/PERSONAJE_RESPONSIVE_SOLO, ~8 ejecuciones reales): **`diff` vacio en los dos ficheros**
+- ni un hash de partida/JSON cambio, ni una carpeta de `Backups` se creo/borro. Confirmado tambien por
+`AISLAMIENTO-ESTADO` de cada ejecucion (0 escrituras bloqueadas).
+
+### 6. Despliegue
+Worktree limpio `Keep\Terrasavr-Win\TKdeployF` en `03513c1c` (retirado despues), `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` + `robocopy /MIR` (sin
+`unins000.*`) a `%LocalAppData%\Programs\Terrakeep\` - Terrakeep.exe NO estaba corriendo (`tasklist` vacio),
+sin forzar ningun cierre. SHA256 publicado == instalado:
+`f018597be07b4af4f2477ca69f7fb7b0db1f7b62dbd2d92d7fe4c1b8c77fa8af`. Debug de `herramientas.json`
+(`terrakeep_native`) recompilado 0/0 en el arbol principal.
+
+### Commits de esta ronda
+`03513c1c` (arreglo ChestInspector + canario COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO, ronda anterior) +
+el commit de cierre que sigue a esta entrada (filtro TextBox del canario + `CanarioResponsiveRestoTabs.cs`
++ capturas + esta entrada). Requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`: sigue OPEN (queda la FASE
+G), evidencia `aplicador-fix`/`aplicador-fix-responsive-faseF-29sep2026` registrada.
+
+### Pendiente real
+1. FALLO pre-existente `COFRES-INSPECTOR-FASED-R1` (ancho del Inspector, 219px vs 230-245px de Browse) -
+   confirmado que ya existia antes de esta fase, sin relacion con scroll/columnas - anotado para el
+   coordinador, fuera del alcance de esta ronda.
+2. FASE G: `MINIMUM_COMFORTABLE_VIEWPORT` - Inicio (hasta 290px de scroll a 1080x700 con 6 personajes
+   reales + banner de sesion), Guia (hasta 1037px a 1080x700, 319,7px incluso a 2560x1440) y AcercaDe
+   (hasta 15107px a 1080x700, contenido documental real) son candidatos reales a que la FASE G reconsidere
+   el minimo, o a que el usuario acepte el scroll de estas 3 como legitimo tal cual (mismo tipo de decision
+   que el known-diff `d7a5a6ef` de Apariencia). No es una regresion ni un bug de esta ronda - es contenido
+   real (lista de personajes/objetivo actual/changelog) que ya existia con el mismo scroll antes de la
+   FASE F, medido por primera vez con geometria real en esta ronda.

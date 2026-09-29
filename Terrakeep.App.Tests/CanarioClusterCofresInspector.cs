@@ -731,7 +731,12 @@ internal static partial class Program
                                     // el caso real mas exigente ya colocado (Picaro, 17 prefijos).
                                     if (contentControlPicaroFaseD != null)
                                     {
-                                        int scrollViewersAnidadosFaseF = Descendientes<ScrollViewer>(contentControlPicaroFaseD).Count();
+                                        // Excluye el ScrollViewer interno PART_ContentHost que trae el ControlTemplate por
+                                        // defecto de CUALQUIER TextBox (Slot.ItemId/Count/PrefixId, 3 en esta plantilla) -
+                                        // gotcha real ya documentado en otros canarios de la familia (AjusteAlViewportTests/
+                                        // CanarioResponsivePersonajeResto.cs), nunca un contenedor de scroll de diseño.
+                                        int scrollViewersAnidadosFaseF = Descendientes<ScrollViewer>(contentControlPicaroFaseD)
+                                            .Count(sv => sv.TemplatedParent is not System.Windows.Controls.Primitives.TextBoxBase);
                                         Console.WriteLine($"COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO: ScrollViewer descendientes de ChestInspectorItemEditTemplate (Picaro, 17 prefijos)={scrollViewersAnidadosFaseF} (esperado 0 - unico scroll owner real es ExplorationSidebarScroll exterior)");
                                         if (scrollViewersAnidadosFaseF > 0)
                                             Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO - ChestInspectorItemEditTemplate volvio a tener un ScrollViewer propio, scroll anidado del mismo eje dentro de ExplorationSidebarScroll (s13/s26-A/s26-H)");
