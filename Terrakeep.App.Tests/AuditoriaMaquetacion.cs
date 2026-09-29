@@ -595,7 +595,7 @@ internal static partial class Program
 
     // Lista COMPARTIDA de pantallas/sub-pestañas reales (16: Inicio, 9 estados de Personaje -
     // Equipamiento/Inventario/Almacenes/Buffs/Investigacion/Apariencia/SpawnPoints/Desbloqueos/
-    // Version -, 2 hojas de Builds, 2 de Novedades, Exploracion, AcercaDe+Ajustes) - extraida de
+    // Version/Comparar -, 2 hojas de Builds, 2 de Novedades, Exploracion, AcercaDe+Ajustes) - extraida de
     // BarridoMaquetacionPorTamañoEIdioma (14-sep-2026, encargo KeepQA "informe real tras la ronda
     // de arreglos") para que el volcado de geometria de AuditoriaKeepQA.cs (KEEPQA_SOLO) recorra
     // EXACTAMENTE las mismas pantallas que AR-LAY ya audita cada `dotnet run`, en vez de mantener
@@ -623,6 +623,7 @@ internal static partial class Program
             ("Personaje/SpawnPoints", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 4; }),
             ("Personaje/Desbloqueos", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 5; }),
             ("Personaje/Version", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 6; }),
+            ("Personaje/Comparar", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 7; }),
             ("Builds/Vanilla", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 0); }),
             ("Builds/Calamity", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 1); }),
             ("Novedades/Terraria", () => { vm.SelectedTabIndex = 6; DoEvents(); HojaAnidada(window, 0); }), // AppTab.Novedades, reordenado T1 21-sep-2026
