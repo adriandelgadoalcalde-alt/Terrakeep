@@ -20,9 +20,14 @@ using ServidorKeep.Core.Instancias;
 // CarpetasMundosDePrueba (SOLO PRUEBAS, exige App.ModoDiagnostico=true) - así ninguna captura
 // puede mostrar ya el nombre de una partida real, ni siquiera de las que YA estaban aisladas de
 // escritura por AislamientoPartidasReales.cs (esa proteccion es contra ESCRITURA, no evita que el
-// NOMBRE real se vea en pantalla). El mundo sigue siendo 'roca_negra.wld' real (su contenido -
-// terreno/cofres - no identifica al usuario, a diferencia de un nombre de personaje), SIEMPRE
-// sobre la copia YA aislada por AislamientoPartidasReales.cs, nunca el original de Documentos.
+// NOMBRE real se vea en pantalla). CORRECCION real (29-sep-2026, aviso del coordinador tras abrir
+// 03-exploracion.png a mano): una version anterior de este comentario decia que seguir usando
+// 'roca_negra.wld' real era aceptable porque "su contenido no identifica al usuario" - FALSO, el
+// propio nombre del mundo ('roca negra') se veia literal en la barra superior/"Mundo: X"/"Tus
+// mundos"/pie de mapa, y sigue siendo una partida real. Ahora el mundo tambien es de PRUEBA:
+// TerrakeepPrueba.wld, el fixture real del propio arnes QA (Documents\My Games\Terraria\
+// tModLoader-KeepQA\Worlds\), con Title interno tambien "TerrakeepPrueba" - SIEMPRE sobre la
+// copia YA aislada por AislamientoPartidasReales.cs, nunca el original de Documentos.
 internal static partial class Program
 {
     private static void CapturarPantallasReadme(MainWindow window, MainViewModel vm)
@@ -115,7 +120,17 @@ internal static partial class Program
             Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
         };
 
-        string origenWld = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
+        // Aviso real del coordinador (29-sep-2026, tras abrir 03-exploracion.png a mano): el
+        // mundo real 'roca_negra' se veia en la barra superior, "Mundo: roca negra" y "Tus
+        // mundos" - la linea 23 de un comentario anterior DECIA que el mundo "no identifica al
+        // usuario", pero un mundo real SIGUE siendo una partida real y la regla de la familia
+        // Keep para capturas de README es igual de tajante que con los personajes: "SOLO mundos
+        // de PRUEBA". Opcion (a) del coordinador: TerrakeepPrueba.wld, el mundo real de fixture
+        // del propio arnes QA (Documents\My Games\Terraria\tModLoader-KeepQA\Worlds\), con Title
+        // interno tambien "TerrakeepPrueba" - nunca un nombre real del usuario, en NINGUN sitio
+        // de la pantalla (barra superior/"Mundo: X"/"Tus mundos"/pie de mapa), porque el propio
+        // campo del archivo ya dice eso.
+        string origenWld = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader-KeepQA\Worlds\TerrakeepPrueba.wld"));
 
         // Carpeta PROPIA del temp, con la estructura Players/Worlds que espera
         // CharacterFileService (SUSTITUYE por completo las carpetas reales mientras dura esta
@@ -164,13 +179,13 @@ internal static partial class Program
             DoEvents();
             Console.WriteLine($"README_SHOTS: personaje sintetico cargado -> HasCalamityData={vm.HasCalamityData} (esperado False, es vanilla puro)");
 
-            // Copia el mundo a la carpeta aislada ANTES del refresco, para que
-            // RefreshWorldsCommand lo detecte y "Tus mundos" muestre 'roca negra' en vez de
+            // Copia el mundo de PRUEBA a la carpeta aislada ANTES del refresco, para que
+            // RefreshWorldsCommand lo detecte y "Tus mundos" muestre 'TerrakeepPrueba' en vez de
             // quedar vacio (dirMundos aun no tenia ningun .wld dentro en el primer intento de
             // este mismo saneado).
             if (File.Exists(origenWld))
             {
-                copiaWld = Path.Combine(dirMundos, "roca_negra.wld");
+                copiaWld = Path.Combine(dirMundos, "TerrakeepPrueba.wld");
                 File.Copy(origenWld, copiaWld, overwrite: true);
                 string origenTwld = Path.ChangeExtension(origenWld, ".twld");
                 if (File.Exists(origenTwld)) File.Copy(origenTwld, Path.ChangeExtension(copiaWld, ".twld"), overwrite: true);
@@ -178,14 +193,14 @@ internal static partial class Program
 
             // Mismo bug que Home.Characters (ver mas arriba): Exploration.Worlds ("Tus mundos")
             // tambien se escaneo UNA VEZ contra las carpetas reales antes de este metodo - sin
-            // refrescarla mostraba los 6 mundos reales de esta maquina (Blando Río, adriandres,
-            // El Musgo de Accidentes...) en la barra de "Tus mundos", aunque el mapa cargado ya
-            // fuera la copia aislada. Bug real encontrado revisando el PNG generado en esta misma
-            // ronda de saneado.
+            // refrescarla mostraba los mundos reales de esta maquina (Blando Río, adriandres,
+            // roca negra...) en la barra de "Tus mundos", aunque el mapa cargado ya fuera la
+            // copia aislada del mundo de prueba. Bug real encontrado revisando el PNG generado en
+            // esta misma ronda de saneado.
             var refrescoMundos = vm.Exploration.RefreshWorldsCommand.ExecuteAsync(null);
             while (!refrescoMundos.IsCompleted) DoEvents();
             DoEvents();
-            Console.WriteLine($"README_SHOTS: Exploration.Worlds tras el refresco aislado = {vm.Exploration.Worlds.Count} (esperado 1, solo 'roca_negra')");
+            Console.WriteLine($"README_SHOTS: Exploration.Worlds tras el refresco aislado = {vm.Exploration.Worlds.Count} (esperado 1, solo 'TerrakeepPrueba')");
 
             if (copiaWld != null)
             {
@@ -229,7 +244,7 @@ internal static partial class Program
                 vm.SelectedTabIndex = 4;
                 DoEvents();
                 vm.Exploration.SelectedCategory = Terrakeep.App.ViewModels.WorldSearchCategory.Ores;
-                DoEvents(); DoEvents();
+                WaitForDispatcher(300); // mismo margen real que 02/04 - primera visita a la pestaña en la sesion
                 Capturar("03-exploracion.png");
 
                 // 05-guia.png (NUEVA - README no mostraba esta pestaña, integrada esta misma
@@ -239,16 +254,19 @@ internal static partial class Program
                 vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
                 DoEvents();
                 vm.Guide.Refresh();
-                DoEvents(); DoEvents();
+                WaitForDispatcher(300); // mismo margen real que 02/03/04 - primera visita a la pestaña en la sesion
                 Console.WriteLine($"README_SHOTS: Guia -> Tramos.Count={vm.Guide.Tramos.Count}, MostrarAvisoCalamity={vm.Guide.MostrarAvisoCalamity}");
                 Capturar("05-guia.png");
             }
 
             // 04-about-settings-en.png: pestaña "Acerca de" en ingles (mismo criterio que la
             // captura ya existente - la version/changelog/autoria reales, en el segundo idioma).
+            // Panel en blanco real (aviso del coordinador, mundo de prueba nuevo - primera visita
+            // a esta pestaña en la sesion, mismo patron ya visto y arreglado en 02-personaje.png):
+            // WaitForDispatcher(300) da tiempo real al layout antes de capturar.
             vm.Settings.Language = "en";
             vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
-            DoEvents(); DoEvents();
+            WaitForDispatcher(300);
             Capturar("04-about-settings-en.png");
             vm.Settings.Language = "es";
             DoEvents();
