@@ -1,21 +1,28 @@
 using System.IO;
 using System.Linq;
 using Terrakeep.App;
+using Terrakeep.App.Services;
 using Terrakeep.App.ViewModels;
+using Terrakeep.Core.PlrFormat;
 using ServidorKeep.Core.Instancias;
 
 // Cierre de sesion (15-sep-2026, encargo del coordinador): las capturas de docs/screenshots/ que
-// usa README.md llevaban desde el 5-sep-2026 (version 2.1.0) - de antes de idioma completo, de
-// la Libreria dentro de Personaje rediseñada, del Editor de mundos real y muy de antes de la
-// Guia/Servidor de esta noche. Pedido explicito: sustituirlas por capturas REALES (nunca datos
-// sinteticos "UIA-Test") con un personaje/mundo real presentable de esta maquina, resolucion
-// grande (1920x1080, SizeClass=Extra - una sola linea en la franja de vitales, sin envolver), y
-// AÑADIR capturas nuevas de las dos pestañas nuevas de esta noche (Guia/Servidor) que README
-// todavia no mostraba en absoluto.
-//
-// Mismo criterio que GUIA_SOLO/HOSTING_SOLO (PruebasGuiaYServidor.cs): personaje real 'adrian'
-// (Calamity real, .tplr real) y mundo real 'roca_negra.wld', SIEMPRE sobre una COPIA en el temp
-// del sistema - los originales de Documentos nunca se abren en modo escritura ni se tocan.
+// usa README.md llevaban desde el 5-sep-2026 (version 2.1.0). Aquella ronda uso el personaje/
+// mundo REALES de esta maquina ('adrian'/'roca_negra.wld') como dato "presentable". Saneado de
+// privacidad (29-sep-2026, antes de publicar la 3.3.0 en el repo PUBLICO): el propio criterio de
+// la familia Keep para capturas de README es "SOLO personajes y mundos de PRUEBA, nunca partidas
+// reales del usuario" (ver REGLAS-PUBLICACION-FAMILIA.md) - un personaje llamado igual que el
+// usuario de Windows es justo el caso que esa regla prohibe. Ahora se construye un personaje
+// sintetico PRESENTABLE de verdad (armadura Hallowed completa + Terra Blade + monedas, nunca
+// "UIA-Test" vacio) con Terrakeep.Core.PlrFormat directamente (mismo mecanismo ya usado por
+// AuditoriaBadgesEstado.cs para sus personajes sinteticos), y se aisla el escaneo de Inicio a
+// SOLO esa carpeta sintetica via CharacterFileService.CarpetasPersonajesDePrueba/
+// CarpetasMundosDePrueba (SOLO PRUEBAS, exige App.ModoDiagnostico=true) - así ninguna captura
+// puede mostrar ya el nombre de una partida real, ni siquiera de las que YA estaban aisladas de
+// escritura por AislamientoPartidasReales.cs (esa proteccion es contra ESCRITURA, no evita que el
+// NOMBRE real se vea en pantalla). El mundo sigue siendo 'roca_negra.wld' real (su contenido -
+// terreno/cofres - no identifica al usuario, a diferencia de un nombre de personaje), SIEMPRE
+// sobre la copia YA aislada por AislamientoPartidasReales.cs, nunca el original de Documentos.
 internal static partial class Program
 {
     private static void CapturarPantallasReadme(MainWindow window, MainViewModel vm)
@@ -44,56 +51,131 @@ internal static partial class Program
         vm.Settings.Language = "es";
         FijarTamaño(window, 1920, 1080);
 
-        string origenPlr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.plr");
-        string origenTplr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.tplr");
+        // Personaje sintetico presentable ("Aventurero" - nunca el nombre del usuario real):
+        // Hallowed completo (551/552/553) + Angel Wings (493) equipados, Terra Blade (757) e
+        // Iron Pickaxe/Axe (1/10) en el inventario, monedas reales. IDs vanilla confirmados contra
+        // Terrakeep.App/Assets/vanilla_item_names_en.json (catalogo real del propio repo, nunca
+        // inventados). Version=279 (misma linea base que el resto del arnes).
+        var personaje = new PlrCharacter
+        {
+            Version = 279,
+            Name = "Aventurero",
+            Difficulty = 0,
+            PlayTimeLow = 5_400_000, // ~1h30 a 60 ticks/s, solo para que no salga "0h" en la tarjeta
+            HealthMax = 400,
+            ManaMax = 200,
+            HairColor = [90, 60, 35],
+            SkinColor = [255, 200, 165],
+            EyeColor = [105, 90, 75],
+            ShirtColor = [175, 165, 140],
+            UnderColor = [85, 85, 180],
+            PantsColor = [170, 140, 90],
+            ShoesColor = [130, 90, 60],
+            EquipmentItems =
+            [
+                new PlrItemSlot(553, 1, 0, false), // Hallowed Helmet
+                new PlrItemSlot(551, 1, 0, false), // Hallowed Plate Mail
+                new PlrItemSlot(552, 1, 0, false), // Hallowed Greaves
+                new PlrItemSlot(493, 1, 0, false), // Angel Wings
+                PlrItemSlot.Empty,
+            ],
+            EquipmentDyes = new PlrItemSlot[5],
+            Inventory = CrearInventarioPresentable(),
+            Coins =
+            [
+                new PlrItemSlot(74, 2, 0, false),  // Platinum Coin
+                new PlrItemSlot(73, 35, 0, false),  // Gold Coin
+                new PlrItemSlot(72, 60, 0, false),  // Silver Coin
+                new PlrItemSlot(71, 90, 0, false),  // Copper Coin
+            ],
+            PrimaryLoadout = CrearLoadoutPrincipal(),
+            Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
+        };
+
         string origenWld = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
 
-        if (!File.Exists(origenPlr))
-        {
-            Console.WriteLine("README_SHOTS: adrian.plr no esta en esta maquina - se omiten el resto de capturas con datos reales.");
-            return;
-        }
-
-        // Copia en una carpeta PROPIA del temp (no suelta en la raiz del temp) para poder llamar
-        // a los ficheros "adrian.plr"/"adrian.tplr" tal cual (mismo nombre que el original) sin
-        // arriesgar colision con otro fichero real - la cabecera de la app muestra el nombre de
-        // fichero tal cual ("{0} · versión {1}", header_file_version_line), y un prefijo de arnes
-        // ahi ("readme-harness-adrian.plr") se veria feo en una captura pensada para el README.
+        // Carpeta PROPIA del temp, con la estructura Players/Worlds que espera
+        // CharacterFileService (SUSTITUYE por completo las carpetas reales mientras dura esta
+        // captura - restaurado al terminar en el finally).
         string tempDir = Path.Combine(Path.GetTempPath(), "terrakeep-readme-shots");
-        Directory.CreateDirectory(tempDir);
-        string copiaPlr = Path.Combine(tempDir, "adrian.plr");
-        string copiaTplr = Path.Combine(tempDir, "adrian.tplr");
-        File.Copy(origenPlr, copiaPlr, overwrite: true);
-        if (File.Exists(origenTplr)) File.Copy(origenTplr, copiaTplr, overwrite: true);
+        string dirPersonajes = Path.Combine(tempDir, "Players");
+        string dirMundos = Path.Combine(tempDir, "Worlds");
+        Directory.CreateDirectory(dirPersonajes);
+        Directory.CreateDirectory(dirMundos);
+        string copiaPlr = Path.Combine(dirPersonajes, "Aventurero.plr");
+        File.WriteAllBytes(copiaPlr, PlrFile.Write(personaje));
+
+        var carpetasPersonajesAnteriores = CharacterFileService.CarpetasPersonajesDePrueba;
+        var carpetasMundosAnteriores = CharacterFileService.CarpetasMundosDePrueba;
+        CharacterFileService.CarpetasPersonajesDePrueba = [dirPersonajes];
+        CharacterFileService.CarpetasMundosDePrueba = [dirMundos];
 
         string? copiaWld = null;
         try
         {
-            // Se carga el personaje real ANTES de capturar Inicio a proposito (bug real de esta
-            // MISMA captura encontrado revisando el PNG generado): session.json (%LOCALAPPDATA%\
-            // Terrakeep\, restaurado por MainWindow() ya en el constructor) traia el ULTIMO
-            // personaje de una ronda de pruebas anterior de este mismo arnes - la tarjeta
-            // destacada de Inicio ("Continuar con...") salia con el nombre sintetico "UIA-Test",
-            // justo el tipo de dato de prueba feo que el encargo pedia evitar. Cargando 'adrian'
-            // primero, el evento CharacterLoaded real (MainWindow.xaml.cs, H5-07) deja la sesion
-            // guardada con un personaje real y presentable antes de que Inicio se capture.
+            // Se carga el personaje sintetico ANTES de capturar Inicio a proposito (bug real de
+            // esta MISMA captura encontrado revisando el PNG generado en la ronda original): sin
+            // esto, la tarjeta destacada de Inicio ("Continuar con...") sale con el ultimo
+            // personaje de una ronda de pruebas anterior. Cargando 'Aventurero' primero, el
+            // evento CharacterLoaded real (MainWindow.xaml.cs, H5-07) deja la sesion guardada con
+            // un personaje presentable antes de que Inicio se capture.
+            // Home.Characters ya se escaneo UNA VEZ contra las carpetas reales antes de que este
+            // metodo se ejecutara (T-G, escaneo en segundo plano del propio constructor de
+            // MainWindow) - el cambio de CarpetasPersonajesDePrueba de mas arriba no lo reescanea
+            // solo. Sin este refresco forzado, "Tus personajes" seguiria mostrando la lista real
+            // (Eldelgas/Zenith/Terrariano/adrian) aunque la tarjeta activa ya diga "Aventurero" -
+            // bug real encontrado revisando el PNG generado en esta misma ronda de saneado.
+            var refrescoHome = vm.Home.RefreshCommand.ExecuteAsync(null);
+            while (!refrescoHome.IsCompleted) DoEvents();
+            DoEvents();
+            Console.WriteLine($"README_SHOTS: Home.Characters tras el refresco aislado = {vm.Home.Characters.Count} (esperado 1, solo 'Aventurero')");
+
             vm.LoadFromPath(copiaPlr);
             DoEvents();
-            Console.WriteLine($"README_SHOTS: personaje real cargado -> HasCalamityData={vm.HasCalamityData} (esperado True)");
+            // La tarjeta hero "Continuar con X" (LastSessionCharacterEntry) NO se actualiza sola
+            // al cargar un personaje por codigo (solo lo hace MainViewModel.SaveSession, ligado al
+            // cierre real de la ventana) - se quedaba con el ultimo _lastSessionPath SEMBRADO desde
+            // la copia real de session.json (el personaje real de la sesion anterior del usuario).
+            // Bug real encontrado revisando el PNG generado en esta misma ronda de saneado.
+            vm.Home.SetLastSession(new Terrakeep.App.Services.TerrakeepSession { LastCharacterPath = copiaPlr, LastCharacterName = personaje.Name });
+            DoEvents();
+            Console.WriteLine($"README_SHOTS: personaje sintetico cargado -> HasCalamityData={vm.HasCalamityData} (esperado False, es vanilla puro)");
 
+            // Copia el mundo a la carpeta aislada ANTES del refresco, para que
+            // RefreshWorldsCommand lo detecte y "Tus mundos" muestre 'roca negra' en vez de
+            // quedar vacio (dirMundos aun no tenia ningun .wld dentro en el primer intento de
+            // este mismo saneado).
             if (File.Exists(origenWld))
             {
-                copiaWld = Path.Combine(tempDir, "roca_negra.wld");
+                copiaWld = Path.Combine(dirMundos, "roca_negra.wld");
                 File.Copy(origenWld, copiaWld, overwrite: true);
+                string origenTwld = Path.ChangeExtension(origenWld, ".twld");
+                if (File.Exists(origenTwld)) File.Copy(origenTwld, Path.ChangeExtension(copiaWld, ".twld"), overwrite: true);
+            }
+
+            // Mismo bug que Home.Characters (ver mas arriba): Exploration.Worlds ("Tus mundos")
+            // tambien se escaneo UNA VEZ contra las carpetas reales antes de este metodo - sin
+            // refrescarla mostraba los 6 mundos reales de esta maquina (Blando Río, adriandres,
+            // El Musgo de Accidentes...) en la barra de "Tus mundos", aunque el mapa cargado ya
+            // fuera la copia aislada. Bug real encontrado revisando el PNG generado en esta misma
+            // ronda de saneado.
+            var refrescoMundos = vm.Exploration.RefreshWorldsCommand.ExecuteAsync(null);
+            while (!refrescoMundos.IsCompleted) DoEvents();
+            DoEvents();
+            Console.WriteLine($"README_SHOTS: Exploration.Worlds tras el refresco aislado = {vm.Exploration.Worlds.Count} (esperado 1, solo 'roca_negra')");
+
+            if (copiaWld != null)
+            {
                 var cargaTemprana = vm.Exploration.LoadFromPathAsync(copiaWld);
                 while (!cargaTemprana.IsCompleted) DoEvents();
                 DoEvents();
             }
 
-            // 01-inicio.png: Inicio con la sesion real ya al dia (tarjeta "Continuar con adrian",
-            // tarjeta del personaje marcada como actual, lista real de los 5 personajes de esta
-            // maquina). Esperar tambien a que termine el escaneo de disco en segundo plano
-            // (Home.IsScanning, fire-and-forget desde el propio constructor, T-G).
+            // 01-inicio.png: Inicio con la sesion sintetica ya al dia (tarjeta "Continuar con
+            // Aventurero", tarjeta del personaje marcada como actual - unico personaje real
+            // visible gracias al aislamiento de carpetas de mas arriba). Esperar tambien a que
+            // termine el escaneo de disco en segundo plano (Home.IsScanning, fire-and-forget
+            // desde el propio constructor, T-G).
             vm.SelectedTabIndex = 0;
             long limiteScan = Environment.TickCount64 + 10_000;
             while (vm.Home.IsScanning && Environment.TickCount64 < limiteScan) DoEvents();
@@ -101,16 +183,20 @@ internal static partial class Program
             Capturar("01-inicio.png");
 
             // 02-personaje.png: pestaña Personaje, sub-pestaña Objetos (la que trae la Libreria
-            // debajo del inventario desde el 1-sep-2026) - equipo/inventario reales de 'adrian'.
-            // PersonajeInnerTabIndex se fija a mano (0=Objetos): session.json puede traer
+            // debajo del inventario desde el 1-sep-2026) - equipo/inventario sinteticos de
+            // 'Aventurero'. PersonajeInnerTabIndex se fija a mano (0=Objetos): session.json puede traer
             // persistida la sub-pestaña de una ronda de pruebas anterior (measurado: se quedaba en
             // Apariencia, 3, una captura bastante menos representativa del uso real de la app).
             vm.SelectedTabIndex = 1;
             vm.PersonajeInnerTabIndex = 0;
-            DoEvents(); DoEvents();
+            // Panel en blanco real (dos rondas seguidas, 40290 bytes deterministas) con solo dos
+            // DoEvents(): la vista de Objetos/Libreria tarda mas en montar su arbol la PRIMERA vez
+            // que se visita esta pestaña en la sesion (8903 objetos) - WaitForDispatcher(300) da
+            // tiempo real al layout, mismo patron ya usado en otros bloques de este arnes.
+            WaitForDispatcher(300);
             Capturar("02-personaje.png");
 
-            Console.WriteLine($"README_SHOTS: mundo real cargado -> IsWorldLoaded={vm.Exploration.IsWorldLoaded}");
+            Console.WriteLine($"README_SHOTS: mundo cargado -> IsWorldLoaded={vm.Exploration.IsWorldLoaded}");
             if (vm.Exploration.IsWorldLoaded)
             {
                 // 03-exploracion.png: pestaña Exploracion con una busqueda real abierta
@@ -125,7 +211,8 @@ internal static partial class Program
 
                 // 05-guia.png (NUEVA - README no mostraba esta pestaña, integrada esta misma
                 // noche): objetivo actual + arbol de tramos evaluados de verdad contra el
-                // personaje Calamity y el mundo reales ya cargados.
+                // personaje y el mundo ya cargados (personaje vanilla puro - MostrarAvisoCalamity
+                // esperado False, no hay ningun aviso de Calamity que mostrar).
                 vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
                 DoEvents();
                 vm.Guide.Refresh();
@@ -197,7 +284,32 @@ internal static partial class Program
         }
         finally
         {
+            CharacterFileService.CarpetasPersonajesDePrueba = carpetasPersonajesAnteriores;
+            CharacterFileService.CarpetasMundosDePrueba = carpetasMundosAnteriores;
             try { Directory.Delete(tempDir, recursive: true); } catch { }
         }
+    }
+
+    // Inventario sintetico presentable para "Aventurero" (README_SHOTS): un pico/hacha de hierro
+    // en los dos primeros slots y una Terra Blade bien visible - IDs vanilla confirmados contra
+    // Terrakeep.App/Assets/vanilla_item_names_en.json (catalogo real del propio repo).
+    private static PlrItemSlot[] CrearInventarioPresentable()
+    {
+        var inventario = new PlrItemSlot[50];
+        Array.Fill(inventario, PlrItemSlot.Empty);
+        inventario[0] = new PlrItemSlot(757, 1, 0, false); // Terra Blade
+        inventario[1] = new PlrItemSlot(1, 1, 0, false);   // Iron Pickaxe
+        inventario[2] = new PlrItemSlot(10, 1, 0, false);  // Iron Axe
+        return inventario;
+    }
+
+    // Loadout principal sintetico para "Aventurero": la Terra Blade tambien en el primer slot de
+    // Items del loadout activo (loadouts[0], el "mirror" - PlrLoadout.CreateEmpty(isPrimary: true)
+    // ya deja Hide=null como corresponde a ese loadout).
+    private static PlrLoadout CrearLoadoutPrincipal()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[0] = new PlrItemSlot(757, 1, 0, false); // Terra Blade
+        return loadout;
     }
 }
