@@ -12,7 +12,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // lectura que viene DESPUES, como los NPCs), no hace falta conocer el valor exacto de antemano.
 public class WldReaderProgressFieldsTests(ITestOutputHelper output)
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
 
     public static IEnumerable<object[]> RealWldFiles()
     {

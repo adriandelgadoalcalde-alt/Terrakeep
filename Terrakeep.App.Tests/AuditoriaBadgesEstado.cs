@@ -194,7 +194,7 @@ internal static partial class Program
             };
             File.WriteAllBytes(plrLimpioPath, PlrFile.Write(personajeLimpio));
 
-            string wldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+            string wldPath = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
             if (!File.Exists(wldPath))
             {
                 Console.WriteLine("BADGES_ESTADO_SOLO: AVISO - falta el mundo real de prueba (roca_negra.wld), se omiten 'Solo lectura' y 'Guia: <Zona>' (LIMITE REAL, no simulado)");

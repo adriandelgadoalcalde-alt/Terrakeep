@@ -22,9 +22,9 @@ internal static partial class Program
     // clave cruda entre corchetes, que seria la señal de que textos.es.json no se cargo).
     private static void EjecutarGuiaReal(MainWindow window, MainViewModel vm)
     {
-        string origenPlr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.plr";
-        string origenTplr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.tplr";
-        string origenWld = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+        string origenPlr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.plr");
+        string origenTplr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.tplr");
+        string origenWld = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
 
         if (!File.Exists(origenPlr))
         {

@@ -12,8 +12,8 @@ namespace Terrakeep.Core.Tests.Data;
 // puerto).
 public sealed class ItemSetFileTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private static readonly CalamityCatalog Calamity = CalamityCatalog.LoadFromFile(Path.Combine(AppAssetsDir, "calamity", "catalog.json"));
     private static readonly RoguePrefixCatalog RoguePrefixes = RoguePrefixCatalog.LoadFromFile(Path.Combine(AppAssetsDir, "calamity", "rogue_prefixes.json"));

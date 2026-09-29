@@ -8,8 +8,8 @@ namespace Terrakeep.Core.Tests.Data;
 // (H5-03) para BuffSetFile.
 public sealed class BuffSetFileTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private static readonly CalamityBuffCatalog CalamityBuffs = CalamityBuffCatalog.LoadFromFile(
         Path.Combine(AppAssetsDir, "calamity", "buffs.json"),

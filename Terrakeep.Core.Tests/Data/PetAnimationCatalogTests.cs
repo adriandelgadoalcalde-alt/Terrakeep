@@ -13,8 +13,8 @@ namespace Terrakeep.Core.Tests.Data;
 // Terrakeep.App/Assets (no una copia de prueba), mismo patron que VanillaItemCatalogRealFileTests.
 public class PetAnimationCatalogTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     // Tabla completa real (itemId -> (offsetX, offsetY, spriteDirection)), extraida el 25-sep-2026
     // cruzando el "shoot" de cada entrada de pet_animations.json contra

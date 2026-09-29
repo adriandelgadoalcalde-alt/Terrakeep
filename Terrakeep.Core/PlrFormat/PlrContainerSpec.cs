@@ -1,8 +1,8 @@
 namespace Terrakeep.Core.PlrFormat;
 
 // Especificacion de cada contenedor de slots del .plr (confirmado contra el constructor real
-// `var ma = function() {...}` de script.js, investigacion dirigida - ver el plan en
-// C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md). Cuando IsAvailable da false para
+// `var ma = function() {...}` de script.js, investigacion dirigida - ver el plan
+// streamed-leaping-balloon.md del historial de sesion). Cuando IsAvailable da false para
 // un slot, ese slot no consume NINGUN byte (ni siquiera un id=0) - se trata como vacio sin mas.
 public sealed class PlrContainerSpec
 {

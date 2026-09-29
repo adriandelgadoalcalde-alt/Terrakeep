@@ -12,10 +12,10 @@ namespace Terrakeep.Core.Tests.Calamity;
 // (CalamityModMusic/CalamityTitleMusicBox). Se salta en silencio si faltan los archivos.
 public class CalamityCharacterSyncRealFileTests(ITestOutputHelper output)
 {
-    private const string PlayersDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
-    private const string LocalSiteDir = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Calamity-Beta\resources\app\local-site";
-    private const string DescriptionsPath = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\calamity_buff_descriptions.json";
-    private const string DebuffsPath = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\calamity\buff_debuffs.json";
+    private static readonly string PlayersDir = RutasEntornoReal.Documentos(@"tModLoader\Players");
+    private static readonly string LocalSiteDir = RutasEntornoReal.HermanoKeep(@"Terrasavr-Win\Terrasavr-Calamity-Beta\resources\app\local-site");
+    private static readonly string DescriptionsPath = RutasEntornoReal.Repo(@"Terrakeep.App\Assets\calamity_buff_descriptions.json");
+    private static readonly string DebuffsPath = RutasEntornoReal.Repo(@"Terrakeep.App\Assets\calamity\buff_debuffs.json");
 
     private static bool RealFilesExist() =>
         File.Exists(Path.Combine(PlayersDir, "adrian.plr")) &&

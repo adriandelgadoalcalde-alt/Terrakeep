@@ -24,8 +24,8 @@ namespace Terrakeep.App.ViewModels.Tests;
 // TODO lo demas del archivo sigue byte a byte igual que antes de editar.
 public sealed class ObjetosRoundTripPersonajeRealTests
 {
-    private const string CarpetaPersonajesReal =
-        @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
+    private static readonly string CarpetaPersonajesReal =
+        RutasEntornoReal.Documentos(@"tModLoader\Players");
 
     // El personaje real mas completo de este PC (~100KB: inventario lleno, almacenes,
     // investigacion y un .tplr real de Calamity de ~22KB). Si algun dia deja de estar, la

@@ -10,8 +10,8 @@ namespace Terrakeep.Core.Tests.Data;
 // de humo de esta carpeta (si el asset real no esta, el test se salta en vez de fallar en falso).
 public class LibraryTreeBuilderTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     // Resolucion de icono de mentira - lo unico que se comprueba es que el arbol la USA (que la
     // dependencia de disco/WPF quedo de verdad fuera de Core, inyectada).

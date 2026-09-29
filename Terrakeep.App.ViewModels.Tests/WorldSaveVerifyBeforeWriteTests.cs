@@ -19,7 +19,7 @@ namespace Terrakeep.App.ViewModels.Tests;
 // el arnes).
 public sealed class WorldSaveVerifyBeforeWriteTests : IDisposable
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
     private readonly string _tempPath = Path.Combine(Path.GetTempPath(), $"terrakeep-worldsave-test-{Guid.NewGuid():N}.wld");
 
     public void Dispose()

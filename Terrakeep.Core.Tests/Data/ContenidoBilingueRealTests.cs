@@ -17,8 +17,8 @@ namespace Terrakeep.Core.Tests.Data;
 // Terraria.Localization.Content.{es-ES,en-US}.* del decompilado - no traducciones nuestras.
 public class ContenidoBilingueRealTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private const string Es = LocalizedContent.Spanish;
     private const string En = LocalizedContent.English;

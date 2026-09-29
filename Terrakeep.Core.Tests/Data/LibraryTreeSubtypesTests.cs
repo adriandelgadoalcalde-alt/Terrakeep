@@ -16,8 +16,8 @@ namespace Terrakeep.Core.Tests.Data;
 // ciegas, y que objetos CONOCIDOS caigan en su subtipo real.
 public class LibraryTreeSubtypesTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private static (VanillaLibraryTreeCatalog Tree, LibraryLabelCatalog Labels)? Cargar()
     {

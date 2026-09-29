@@ -33,8 +33,8 @@ public class CalamityBuffCatalogTests
         Assert.False(catalog.Entries[2].IsDebuff); // sin mencion en buff_debuffs.json -> false por defecto
     }
 
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealFile_DebuffsConocidosCoincidenConMainDebuffReal()

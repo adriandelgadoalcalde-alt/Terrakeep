@@ -10,7 +10,7 @@ namespace Terrakeep.Core.Tests.Data;
 // cofre/comoda), 366 de pared.
 public class TileWallIconAssetsSmokeTests
 {
-    private const string AssetsDir = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir = RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void TileIcons_878FicherosReales_IncluidoElCofreDeOro()

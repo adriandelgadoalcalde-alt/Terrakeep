@@ -8,8 +8,8 @@ namespace Terrakeep.Core.Tests.Data;
 // Tests del proyecto.
 public class HairDyeCatalogTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealFile_Has12EntriesInRealCallOrder()

@@ -9,8 +9,8 @@ namespace Terrakeep.Core.Tests.Data;
 // el movimiento a Core.
 public class BuffTreeBuilderTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private static string? FakeBuffIcon(int id) => $"buff:{id}";
     private static string? FakeItemIcon(int id) => $"objeto:{id}";

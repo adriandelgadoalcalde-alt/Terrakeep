@@ -33,7 +33,7 @@ internal static partial class Program
     {
         try
         {
-            string mundoOriginal = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
+            string mundoOriginal = MundoAislado(RutasEntornoReal.Documentos(@"Worlds\Blando_Río.wld"));
             if (!File.Exists(mundoOriginal))
             {
                 Console.WriteLine($"FLUJOCOFRES: no se encontro {mundoOriginal} - abortando (mismo mundo real ya usado por COFRES_INSPECTOR_SOLO)");

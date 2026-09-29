@@ -21,8 +21,8 @@ namespace Terrakeep.Core.Tests.Data;
 // esas traducciones, no que el lector sepa leerlas.
 public class NombresContenedoresEsTests
 {
-    private const string TileNamesPath =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\tile_names.json";
+    private static readonly string TileNamesPath =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets\tile_names.json");
 
     private static TileNameCatalog Catalogo() => TileNameCatalog.LoadFromFile(TileNamesPath);
 

@@ -17,7 +17,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // manual de cabecera/tiles ya cubierta en otro sitio.
 public class WldWriterWriteNpcsTests : IDisposable
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
     private readonly string _tempPath = Path.Combine(Path.GetTempPath(), $"terrakeep-npcs-test-{Guid.NewGuid():N}.wld");
 
     public void Dispose()

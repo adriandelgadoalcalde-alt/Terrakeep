@@ -10,8 +10,8 @@ namespace Terrakeep.Core.Tests.Data;
 // carpeta no existe en la maquina donde corran los tests.
 public class VanillaItemCatalogRealFileTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealFiles_GetIdByKey_ResolvesKnownItems()

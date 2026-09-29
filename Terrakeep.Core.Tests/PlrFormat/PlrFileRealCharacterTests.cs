@@ -9,7 +9,7 @@ namespace Terrakeep.Core.Tests.PlrFormat;
 // maquina donde corran los tests (igual criterio que RealDataFilesSmokeTests.cs).
 public class PlrFileRealCharacterTests(ITestOutputHelper output)
 {
-    private const string PlayersDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
+    private static readonly string PlayersDir = RutasEntornoReal.Documentos(@"tModLoader\Players");
 
     public static IEnumerable<object[]> RealPlrFiles()
     {

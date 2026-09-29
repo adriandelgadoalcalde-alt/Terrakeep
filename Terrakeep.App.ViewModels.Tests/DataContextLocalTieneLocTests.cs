@@ -27,8 +27,8 @@ namespace Terrakeep.App.ViewModels.Tests;
 // quede sin el y nadie se entere hasta que un usuario reporte "no salen los botones".
 public class DataContextLocalTieneLocTests
 {
-    private const string TerrakeepAppDir =
-        @"C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native\Terrakeep.App";
+    private static readonly string TerrakeepAppDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App");
 
     // ADR-TERRAKEEP-016/031 (27-sep-2026): esta prueba SOLO miraba MainWindow.xaml a pelo - valia
     // mientras EquipmentGroup/StorageGroup (los dos unicos DataContext locales reales que vigila

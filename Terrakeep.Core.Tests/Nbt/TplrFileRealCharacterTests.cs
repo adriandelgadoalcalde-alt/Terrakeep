@@ -10,7 +10,7 @@ namespace Terrakeep.Core.Tests.Nbt;
 // criterio que el resto de pruebas contra datos reales de este proyecto).
 public class TplrFileRealCharacterTests(ITestOutputHelper output)
 {
-    private const string PlayersDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
+    private static readonly string PlayersDir = RutasEntornoReal.Documentos(@"tModLoader\Players");
 
     public static IEnumerable<object[]> RealTplrFiles()
     {

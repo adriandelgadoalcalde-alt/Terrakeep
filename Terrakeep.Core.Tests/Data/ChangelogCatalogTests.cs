@@ -8,8 +8,8 @@ namespace Terrakeep.Core.Tests.Data;
 // carpeta no existe, mismo patron que el resto de *RealFileTests del proyecto.
 public class ChangelogCatalogTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealFile_HasEntriesInDescendingOrderWithNoEmptyFields()

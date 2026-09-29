@@ -10,7 +10,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // verificar pixel a pixel para tener una señal de alarma fiable.
 public class WldReaderRealFileTests(ITestOutputHelper output)
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
 
     public static IEnumerable<object[]> RealWldFiles()
     {

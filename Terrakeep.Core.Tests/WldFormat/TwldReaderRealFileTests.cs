@@ -13,7 +13,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // mismos cofres con un nombre real (mod + tile), no solo el ID crudo.
 public class TwldReaderRealFileTests(ITestOutputHelper output)
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
     private const string WorldName = "Afueras_de_Larvas_de_gusano";
 
     [Fact]

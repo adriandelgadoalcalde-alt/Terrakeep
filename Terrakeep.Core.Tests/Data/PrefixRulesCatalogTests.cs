@@ -81,8 +81,8 @@ public class PrefixRulesCatalogTests
 // sola si la carpeta no existe en la maquina donde corran los tests.
 public class PrefixRulesCatalogRealFileTests
 {
-    private const string AssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealFile_KnownItems_HaveCorrectEligibility()

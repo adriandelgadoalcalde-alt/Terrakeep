@@ -23,8 +23,8 @@ namespace Terrakeep.App.ViewModels.Tests;
 // sigue igual.
 public sealed class BuffsAparienciaRoundTripPersonajeRealTests
 {
-    private const string CarpetaPersonajesReal =
-        @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
+    private static readonly string CarpetaPersonajesReal =
+        RutasEntornoReal.Documentos(@"tModLoader\Players");
 
     private static string? RutaCopiaDePersonajeReal(out string carpetaTemporal)
     {

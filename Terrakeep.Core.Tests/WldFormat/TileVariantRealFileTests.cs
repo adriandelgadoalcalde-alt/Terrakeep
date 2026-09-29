@@ -12,8 +12,8 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // sprite segun bioma) y casi cualquier mundo real tiene al menos uno.
 public class TileVariantRealFileTests(ITestOutputHelper output)
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
-    private const string AssetsDir = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
+    private static readonly string AssetsDir = RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
     private const int ChestTileId = 21;
 
     [Fact]

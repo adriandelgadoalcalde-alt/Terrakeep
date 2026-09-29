@@ -16,7 +16,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 //    que de verdad demuestra que un cofre editado persiste sin corromper el resto del mundo.
 public class WldWriterChestSignTests : IDisposable
 {
-    private const string WorldsDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds";
+    private static readonly string WorldsDir = RutasEntornoReal.Documentos(@"tModLoader\Worlds");
     private readonly string _tempPath = Path.Combine(Path.GetTempPath(), $"terrakeep-chest-test-{Guid.NewGuid():N}.wld");
 
     public void Dispose()

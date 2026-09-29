@@ -36,7 +36,7 @@ namespace Terrakeep.App.ViewModels.Tests;
 // el arreglo (ResolveActiveHide ya solo mira HideVisual1/HideVisual2) - confirmado con git stash.
 public sealed class ParidadPersonajeHideRealFileCanarioTests
 {
-    private const string PlayersDir = @"C:\Users\adrian\Documents\My Games\Terraria\Players";
+    private static readonly string PlayersDir = RutasEntornoReal.Documentos(@"Players");
 
     private static readonly CharacterFileService Service = new();
     private static readonly EquipmentAppearanceResolver EquipAppearance = Service.EquipmentAppearance;

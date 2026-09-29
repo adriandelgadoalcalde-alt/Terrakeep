@@ -16,10 +16,10 @@ using Terrakeep.App.ViewModels;
 // independiente byte a byte (scratchpad\leer_wld_ground_truth.py, replica ReadHeader+
 // ReadLateBossFlags linea a linea sin reutilizar el codigo de produccion, para que sea una
 // segunda fuente real, no la misma logica preguntandose a si misma):
-//   - "C:\Users\adrian\Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld"
+//   - "<Documents>\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld"
 //     (version cruda 326, >=240 => Deerclops/QueenSlime/EmpressOfLight SI tienen campo real) -
 //     TODAS las 11 banderas en false (mundo del propio arnes de KeepQA, sin jefes derrotados).
-//   - "C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld" (version cruda 326,
+//   - "<Documents>\My Games\Terraria\Worlds\Blando_Río.wld" (version cruda 326,
 //     partida REAL activa del usuario, ya usada de forma read-only por BLANDO_RIO_SOLO) - TODAS
 //     las 11 banderas en true (los 8 jefes/eventos tardios ya superados en esa partida real).
 // Los dos en la MISMA version (326) a proposito: aisla la variable "el flag se lee o no" de "el
@@ -132,11 +132,11 @@ internal static partial class Program
         }
 
         CargarMundoYVerificar(
-            MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld"),
+            MundoAislado(RutasEntornoReal.Documentos(@"KeepQA-Vanilla-Server\Worlds\KeepQAVanilla.wld")),
             "todos-vivos", esperadoDerrotado: false);
 
         CargarMundoYVerificar(
-            MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld"),
+            MundoAislado(RutasEntornoReal.Documentos(@"Worlds\Blando_Río.wld")),
             "todos-derrotados", esperadoDerrotado: true);
     }
 }

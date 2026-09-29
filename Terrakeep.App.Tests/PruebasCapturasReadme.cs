@@ -44,9 +44,9 @@ internal static partial class Program
         vm.Settings.Language = "es";
         FijarTamaño(window, 1920, 1080);
 
-        string origenPlr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.plr";
-        string origenTplr = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\adrian.tplr";
-        string origenWld = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+        string origenPlr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.plr");
+        string origenTplr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.tplr");
+        string origenWld = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
 
         if (!File.Exists(origenPlr))
         {

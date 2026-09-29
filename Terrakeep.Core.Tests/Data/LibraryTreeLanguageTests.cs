@@ -8,8 +8,8 @@ namespace Terrakeep.Core.Tests.Data;
 // reporto el usuario por su nombre. Estas pruebas fijan que el arbol trae AHORA los dos nombres.
 public class LibraryTreeLanguageTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     private static string? FakeIcon(int id) => $"icono:{id}";
 

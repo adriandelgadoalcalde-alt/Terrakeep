@@ -55,7 +55,7 @@ internal static partial class Program
         // LoadProgressText nuevos) - mundo real y grande de esta maquina (mismo que X7-ASYNC mas
         // abajo en este arnes, 11MB/8400x2400 tiles, medido antes de este cambio en ~1.4s).
         // ---------------------------------------------------------------------------------
-        string worldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+        string worldPath = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
         if (File.Exists(worldPath))
         {
             vm.SelectedTabIndex = 4; // Exploracion

@@ -11,8 +11,8 @@ namespace Terrakeep.Core.Tests.Data;
 // no una dependencia dura del build.
 public class RealDataFilesSmokeTests
 {
-    private const string LocalSiteDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Calamity-Beta\resources\app\local-site";
+    private static readonly string LocalSiteDir =
+        RutasEntornoReal.HermanoKeep(@"Terrasavr-Win\Terrasavr-Calamity-Beta\resources\app\local-site");
 
     [Fact]
     public void RealCatalogJson_LoadsAllEntriesWithSequentialIds()

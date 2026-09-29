@@ -48,7 +48,7 @@ internal static partial class Program
     {
         try
         {
-            string catalogoPath = @"C:\Users\adrian\Downloads\Keep\KeepQA\src\adversarial\catalogo.json";
+            string catalogoPath = RutasEntornoReal.HermanoKeep(@"KeepQA\src\adversarial\catalogo.json");
             if (!File.Exists(catalogoPath))
             {
                 Console.WriteLine("KEEPQA_SOLO: catalogo.json no encontrado en " + catalogoPath + " - omitido");
@@ -467,7 +467,7 @@ internal static partial class Program
     {
         try
         {
-            string worldPath = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+            string worldPath = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
             if (!File.Exists(worldPath))
             {
                 Console.WriteLine("FALLO3_SOLO: FALLO - no se encuentra roca_negra.wld, no se puede investigar con datos reales");

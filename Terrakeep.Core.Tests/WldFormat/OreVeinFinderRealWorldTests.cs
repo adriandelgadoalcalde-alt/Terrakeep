@@ -11,7 +11,7 @@ namespace Terrakeep.Core.Tests.WldFormat;
 // real" en su propia seccion de huecos) - y mide el coste real en C#, no en JS.
 public class OreVeinFinderRealWorldTests(ITestOutputHelper output)
 {
-    private const string WorldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld";
+    private static readonly string WorldPath = RutasEntornoReal.Documentos(@"tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld");
 
     [Fact]
     public void Find_MundoGrandeReal_CifrasDeVetasDeCobreCercanasALasMedidasPorElAdvisor()

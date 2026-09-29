@@ -38,7 +38,7 @@ internal static partial class Program
     {
         try
         {
-            string mundo = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld");
+            string mundo = MundoAislado(RutasEntornoReal.Documentos(@"Worlds\Blando_Río.wld"));
             if (!File.Exists(mundo))
             {
                 Console.WriteLine("AR-MRK: no se encontro Blando_Río.wld - omitido");
@@ -333,7 +333,7 @@ internal static partial class Program
             vm.Exploration.ChestViewMode = 0;
             vm.Exploration.SelectedCategory = WorldSearchCategory.All;
             DoEvents();
-            string mundoDeSiempre = MundoAislado(@"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld");
+            string mundoDeSiempre = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
             if (File.Exists(mundoDeSiempre))
             {
                 var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempre);

@@ -8,8 +8,8 @@ namespace Terrakeep.Core.Tests.Data;
 // objetos {key,es,en}, no de strings) antes de que la app llegara a crashear en runtime.
 public class BuildsAndWhatsNewRealFileTests
 {
-    private const string AppAssetsDir =
-        @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets";
+    private static readonly string AppAssetsDir =
+        RutasEntornoReal.Repo(@"Terrakeep.App\Assets");
 
     [Fact]
     public void RealBuildsJson_LoadsAllStagesAndClasses()
