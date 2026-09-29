@@ -50,6 +50,14 @@ internal static partial class Program
     [STAThread]
     private static void Main()
     {
+        // LAYOUT_REPOSO_SOLO (29-sep-2026): modo "cliente UIA externo" - este mismo exe, lanzado como
+        // proceso HIJO por CanarioBucleLayoutReposo.cs, se suscribe a eventos UIA de la ventana del
+        // arnes (como un lector de pantalla/herramienta de accesibilidad real). Va lo PRIMERO: no monta
+        // ninguna ventana, no toca partidas ni estado.
+        if (Environment.GetEnvironmentVariable("LAYOUT_REPOSO_CLIENTE_UIA_HWND") is { Length: > 0 } hwndCliente)
+        {
+            Environment.Exit(EjecutarClienteUiaExterno(new IntPtr(long.Parse(hwndCliente))));
+        }
         // Opt-in: con la escala del sistema alta (225 %) y el monitor bajado a 100 %, solo un proceso
         // Per-Monitor-V2 ve 96 DPI; el System-aware por defecto conserva el DPI de inicio de sesion y
         // su ventana no cabe en pantalla para las pruebas con raton real. Si el proceso ya tiene un
@@ -2673,6 +2681,15 @@ internal static partial class Program
             EjecutarRestoResponsiveSolo(window, vm);
             Console.WriteLine("DONE (RESTO_RESPONSIVE_SOLO)");
             Environment.Exit(0);
+        }
+        // LAYOUT_REPOSO_SOLO=1 (29-sep-2026): pasadas de layout en REPOSO en todas las vistas y
+        // tamaños (incl. fronteras de SizeClass) - regresion real "Terrakeep congelado", ver
+        // CanarioBucleLayoutReposo.cs.
+        if (Environment.GetEnvironmentVariable("LAYOUT_REPOSO_SOLO") == "1")
+        {
+            int fallosReposo = EjecutarLayoutReposoSolo(window, vm);
+            Console.WriteLine("DONE (LAYOUT_REPOSO_SOLO)");
+            Environment.Exit(fallosReposo == 0 ? 0 : 1);
         }
         // INICIO_AJUSTES_SOLO=1 (28-sep-2026): solo el bloque de Inicio/Ajustes/Novedades/Acerca de
         // (INI-*, PruebasInicioAjustes.cs) - sin la pasada completa, que usa entrada real de raton. Sirve

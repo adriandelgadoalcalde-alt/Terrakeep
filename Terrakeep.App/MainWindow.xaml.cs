@@ -735,6 +735,18 @@ public partial class MainWindow : Window
     private void OnExplorationSidebarScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (ExplorationScrollHint == null) return;
+        // BUCLE DE LAYOUT REAL (29-sep-2026, "Terrakeep congelado" del usuario: 57 % de un nucleo sin
+        // parar, entrada sin atender). ScrollChanged es un evento enrutado que BURBUJEA: este manejador
+        // tambien recibia los ScrollChanged del ScrollViewer INTERNO de las listas virtualizadas de
+        // Browse (Cofres/Objetos, ScrollUnit=Pixel) y decidia la visibilidad del indicador con el
+        // extent/viewport/offset de ESA lista como si fueran los de la barra lateral. Secuencia medida
+        // en el volcado del proceso congelado (44 ScrollChangedEventArgs reales): barra lateral en
+        // offset 37,21 -> "queda scroll" -> indicador Visible -> la barra pierde 30,63 px de viewport
+        // (910,82) -> el ListBox encoge y su VirtualizingStackPanel reajusta el offset de 1031,13 a
+        // 1059,94 (a <2 px de SU fondo) -> "no queda scroll" -> indicador Collapsed -> la barra
+        // recupera los 30,63 px (941,45) -> la lista vuelve a 1031,13 -> Visible... sin fin. Solo
+        // cuentan los cambios del PROPIO ScrollViewer de la barra lateral.
+        if (!ReferenceEquals(e.OriginalSource, sender)) return;
         // Margen de 2px: evita parpadeo por redondeo de layout cuando el contenido mide justo
         // igual que el viewport (mismo umbral ya usado por AR-11f para el caso simetrico).
         bool quedaScrollPendiente = e.ExtentHeight - e.ViewportHeight > 2
