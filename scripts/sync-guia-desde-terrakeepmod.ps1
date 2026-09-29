@@ -36,7 +36,7 @@ $ErrorActionPreference = "Stop"
 $repoTerrakeep = Split-Path -Parent $PSScriptRoot
 $repoTerrakeepMod = "C:\Users\adrian\Documents\My Games\Terraria\tModLoader\ModSources\TerrakeepMod"
 $destino = Join-Path $repoTerrakeep "Terrakeep.App\Assets\guia"
-$node = "C:\Users\adrian\Downloads\dev-tools\node-v24.20.0-win-x64\node.exe"
+$node = "C:\Users\adrian\Downloads\Keep\dev-tools\node-v24.20.0-win-x64\node.exe"
 $scriptHjson = Join-Path $repoTerrakeep "scripts\hjson-guia-a-json.js"
 
 New-Item -ItemType Directory -Force -Path $destino | Out-Null
