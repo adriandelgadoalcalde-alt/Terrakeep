@@ -33865,3 +33865,19 @@ Las 6 capturas regeneradas y revisadas una a una otra vez. `git push origin mast
 `600e4a0a...`, confirmado con `gh release view`); las notas de la release no enlazan capturas, asi
 que la release en si no necesitaba ningun cambio. Verificado que GitHub sirve ya las 6 capturas
 nuevas (`curl -I` a raw.githubusercontent.com, Content-Length identico al de cada PNG regenerado).
+
+### 8. Segunda correccion real: el MUNDO tambien era real (commit `97538a95`)
+El coordinador abrio `03-exploracion.png` y encontro que "roca negra" (mundo real del usuario) se
+veia literal en tres sitios (barra superior, "Mundo: roca negra", "Tus mundos") - el comentario
+del punto 7 decia que el contenido del mundo "no identifica al usuario", pero el propio NOMBRE
+del mundo si es una partida real, y la regla de capturas de README es igual de tajante con mundos
+que con personajes. Sustituido por `TerrakeepPrueba.wld` (opcion (a) del coordinador): el fixture
+real del propio arnes QA en `Documents\My Games\Terraria\tModLoader-KeepQA\Worlds\`, con `Title`
+interno tambien "TerrakeepPrueba" - ningun sitio de la pantalla puede mostrar ya un nombre real
+porque el propio campo del archivo dice eso (nunca se toco ningun byte de ningun `.wld` a mano).
+De paso, un panel en blanco intermitente real en `04-about-settings-en.png` (primera visita a la
+pestaña con el mundo de prueba nuevo, mismo patron que el de `02-personaje.png` del punto 7) -
+`WaitForDispatcher(300)` añadido tambien ahi y en 03/05 por prevencion. Las 6 capturas
+regeneradas, abiertas una a una, bordes comprobados pixel a pixel (0 blancos/transparentes,
+`comprobar-bordes.ps1`). `git push origin master` normal (`04840e8d..97538a95`). Verificado que
+GitHub sirve ya las 4 capturas que cambiaron (Content-Length identico via `curl -I`).
