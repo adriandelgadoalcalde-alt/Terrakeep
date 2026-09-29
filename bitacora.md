@@ -33936,3 +33936,50 @@ sin comitear + 2 elementos sin seguimiento, heredados de rondas anteriores en pa
    seria un cambio enorme aparte), reportado tal cual al coordinador.
 8. **Cierre**: `git status` limpio, `git push origin master` (3 commits) + rama `rescate/wip-29sep`
    ya empujada, 0 commits sin push.
+
+## 29-sep-2026 (mismo día) - Cierre de la verificación pendiente de Comparar (requirement 6b59710e)
+
+Encargo del coordinador: cerrar la reapertura de `6b59710e` (Comparar, `PersonajeInnerTabIndex=7`,
+añadida a la lista compartida de `AuditoriaMaquetacion.cs` en `d50c1eb7` pero nunca auditada de
+verdad) con evidencia fresca, y abrir las capturas del mínimo y del grande.
+
+1. **Arnés ampliado** (commit `b18aa8c5`): `CanarioResponsivePersonajeResto.cs` solo capturaba
+   Comparar en 1080x700 - se añadió también 2560x1440 para poder revisar el tamaño grande a mano.
+   Cambio de test, sin tocar producción.
+2. **`PERSONAJE_RESPONSIVE_SOLO=1`**: 0 FALLO. Comparar medida en los 5 tamaños (1080x700..
+   2560x1440) en ES + 1080x700 en EN, con 2 personajes reales aislados seleccionados (antes el
+   canario medía `vp=0 ext=0` sin personajes - ya corregido en la Fase E), resize en caliente
+   grande->mínimo->grande sin perder la selección. 50/50 capturas con contenido real. Aislamiento
+   confirmado: los 4 JSON reales de `%LocalAppData%\Terrakeep` con el mismo SHA256 antes/después.
+3. **`AR_LAY_SOLO=Comparar`** (el barrido que `d50c1eb7` arregló y nunca se había ejecutado): D1
+   contenido perdido / D2 solape / D3 palabra partida = **0/0/0** en 26 combinaciones tamaño x
+   idioma. 90/90 capturas con contenido real. Los `FALLO` de otras categorías que salen en la misma
+   pasada (`H5-05`, `A8-06`, `AR-11f`, `AR-MRK-*`, `A10-IDIOMA-BARRIDO`) son el mismo baseline
+   preexistente documentado desde `ADR-019` en adelante, sin relación con Comparar.
+4. **3 capturas abiertas y revisadas a mano**: 1080x700 ES/EN y 2560x1440 ES. Selectores
+   Personaje A/B y resumen "N diferencia(s)" siempre fuera del scroll; tabla Estadísticas/Equipo/
+   Inventario completa sin recorte en el tamaño grande; traducción EN correcta; el único scroll es
+   el de RESULTADOS (legítimo, familia UNBOUNDED_COLLECTION, ya documentado desde la Fase E).
+5. **Sin bugs reales encontrados en Comparar** - el hueco era de cobertura de auditoría, no de
+   código. Requirement `6b59710e` llevado de vuelta a **DONE** en el Task Context (evidencia
+   `101d0edd`/`237a1c0c` y superior, commits `b18aa8c5` enlazado).
+6. **Evidencia stale de otro criterio del mismo requirement** ("minimum viewport medido"): la
+   evidencia `93e23e64` citaba el commit `4d8606ed`, y el gate de frescura del Task Context bloqueó
+   el DONE al detectar que el HEAD real ya era `b18aa8c5`. Refrescada re-ejecutando (primer plano,
+   sin nada más en paralelo) `dotnet build` (0/0), `Core.Tests` (789/789), `ViewModels.Tests`
+   (825/825) y los 5 canarios de geometría `EQUIP/INVALM/LIBRARY/RESTO/PERSONAJE_RESPONSIVE_SOLO`
+   (0 FALLO los 5) sobre el HEAD real - misma conclusión que la evidencia vieja, ahora con hash de
+   commit correcto.
+7. **Hallazgo incidental, FUERA de alcance de esta ronda**: de paso también se re-ejecutó
+   `LAYOUT_REPOSO_SOLO` (pertenece a otro requirement, `0529c3e2`, no a `6b59710e` - decisión ya
+   documentada más arriba en esta misma bitácora) y salieron **5 FALLO nuevos** en
+   Exploracion/Cofres-CofreACofre, Exploracion/Minerales y Exploracion/Objetos (1920x1080 y
+   1651x1204, barra=520) - 540 medidas, 5 fallos, frente a las 540/0 de la entrada de arriba a
+   commit `~56768d20`. **Una sola pasada, no repetida** (regla del proyecto: no perseguir en bucle
+   sin fallo doble) - no se investigó la causa ni se tocó código. Posibles causas sin descartar:
+   regresión real, o ruido por la carga de CPU de esta misma sesión (varios `dotnet build`/`test`
+   consecutivos justo antes). Evidencia registrada en `0529c3e2` (marcada negativa) para que quede
+   constancia y no se pierda - requiere una ronda dedicada, con la máquina en reposo, para
+   confirmar o descartar.
+8. **Segunda verificación de la misma ronda**: `d3d06630` (TerrakeepTrainer, `CampoNumerico`) - ver
+   `LEEME.md` del propio repo, no aplica aquí.
