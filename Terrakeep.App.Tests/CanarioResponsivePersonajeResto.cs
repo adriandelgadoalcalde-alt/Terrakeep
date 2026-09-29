@@ -197,6 +197,16 @@ internal static partial class Program
             var casos = new (string id, double w, double h)[]
             {
                 ("min-1080x700", 1080, 700),
+                // Intermedios de §2 que el verificador QA final (29-sep-2026) señalo sin medir en
+                // toda la app - añadidos aqui a peticion explicita ("Añade esos tamaños a RESTO y
+                // PERSONAJE"). Mismo rango que RESTO_RESPONSIVE_SOLO.
+                ("fino-1100x720", 1100, 720),
+                ("fino-1120x740", 1120, 740),
+                ("fino-1180x760", 1180, 760),
+                ("fino-1180x800", 1180, 800),
+                ("fino-1200x800", 1200, 800),
+                ("fino-1280x800", 1280, 800),
+                ("fino-1280x900", 1280, 900),
                 ("medio-1366x768", 1366, 768),
                 ("amplio-1520x860", 1520, 860),
                 ("grande-1920x1080", 1920, 1080),

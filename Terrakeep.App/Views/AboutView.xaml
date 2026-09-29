@@ -50,7 +50,12 @@
     <ScrollViewer x:Name="AboutContentScroll" Margin="14" VerticalScrollBarVisibility="Auto">
         <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <!-- REGRESION REAL #2 (verificador QA final, 29-sep-2026) - ver el comentario real
+                     de GuideView.xaml: una ColumnDefinition Auto se mide con ancho infinito, rompe
+                     TextWrapping dentro (el Changelog, plantilla compartida de MainWindow.xaml) y
+                     arrastra a toda la columna (tambien "Autoria"/"Ajustes"). MaxWidth="680"
+                     restaura el mismo tope de siempre. -->
+                <ColumnDefinition Width="Auto" MaxWidth="680" />
                 <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
@@ -179,7 +184,12 @@
 
         <!-- "Sobre esta version" + Changelog completo - columna derecha en Amplio/Extra (junto a
              Autoria/Ajustes), apilado debajo en Compacto/Normal - ver comentario FASE G arriba. -->
-        <StackPanel Grid.Row="0" Grid.Column="1" Margin="24,0,0,0">
+        <!-- REGRESION REAL (verificador QA final, 29-sep-2026): ver el comentario real de
+             GuideView.xaml - Grid.Row/Grid.Column/Margin como atributos LOCALES aqui dejaban el
+             Style (unico dueño real de esas propiedades, DataTrigger incluido) muerto, fijando esta
+             columna en Grid.Column=1 SIEMPRE, tambien a 1080x700 - "¡Sobre esta version!" cortado
+             por el borde derecho sin scroll. -->
+        <StackPanel>
             <StackPanel.Style>
                 <Style TargetType="StackPanel">
                     <Setter Property="Grid.Row" Value="0" />
@@ -200,7 +210,23 @@
                 <Run Text="{Binding Loc[about_changelog_editor], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
                 <Run Text="{Binding Loc[about_changelog_2], Mode=OneWay}" />
             </TextBlock>
-            <ItemsControl ItemsSource="{Binding Changelog.Entries}">
+            <!-- REGRESION REAL #3 (verificador QA final, 29-sep-2026, AR-LAY: 43 casos reales solo
+                 a 1080x1440 - ancho igual que 1080x700, pero mucho mas alto, asi que se mide/realiza
+                 mucho mas Changelog): confiar solo en el MaxWidth de la ColumnDefinition (ver el
+                 comentario real del Grid mas arriba) no basta para ESTE ItemsControl en concreto -
+                 sin MaxWidth propio, WPF reporto un DesiredSize de hasta 3276px para el UniformGrid/
+                 Border/TextBlock de cada tarjeta del Changelog (el TextBlock de arriba, CON
+                 MaxWidth=680 propio, NUNCA aparecio en la lista de casos perdidos - la prueba real
+                 de que el problema es la ausencia de un tope EXPLICITO en este elemento concreto,
+                 no un fallo generico de la columna). MainViewModel.ChangelogMaxWidth da ese tope
+                 PROPIO (680 en Compacto/Normal, igual que el resto de bloques de esta pagina) SIN
+                 depender de ninguna propagacion ambiental de ancho a traves de Grid/StackPanel/
+                 UniformGrid intermedios - pero SIN tope en Amplio/Extra (Infinity), porque ahi el
+                 Changelog vive en su propia columna real y un 680 fijo habria deshecho el arreglo de
+                 WARN-02 (99%/72% de uso de ancho medido a 1920/2560). Se deja HorizontalAlignment en
+                 su valor por defecto (Stretch) a proposito - con Left, el ItemsControl dejaria de
+                 estirarse a la columna real en Amplio/Extra y volveria a medir estrecho. -->
+            <ItemsControl ItemsSource="{Binding Changelog.Entries}" MaxWidth="{Binding ChangelogMaxWidth}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>

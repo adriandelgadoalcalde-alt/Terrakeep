@@ -956,6 +956,21 @@ public partial class MainViewModel : ObservableObject
     // reposicionamiento de un unico elemento en vez de layouts duplicados con Visibility).
     public bool IsDetailSideBySide => SizeClass >= WindowSizeClass.Amplio;
 
+    // REGRESION REAL #3 (verificador QA final, 29-sep-2026, AR-LAY: 43 casos reales solo a
+    // 1080x1440 - mismo ancho que 1080x700, pero mucho mas alto, con mucho mas Changelog
+    // realizado). El Grid de 2 columnas de AboutView.xaml ya acota Column0 con MaxWidth=680 (ver su
+    // comentario real), pero eso NO basta para el ItemsControl del Changelog en concreto: sin un
+    // MaxWidth PROPIO, WPF reporto un DesiredSize de hasta 3276px para el UniformGrid/Border/
+    // TextBlock de cada tarjeta a ese tamaño exacto (el texto introductorio de justo encima, que SI
+    // tiene MaxWidth=680 propio, nunca aparecio en la lista de casos perdidos - la prueba real de
+    // que el problema es la ausencia de un tope EXPLICITO, no un fallo generico de la columna).
+    // ChangelogMaxWidth da ese tope PROPIO: 680 en Compacto/Normal (igual que el resto de bloques
+    // de la pagina, columna unica apilada), sin tope en Amplio/Extra (el Changelog vive en su
+    // propia columna real, ya acotada por el Grid - un MaxWidth fijo ahi habria deshecho el
+    // arreglo real de WARN-02, que mide 99%/72% de uso de ancho a 1920/2560 gracias a que el
+    // Changelog SI puede crecer con DetailCardColumns).
+    public double ChangelogMaxWidth => IsDetailSideBySide ? double.PositiveInfinity : 680;
+
     // H5-09: numero real de columnas para las listas de tarjetas de version (Novedades x2,
     // Changelog de Acerca de) - 2 en Amplio (autentico reparto en columnas, no solo mas ancho
     // cada tarjeta), 1 en Compacto/Normal (la tira unica de siempre, ya legible a ese ancho).
@@ -981,6 +996,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(DetailContentMaxWidth));
         OnPropertyChanged(nameof(DetailCardColumns));
         OnPropertyChanged(nameof(IsDetailSideBySide));
+        OnPropertyChanged(nameof(ChangelogMaxWidth));
         // F-10 (auditoria de Opus vs TEdit, E-10): ExplorationSidebarMaxWidth (R-10 de la
         // auditoria de redimensionado) queda ELIMINADO, no solo desactivado - la columna ya no
         // es Auto+MaxWidth-por-SizeClass, es un GridLength literal con GridSplitter real

@@ -33491,3 +33491,115 @@ visual ni de comportamiento) y el encargo restringe explicitamente el uso del es
 agente probando con el raton en paralelo") - `dotnet build` confirma que compila, pero no se ha
 generado ni copiado un nuevo `Terrakeep.exe` de Release. Queda pendiente para cuando haya escritorio
 libre (mismo momento en que se lancen 16/17).
+
+## 29-sep-2026 - FASE G: REGRESION real del cierre anterior (WARN-02), diagnosticada y arreglada con el arnes libre
+
+Agente: `aplicador-fix-responsive-faseG-29sep2026`. El verificador QA final (condicion 17 de s33) dio
+FAIL y el coordinador lo confirmo a ojo: a 1080x700, en ES y EN, Guia y AcercaDe mostraban YA la
+columna derecha (arbol de progresion / Sobre esta version) pero CORTADA por el borde derecho, sin
+scroll para alcanzarla. Base `49e5892e` (dos commits despues de mi ultimo cierre, de otro agente:
+`x:Name` real en los ScrollViewer para el perfil de KeepQA + documentacion de s33).
+
+### 1. Causa raiz real #1: precedencia LOCAL vs Style en WPF
+`GuideView.xaml`/`HostingView.xaml`/`AboutView.xaml` ponian `Grid.Row="0" Grid.Column="1"
+Margin="24,0,0,0"` como ATRIBUTOS LOCALES en el `StackPanel` de la columna derecha, ADEMAS del
+`Style` con `DataTrigger` que fija esos mismos valores. En WPF, un valor local SIEMPRE gana sobre
+cualquier Setter de Style (DataTrigger incluido, es el orden real de precedencia de una
+DependencyProperty) - el `Style` entero quedaba MUERTO, la columna derecha se quedaba fija en
+`Grid.Column=1` sin importar `IsDetailSideBySide`. A 1080x700 (Compacto, `IsDetailSideBySide=False`)
+la columna 1 pasa a `Width=Auto` (sin contenido reservado), pero el bloque seguia viviendo ahi,
+medido a su ancho natural (mayor que el hueco real) y CORTADO por el borde derecho del Grid, sin
+scroll. Arreglo: quitados los atributos locales duplicados en los 3 archivos - ahora solo el
+`Style`/`DataTrigger` controla esas 3 propiedades, y SI reacciona a `IsDetailSideBySide`.
+
+**Rojo real confirmado** contra `49e5892e` (worktree limpio `TKfeG-red2`, canario copiado sin
+comitear, retirado despues): `RESTO_RESPONSIVE_SOLO` con la metrica de recorte horizontal nueva
+(ver punto 3) - **2177 FALLO** (837 `ACERCADE-CLIP`, 1320 `GUIA-CLIP`, 20 `HOSTING-CLIP`).
+
+### 2. Causa raiz real #2: una ColumnDefinition Auto se mide con ancho INFINITO
+Con el arreglo del punto 1 aplicado, `RESTO_RESPONSIVE_SOLO` seguia dando **~76 FALLO** a 1080x700 -
+investigado antes de dar la ronda por buena. `ColumnDefinition Width="Auto"` se MIDE con ancho
+infinito (asi averigua Grid el tamaño "natural" de una columna Auto) - cualquier `TextWrapping="Wrap"`
+dentro deja de envolver de verdad (nada que envolver contra "infinito"), y el texto mas largo posible
+fija el ancho de TODA la columna. En Compacto/Normal (apilado), la columna 0 aloja ADEMAS el bloque
+secundario (Changelog de AcercaDe, arbol de Guia, instancias de Hosting) - el Changelog (plantilla
+compartida de `MainWindow.xaml`, `TextWrapping=Wrap` sin `MaxWidth` propio, siempre confio en el
+`MaxWidth` del `StackPanel` contenedor de ANTES de esta fase) media miles de px de ancho natural sin
+envolver, arrastrando tambien "Autoria"/"Ajustes" (misma columna) a un recorte horizontal real
+("Grid 900x12117" en el reporte del canario - clip absurdo de una columna que deberia medir 900).
+Arreglo: `MaxWidth="680"` en la propia `ColumnDefinition` de las 3 vistas (una `ColumnDefinition` SI
+respeta su propio Min/MaxWidth durante el Measure, a diferencia de un `StackPanel`/`Grid` normal) -
+restaura el mismo wrapping de antes de la FASE G sin tocar la plantilla compartida del Changelog.
+
+### 3. Causa raiz real #3: un ItemsControl SIN MaxWidth propio, solo a 1080x1440
+Con los arreglos 1 y 2, `RESTO_RESPONSIVE_SOLO` daba **0 FALLO** en todo su barrido (que NO incluia
+1080x1440) - pero `AR14_SOLO+AR_LAY_FINO` (pedido explicito del coordinador, "0 casos en Guia/
+Hosting/AcercaDe/Novedades") encontro **43 casos reales**, TODOS "AcercaDe+Ajustes 1080x1440"
+(mismo ancho que el minimo, mucho mas alto - nunca antes probado con este canario en concreto).
+Confirmado que es una regresion REAL de esta fase (no preexistente): el mismo `AR14_SOLO+AR_LAY_FINO`
+contra `feb490b9` (worktree limpio `TKfeG-prefase`, retirado despues) solo tenia 1 caso, un
+recorte de 2,4px en Exploracion sin relacion. Diagnosticado añadiendo temporalmente 1080x1440 al
+propio barrido de `RESTO_RESPONSIVE_SOLO` (mi propio `MedirClipHorizontal` lo reprodujo igual,
+confirmando que no era un artefacto del barrido largo de AR-LAY) - el `ItemsControl` del Changelog
+(sin `MaxWidth` propio, a diferencia del texto introductorio justo encima, que SI lo tiene y NUNCA
+aparecio en la lista de casos perdidos) reportaba hasta 3276px de ancho natural pese a que su
+`StackPanel` ancestro ya media 680px correctamente (clip visual, pero sin restringir el layout real
+de sus descendientes). Arreglo: `MainViewModel.ChangelogMaxWidth` (nueva propiedad, `IsDetailSideBySide
+? double.PositiveInfinity : 680`) ligada al `MaxWidth` del `ItemsControl` - 680 en Compacto/Normal
+(mismo tope que el resto de bloques de la pagina), SIN tope en Amplio/Extra (un 680 fijo ahi habria
+deshecho el cierre real de WARN-02, que mide 99%/72% de uso de ancho a 1920/2560 gracias a que el
+Changelog puede crecer con `DetailCardColumns`). Verificado que el tamaño 1920x1080/2560x1440 de
+AcercaDe sigue exactamente igual tras este cambio (capturas revisadas a ojo). El tamaño
+`altura-1080x1440` se queda PERMANENTE en el barrido de `RESTO_RESPONSIVE_SOLO` (antes solo
+diagnostico) para que esta regresion en concreto no pueda volver sin que el arnes la cace.
+
+### 4. Canario: recorte horizontal real, reutilizando el oraculo YA REAL de la familia
+`MedirClipHorizontal` (nuevo, `CanarioResponsiveRestoTabs.cs`) reutiliza `RectCompleto`/`ZonaVisible`/
+`AlcanzableConScroll`/`QuienRecorta`/`Describir` - los MISMOS helpers privados reales de
+`AuditoriaMaquetacion.cs` (misma clase parcial `Program`, SIN tocar ese archivo, que tiene cambios de
+otro agente sin comitear) en vez de reimplementar la logica. Corre en TODOS los tamaños del barrido
+(no solo >=1920, a diferencia del chequeo de USO DE ANCHO de WARN-02 - el recorte de esta regresion
+vivia justo en el minimo). Tambien se añadieron los 7 tamaños intermedios de s2 que el verificador
+señalo sin medir (1100x720/1120x740/1180x760/1180x800/1200x800/1280x800/1280x900) al barrido de
+`RESTO_RESPONSIVE_SOLO` y a la lista de Buffs de `PERSONAJE_RESPONSIVE_SOLO`.
+
+### 5. Verde real confirmado (todo con el arnes libre, sin ventanas mientras DST tenia el raton)
+- `RESTO_RESPONSIVE_SOLO`: **0 FALLO** (incluidos los 7 tamaños nuevos + `altura-1080x1440`).
+- `PERSONAJE_RESPONSIVE_SOLO`: **0 FALLO** (con los tamaños nuevos en la lista de Buffs).
+- `AR14_SOLO+AR_LAY_FINO` (`AR_LAY_DESDE=1080 AR_LAY_HASTA=1320 AR_LAY_FINO=20`, 663 combinaciones
+  pantalla x tamaño x idioma, 92201 elementos medidos): **1 sola firma perdida** (el mismo caso
+  preexistente de Exploracion de 2,4px, confirmado presente ya en `feb490b9`, sin relacion con esta
+  ronda) - **0 casos en Guia, Hosting, AcercaDe y Novedades**, tal como pidio el coordinador.
+- Capturas a 1080x700 de las 6 vistas revisadas a ojo (no solo el numero): columna unica apilada,
+  "Arbol de progresion completo"/"Servidores activos"/"¡Sobre esta version!" completos debajo del
+  contenido principal, sin recorte lateral, sin overlap. Capturas a 1920x1080/2560x1440 tambien
+  revisadas: el cierre de WARN-02 (columnas lado a lado, Changelog visible sin scroll) sigue intacto
+  tras los arreglos de este apartado.
+- Sin regresion: `EQUIP_RESPONSIVE_SOLO` 0 FALLO, `INVALM_RESPONSIVE_SOLO` 0 FALLO,
+  `LIBRARY_RESPONSIVE_SOLO` 0 FALLO, `COFRES_INSPECTOR_SOLO` 1 FALLO (el mismo pre-existente
+  `COFRES-INSPECTOR-FASED-R1`, sin relacion, ya documentado en FASE F). `dotnet build` 0/0.
+  `Terrakeep.App.ViewModels.Tests` 825/825. `Terrakeep.Core.Tests` 789/789.
+- Hashes antes/despues de toda la ronda del arnes: `diff` VACIO en los 55 hashes de partidas/JSON
+  reales y en las 20 carpetas de `Backups`.
+
+### 6. Despliegue y commits
+Ver el commit que sigue a esta entrada para el hash real publicado==instalado. Archivos tocados:
+`Terrakeep.App/Views/GuideView.xaml`, `Terrakeep.App/Views/HostingView.xaml`, `Terrakeep.App/Views/
+AboutView.xaml`, `Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App.Tests/
+CanarioResponsiveRestoTabs.cs`, `Terrakeep.App.Tests/CanarioResponsivePersonajeResto.cs`,
+`docs/evidencia/responsive-global/faseG-regresion/` (44 capturas), esta entrada de `bitacora.md`.
+Sin `git add -A` (cambios ajenos sin comitear: `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, 17
+archivos de `Terrakeep.Core.Tests/`, 2 scripts, `Terrasavr-Native.zip`, `docs/evidencia/
+responsive-global/final/` del propio verificador). Sin `git push`.
+
+### Pendiente real
+1. `COFRES-INSPECTOR-FASED-R1` (pre-existente, ancho del Inspector) - sin relacion, no arreglado.
+2. El unico caso de `AR-LAY` que queda (Exploracion, 2,4px, confirmado preexistente en `feb490b9`) -
+   fuera del alcance de esta ronda (WARN-01/WARN-02/regresion de columnas), anotado para el coordinador.
+3. Barrido completo de los 15 tamaños de s2 en TODAS las vistas de la app (esta ronda solo confirmo
+   los 7 intermedios en RESTO/PERSONAJE/Buffs, mas el barrido AR-LAY acotado a 1080-1320) - el resto
+   de sub-pestañas de Personaje (Apariencia fuera de sus tamaños ya fijos, SpawnPoints, Desbloqueos,
+   Version, Comparar) no se ampliaron con los 7 tamaños nuevos por la estructura del archivo (llamadas
+   explicitas por tamaño, no un array compartido) - anotado para el coordinador.
+4. `revisor-visual`/`verificador-qa` independientes + `requirement precheck` - lo lanza el coordinador
+   antes de marcar DONE el requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`.

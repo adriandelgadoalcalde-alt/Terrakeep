@@ -63,7 +63,11 @@
     <ScrollViewer x:Name="HostingContentScroll" Margin="14" VerticalScrollBarVisibility="Auto">
         <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <!-- REGRESION REAL #2 (verificador QA final, 29-sep-2026) - ver el comentario real
+                     de GuideView.xaml: una ColumnDefinition Auto se mide con ancho infinito, rompe
+                     TextWrapping dentro y arrastra a toda la columna. MaxWidth="680" restaura el
+                     mismo tope de siempre. -->
+                <ColumnDefinition Width="Auto" MaxWidth="680" />
                 <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
@@ -156,7 +160,12 @@
 
         <!-- Servidores activos - columna derecha en Amplio/Extra (junto al formulario), apilado
              debajo en Compacto/Normal - ver comentario FASE G arriba. -->
-        <StackPanel Grid.Row="0" Grid.Column="1" Margin="24,0,0,0">
+        <!-- REGRESION REAL (verificador QA final, 29-sep-2026): ver el comentario real de
+             GuideView.xaml - Grid.Row/Grid.Column/Margin como atributos LOCALES aqui dejaban el
+             Style (unico dueño real de esas propiedades, DataTrigger incluido) muerto, fijando esta
+             columna en Grid.Column=1 SIEMPRE, tambien a 1080x700 - contenido cortado por el borde
+             derecho sin scroll. -->
+        <StackPanel>
             <StackPanel.Style>
                 <Style TargetType="StackPanel">
                     <Setter Property="Grid.Row" Value="0" />

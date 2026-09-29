@@ -81,6 +81,46 @@ internal static partial class Program
         return double.IsInfinity(minX) ? 0 : maxX - minX;
     }
 
+    // REGRESION REAL (verificador QA final, 29-sep-2026, tras el cierre en verde de WARN-02):
+    // GUIA/ACERCADE (y en teoria HOSTING/NOVEDADES por el mismo mecanismo) mostraban la columna
+    // derecha CORTADA por el borde derecho a 1080x700, sin scroll para alcanzarla - RESTO_RESPONSIVE_
+    // SOLO no lo cazaba porque solo media SCROLL VERTICAL (s3/s22) y USO DE ANCHO (s17, solo >=1920),
+    // nunca RECORTE HORIZONTAL propiamente dicho. Causa real del bug de produccion: Grid.Row/
+    // Grid.Column/Margin puestos como atributos LOCALES ademas de en un Style con DataTrigger -en
+    // WPF un valor local siempre gana sobre cualquier Setter de Style- dejaba la columna derecha FIJA
+    // en Grid.Column=1 sin importar IsDetailSideBySide (ver el comentario real de GuideView.xaml).
+    // Esta funcion reutiliza el oraculo YA REAL de la familia (RectCompleto/ZonaVisible/
+    // AlcanzableConScroll/QuienRecorta/Describir, D1 de AuditoriaMaquetacion.cs - MISMA clase
+    // parcial Program, sin duplicar logica ni tocar ese archivo) pero acotado al ScrollViewer de
+    // CADA pagina (mas rapido que el barrido de toda la ventana de AR14_SOLO, y corre SIEMPRE junto
+    // al resto de RESTO_RESPONSIVE_SOLO, en TODOS los tamaños - el recorte de este bug se dio
+    // justo en el minimo, 1080x700, no en los tamaños grandes que ya cubria ANCHO).
+    private static void MedirClipHorizontal(MainWindow window, ScrollViewer sv, string nombre, string cab, Action<string, string> fallo)
+    {
+        foreach (var fe in Descendientes<FrameworkElement>(sv))
+        {
+            if (fe is not (TextBlock or Border or ButtonBase)) continue;
+            if (!fe.IsVisible || fe.ActualWidth < 1 || fe.ActualHeight < 1) continue;
+            if (fe is TextBlock tbVacio && string.IsNullOrWhiteSpace(tbVacio.Text)) continue;
+            Rect completo, zona;
+            try { completo = RectCompleto(fe, window); zona = ZonaVisible(fe, window); }
+            catch (InvalidOperationException) { continue; }
+            double faltaX;
+            if (zona.IsEmpty)
+            {
+                if (AlcanzableConScroll(fe, window, true) || AlcanzableConScroll(fe, window, false)) continue;
+                faltaX = completo.Width;
+            }
+            else
+            {
+                faltaX = Math.Min(completo.Width, Math.Max(0, zona.Left - completo.Left) + Math.Max(0, completo.Right - zona.Right));
+            }
+            if (faltaX <= 1) continue;
+            if (AlcanzableConScroll(fe, window, horizontal: true)) continue;
+            fallo(nombre.ToUpperInvariant() + "-CLIP", $"{cab}: {Describir(fe)} pierde {faltaX:0.#}px por recorte horizontal sin scroll para alcanzarlo [recorta: {QuienRecorta(fe, window)}]");
+        }
+    }
+
     private static void EjecutarRestoResponsiveSolo(MainWindow window, MainViewModel vm)
     {
         int fallos = 0;
@@ -96,6 +136,27 @@ internal static partial class Program
             var tamaños = new (string id, double w, double h)[]
             {
                 ("min-1080x700", 1080, 700),
+                // Intermedios de §2 que el verificador QA final (29-sep-2026) señalo sin medir en
+                // toda la app - añadidos aqui a peticion explicita ("Añade esos tamaños a RESTO y
+                // PERSONAJE"). Son justo la zona donde vivia la regresion del recorte horizontal
+                // (1080-1320px de ancho, Compacto/Normal - por debajo de AmplioMinWidth=1520, donde
+                // IsDetailSideBySide debe seguir en False).
+                ("fino-1100x720", 1100, 720),
+                ("fino-1120x740", 1120, 740),
+                ("fino-1180x760", 1180, 760),
+                ("fino-1180x800", 1180, 800),
+                ("fino-1200x800", 1200, 800),
+                ("fino-1280x800", 1280, 800),
+                ("fino-1280x900", 1280, 900),
+                // Hallazgo propio (29-sep-2026, investigando la regresion de arriba con AR-LAY):
+                // mismo ancho que el minimo (1080, Compacto), pero mucho mas alto - expone una
+                // regresion REAL que ninguno de los tamaños anteriores cazaba (todos comparten
+                // altura <=900): a 1080x1440 el Changelog de AcercaDe (mucho mas contenido
+                // realizado que a 700 de alto) media hasta 3276px de ancho sin su propio MaxWidth
+                // (ver MainViewModel.ChangelogMaxWidth y el comentario real de AboutView.xaml) -
+                // 43 casos reales en AR-LAY antes de este arreglo, 0 despues. Se queda en el
+                // barrido para que no pueda volver sin que el arnes lo cace.
+                ("altura-1080x1440", 1080, 1440),
                 ("medio-1366x768", 1366, 768),
                 ("amplio-1520x860", 1520, 860),
                 ("grande-1920x1080", 1920, 1080),
@@ -136,6 +197,9 @@ internal static partial class Program
                     Fallo(nombre.ToUpperInvariant(), $"{cab}: la pagina desplaza {sv.ScrollableHeight:0.#}px (ext {sv.ExtentHeight:0.#} en vp {sv.ViewportHeight:0.#}) - contenido finito, no deberia necesitar scroll (s3/s22)");
                 if (sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled && sv.ExtentWidth > sv.ViewportWidth + 0.5)
                     Fallo(nombre.ToUpperInvariant() + "-HSCROLL", $"{cab}: overflow horizontal real ({sv.ExtentWidth:0.#}px en {sv.ViewportWidth:0.#}px) con la barra deshabilitada (s26 G)");
+                // Regresion real (verificador QA final): recorte horizontal SIN escape de scroll -
+                // en TODOS los tamaños, no solo >=1920 (ver el comentario real de MedirClipHorizontal).
+                MedirClipHorizontal(window, sv, nombre, cab, Fallo);
                 // FASE G (WARN-02, s17): "NO columna estrecha en el centro + 50% de fondo vacio" en
                 // ventana grande. Medido contra el ANCHO REAL VISIBLE (union de bounds de los
                 // descendientes hoja visibles DENTRO del viewport actual del ScrollViewer, ver
@@ -201,6 +265,9 @@ internal static partial class Program
                     Console.WriteLine($"RESTO {cab}: vp={sv.ViewportHeight:0.#} ext={sv.ExtentHeight:0.#} scr={sv.ScrollableHeight:0.#} (scroll de resultados FINITE_PAGEABLE, solo se informa)");
                     if (sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled && sv.ExtentWidth > sv.ViewportWidth + 0.5)
                         Fallo(nombre.ToUpperInvariant() + "-HSCROLL", $"{cab}: overflow horizontal real ({sv.ExtentWidth:0.#}px en {sv.ViewportWidth:0.#}px)");
+                    // Regresion real (verificador QA final): mismo chequeo de recorte horizontal que
+                    // MedirPaginaSimple, en TODOS los tamaños.
+                    MedirClipHorizontal(window, sv, nombre, cab, Fallo);
                     // Mismo criterio de uso de ancho VISIBLE que MedirPaginaSimple (WARN-02, s17),
                     // incluido el ScrollToTop() (ver su comentario real arriba).
                     if (w >= 1920)

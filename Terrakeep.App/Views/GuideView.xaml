@@ -75,7 +75,24 @@
              tambien respeta el ancho real disponible cuando es MENOR que MaxWidth. -->
         <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
+                <!-- REGRESION REAL #2 (verificador QA final, 29-sep-2026, tras arreglar el bug de
+                     precedencia local/Style): una ColumnDefinition Width="Auto" se MIDE con ancho
+                     INFINITO (asi es como Grid averigua el tamaño "natural" de una columna Auto) -
+                     cualquier TextWrapping="Wrap" dentro deja de envolver de verdad (nada que
+                     envolver contra "infinito"), y el texto mas largo posible fija el ancho de TODA
+                     la columna. En Compacto/Normal (apilado), la columna 0 aloja ADEMAS el bloque
+                     secundario (Changelog de AcercaDe, arbol de Guia, instancias de Hosting) - el
+                     Changelog (plantilla compartida de MainWindow.xaml, TextWrapping=Wrap sin
+                     MaxWidth propio, siempre confio en el MaxWidth del StackPanel contenedor de
+                     ANTES de esta fase) media miles de px de ancho natural sin envolver, arrastrando
+                     tambien "Autoria"/"Ajustes" (misma columna) a un recorte horizontal real.
+                     MaxWidth="680" en la propia ColumnDefinition SI limita el ancho efectivo de
+                     Measure de una columna Auto (a diferencia de un StackPanel/Grid normal, una
+                     ColumnDefinition SI respeta su propio Min/MaxWidth durante el Measure) -
+                     restaura el mismo comportamiento de wrapping de antes de la FASE G, sin tocar la
+                     plantilla compartida del Changelog ni ninguno de los MaxWidth=680 ya existentes
+                     (que se quedan igual, esto es solo un cinturon de seguridad adicional). -->
+                <ColumnDefinition Width="Auto" MaxWidth="680" />
                 <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
@@ -217,7 +234,19 @@
              defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
              entera de golpe con 46 tramos reales). Columna derecha en Amplio/Extra (junto al
              objetivo actual), apilado debajo en Compacto/Normal - ver comentario FASE G arriba. -->
-        <StackPanel Grid.Row="0" Grid.Column="1" Margin="24,0,0,0">
+        <!-- REGRESION REAL (encontrada por el verificador QA final, 29-sep-2026): Grid.Row/
+             Grid.Column/Margin puestos como ATRIBUTOS LOCALES aqui (ademas de en el Style de abajo)
+             dejaban el Style entero MUERTO - en WPF un valor local SIEMPRE gana sobre cualquier
+             Setter de Style, incluido uno dentro de un DataTrigger (orden real de precedencia de
+             propiedades de dependencia). Este StackPanel se quedaba FIJO en Grid.Column=1 sin
+             importar IsDetailSideBySide - a 1080x700 (Compacto, IsDetailSideBySide=False) la
+             columna 1 pasa a Width=Auto (BoolToGridLength), pero el contenido seguia intentando
+             vivir ahi, se media a su ancho natural (mayor que el hueco real) y quedaba CORTADO por
+             el borde derecho del Grid, sin scroll para alcanzarlo (Guia: "Arbol de progresion
+             completo" cortado; mismo bug en HostingView.xaml/AboutView.xaml). Sin ningun atributo
+             local aqui, el Style (unico dueño real de Grid.Row/Grid.Column/Margin) SI reacciona al
+             DataTrigger. -->
+        <StackPanel>
             <StackPanel.Style>
                 <Style TargetType="StackPanel">
                     <Setter Property="Grid.Row" Value="0" />
