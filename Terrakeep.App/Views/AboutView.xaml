@@ -23,6 +23,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:controls="clr-namespace:Terrakeep.App.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -226,9 +227,13 @@
                  WARN-02 (99%/72% de uso de ancho medido a 1920/2560). Se deja HorizontalAlignment en
                  su valor por defecto (Stretch) a proposito - con Left, el ItemsControl dejaria de
                  estirarse a la columna real en Amplio/Extra y volveria a medir estrecho. -->
+            <!-- 29-sep-2026 (pedido del usuario, "una caja que queden todas iguales pero que sea justo al
+                 acabar el texto, no esta locura"): TarjetasEnFilasPanel en vez de UniformGrid - mismo
+                 reparto de columnas iguales, pero cada fila mide lo que su tarjeta mas alta (UniformGrid
+                 estiraba TODAS las tarjetas al alto de la version mas larga de todo el historial). -->
             <ItemsControl ItemsSource="{Binding Changelog.Entries}" MaxWidth="{Binding ChangelogMaxWidth}">
                 <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
+                    <ItemsPanelTemplate><controls:TarjetasEnFilasPanel Columnas="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>
         </StackPanel>

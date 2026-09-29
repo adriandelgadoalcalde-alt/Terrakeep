@@ -121,6 +121,60 @@ internal static partial class Program
         }
     }
 
+    // 29-sep-2026 (pedido del usuario con captura de "Acerca de": "tiene que tener una caja que queden
+    // todas iguales pero que sea justo al acabar el texto, no esta locura"). Tarjetas de version
+    // (Changelog de Acerca de y las dos listas de Novedades): el ItemsPanel era un UniformGrid, que da a
+    // TODAS las celdas el alto de la tarjeta mas alta de la coleccion entera. Contrato medido aqui, por
+    // tarjeta: su alto real = el alto NATURAL (contenido + padding) de la tarjeta mas alta de SU fila
+    // (misma altura dentro de la fila, nada de estirarse mas alla), y ningun hueco vertical entre una
+    // fila y la siguiente. Funciona con cualquier panel (UniformGrid o TarjetasEnFilasPanel), asi que
+    // sale en ROJO contra el UniformGrid de antes.
+    private static void MedirTarjetasDeVersion(MainWindow window, ScrollViewer sv, string nombre, string cab, Action<string, string> fallo)
+    {
+        var paneles = Descendientes<Panel>(sv).Where(p => p.IsItemsHost && p.IsVisible
+            && (p is UniformGrid || p is Terrakeep.App.Controls.TarjetasEnFilasPanel)).ToList();
+        foreach (var panel in paneles)
+        {
+            var tarjetas = new List<(double y, double alto, double natural)>();
+            foreach (var cp in panel.Children.OfType<ContentPresenter>())
+            {
+                if (!cp.IsVisible || VisualTreeHelper.GetChildrenCount(cp) == 0) continue;
+                if (VisualTreeHelper.GetChild(cp, 0) is not Border tarjeta || tarjeta.Child is not FrameworkElement contenido) continue;
+                double natural = contenido.DesiredSize.Height + tarjeta.Padding.Top + tarjeta.Padding.Bottom
+                                 + tarjeta.BorderThickness.Top + tarjeta.BorderThickness.Bottom;
+                double y;
+                try { y = cp.TransformToAncestor(panel).Transform(new Point(0, 0)).Y; }
+                catch (InvalidOperationException) { continue; }
+                tarjetas.Add((y, tarjeta.ActualHeight, natural));
+            }
+            if (tarjetas.Count == 0) continue;
+            var filas = tarjetas.GroupBy(t => Math.Round(t.y, 1)).OrderBy(g => g.Key).ToList();
+            double peorExceso = 0; int tarjetasEstiradas = 0;
+            foreach (var fila in filas)
+            {
+                double naturalFila = fila.Max(t => t.natural);
+                foreach (var t in fila)
+                {
+                    double exceso = t.alto - naturalFila;
+                    peorExceso = Math.Max(peorExceso, exceso);
+                    if (exceso > 2) tarjetasEstiradas++;
+                }
+            }
+            double peorHueco = 0;
+            for (int i = 0; i + 1 < filas.Count; i++)
+            {
+                // Fondo real de la fila = y + alto de su presentador (la tarjeta + su margen inferior).
+                double fondo = filas[i].Key + filas[i].Max(t => t.alto) + 14; // Margin="0,0,10,14" de la plantilla real
+                peorHueco = Math.Max(peorHueco, filas[i + 1].Key - fondo);
+            }
+            Console.WriteLine($"RESTO {cab} TARJETAS[{panel.GetType().Name}]: {tarjetas.Count} tarjetas en {filas.Count} filas, peorExceso={peorExceso:0.#}px, tarjetasEstiradas={tarjetasEstiradas}, peorHuecoEntreFilas={peorHueco:0.#}px");
+            if (tarjetasEstiradas > 0)
+                fallo(nombre.ToUpperInvariant() + "-TARJETAS", $"{cab}: {tarjetasEstiradas} tarjeta(s) de version mas altas que el contenido mas alto de su fila (peor exceso {peorExceso:0.#}px de fondo vacio bajo el texto, panel {panel.GetType().Name})");
+            if (peorHueco > 2)
+                fallo(nombre.ToUpperInvariant() + "-TARJETAS-HUECO", $"{cab}: hueco vertical de {peorHueco:0.#}px entre filas de tarjetas de version");
+        }
+    }
+
     private static void EjecutarRestoResponsiveSolo(MainWindow window, MainViewModel vm)
     {
         int fallos = 0;
@@ -200,6 +254,7 @@ internal static partial class Program
                 // Regresion real (verificador QA final): recorte horizontal SIN escape de scroll -
                 // en TODOS los tamaños, no solo >=1920 (ver el comentario real de MedirClipHorizontal).
                 MedirClipHorizontal(window, sv, nombre, cab, Fallo);
+                MedirTarjetasDeVersion(window, sv, nombre, cab, Fallo);
                 // FASE G (WARN-02, s17): "NO columna estrecha en el centro + 50% de fondo vacio" en
                 // ventana grande. Medido contra el ANCHO REAL VISIBLE (union de bounds de los
                 // descendientes hoja visibles DENTRO del viewport actual del ScrollViewer, ver
@@ -268,6 +323,7 @@ internal static partial class Program
                     // Regresion real (verificador QA final): mismo chequeo de recorte horizontal que
                     // MedirPaginaSimple, en TODOS los tamaños.
                     MedirClipHorizontal(window, sv, nombre, cab, Fallo);
+                    MedirTarjetasDeVersion(window, sv, nombre, cab, Fallo);
                     // Mismo criterio de uso de ancho VISIBLE que MedirPaginaSimple (WARN-02, s17),
                     // incluido el ScrollToTop() (ver su comentario real arriba).
                     if (w >= 1920)
