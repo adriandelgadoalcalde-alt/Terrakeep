@@ -852,9 +852,26 @@ public partial class MainViewModel : ObservableObject
     // el WrapPanel de tarjetas reparta una fila mas ancha en vez de quedarse angosto.
     // Auditoria de redimensionado, R-10: 1900 en Extra - 6 tarjetas de 270+14 en una sola fila
     // (WrapPanel real) = 1704px, mas el margen real de la fila.
+    //
+    // FASE G del responsive global (WARN-02, s17, 29-sep-2026, correccion del coordinador tras el
+    // checkpoint parcial): el tope de 1900 quedo OBSOLETO el 26-sep-2026 sin que nadie lo
+    // recalculara - GapAnalysis ParidadPersonaje (requirement 480a9bdd) subio CharacterCardTemplate.
+    // Width de 240 a 312 (columna de mascota nueva, HomeView.xaml) sin tocar este numero. Medido con
+    // el arnes contra feb490b9 (RESTO_RESPONSIVE_SOLO, mismo canario de WARN-02): a 2560x1440 el
+    // WrapPanel de "Tus personajes" solo cabia 5 tarjetas por fila (5*(312+14)=1630px) contra un tope
+    // de 1900 pensado para 6 - un WrapPanel NUNCA reclama mas ancho del que de verdad usa (a
+    // diferencia de un UniformGrid/Grid con HorizontalAlignment=Stretch), asi que el StackPanel
+    // resultante se quedaba en 1630px de un ancho real disponible de 2365,8px (69% de uso, y bajando
+    // de ahi con pantallas aun mas anchas - el propio tope, pensado para "caber justo 6", nunca podia
+    // subir de columna aunque hubiera sitio de sobra para 7). En vez de adivinar otro numero fijo que
+    // volvera a quedar obsoleto en el siguiente cambio de Width de la tarjeta (mismo patron ya usado
+    // por VitalsStripMaxWidth arriba, sin cap salvo donde hace falta comprimir de verdad): Extra deja
+    // de tener tope - el WrapPanel ya autolimita sus columnas al ancho REAL disponible por si solo,
+    // sin necesitar que nadie precalcule cuantas tarjetas caben. Amplio/Compacto/Normal no cambian
+    // (sin evidencia de que fallen: a esos anchos el WrapPanel nunca llega a tocar el tope actual).
     public double InicioContentMaxWidth => SizeClass switch
     {
-        WindowSizeClass.Extra => 1900,
+        WindowSizeClass.Extra => double.PositiveInfinity,
         WindowSizeClass.Amplio => 1400,
         _ => 880,
     };

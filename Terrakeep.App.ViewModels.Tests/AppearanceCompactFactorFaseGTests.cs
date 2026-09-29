@@ -73,3 +73,54 @@ public sealed class AppearanceCompactFactorFaseGTests
         Assert.Equal(0.0, anterior, 3);
     }
 }
+
+// FASE G del responsive global (WARN-02, s17, 29-sep-2026, correccion del coordinador): Inicio
+// tambien es uno de los 4 hallazgos reales del revisor (Guia/AcercaDe/Inicio/Hosting) - el primer
+// informe de esta ronda solo cubria Guia/Hosting. Causa real: InicioContentMaxWidth=1900 en Extra
+// quedo obsoleto el 26-sep-2026 cuando CharacterCardTemplate.Width subio de 240 a 312 (requirement
+// 480a9bdd) sin recalcular este tope - a 2560x1440 solo cabian 5 tarjetas de 326px (1630px) contra
+// un tope pensado para 6 (1900px), y un WrapPanel nunca reclama mas ancho del que usa de verdad
+// (ver el comentario real de MainViewModel.InicioContentMaxWidth). Arreglo: Extra sin tope
+// (double.PositiveInfinity, mismo patron ya usado por VitalsStripMaxWidth) - el WrapPanel se
+// autolimita solo al ancho real disponible, sin depender de una constante que vuelva a quedar
+// obsoleta en el siguiente cambio de Width de la tarjeta.
+public sealed class InicioContentMaxWidthFaseGTests
+{
+    [Fact]
+    public void ExtraYaNoTieneTope_ElWrapPanelUsaTodoElAnchoRealDisponible()
+    {
+        var vm = new MainViewModel();
+        vm.UpdateSizeClass(2560); // Extra
+        Assert.Equal(double.PositiveInfinity, vm.InicioContentMaxWidth);
+    }
+
+    [Fact]
+    public void AmplioYCompactoNoCambian_SinEvidenciaDeQueFallenAEseAncho()
+    {
+        var vm = new MainViewModel();
+        vm.UpdateSizeClass(1600); // Amplio
+        Assert.Equal(1400, vm.InicioContentMaxWidth);
+
+        vm.UpdateSizeClass(1000); // Compacto
+        Assert.Equal(880, vm.InicioContentMaxWidth);
+    }
+}
+
+// FASE G del responsive global (WARN-02, s17): IsDetailSideBySide (Guia/Hosting/AcercaDe) - fija el
+// umbral real en el nivel de ViewModel, sin ventana.
+public sealed class IsDetailSideBySideFaseGTests
+{
+    [Theory]
+    [InlineData(1080, false)]
+    [InlineData(1366, false)]
+    [InlineData(1519, false)]
+    [InlineData(1520, true)]
+    [InlineData(1920, true)]
+    [InlineData(2560, true)]
+    public void SigueElMismoUmbralQueDetailContentMaxWidth(double w, bool esperado)
+    {
+        var vm = new MainViewModel();
+        vm.UpdateSizeClass(w);
+        Assert.Equal(esperado, vm.IsDetailSideBySide);
+    }
+}

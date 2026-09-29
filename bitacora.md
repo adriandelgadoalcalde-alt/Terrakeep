@@ -33117,3 +33117,89 @@ tocados). Sin `git push`.
 9. Registrar toda la evidencia final en el requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`
    (`--fuente aplicador-fix --agente aplicador-fix-responsive-faseG-29sep2026`) antes de que el
    coordinador lance revisor-visual/verificador-qa independientes.
+
+## 29-sep-2026 - FASE G: correccion del coordinador sobre el checkpoint de arriba (sigue en pausa)
+
+El coordinador senalo DOS problemas reales en el checkpoint anterior (mismo agente, misma ronda,
+todavia sin arnes):
+
+### 1. Inicio no estaba cubierto - hallazgo real, arreglado
+Mi primer informe solo cerraba Guia/Hosting; el revisor habia senalado 4 vistas (Guia/AcercaDe/
+Inicio/Hosting), mas Builds/Novedades "a revisar". Medido con la CAPTURA REAL del revisor
+(`resto-actual-inicio-2560x1440-es.png`) y con el log YA generado del rojo original (dato que ya
+tenia, solo no lo habia interpretado bien la primera vez): a 2560x1440 el WrapPanel de "Tus
+personajes" solo cabia 5 tarjetas por fila (`anchoUsado=1630` CONSTANTE en 1920 y 2560 - la pista
+real de que el WrapPanel se auto-limitaba, nunca reclamaba el ancho completo disponible).
+
+**Causa real**: `InicioContentMaxWidth` (Extra=1900) se calculo el 26-sep-2026 (auditoria R-10) para
+tarjetas de 270+14=284px (6 por fila = 1704px). Ese mismo dia, mas tarde, GapAnalysis
+ParidadPersonaje (requirement `480a9bdd`) subio `CharacterCardTemplate.Width` de 240 a 312 (columna
+de mascota nueva) SIN recalcular el tope de Inicio - a 312+14=326px por tarjeta, 1900px solo dan
+para 5 columnas (1630px), no las 6 originales, y un `WrapPanel` (a diferencia de un `UniformGrid`/
+`Grid Stretch`) nunca pide mas ancho del que en verdad usa, asi que el "sobrante" del tope (1900-
+1630=270px) mas el sobrante del propio tope frente al ancho real de la ventana (2365,8-1900=465,8px)
+se quedaban en negro.
+
+**Arreglo real** (`Terrakeep.App/ViewModels/MainViewModel.cs`): `InicioContentMaxWidth` para Extra
+pasa de `1900` a `double.PositiveInfinity` - mismo patron ya usado por `VitalsStripMaxWidth` (sin
+tope donde no hace falta comprimir). El WrapPanel se autolimita solo al ancho real disponible sin
+depender de una constante que vuelva a quedar obsoleta la proxima vez que cambie el ancho de la
+tarjeta. Amplio (1400) y Compacto/Normal (880) NO se tocan - sin evidencia de que fallen a esos
+anchos (el WrapPanel nunca llega a tocar esos topes segun el log real).
+
+### 2. La metrica de "uso de ancho" del canario estaba mal disenada - corregida
+El coordinador identifico el fallo real: medir `ActualWidth` del hijo directo del `ScrollViewer` no
+mide lo que el USUARIO VE, mide el tamano que WPF calculo para TODO el contenido logico, incluido lo
+que esta mas abajo del viewport actual sin hacer scroll (WPF no virtualiza un `ItemsControl` normal -
+sigue midiendo esos elementos igual, aunque no se vean). Por eso AcercaDe daba "99%/72% de uso" con
+la metrica vieja (el Changelog, mas abajo del todo, fuerza el ancho del `StackPanel` aunque a
+1920x1080 el usuario JAMAS lo ve sin desplazar - confirmado con la captura real del revisor,
+`resto-actual-acercade-1920x1080-es.png`, que corta justo antes del Changelog).
+
+**Metrica nueva** (`Terrakeep.App.Tests/CanarioResponsiveRestoTabs.cs`,
+`MedirAnchoContenidoVisible`): union de los bounds (en coordenadas de VENTANA, via
+`TransformToAncestor`) de los descendientes "hoja" visibles del `ScrollViewer`
+(`TextBlock`/`Border`/`Image`/`TextBox`/`Slider`/`Shape`/`ButtonBase` - nunca paneles de layout como
+`Grid`/`StackPanel`/`WrapPanel`/`UniformGrid`/`ItemsControl`, que solo medirian el contenedor otra
+vez), INTERSECADA con el rectangulo real del viewport del `ScrollViewer` - un elemento mas abajo sin
+hacer scroll queda fuera de la interseccion, no cuenta. Sustituye a la medicion anterior en los dos
+sitios (`MedirPaginaSimple`/`MedirTabControlInterno`).
+
+**Arreglo real de AcercaDe** (`Terrakeep.App/Views/AboutView.xaml`): mismo patron que
+Guia/Hosting - "Sobre esta version" + el Changelog completo (bloque que YA EXISTIA, antes debajo de
+Ajustes) pasa a columna derecha en Amplio/Extra (`IsDetailSideBySide`), visible SIN scroll junto a
+Autoria/Ajustes en vez de necesitar bajar hasta el final de la pagina. Apilado debajo en
+Compacto/Normal, igual que siempre - mismo `Style`+`DataTrigger` sobre `Grid.Row`/`Grid.Column`, sin
+duplicar el `ItemsControl` del Changelog.
+
+### 3. Builds y Novedades - revisados, SIN cambio de produccion (con cifras reales)
+Con el log YA generado del rojo original (`RESTO_RESPONSIVE_ETIQUETA=rojo-faseG`, contra `feb490b9`,
+metrica vieja pero informativa para estos dos porque ninguno de los dos tiene el problema de "el
+contenedor se estira por un hijo fuera del viewport" - Builds/Novedades no tienen ningun `MaxWidth`
+distinto entre el contenedor y las tarjetas, el `UniformGrid`/ausencia de tope hace que ambos
+coincidan siempre):
+- **Builds**: `100%` de uso a 1920x1080 Y a 2560x1440 (`BuildsView.xaml` no tiene NINGUN `MaxWidth` -
+  el `ItemsControl` de etapas usa el ancho completo siempre). Sin cambio.
+- **Novedades**: `99-100%` a 1920x1080, `72%` a 2560x1440 (capado por `DetailContentMaxWidth=1700` en
+  Extra, pero las tarjetas del Changelog SI llegan a usar ese ancho completo con `UniformGrid
+  Columns={DetailCardColumns}` - a diferencia de AcercaDe, aqui el Changelog es TODO el contenido de
+  la subvista, siempre visible desde el principio sin scroll). 72% no es "mas de la mitad vacio" - se
+  deja tal cual, sin evidencia de violacion.
+
+### 4. Verificacion (sin ventana, no bloqueada por la pausa)
+`dotnet build Terrakeep.slnx -c Debug`: 0/0 (2 pasadas: una con error real de compilacion,
+`CS0104 'Path' referencia ambigua entre System.Windows.Shapes.Path y System.IO.Path` al importar
+`System.Windows.Shapes` completo para `Shape` - corregido con un alias `using Shape =
+System.Windows.Shapes.Shape;` en vez del using completo). 8 tests nuevos (`InicioContentMaxWidthFaseGTests`
+x2, `IsDetailSideBySideFaseGTests` x6, en `AppearanceCompactFactorFaseGTests.cs`) - **18/18** verde
+(10 anteriores + 8 nuevos). Suite completa `Terrakeep.App.ViewModels.Tests`: **825/825** (817+8), sin
+regresion.
+
+### 5. Pendiente (sigue bloqueado por la pausa)
+Confirmar con el arnes real: `RESTO_RESPONSIVE_SOLO` en verde con la metrica NUEVA para las 6 vistas
+(especialmente Inicio-ANCHO y AcercaDe-ANCHO, que con la metrica vieja NUNCA habian fallado y ahora
+deberian confirmar rojo->verde de verdad), capturas reales a 1920/2560 de las 6 vistas para juzgar
+con los ojos (no solo el numero) una vez arreglado, y que Builds/Novedades sigan en verde (deberian,
+sin cambio de produccion). Archivos tocados en esta correccion: `Terrakeep.App.Tests/
+CanarioResponsiveRestoTabs.cs`, `Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Views/
+AboutView.xaml`, `Terrakeep.App.ViewModels.Tests/AppearanceCompactFactorFaseGTests.cs`.
