@@ -48,12 +48,12 @@
         </ItemsControl>
         <TabControl Style="{StaticResource InnerTabControl}">
         <TabItem Header="Vanilla">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="BuildsVanillaScroll" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Builds.VanillaStages}" Margin="4,10,0,0" />
             </ScrollViewer>
         </TabItem>
         <TabItem Header="Calamity Mod">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="BuildsCalamityScroll" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Builds.CalamityStages}" Margin="4,10,0,0" />
             </ScrollViewer>
         </TabItem>

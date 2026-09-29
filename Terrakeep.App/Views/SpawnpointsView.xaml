@@ -64,7 +64,7 @@
             <TextBlock Grid.Column="3" Text="{Binding Loc[label_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
                        ToolTip="{Binding Loc[tt_world_internal_id], Mode=OneWay}" />
         </Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="SpawnPointsContentScroll" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Servers.Entries}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:ServerEntryRowViewModel}">

@@ -1627,7 +1627,7 @@
                                  el compactado (700). El doll tambien encoge (240x336 -> 200x280, escalado ENTERO
                                  6x/5x del sprite real de 40x56, s34) SOLO en el minimo - libera el alto que le
                                  falta a esta columna (60,9px de scroll medido antes de esta ronda). -->
-                            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer x:Name="AppearancePreviewScroll" Grid.Column="0" VerticalScrollBarVisibility="Auto">
                             <StackPanel VerticalAlignment="Top" Margin="0,0,20,0">
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8"
                                         Padding="{Binding AppearancePreviewBorderPadding}" Margin="{Binding AppearancePreviewBorderMargin}">
@@ -1671,7 +1671,7 @@
                             </StackPanel>
                             </ScrollViewer>
 
-                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer x:Name="AppearanceEditableScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto">
                             <!-- H4-07 (cuarta auditoria de Opus, Fable): mismo patron real que
                                  InicioContentMaxWidth (I-c) - 640px fijos dejaban ~70% del ancho en
                                  negro en Amplio, donde las tarjetas de color (WrapPanel real) tienen

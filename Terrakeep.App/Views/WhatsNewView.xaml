@@ -31,7 +31,7 @@
                  pasan de tira unica a UniformGrid de verdad (DetailCardColumns, 2 en Amplio)
                  en vez de "una tira unica" (texto literal del hallazgo). -->
             <TabItem Header="Terraria">
-                <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="WhatsNewTerrariaScroll" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                         <ItemsControl ItemsSource="{Binding WhatsNew.VanillaEntries}">
                             <ItemsControl.ItemsPanel>
@@ -42,7 +42,7 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="tModLoader / Calamity Mod">
-                <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="WhatsNewCalamityScroll" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                         <ItemsControl ItemsSource="{Binding WhatsNew.CalamityEntries}">
                             <ItemsControl.ItemsPanel>
