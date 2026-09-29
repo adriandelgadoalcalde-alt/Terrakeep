@@ -33754,3 +33754,87 @@ Requirement NUEVO `0529c3e2-2158-4956-8076-20ea311f7ba4` (no se reabre `6b59710e
 de la Fase G, viene del indicador del 14-sep + listas en pixel; las tarjetas, del UniformGrid de
 H5-09). 2 criterios, commits 7d801dfe/314f3f26, 2 tests y 3 evidencias enlazadas. Queda OPEN: el
 paso a VERIFYING no se aplico - pendiente para el coordinador.
+
+## 29-sep-2026 - Publicación real de la 3.3.0 (275 commits acumulados desde la 3.2.5)
+
+### 1. Saneado de privacidad (commit `d83fd642`)
+94 apariciones de `C:\Users\adrian\...` comitteadas en 47 archivos `.cs` de test (Core.Tests,
+App.Tests, App.ViewModels.Tests) + 1 comentario en produccion (`PlrContainerSpec.cs`). Sustituidas
+por `RutasEntornoReal.Documentos()/.Repo()/.HermanoKeep()` (helper nuevo, uno por proyecto de
+test) que calculan la misma ruta real en tiempo de ejecucion via `Environment.SpecialFolder` y
+localizando `Terrakeep.slnx` - mismo comportamiento en esta maquina, sin el nombre de usuario en
+el codigo fuente publico. De paso absorbe una correccion de ruta de centralizacion
+(`Downloads`->`Downloads\Keep`) que otro agente tenia a medias sin comitear en 18 de estos mismos
+archivos (verificado archivo a archivo: mi reescritura no deja rastro literal de ninguna de las
+dos rutas, asi que no hay perdida de su trabajo, solo absorcion). Build 0/0, Core.Tests 789/789,
+ViewModels.Tests 825/825 tras el cambio.
+
+Hallazgo NO corregido (bajo riesgo, ya documentado en el inventario de cierre de familia):
+`CLAUDE.md`/`bitacora.md`/`ESPEC-dibujado-sprites.md`/`scripts/ParidadVisual/README.md` siguen
+citando `C:\Users\adrian\...` (documentacion del propio entorno de desarrollo) - **ya estaba en el
+ultimo release publico (v3.2.5)**, no es una exposicion nueva de esta ronda. Tambien quedan
+menciones sueltas de "Eldelgas"/"Terrariano"/"adrian" (nombres de partida reales, sin ruta
+completa) en comentarios y datos de prueba de decenas de archivos de test (`Program.cs` sobre
+todo) - mismo patron ya clasificado como riesgo bajo en el inventario ("no son credenciales ni
+datos de terceros"). Fuera de alcance de esta ronda por volumen; anotado para una ronda dedicada
+si se quiere cerrar del todo.
+
+### 2. Version 3.3.0 (commit `634d99b7`)
+`Version`/`FileVersion`/`AssemblyVersion` del csproj y `MyAppVersion` del `.iss` a 3.3.0 los tres a
+la vez. Entrada nueva en `changelog.json` (ES+EN) agrupando TODO lo real desde la 3.2.5: responsive
+global fases A-G, arrastre con cursor de mano, boton "Guardar mundo", sprites de la Guia
+auditados, y los 7 arreglos reales (congelamiento de Exploracion, boton Personaje, idioma que
+ensuciaba la partida, Apariencia sin encoger, tarjetas del historial, Inspector de cofres, ghost
+de arrastre).
+
+### 3. Capturas del README (commit `adf6a5ac`)
+`PruebasCapturasReadme.cs` usaba el personaje REAL `adrian` (mismo nombre que el usuario de
+Windows) y sus mundos reales como dato "presentable" - decision de una ronda anterior (15-sep) ya
+superada por el estandar actual de la familia ("SOLO personajes/mundos de prueba"). Reescrito para
+construir un personaje 100% sintetico ("Aventurero": Hallowed completo + Terra Blade + monedas,
+IDs vanilla confirmados contra `vanilla_item_names_en.json` del propio repo) con
+`Terrakeep.Core.PlrFormat` directamente, y aislar el escaneo de Inicio/Exploracion a esa carpeta
+sintetica via `CharacterFileService.CarpetasPersonajesDePrueba`/`CarpetasMundosDePrueba` (SOLO
+PRUEBAS, exige `ModoDiagnostico=true` - mismo mecanismo que ya protegia de ESCRITURAS mediante
+`AislamientoPartidasReales.cs`, pero que no evitaba que los NOMBRES reales se vieran en una
+captura publica). Dos bugs reales encontrados revisando los PNG generados en esta misma ronda: la
+tarjeta hero "Continuar con X" y la barra "Tus mundos" no se refrescaban solas al cambiar las
+carpetas de escaneo (se quedaban con la lista sembrada de la sesion real anterior) - arreglado
+forzando `Home.RefreshCommand`/`Exploration.RefreshWorldsCommand` antes de capturar. Las 6
+capturas (`01-inicio` a `06-servidor`) regeneradas y revisadas una a una a mano: sin nombres
+reales, sin paneles en blanco (hubo uno intermitente en 02-personaje.png, corregido con
+`WaitForDispatcher(300)` tras cambiar de pestaña), sin franjas blancas/transparentes.
+
+### 4. Pruebas y empaquetado
+`dotnet build Terrakeep.slnx -c Debug` 0/0. Canarios en verde (todos ejecutados en PRIMER PLANO,
+sin comandos en paralelo - una ronda de `LIBRARY_RESPONSIVE_SOLO` en segundo plano parecio
+colgarse por interferencia de comandos concurrentes del propio coordinador, aparentemente sano
+tras matarlo, pero desde entonces todo en primer plano sin excepcion):
+`RESTO_RESPONSIVE_SOLO` 0 fallos, `EQUIP_RESPONSIVE_SOLO` 0 fallos, `INVALM_RESPONSIVE_SOLO` 0
+fallos, `LIBRARY_RESPONSIVE_SOLO` 0 fallos, `PERSONAJE_RESPONSIVE_SOLO` 0 fallos,
+`LAYOUT_REPOSO_SOLO` 540 medidas/0 fallos. `dotnet publish -c Release -p:PublishProfile=win-x64` +
+`ISCC installer\TerrakeepSetup.iss` -> `TerrakeepSetup-3.3.0.exe` (56.521.137 bytes, SHA256
+`600e4a0a8fadb8d28b74727adb5bae7b03d404b505fa5b0a4347f41643d74b34`). Instalado en modo silencioso
+(`/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`) encima de la instalacion existente (3.2.5 -> 3.3.0):
+version instalada y desinstalador (`unins000.exe`) verificados tras el cambio, SHA256
+publicado==instalado. Carpeta temporal `Terrasavr-Win\TKdeployBucle-publish\` (huerfana de una
+ronda anterior) borrada. SHA256 de las 105 partidas/mundos reales (`Documents\My Games\Terraria`)
+y de los 105 ficheros de `%LOCALAPPDATA%\Terrakeep` identicos antes/despues de TODA la ronda
+(tests + build + instalacion).
+
+### 5. Publicacion
+278 commits empujados a `origin/master` (275 originales + 4 de esta ronda), tag `v3.3.0` sobre el
+commit final (incluye el saneado de capturas). Release `v3.3.0` en GitHub con
+`TerrakeepSetup-3.3.0.exe` adjunto (digest verificado igual al SHA256 local). README actualizado
+(bullet nuevo sobre responsive/arrastre; las 6 capturas se sirven bien via
+raw.githubusercontent.com, comprobado con `curl -I`). Descripcion corta y topics del repo
+actualizados (`gh repo edit`) manteniendo la marca "Keep". Commit quinto (`a055fc6c`) solo para el
+README, separado del resto.
+
+### 6. Privacidad del diff completo
+`git diff v3.2.5..HEAD` grepeado contra `C:\Users\adrian`, emails, tokens, `api_key`, `password\s*=`
+tras el push: **0 coincidencias**. Los PNG de evidencia nuevos comiteados en
+`docs/evidencia/responsive-global/*` (no son los del README) SI muestran nombres de partidas
+reales (Eldelgas/Zenith/Terrariano/adrian) en varias capturas de muestra abiertas al azar - riesgo
+bajo ya clasificado por el inventario de cierre de familia, NO se ha reescrito la historia ni
+borrado nada, solo reportado aqui como pedia el encargo.
