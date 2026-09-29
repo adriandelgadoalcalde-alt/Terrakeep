@@ -1,5 +1,42 @@
 [
   {
+    "version": "3.3.0",
+    "date": "29 de septiembre de 2026",
+    "date_en": "September 29, 2026",
+    "summary": "La ronda más grande hasta ahora: la ventana entera pasa a ser de verdad responsive, con siete fases de trabajo que revisan las doce pestañas y su ventana mínima, normal y grande sin recortes ni solapes. Arrastrar objetos entre la Librería, el Equipamiento, el Inventario y los Almacenes se siente distinto: un cursor propio en forma de mano que agarra, con el sprite del objeto centrado en la palma, sustituye al recuadro genérico de Windows. Se arregla además un congelamiento real de la app en Exploración (un bucle de layout en el indicador de scroll de la barra lateral), el botón de Personaje que a veces no cerraba su desplegable, y el cambio de idioma que marcaba la partida como modificada sin ningún cambio real.",
+    "summary_en": "The biggest round so far: the whole window becomes genuinely responsive, with seven phases of work covering all twelve tabs and their minimum, normal and large window sizes without clipping or overlap. Dragging items between the Library, Equipment, Inventory and Storage now feels different: a custom hand-grab cursor, with the item's sprite centered on the palm, replaces Windows' generic drag rectangle. Also fixed: a real freeze in Exploration (a layout loop in the sidebar's scroll indicator), the Character header button that sometimes wouldn't close its dropdown, and a language switch that marked the save as modified with no real change.",
+    "added": [
+      "Responsive global (fases A-G): Equipamiento, Inventario, Almacenes, Librería/Librería de buffs/Investigación, Personaje (Objetos, Apariencia, Puntos de aparición, Desbloqueos, Versión, Comparar) e Inicio/Guía/Servidor/Acerca de/Novedades se adaptan de verdad a cualquier tamaño de ventana, desde el mínimo (1080x700) hasta pantallas grandes (2560x1440), con un único propietario de scroll por zona y sin texto ni tarjetas recortadas.",
+      "Arrastre con cursor propio: al arrastrar un objeto (desde la Librería, el Equipamiento, el Inventario o cualquier Almacén) el cursor cambia a una mano que agarra, con el sprite del objeto centrado en la palma - sustituye al recuadro gris genérico de arrastre de Windows.",
+      "Botón \"Guardar mundo\" en Exploración, que junta en un único sitio las secciones con cambios pendientes de guardar y explica cómo se guarda el mundo.",
+      "Sprites reales de jefe auditados en la Guía (vanilla y Calamity), incluido el Devorador de Mundos/Cerebro de Cthulhu, y banderas reales de los jefes/eventos tardíos vanilla (Fishron, Marcianos, Culto Lunático, Torres, Emperatriz de la Luz, Reina Slime, Deerclops)."
+    ],
+    "added_en": [
+      "Global responsive layout (phases A-G): Equipment, Inventory, Storage, Library/Buff Library/Research, Character (Items, Appearance, Spawn Points, Unlocks, Version, Compare) and Home/Guide/Server/About/What's New now genuinely adapt to any window size, from the minimum (1080x700) up to large screens (2560x1440), with a single scroll owner per area and no clipped text or cards.",
+      "Drag with a custom cursor: dragging an item (from the Library, Equipment, Inventory or any Storage) now shows a hand-grab cursor with the item's sprite centered on the palm - replacing Windows' generic gray drag rectangle.",
+      "\"Save world\" button in Exploration, gathering every pending world-edit section in one place and explaining how the world gets saved.",
+      "Real boss sprites audited in the Guide (vanilla and Calamity), including the Eater of Worlds/Brain of Cthulhu, plus real late-game vanilla boss/event flags (Duke Fishron, Martians, Lunatic Cultist, Pillars, Empress of Light, Queen Slime, Deerclops)."
+    ],
+    "fixed": [
+      "Congelamiento real de la app en Exploración: un indicador de scroll de la barra lateral entraba en un bucle infinito de layout (la barra y la lista interna se disputaban 30px una y otra vez) al bajar con la rueda hasta el final de una lista larga (p.ej. Cofres/Por tipo) - la app dejaba de responder por completo.",
+      "El botón de Personaje de la cabecera a veces no cerraba su desplegable al pulsarlo una segunda vez.",
+      "Cambiar el idioma de la app marcaba el personaje cargado como modificado (Apariencia y Buffs) sin que hubiera ningún cambio real que guardar.",
+      "Apariencia no se reducía de verdad al tamaño mínimo de la ventana: parte de su contenido quedaba recortado en vez de ajustarse o mostrar scroll.",
+      "Las tarjetas del historial de versiones (Acerca de y Novedades) se estiraban todas a la altura de la tarjeta más alta de toda la colección; ahora cada fila mide solo lo que necesita su propio contenido.",
+      "Inspector de cofres de Exploración: los prefijos de los objetos no se aplicaban al editar, el botón Guardar quedaba deshabilitado permanentemente, los slots vacíos no se alineaban en rejilla, y el número de columnas era fijo en vez de adaptarse al ancho real de la barra lateral.",
+      "El fantasma (ghost) del arrastre de la Librería aparecía en blanco o recortado fuera de su zona de scroll."
+    ],
+    "fixed_en": [
+      "Real app freeze in Exploration: a sidebar scroll indicator entered an infinite layout loop (the scrollbar and the inner list fought over 30px back and forth) when scrolling to the end of a long list (e.g. Chests/By type) - the app stopped responding entirely.",
+      "The header Character button sometimes wouldn't close its dropdown on a second click.",
+      "Switching the app's language marked the loaded character as modified (Appearance and Buffs) with no real change to save.",
+      "Appearance didn't genuinely shrink to the window's minimum size: part of its content got clipped instead of resizing or scrolling.",
+      "Version history cards (About and What's New) were all stretched to the height of the tallest card in the whole collection; each row now sizes to only what its own content needs.",
+      "Exploration's chest inspector: item prefixes weren't applied when editing, the Save button stayed permanently disabled, empty slots didn't align to a grid, and the column count was fixed instead of adapting to the sidebar's real width.",
+      "The Library's drag ghost showed up blank or clipped outside its scroll area."
+    ]
+  },
+  {
     "version": "3.2.5",
     "date": "19 de septiembre de 2026",
     "date_en": "September 19, 2026",

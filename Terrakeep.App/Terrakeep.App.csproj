@@ -91,9 +91,18 @@
          zooms que se habian medido antes por casualidad. Arreglado comparando el enfoque real de
          TEdit (sin copiar codigo). Añadida ademas la funcion de clic para abrir el editor de cofre
          desde un marcador del mapa, que nunca habia existido. Ver bitacora.md. -->
-    <Version>3.2.5</Version>
-    <FileVersion>3.2.5.0</FileVersion>
-    <AssemblyVersion>3.2.5.0</AssemblyVersion>
+    <!-- 3.3.0 (29-sep-2026): responsive global fases A-G (las 12 pestañas se adaptan de verdad a
+         cualquier tamaño, del minimo 1080x700 a 2560x1440), arrastre con cursor propio de mano y
+         sprite centrado en la palma (Libreria/Equipamiento/Inventario/Almacenes), boton "Guardar
+         mundo" en Exploracion, sprites de la Guia auditados (incluido el Devorador de Mundos), y
+         arreglos reales: congelamiento de Exploracion (bucle de layout del indicador de scroll de
+         la barra lateral), boton Personaje que no siempre cerraba su desplegable, cambio de idioma
+         que marcaba la partida como modificada sin motivo, Apariencia sin encoger al minimo, tarjetas
+         del historial estiradas a la mas alta, e Inspector de cofres (prefijos/Guardar/slots/ancho).
+         Ver changelog.json y bitacora.md. MINOR real (hay funciones nuevas, no solo arreglos). -->
+    <Version>3.3.0</Version>
+    <FileVersion>3.3.0.0</FileVersion>
+    <AssemblyVersion>3.3.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
