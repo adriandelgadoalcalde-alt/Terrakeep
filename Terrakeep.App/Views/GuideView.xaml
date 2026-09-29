@@ -48,8 +48,25 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="GuideBoolToVis" />
     </UserControl.Resources>
+    <!-- FASE G del responsive global (WARN-02, s17): a 1920/2560 el objetivo actual (columna
+         izquierda, MaxWidth=680 de siempre) dejaba mas de la mitad del ancho disponible vacio -
+         medido con RESTO_RESPONSIVE_SOLO (RESTO-GUIA-ANCHO: 40%/29% de uso a 1920/2560). El arbol
+         de progresion completo (antes debajo de todo) pasa a columna derecha en Amplio/Extra
+         (IsDetailSideBySide) - mismo contenido/bindings de siempre, solo reposicionado con un
+         Style/DataTrigger sobre Grid.Row/Grid.Column (sin duplicar el ItemsControl). En
+         Compacto/Normal sigue apilado debajo, igual que siempre (columna derecha colapsa a Auto/0
+         via BoolToGridLength, ya usado en el resto del repo). -->
     <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-        <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+        <Grid MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Grid.Column="0">
             <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
             <TextBlock Text="{Binding Loc[guide_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,4" />
             <TextBlock Text="{Binding Loc[guide_desktop_notice], Mode=OneWay}" Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
@@ -178,11 +195,28 @@
             </StackPanel>
             <TextBlock Text="{Binding Guide.TextoSinObjetivo, Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left"
                        Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToCollapsed}}" />
+        </StackPanel>
 
-            <!-- Arbol completo, como hoja de ruta - un Expander por tramo (colapsado por
-                 defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
-                 entera de golpe con 46 tramos reales). -->
-            <TextBlock Text="{Binding Loc[guide_all_tracks_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,16,0,10" />
+        <!-- Arbol completo, como hoja de ruta - un Expander por tramo (colapsado por
+             defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
+             entera de golpe con 46 tramos reales). Columna derecha en Amplio/Extra (junto al
+             objetivo actual), apilado debajo en Compacto/Normal - ver comentario FASE G arriba. -->
+        <StackPanel Grid.Row="0" Grid.Column="1" Margin="24,0,0,0">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Grid.Row" Value="0" />
+                    <Setter Property="Grid.Column" Value="1" />
+                    <Setter Property="Margin" Value="24,0,0,0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsDetailSideBySide}" Value="False">
+                            <Setter Property="Grid.Row" Value="1" />
+                            <Setter Property="Grid.Column" Value="0" />
+                            <Setter Property="Margin" Value="0,16,0,0" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <TextBlock Text="{Binding Loc[guide_all_tracks_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
             <ItemsControl ItemsSource="{Binding Guide.Tramos}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -279,5 +313,6 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
+        </Grid>
     </ScrollViewer>
 </UserControl>

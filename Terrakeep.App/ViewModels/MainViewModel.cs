@@ -611,19 +611,28 @@ public partial class MainViewModel : ObservableObject
     // "contenido real que no cabe en ~493px de alto util sin recortar el preview (contenido util,
     // no espaciado)". El usuario decidio EXPLICITAMENTE (29-sep-2026) no rediseñar: la MISMA
     // distribucion (mismo doll, mismas 7 tarjetas en 3 columnas, mismos deslizadores/hex) se
-    // encoge lo justo para caber SOLO cuando el alto real de la ventana aprieta - en >=768px de
-    // alto (1366x768, el resto de los 5 tamaños del encargo) debe verse EXACTAMENTE igual que
-    // antes de esta ronda. Regla CONTINUA (no un salto de SizeClass, s24: "sin saltos bruscos al
-    // redimensionar") atada al ALTO real (la dimension que de verdad aprieta aqui, mismo criterio
-    // ya usado por WindowHeightClass/H5-08, no al ancho): 1.0 en el MinHeight=700 obligado de la
-    // ventana, 0.0 en 768 (el siguiente escalon real del encargo) - interpolada linealmente entre
-    // los dos. Los 3 tamaños siguientes (860/1080/1440) ya quedan a factor 0 sin necesitar mas
-    // puntos de control. NINGUN valor recortado toca FontSize (SectionText/BodyText/CaptionText
-    // intactos) ni el tamaño real del Thumb del Slider (SliderThumb sigue en 14/17px, Theme.xaml -
-    // solo se reduce el Height del contenedor del Slider y los margenes/paddings de alrededor,
-    // nunca la zona de agarre en si).
+    // encoge lo justo para caber SOLO cuando el alto real de la ventana aprieta. Regla CONTINUA
+    // (no un salto de SizeClass, s24: "sin saltos bruscos al redimensionar") atada al ALTO real
+    // (la dimension que de verdad aprieta aqui, mismo criterio ya usado por WindowHeightClass/
+    // H5-08, no al ancho): 1.0 en el MinHeight=700 obligado de la ventana, 0.0 en
+    // AppearanceCompactMaxHeight - interpolada linealmente entre los dos.
+    //
+    // FASE G del responsive global (WARN-01, 29-sep-2026, revisor-visual-responsive-faseEF-r1):
+    // el tope original (768, exactamente 1366x768) dejaba ESE tamaño exacto en factor 0 (sin
+    // recorte alguno) - el revisor midio 66,1px de scroll real en la columna editable a
+    // 1366x768 (7 tarjetas de color en 4 columnas a ese ancho, "Muertes (PvE/PvP)" al borde).
+    // Subido a 800 (no a 864/900 - habria recortado tambien 1520x864/1600x900, que el usuario
+    // exige ver IDENTICOS a como estaban): 800 es el siguiente escalon REAL del barrido de la
+    // FASE G (1180x800/1200x800/1320x800, todos por debajo de 1520 de ancho) que YA pasaba con
+    // factor 0 antes de este cambio (altura holgada) - se mantiene el tope justo AHI para que
+    // esos tres tamaños sigan exactamente iguales (factor 0 en su frontera), y 768 (que antes
+    // caia FUERA del rango compactable) ahora cae DENTRO (factor ~0,32, interpolado) y libera el
+    // margen/padding suficiente para que la columna editable deje de desplazar. A partir de 800
+    // de alto (864/900/1080/1440, todos los tamaños de 1520px de ancho o mas del barrido) el
+    // factor sigue en 0, identico a como estaba - ninguno de esos tamaños pierde altura de rango
+    // compactable con este cambio.
     private const double AppearanceCompactMinHeight = 700; // MainWindow.xaml MinHeight="700"
-    private const double AppearanceCompactMaxHeight = 768; // 1366x768, el tamaño "medio" del encargo
+    private const double AppearanceCompactMaxHeight = 800; // FASE G: 1180/1200/1320x800, frontera real sin cambios
     [ObservableProperty] private double _appearanceCompactFactor;
 
     private static double Lerp(double atExpandido, double atCompacto, double factor) => atExpandido + (atCompacto - atExpandido) * factor;
@@ -901,6 +910,18 @@ public partial class MainViewModel : ObservableObject
         _ => 900,
     };
 
+    // FASE G del responsive global (WARN-02, s17, 29-sep-2026): Guia/Hosting media a 1920/2560 solo
+    // usaban 28-40% del ancho disponible (RESTO_RESPONSIVE_SOLO, RESTO-GUIA-ANCHO/RESTO-HOSTING-
+    // ANCHO) - las dos son paginas "de detalle" con una columna estructural angosta (MaxWidth=680,
+    // objetivo/config) y un bloque secundario real ya existente (arbol de progresion/servidores
+    // activos) que antes vivia debajo, sin usar el resto del ancho. IsDetailSideBySide activa esa
+    // columna secundaria EN Amplio/Extra (mismo umbral que DetailContentMaxWidth ya sube a 1200/1700
+    // - suficiente para 680 + una columna real al lado, medido con el arnes), sin duplicar ningun
+    // ItemsControl - GuideView/HostingView solo reposicionan el bloque via Grid.Row/Grid.Column con
+    // un Style+DataTrigger (mismo patron ya usado por IsEquipmentSideBySide en ObjetosView, pero con
+    // reposicionamiento de un unico elemento en vez de layouts duplicados con Visibility).
+    public bool IsDetailSideBySide => SizeClass >= WindowSizeClass.Amplio;
+
     // H5-09: numero real de columnas para las listas de tarjetas de version (Novedades x2,
     // Changelog de Acerca de) - 2 en Amplio (autentico reparto en columnas, no solo mas ancho
     // cada tarjeta), 1 en Compacto/Normal (la tira unica de siempre, ya legible a ese ancho).
@@ -925,6 +946,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
         OnPropertyChanged(nameof(DetailContentMaxWidth));
         OnPropertyChanged(nameof(DetailCardColumns));
+        OnPropertyChanged(nameof(IsDetailSideBySide));
         // F-10 (auditoria de Opus vs TEdit, E-10): ExplorationSidebarMaxWidth (R-10 de la
         // auditoria de redimensionado) queda ELIMINADO, no solo desactivado - la columna ya no
         // es Auto+MaxWidth-por-SizeClass, es un GridLength literal con GridSplitter real

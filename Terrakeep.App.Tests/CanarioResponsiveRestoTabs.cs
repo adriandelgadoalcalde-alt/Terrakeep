@@ -89,6 +89,21 @@ internal static partial class Program
                     Fallo(nombre.ToUpperInvariant(), $"{cab}: la pagina desplaza {sv.ScrollableHeight:0.#}px (ext {sv.ExtentHeight:0.#} en vp {sv.ViewportHeight:0.#}) - contenido finito, no deberia necesitar scroll (s3/s22)");
                 if (sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled && sv.ExtentWidth > sv.ViewportWidth + 0.5)
                     Fallo(nombre.ToUpperInvariant() + "-HSCROLL", $"{cab}: overflow horizontal real ({sv.ExtentWidth:0.#}px en {sv.ViewportWidth:0.#}px) con la barra deshabilitada (s26 G)");
+                // FASE G (WARN-02, s17): "NO columna estrecha en el centro + 50% de fondo vacio" en
+                // ventana grande. Medido contra el ANCHO REAL usado por el contenido (ActualWidth del
+                // hijo directo del ScrollViewer, que en estas paginas es el StackPanel/Grid raiz con
+                // HorizontalAlignment que decide su propio ancho) frente al ancho real disponible
+                // (sv.ViewportWidth) - solo se exige a partir de 1920 (el propio s17 habla de "ventana
+                // grande"/1920-2560, nunca del minimo).
+                if (w >= 1920 && sv.Content is FrameworkElement contenidoRaiz)
+                {
+                    double anchoUsado = contenidoRaiz.ActualWidth;
+                    double anchoDisponible = sv.ViewportWidth;
+                    double fraccion = anchoDisponible > 0 ? anchoUsado / anchoDisponible : 0;
+                    Console.WriteLine($"RESTO {cab}: anchoUsado={anchoUsado:0.#} anchoDisponible={anchoDisponible:0.#} uso={fraccion:P0}");
+                    if (fraccion < 0.5)
+                        Fallo(nombre.ToUpperInvariant() + "-ANCHO", $"{cab}: el contenido solo usa {fraccion:P0} del ancho disponible ({anchoUsado:0.#}px de {anchoDisponible:0.#}px) - columna estrecha + mas de la mitad de fondo vacio (s17)");
+                }
                 if (w == 1080 || primeraEntrada)
                 {
                     string shot = Path.Combine(outDir, $"resto-{etiqueta}-{nombre.ToLowerInvariant()}-{w:0}x{h:0}-{idioma}{(primeraEntrada ? "-primeraentrada" : "")}.png");
@@ -124,6 +139,16 @@ internal static partial class Program
                     Console.WriteLine($"RESTO {cab}: vp={sv.ViewportHeight:0.#} ext={sv.ExtentHeight:0.#} scr={sv.ScrollableHeight:0.#} (scroll de resultados FINITE_PAGEABLE, solo se informa)");
                     if (sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled && sv.ExtentWidth > sv.ViewportWidth + 0.5)
                         Fallo(nombre.ToUpperInvariant() + "-HSCROLL", $"{cab}: overflow horizontal real ({sv.ExtentWidth:0.#}px en {sv.ViewportWidth:0.#}px)");
+                    // Mismo criterio de uso de ancho que MedirPaginaSimple (WARN-02, s17).
+                    if (w >= 1920 && sv.Content is FrameworkElement contenidoRaiz)
+                    {
+                        double anchoUsado = contenidoRaiz.ActualWidth;
+                        double anchoDisponible = sv.ViewportWidth;
+                        double fraccion = anchoDisponible > 0 ? anchoUsado / anchoDisponible : 0;
+                        Console.WriteLine($"RESTO {cab}: anchoUsado={anchoUsado:0.#} anchoDisponible={anchoDisponible:0.#} uso={fraccion:P0}");
+                        if (fraccion < 0.5)
+                            Fallo(nombre.ToUpperInvariant() + "-ANCHO", $"{cab}: el contenido solo usa {fraccion:P0} del ancho disponible ({anchoUsado:0.#}px de {anchoDisponible:0.#}px) - columna estrecha + mas de la mitad de fondo vacio (s17)");
+                    }
                     // El selector de tabs (TabItem.Header) siempre debe seguir siendo clicable/visible -
                     // TabControl nunca lo mete dentro del propio ScrollViewer de contenido (confirmado
                     // por estructura XAML, BuildsView/WhatsNewView: TabControl es el padre, no un hijo).

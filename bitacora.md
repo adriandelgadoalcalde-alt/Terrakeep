@@ -32929,3 +32929,191 @@ G), evidencia `aplicador-fix`/`aplicador-fix-responsive-faseF-29sep2026` registr
    que el known-diff `d7a5a6ef` de Apariencia). No es una regresion ni un bug de esta ronda - es contenido
    real (lista de personajes/objetivo actual/changelog) que ya existia con el mismo scroll antes de la
    FASE F, medido por primera vez con geometria real en esta ronda.
+
+## 29-sep-2026 - FASE G del responsive global (PARCIAL - pausada por prueba en vivo de DST)
+
+Agente: `aplicador-fix-responsive-faseG-29sep2026`. Base `feb490b9` (FASE F). Objetivo: cerrar WARN-01,
+WARN-02, §31 (`MINIMUM_COMFORTABLE_VIEWPORT`) y las 19 condiciones de §33 de la revision independiente
+`6b59710e-e57b-4677-89a1-2c4c58c29b5a` (agente `revisor-visual-responsive-faseEF-r1-29sep2026`).
+
+**El coordinador pidio PAUSA a mitad de ronda** (prueba en vivo de DST en el mismo escritorio): "termina
+la ejecucion en curso, no lances mas ventanas ni el arnes". Cumplido - la ultima ejecucion de
+`Terrakeep.App.Tests.exe` ya habia terminado (exit 0) antes de llegar el aviso, no se lanzo ninguna mas
+despues. Todo lo de abajo que necesita el arnes real (ventanas WPF) queda **PENDIENTE de "via libre"**;
+lo que no necesita ventana (codigo, `dotnet build`, `dotnet test` de proyectos xunit puros) se completo.
+
+### 1. WARN-02 (columna estrecha + >50% de fondo vacio a 1920/2560, s17) - investigado y arreglado
+
+Extendido `CanarioResponsiveRestoTabs.cs` (`MedirPaginaSimple`/`MedirTabControlInterno`) con una medicion
+de USO DE ANCHO real: `ActualWidth` del hijo directo del `ScrollViewer` (el `StackPanel`/`Grid` raiz de
+cada pagina) frente a `sv.ViewportWidth`, solo a partir de 1920 (s17 habla de "ventana grande"). `Fallo()`
+si el uso es <50%.
+
+**Rojo confirmado contra `feb490b9`** (ultima ejecucion del arnes antes de la pausa,
+`RESTO_RESPONSIVE_ETIQUETA=rojo-faseG`): 4 FALLO reales -
+- `GUIA-ANCHO`: 40% a 1920x1080 (677,6px de 1708,8px), 29% a 2560x1440 (677,6px de 2348,8px).
+- `HOSTING-ANCHO`: 38% a 1920x1080 (652,7px de 1725,8px), 28% a 2560x1440 (652,7px de 2365,8px).
+- `AcercaDe`: **PASA** ya en `feb490b9` (99%/72% de uso) - el `StackPanel` raiz de `AboutView.xaml` no
+  tiene ningun hijo con `MaxWidth=680` que fuerce su ancho: el `ItemsControl` de `Changelog.Entries` (sin
+  `MaxWidth` propio, `UniformGrid Columns={DetailCardColumns}`, `HorizontalAlignment=Stretch` por
+  defecto) obliga al `StackPanel` padre (que en un `StackPanel` vertical toma el MAXIMO ancho deseado de
+  sus hijos) a extenderse hasta `DetailContentMaxWidth` completo (1700 en Extra) - el texto corrido
+  (Autoria/Ajustes) se queda en 680px por legibilidad, pero el CONTENEDOR ya usa casi todo el ancho
+  gracias al changelog de abajo. Confirma la instruccion del coordinador ("ancho de lectura comodo
+  centrado es aceptable si el espacio sobrante no queda como columna estrecha + vacio") sin tocar nada:
+  `AboutView.xaml` NO se modifica esta ronda.
+- Builds/Novedades/Inicio: **PASAN** (no listados en el log de fallos) - ya reflowan con
+  `DetailCardColumns`/`InicioContentMaxWidth`, sin necesitar cambio.
+
+**Arreglo real aplicado** (`Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Views/
+GuideView.xaml`, `Terrakeep.App/Views/HostingView.xaml`): nueva propiedad `MainViewModel.
+IsDetailSideBySide => SizeClass >= WindowSizeClass.Amplio` (mismo umbral que ya usa
+`DetailContentMaxWidth` para subir a 1200/1700, sitio real de sobra para 2 columnas). El bloque
+secundario que YA EXISTIA debajo de cada pagina (arbol de progresion completo en Guia; "Servidores
+activos" en Hosting) pasa a columna derecha en Amplio/Extra - reposicionado con un `Style`+
+`DataTrigger` sobre `Grid.Row`/`Grid.Column` de un UNICO `StackPanel` (sin duplicar ningun
+`ItemsControl`, mismo patron ya usado por `IsEquipmentSideBySide` en `ObjetosView.xaml` pero sin
+duplicar el contenido: aqui se reposiciona el mismo elemento, no se clona). La columna derecha colapsa
+a 0 en Compacto/Normal via el converter `BoolToGridLength` YA REGISTRADO en `App.xaml`
+(`ConverterParameter=1` -> `1*` en Amplio/Extra, `Auto` sin contenido -> 0 en Compacto/Normal) - sin
+converter nuevo. Contenido/bindings identicos, solo reposicionados: nada se oculta ni se duplica.
+
+**Verificacion (parcial - bloqueada por la pausa):** `dotnet build Terrakeep.slnx -c Debug`: 0/0.
+`RESTO_RESPONSIVE_SOLO` en verde con el arreglo **NO EJECUTADO TODAVIA** (haria falta relanzar
+`Terrakeep.App.Tests.exe`, ventana real, bloqueado por la pausa) - pendiente de "via libre para el
+arnes". El razonamiento geometrico (dos columnas reales que ya reservan el ancho completo del `Grid`
+via `Width=Auto`+`1*`, en vez de un `StackPanel` de un solo hijo con `HorizontalAlignment=Left`) hace
+esperable que el uso de ancho suba muy por encima del 50% en Amplio/Extra, pero **no esta confirmado
+con geometria runtime real todavia** (s27: "no basta que no crashee, capturar geometria real" - aplica
+igual a mi propio arreglo).
+
+### 2. WARN-01 (66,1px de scroll en Apariencia a 1366x768) - investigado y arreglado
+
+Causa real confirmada por lectura de codigo (`MainViewModel.cs`, `AppearanceCompactFactor`): el tope
+`AppearanceCompactMaxHeight` estaba fijado EXACTAMENTE en 768 (el alto de 1366x768) - la formula
+`Clamp((768-alto)/(768-700), 0, 1)` da **factor 0 EXACTO** justo en ese alto, es decir CERO recorte,
+mientras que cualquier alto por debajo (720/740/760) SI recibia algo de compactacion. 1366x768 quedaba
+en la peor situacion posible: el unico tamaño del barrido sin ningun margen recortado pese a tener menos
+alto util que 800/864/900/1080/1440.
+
+**Arreglo real aplicado**: `AppearanceCompactMaxHeight` sube de 768 a **800** (no a 864/900: eso habria
+recortado tambien 1520x864/1600x900, que el pedido explicito "a >=1520 debe seguir identico" prohibe
+tocar). 800 es la frontera EXACTA de otros 3 tamaños reales del barrido de §2 (1180x800/1200x800/
+1320x800, todos con ancho <1520) que ya pasaban con factor 0 (alto holgado) - se deja el tope justo ahi
+para que esos 3 NO cambien (factor 0 en su frontera, igual que antes), y 1366x768 (alto=768, ahora
+DENTRO del rango 700-800) pasa a factor `(800-768)/(800-700) = 0,32` - compactacion real y continua, sin
+salto brusco (s24).
+
+**Verificacion**: nuevo test real `Terrakeep.App.ViewModels.Tests/AppearanceCompactFactorFaseGTests.cs`
+(xunit puro, SIN ventana - no bloqueado por la pausa) fija la formula: factor=1 a 700 (sin cambios),
+factor=0,32 exacto a 1366x768 (el hallazgo del revisor, antes 0,0), factor=0 exacto en la frontera real
+800 (1180/1200/1320x800, sin cambios) y factor=0 en los 4 tamaños de ancho>=1520 del barrido
+(1520x864/1600x900/1920x1080/2560x1440, sin cambios - "a >=1520 identico" confirmado por formula, no
+solo por lectura), mas una prueba de monotonia/continuidad entre 700 y 800. **10/10 verde**. Suite
+completa `Terrakeep.App.ViewModels.Tests`: **817/817** (807 previos + 10 nuevos), sin regresion.
+`Terrakeep.Core.Tests`: **789/789**, sin regresion (no tocado).
+
+**Pendiente (bloqueado por la pausa)**: confirmar con `PERSONAJE_RESPONSIVE_SOLO` (el canario real que
+mide `ScrollableHeight` de Apariencia con la ventana real) que los 66,1px de scroll medidos por el
+revisor bajan a 0 a 1366x768, y que 1520x864/1600x900/1920x1080/2560x1440 siguen pixel-identicos
+(captura antes/despues). El test de formula confirma que la ENTRADA al layout cambia exactamente como
+se pretende; falta la confirmacion de que la SALIDA visual (scroll real) tambien se resuelve - requiere
+ventana real.
+
+### 3. §31 MINIMUM_COMFORTABLE_VIEWPORT - decision con las cifras YA reales disponibles
+
+**Decision: MANTENER 1080x700.** No se ha podido re-ejecutar el barrido completo de 15 tamaños con el
+arnes esta ronda (pausa), asi que la decision se apoya en la evidencia YA MEDIDA y real de las rondas D/
+E/F (mismo HEAD `feb490b9` del que parte esta ronda, sin ningun cambio de produccion entre medias que
+afecte 1080x700 salvo los 2 de arriba, que aun no se han re-verificado con ventana):
+- `EQUIP_RESPONSIVE_SOLO`, `INVALM_RESPONSIVE_SOLO`, `LIBRARY_RESPONSIVE_SOLO`,
+  `PERSONAJE_RESPONSIVE_SOLO`, `RESTO_RESPONSIVE_SOLO`, `COFRES_INSPECTOR_SOLO`: **0 FALLO a 1080x700**
+  en la ultima pasada real (FASE F, 29-sep-2026), salvo el `COFRES-INSPECTOR-FASED-R1` pre-existente
+  (ancho del Inspector, sin relacion con el viewport minimo).
+- Los 3 candidatos reales a "necesitar mas alto" (Inicio 290px, Guia 1037px, AcercaDe 15107px de scroll
+  a 1080x700) son **scroll de RESULTADOS/contenido documental legitimo** (s3/s22/s34: lista de
+  personajes reales, objetivo+arbol de progresion completo, changelog completo) - el propio contrato de
+  §33 solo exige "structural controls/navegacion/categorias" visibles SIN scroll a ese tamaño, nunca
+  contenido no acotado. Confirmado visualmente en las capturas de FASE F (cabecera+selector+primera
+  tarjeta/objetivo siempre visibles, scrollbar real indicando mas contenido debajo, sin clipping/overlap).
+- Ningun tamaño del barrido de §2 por DEBAJO de 1080x700 se prueba (1080x700 YA es el minimo declarado en
+  `MainWindow.xaml`) - no hay evidencia de que la arquitectura actual necesite MAS que 1080x700; subirlo
+  "por si acaso" iria contra s31 ("no subir el minimo para esconder una mala arquitectura" - aqui no hay
+  mala arquitectura, hay contenido real documental, que es el caso legitimo explicito de s3/s34).
+`MinWidth`/`MinHeight` de `MainWindow.xaml` **NO se tocan**.
+
+**Pendiente (bloqueado por la pausa)**: re-ejecutar el barrido completo de §2 (15 tamaños, incluyendo los
+intermedios 1100x720/1120x740/1180x760/1180x800/1200x800/1280x720/1280x800/1280x900/1320x800/1440x900/
+1600x900 que las rondas D/E/F no cubrieron con el mismo detalle que 1080x700/1366x768/1520x860/1920x1080/
+2560x1440) para dejar la decision confirmada con cifras de TODOS los 15 tamaños, no solo del minimo y los
+5 principales. Con los 2 arreglos de arriba aplicados (que solo AUMENTAN compactacion/uso de ancho, nunca
+lo reducen), no se espera ningun tamaño nuevo por debajo del umbral, pero queda por confirmar con
+geometria real.
+
+### 4. §33 - criterio final de DONE (19 condiciones), estado a fecha de la pausa
+
+| # | Condicion | Estado | Evidencia |
+|---|---|---|---|
+| 1 | minimum viewport medido | **PARCIAL** | Decision con cifras de FASE D/E/F (0 FALLO a 1080x700, salvo pre-existente sin relacion); barrido completo de los 15 tamaños de §2 pendiente de arnes |
+| 2 | toda la app auditada | OK (rondas B-F) | bitacora.md, entradas FASE B-F |
+| 3 | structural controls visibles | OK (rondas B-F) + WARN-02 cerrado esta ronda | canarios EQUIP/INVALM/LIBRARY/PERSONAJE/RESTO_RESPONSIVE_SOLO |
+| 4 | navegacion descubrible | OK (rondas B-F) | idem |
+| 5 | paginacion Equipamiento/Vanidad/Tintes | OK (FASE B) | `IsEquipmentSideBySide`, `EQUIP_RESPONSIVE_SOLO` |
+| 6 | categorias accesibles | OK (FASE D) | `LIBRARY_RESPONSIVE_SOLO` |
+| 7 | adaptive grids | OK (FASE A-F) | `SlotGridPanel.AdaptiveColumns`, `ChestInspectorColumnsConverter` |
+| 8 | nested same-axis scroll = 0 salvo waiver | OK (FASE F cerro ChestInspector) | `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO`: 0 |
+| 9 | clipping = 0 | OK (rondas B-F, confirmado visualmente) | capturas `docs/evidencia/responsive-global/` |
+| 10 | overlap = 0 | OK (rondas B-F) | idem |
+| 11 | scroll horizontal inesperado = 0 | OK (rondas B-F + canario HSCROLL) | `CanarioResponsiveRestoTabs.cs` y hermanos |
+| 12 | ningun scrollbar tapado | OK (rondas B-F, confirmado visualmente) | capturas |
+| 13 | resize en caliente | OK (FASE F, bloque RESIZE de `CanarioResponsiveRestoTabs.cs`) | log FASE F |
+| 14 | ES/EN | OK (FASE F, bloque EN de `CanarioResponsiveRestoTabs.cs`) | idem |
+| 15 | perfil responsive de KeepQA actualizado | **NO VERIFICADO esta ronda** | pendiente de revisar `__perfiles-responsive__/Terrakeep.json` en KeepQA |
+| 16 | revisor-visual PASS | **PENDIENTE** | lo lanza el coordinador tras cerrar esta ronda |
+| 17 | verificador-qa PASS | **PENDIENTE** | idem |
+| 18 | evidencia fresca | **PARCIAL** | esta entrada + capturas antes/despues de WARN-01/WARN-02 pendientes de arnes |
+| 19 | Supersession Gate PASS | **NO VERIFICADO esta ronda** | pendiente `requirement precheck` |
+
+### 5. Canario nuevo
+`RESTO_RESPONSIVE_SOLO` gana la medicion de USO DE ANCHO (ver punto 1) - rojo confirmado contra
+`feb490b9` (4 FALLO: GUIA-ANCHO/HOSTING-ANCHO x2 tamaños), verde **pendiente de confirmar** con el
+arreglo aplicado (bloqueado por la pausa).
+
+### 6. Sin regresion (lo que SI se pudo verificar sin ventana)
+`dotnet build Terrakeep.slnx -c Debug`: 0/0. `Terrakeep.App.ViewModels.Tests`: 817/817 (807 previos +
+10 `AppearanceCompactFactorFaseGTests` nuevos). `Terrakeep.Core.Tests`: 789/789 (no tocado). Los
+canarios de ventana (`EQUIP`/`INVALM`/`LIBRARY`/`PERSONAJE_RESPONSIVE_SOLO`/`RESTO_RESPONSIVE_SOLO`/
+`COFRES_INSPECTOR_SOLO`) **no se han vuelto a ejecutar tras el arreglo** - pendiente de "via libre".
+
+### 7. Despliegue
+**PENDIENTE por completo** - requiere el arreglo confirmado en verde con el arnes real antes de publicar,
+y ademas Terrakeep.exe/el propio arnes no se pueden lanzar ahora mismo (pausa). `%LocalAppData%\Programs\
+Terrakeep\` sigue con el binario de la FASE F (`f018597be07b4af4f2477ca69f7fb7b0db1f7b62dbd2d92d7fe4c1b8c77fa8af`).
+
+### 8. Commits de esta ronda
+Checkpoint intermedio (este mismo commit, archivos exactos: `Terrakeep.App.Tests/
+CanarioResponsiveRestoTabs.cs`, `Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Views/
+GuideView.xaml`, `Terrakeep.App/Views/HostingView.xaml`, `Terrakeep.App.ViewModels.Tests/
+AppearanceCompactFactorFaseGTests.cs`, esta entrada de `bitacora.md`) - NO se marca DONE el requirement
+`6b59710e-e57b-4677-89a1-2c4c58c29b5a`, sigue OPEN/VERIFYING a la espera del cierre real con el arnes.
+Sin `git add -A` (cambios ajenos sin comitear de otros agentes en paralelo: `Terrakeep.App.Tests/
+AuditoriaMaquetacion.cs`, 17 archivos de `Terrakeep.Core.Tests/`, 2 scripts, `Terrasavr-Native.zip` - NO
+tocados). Sin `git push`.
+
+### Pendiente real (para retomar en cuanto llegue "via libre para el arnes")
+1. `dotnet build` ya en verde - relanzar `RESTO_RESPONSIVE_SOLO` con el arreglo de WARN-02, confirmar
+   verde (0 FALLO, especialmente `GUIA-ANCHO`/`HOSTING-ANCHO` a 1920/2560).
+2. Relanzar `PERSONAJE_RESPONSIVE_SOLO` para confirmar que WARN-01 baja a 0 scroll a 1366x768 y que
+   1520x864/1600x900/1920x1080/2560x1440 siguen identicos (captura pixel a pixel si hace falta).
+3. Barrido completo de los 15 tamaños de §2 para terminar de confirmar §31 con cifras de TODOS los
+   tamaños (no solo los 5 principales + el minimo).
+4. Sin regresion completa: `EQUIP`/`INVALM`/`LIBRARY`/`PERSONAJE_RESPONSIVE_SOLO`/`RESTO_RESPONSIVE_SOLO`/
+   `COFRES_INSPECTOR_SOLO` en 0 FALLO (salvo el pre-existente ya conocido).
+5. Capturas antes/despues a 1080x700/1920x1080/2560x1440 en `docs/evidencia/responsive-global/faseG/`.
+6. Revisar/actualizar `__perfiles-responsive__/Terrakeep.json` en KeepQA (condicion 15 de §33).
+7. Desplegar desde worktree limpio a `%LocalAppData%\Programs\Terrakeep\` (verificar Terrakeep.exe
+   cerrado, hash publicado==instalado) y recompilar el Debug de `herramientas.json`.
+8. `requirement precheck` para las condiciones 18/19 de §33 (evidencia fresca + Supersession Gate).
+9. Registrar toda la evidencia final en el requirement `6b59710e-e57b-4677-89a1-2c4c58c29b5a`
+   (`--fuente aplicador-fix --agente aplicador-fix-responsive-faseG-29sep2026`) antes de que el
+   coordinador lance revisor-visual/verificador-qa independientes.
