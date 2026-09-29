@@ -33999,7 +33999,7 @@ barra 520).
 2. **Bisección**: no hay commit que bisecar. Entre el verde (540/0, `56768d20`) y el rojo
    (`b18aa8c5`) solo cambió `CanarioResponsivePersonajeResto.cs` y la bitácora; entre `v3.3.0`
    (`adf6a5ac`, publicada, ya incluye `7d801dfe`) y HEAD el diff de `Terrakeep.App`/`Core`/`ViewModels`
-   está vacío. Mismo código, mismo mundo (`El_Gruta_(Legendario).wld`, sin tocar desde el 26-sep).
+   está vacío. Mismo código, mismo mundo de origen de la copia aislada (sin modificar desde el 26-sep).
 3. **Reproducción en HEAD** (con volcado de firma añadido, que no cambia el veredicto): 540 medidas,
    0 fallos, con el ratón fuera de la ventana.
 4. **Experimento controlado** (usuario 11 min inactivo, `SetCursorPos` sobre la ventana del arnés,
@@ -34030,8 +34030,8 @@ barra 520).
 8. **Verificación** (Debug, `TERRAKEEP_ARNES_DPI_POR_MONITOR=1`): `LAYOUT_REPOSO_SOLO` x3 seguidas =
    540 medidas / 0 fallos / 0 inconclusas las tres; RESTO/EQUIP/INVALM/LIBRARY/PERSONAJE_RESPONSIVE_SOLO
    0 FALLO; Core.Tests 789/789; ViewModels.Tests 825/825; build incremental 0/0 (el `--no-incremental`
-   saca 5 CS0649 preexistentes de `WldWriterWriteWorldTests.cs`, ajenos). SHA256 de 25 partidas
-   reales + 4 JSON de `%LOCALAPPDATA%\Terrakeep` + nº de carpetas de `Backups`: idénticos antes y
+   saca 5 CS0649 preexistentes de `WldWriterWriteWorldTests.cs`, ajenos). SHA256 de 23 partidas
+   reales + 5 archivos de `%LOCALAPPDATA%\Terrakeep` + nº de carpetas de `Backups` (8): idénticos antes y
    después. Turno de pantalla respetado (`PANTALLA.lock` tomado y liberado).
 9. **Observación aparte, no es bug**: mover el ratón sobre el mapa cuesta hasta ~600 ms de CPU/s en
    el arnés (Debug + DoEvents) por el re-maquetado de la barra de estado dentro de su `Viewbox`. No
