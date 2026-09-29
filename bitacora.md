@@ -33667,3 +33667,90 @@ requirement (los 4 `knownDifferences` Medium estan `RESOLVED`, solo quedan 3 `Lo
 relacion con Hallazgo 1/2 de la clasificacion s3). El cierre completo del requirement (vincular
 test-por-criterio a los 17 restantes) queda **fuera del alcance de este encargo** - anotado para
 el coordinador, igual que el punto 4 de "Pendiente real" de la entrada anterior.
+
+## 29-sep-2026 - "Terrakeep congelado" (bucle de layout real en Exploracion) + tarjetas del historial estiradas
+
+### 1. Lo que mostraba el volcado del proceso congelado (PID 81752, dotnet-dump, solo lectura)
+- `MainViewModel._selectedTabIndex=4` -> **Exploracion** (no Acerca de, como se suponia por la captura),
+  `_sizeClass=2` (Amplio), `_heightClass=1`; ventana real 1651x1204 a 96 ppp (GetWindowRect del
+  proceso vivo); idioma `es`; personaje cargado; mundo grande (8400x2400) cargado; barra lateral en
+  modo Buscar, categoria Cofres, vista "Por tipo" (`_chestViewMode=0`), `ExplorationSidebarWidth=520`.
+- Ningun `DispatcherTimer` activo (`Dispatcher._timers._size=0`): el trabajo no venia de un timer.
+- `ContextLayoutManager`: `_inFireAutomationEvents=1`, `_automationSyncUpdateCounter=7` -> habia un
+  cliente UIA externo suscrito; cada pasada de layout recorria ademas todo el arbol de peers.
+- 28.457 `Stack<DependencyObject>` basura, todos con el mismo `ListBox` (el de las filas
+  `WorldInventoryRowViewModel`): cada `Measure`/`Arrange` con UIA activo crea uno
+  (`UIElementHelper.InvalidateAutomationAncestors`) -> ese ListBox se re-maquetaba sin parar.
+- 990 `SizeChangedEventArgs` recientes: el `ScrollViewer` de la barra lateral alternaba su alto
+  **910,82 <-> 941,45** (30,63 px = la fila de `ExplorationScrollHint`). Y los 44
+  `ScrollChangedEventArgs` vivos daban la secuencia exacta: BARRA (offset 37,21) -> "queda scroll" ->
+  indicador Visible; LISTA interna (offset 1031,13 -> 1059,94, a <2 px de su fondo) -> "no queda
+  scroll" -> indicador Collapsed; y vuelta a empezar.
+
+### 2. Causa exacta
+`Terrakeep.App/MainWindow.xaml.cs`, `OnExplorationSidebarScrollChanged` (antes linea ~735):
+`ScrollChanged` BURBUJEA, y el manejador usaba `e.ExtentHeight/ViewportHeight/VerticalOffset` sin
+mirar el origen - tambien los de la lista virtualizada interna (ScrollUnit=Pixel). Indicador
+Visible -> la barra pierde 30,63 px -> el ListBox encoge -> su VirtualizingStackPanel reajusta el
+offset -> la lista "llega al fondo" -> indicador Collapsed -> la barra recupera los 30,63 px -> ...
+Basta con bajar con la rueda hasta el final de Cofres/Por tipo para congelar la app (sin UIA
+tambien; con UIA, cada vuelta cuesta ademas el recorrido completo de peers).
+
+### 3. Arreglo (commit 7d801dfe)
+`if (!ReferenceEquals(e.OriginalSource, sender)) return;` - solo cuenta el propio ScrollViewer de la
+barra lateral. Analizado a mano que la decision con los valores propios no oscila (en Browse
+extent-viewport = cabecera constante por el `Height=ViewportHeight` de BrowseView; en los modos de
+contenido fijo es biestable, nunca oscilante). Revisado el otro `ScrollChanged` de la app
+(`WorldMapView.OnWorldMapScrollChanged` -> `UpdateMinimapViewport`): lee `WorldMapScroll.*`, nunca
+`e`, y solo mueve el rectangulo del minimapa, fuera de ese ScrollViewer - no tiene el patron.
+
+### 4. Canario nuevo `LAYOUT_REPOSO_SOLO` (Terrakeep.App.Tests/CanarioBucleLayoutReposo.cs)
+Cuenta `Window.LayoutUpdated` en 1 s de reposo (umbral 2/s) en: estado EXACTO del volcado (1651x1204,
+barra 520, Cofres/Por tipo, lista con rueda hasta el final, barra en 37,21), matriz barra-offset x
+lista-al-fondo, las 6 pestanas de primer nivel (arriba y al fondo), las 8 sub-pestanas de Personaje,
+las 7 categorias de Exploracion + modo Mundo, en 1080x700, 1366x768, 1519x900, 1520x900, 1651x1204,
+1919x1080, 1920x1080, 2560x1440 (320 y 520 de barra en las fronteras) y EN. Con cliente UIA
+EXTERNO real (el propio exe en modo cliente, proceso hijo suscrito a PropertyChanged/
+StructureChanged/Focus - un UIA en proceso no reproduce `fireAutomationEvents`). Vigilante en otro
+hilo: si el hilo de UI no vuelve de DoEvents en 20 s -> `FALLO: LAYOUT_REPOSO_SOLO-BLOQUEO` con los
+ultimos ScrollChanged y salida 1 (no se queda colgado).
+- ROJO contra 37b65114: `FALLO ... BLOQUEO` en "rueda hasta el final de la lista interna", con el
+  mismo ciclo del volcado (BARRA 910,82/941,45; INTERNO 1031,13/1061,76, ext 1772,44, vp 710,69).
+- VERDE tras 7d801dfe: 540 medidas, 0 fallos; estado del volcado 0 pasadas/s.
+- Hallazgo lateral (NO bug): Inicio daba 14 pasadas/s en algunos barridos = animacion de andar de
+  una tarjeta de personaje (timer 70 ms, `CharacterListEntryViewModel.SetHovering`) disparada por el
+  RATON REAL del usuario sobre la ventana del arnes (confirmado listando los DispatcherTimer activos
+  por reflexion). El canario apaga el hover y reintenta; si el raton lo vuelve a disparar la medida
+  queda INCONCLUSIVE, nunca FALLO. Con el hover apagado: 0 pasadas/s.
+- Lo que NO lo reproducia (por si vuelve a hacer falta): reposo con la lista arriba, cliente UIA
+  sin la lista al fondo, `ScrollToVerticalOffset` directo (en modo pixel ni llega al fondo: pedi
+  1029 y quedo en 514). Hizo falta la rueda (`IScrollInfo.MouseWheelDown`) como el usuario.
+
+### 5. Tarjetas del historial de versiones (commit 314f3f26)
+Causa: `UniformGrid` da a TODAS las celdas el alto de la tarjeta mas alta de toda la coleccion.
+Arreglo: `Terrakeep.App/Controls/TarjetasEnFilasPanel.cs` (columnas iguales como UniformGrid, pero
+cada fila mide lo que su tarjeta mas alta; sin estado entre pasadas) en `AboutView.xaml` (Changelog)
+y `WhatsNewView.xaml` (Terraria y tModLoader/Calamity). `RESTO_RESPONSIVE_SOLO` mide ahora
+`MedirTarjetasDeVersion`: ninguna tarjeta mas alta que el contenido mas alto de su fila (+2 px) y
+sin huecos entre filas. ROJO antes: 42 fallos (AcercaDe 19/20 tarjetas estiradas, hasta 630 px a
+1080x700 y 1361 px a 1520x860). VERDE despues: 0 fallos en todo RESTO (sin fallos CLIP/ANCHO: la
+Fase G no se reabre). Capturas antes/despues mirando las de 1080x1440 y 2560x1440:
+`docs/evidencia/tarjetas-historial-29sep/`.
+
+### 6. Pruebas y regresion
+`dotnet build Terrakeep.slnx` 0/0; Core.Tests 789/789; ViewModels.Tests 825/825; EQUIP, INVALM,
+LIBRARY, PERSONAJE, RESTO: 0 fallos; COFRES_INSPECTOR_SOLO: 0 FALLO. Todas con
+`TERRAKEEP_ARNES_DPI_POR_MONITOR=1`, sin SendInput. SHA256 de 25 partidas + 4 JSON de
+`%LOCALAPPDATA%\Terrakeep` + lista de 8 carpetas de `Backups`: identicos antes y despues.
+
+### 7. Despliegue
+Terrakeep del usuario ya cerrado por el (tasklist vacio). Worktree limpio en 314f3f26 (retirado),
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` +
+`robocopy /MIR /XF unins000.*` a `%LocalAppData%\Programs\Terrakeep\` (13062 archivos). SHA256
+publicado == instalado: `566bcb869ec013e3d6716d260a5dc79366d411672c01bea5943bb64a6fc605a9`.
+
+### 8. Task Context
+Requirement NUEVO `0529c3e2-2158-4956-8076-20ea311f7ba4` (no se reabre `6b59710e`: el bucle no es
+de la Fase G, viene del indicador del 14-sep + listas en pixel; las tarjetas, del UniformGrid de
+H5-09). 2 criterios, commits 7d801dfe/314f3f26, 2 tests y 3 evidencias enlazadas. Queda OPEN: el
+paso a VERIFYING no se aplico - pendiente para el coordinador.
