@@ -33881,3 +33881,58 @@ pestaña con el mundo de prueba nuevo, mismo patron que el de `02-personaje.png`
 regeneradas, abiertas una a una, bordes comprobados pixel a pixel (0 blancos/transparentes,
 `comprobar-bordes.ps1`). `git push origin master` normal (`04840e8d..97538a95`). Verificado que
 GitHub sirve ya las 4 capturas que cambiaron (Content-Length identico via `curl -I`).
+
+## 29-sep-2026 - Limpieza final de cara a la semana que viene (repo sin nada sin comitear/pushear)
+
+Encargo de la limpieza general de la Familia Keep ("hazlo todo tu menos ClasificaKeep, decide tu
+sobre la marcha, dejalo todo limpio"). Estado de partida (`git status -s`): 4 archivos modificados
+sin comitear + 2 elementos sin seguimiento, heredados de rondas anteriores en paralelo (ver los
+"Sin `git add -A`" de las dos entradas anteriores).
+
+1. **`Terrakeep.App.Tests/AuditoriaMaquetacion.cs`** - comiteado (`d50c1eb7`): anade
+   `Personaje/Comparar` (indice 7) a la lista COMPARTIDA de pantallas de AR-LAY/KEEPQA_SOLO.
+   `CompareView` ya vive en produccion desde hace varias rondas (ver "FASE G" mas arriba) pero
+   faltaba en esta lista - trabajo terminado y coherente, sin nada a medias.
+2. **`scripts/extraer-nombres-calamity-en.js` + `scripts/sync-guia-desde-terrakeepmod.ps1`** -
+   comiteados juntos (`56f1e236`): 2 rutas viejas (`Downloads\Terrasavr-Win\...`,
+   `Downloads\dev-tools\...`) corregidas a `Downloads\Keep\...` tras la centralizacion del
+   16-sep-2026 - las viejas seguian funcionando via symlink de compatibilidad, pero la regla
+   global pide la ruta nueva en codigo tocado. Sintaxis verificada (`node --check` / tokenizer de
+   PowerShell), sin build propio al ser scripts sueltos.
+3. **`Terrakeep.Core.Tests/WldFormat/WldWriterWriteWorldTests.cs`** - **rescatado, no comiteado en
+   master**: anadia `= false` explicito a ALGUNOS campos bool de `HeaderOverrides` en
+   declaraciones multiples pero no a otros de la misma linea (p.ej. `DownedBoss1, DownedBoss2,
+   DownedBoss3, DownedQueenBee = false` - solo el ultimo lleva inicializador) - sin efecto
+   funcional real (`bool` ya vale `false` por defecto) e inconsistente a medias. Llevado a la rama
+   `rescate/wip-29sep` (creada desde HEAD, commit `a9108d9`, `git push -u origin
+   rescate/wip-29sep`) y restaurado a HEAD en `master` (confirmado con `git diff` vacio tras volver).
+4. **`Terrasavr-Native.zip`** (raiz, sin seguimiento, 380 MB, 23-sep-2026) - inspeccionado con
+   `ZipFile::OpenRead` (168.892 entradas: `.codebase-memory/`, `bitacora.md`, `CLAUDE.md`, `docs/`,
+   `reference/`... el repo entero) - export/backup accidental del propio repo, sin valor de
+   recuperacion adicional sobre el propio git. **Borrado del disco** (nunca comiteado - 380 MB,
+   regla de "nunca binarios grandes"). Anadido `/*.zip` al `.gitignore` (commit `3aef4db4`) para
+   que no se pueda colar otra vez sin querer.
+5. **`docs/evidencia/responsive-global/final/`** (298 archivos, 49 MB, sin seguimiento) -
+   confirmado por el propio texto de las 2 entradas anteriores de esta bitacora que es la
+   evidencia real del verificador de la ronda WARN-01/WARN-02/regresion de columnas (0 FALLO en
+   RESTO/PERSONAJE/EQUIP/INVALM/LIBRARY_RESPONSIVE_SOLO, AR-LAY 663 combinaciones con 1 sola firma
+   preexistente sin relacion) - mismo criterio de versionado que faseB..faseG-regresion, ya
+   comiteadas en esta misma carpeta. **Comiteada** junto al `.gitignore` (`3aef4db4`).
+6. **Build+tests antes de comitear codigo**: `dotnet build Terrakeep.slnx -c Debug` -> **0
+   Advertencias, 0 Errores**. `Terrakeep.Core.Tests` -> **789/789**. `Terrakeep.App.ViewModels.Tests`
+   -> **825/825**. No se ejecuto `Terrakeep.App.Tests` (arnes de ventana real UI Automation, fuera
+   del alcance pedido - solo Core.Tests/ViewModels.Tests - y el build ya confirma que compila).
+7. **Privacidad** (repo PUBLICO): `git diff origin/master..HEAD` grepeado contra
+   `C:\Users\adrian`, `AppData`, correos, tokens/`api_key`/`password=`/`secret`: **0 coincidencias**
+   en los 2 commits de codigo (AuditoriaMaquetacion.cs, los 2 scripts). El commit de evidencia SI
+   contiene rutas `C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-*` dentro de los `.log` (texto
+   de aislamiento del arnes, nunca datos de partidas reales en si) - mismo patron EXACTO ya
+   presente en los 15 `.log` ya comiteados de `docs/evidencia/responsive-global/faseD/` (y
+   `faseD/revisor-r1|r2/`), asumido consciente por continuidad con ese precedente real del propio
+   repo, no una categoria nueva de fuga. Deuda YA EXISTENTE y anterior a esta limpieza (no
+   introducida ni agravada por ella): 94 apariciones de rutas `C:\Users\adrian\...` en 47 `.cs` de
+   test (33 en `Terrakeep.App.Tests/Program.cs`) con nombres de partidas reales como datos de
+   prueba, y en `CLAUDE.md`/`ESPEC-*.md` - fuera de alcance de esta ronda (arreglarlo retroactivo
+   seria un cambio enorme aparte), reportado tal cual al coordinador.
+8. **Cierre**: `git status` limpio, `git push origin master` (3 commits) + rama `rescate/wip-29sep`
+   ya empujada, 0 commits sin push.
