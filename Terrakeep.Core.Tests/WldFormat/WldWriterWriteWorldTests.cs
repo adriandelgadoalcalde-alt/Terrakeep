@@ -73,10 +73,10 @@ public class WldWriterWriteWorldTests
         public double Time = 0;
         public bool DayTime = true;
         public int MoonPhase = 0;
-        public bool BloodMoon, IsEclipse, IsCrimson;
-        public bool DownedBoss1, DownedBoss2, DownedBoss3, DownedQueenBee;
+        public bool BloodMoon = false, IsEclipse = false, IsCrimson = false;
+        public bool DownedBoss1, DownedBoss2, DownedBoss3, DownedQueenBee = false;
         public bool DownedMech1, DownedMech2, DownedMech3;
-        public bool DownedPlant, DownedGolem;
+        public bool DownedPlant = false, DownedGolem;
         public bool? DownedSlimeKing = false;
         public bool HardMode;
         public bool DownedGoblinArmy, DownedFrostLegion, DownedPirates;
