@@ -33983,3 +33983,57 @@ verdad) con evidencia fresca, y abrir las capturas del mínimo y del grande.
    confirmar o descartar.
 8. **Segunda verificación de la misma ronda**: `d3d06630` (TerrakeepTrainer, `CampoNumerico`) - ver
    `LEEME.md` del propio repo, no aplica aquí.
+
+## 29-sep-2026 (mismo día) - Los 5 FALLO de `LAYOUT_REPOSO_SOLO` (requirement 0529c3e2): ratón real, no bucle
+
+Encargo: reproducir, bisecar y clasificar los 5 `FALLO: LAYOUT_REPOSO_SOLO-BUCLE` del hallazgo
+incidental de arriba (Exploracion/Cofres-CofreACofre, Minerales y Objetos; 1920x1080 y 1651x1204 EN,
+barra 520).
+
+1. **Firma del fallo** (log original `layout-reposo-refresh.log`): 126, 5 y 92 pasadas/s a
+   1920x1080 y 95/102 a 1651x1204 EN con la lista de Cofre a cofre al fondo; CPU 280-470 ms/s;
+   **ScrollChanged=0** en la barra lateral (el bucle del 29-sep hacía oscilar la barra 910,82 <->
+   941,45 con decenas de ScrollChanged); en 2 de los 5, un temporizador de tooltip
+   (`PopupControlService.BeginShowToolTip`) activo = el cursor estaba encima de un elemento de la
+   ventana del arnés; la medida siguiente de cada serie, 0 pasadas.
+2. **Bisección**: no hay commit que bisecar. Entre el verde (540/0, `56768d20`) y el rojo
+   (`b18aa8c5`) solo cambió `CanarioResponsivePersonajeResto.cs` y la bitácora; entre `v3.3.0`
+   (`adf6a5ac`, publicada, ya incluye `7d801dfe`) y HEAD el diff de `Terrakeep.App`/`Core`/`ViewModels`
+   está vacío. Mismo código, mismo mundo (`El_Gruta_(Legendario).wld`, sin tocar desde el 26-sep).
+3. **Reproducción en HEAD** (con volcado de firma añadido, que no cambia el veredicto): 540 medidas,
+   0 fallos, con el ratón fuera de la ventana.
+4. **Experimento controlado** (usuario 11 min inactivo, `SetCursorPos` sobre la ventana del arnés,
+   sin clics ni teclas, cursor restaurado): cursor QUIETO sobre el mapa o sobre la lista, en las 3
+   vistas: 0-1 pasadas/s (no hay bucle de hover). Cursor MOVIÉNDOSE sobre el mapa: 63-64 pasadas/s
+   con 63-64 pasos, ScrollChanged=0, y lo que cambia de tamaño en cada paso es la barra de estado del
+   mapa (`MapStatusBar`, ancho 225,88<->629,79) y el tooltip (`MapTooltipBorder`, 96,84<->352,77):
+   `WorldMapView.OnWorldMapMouseMove` (WorldMapView.xaml.cs:354) -> `UpdateHover` + `PositionMapTooltip`,
+   una pasada legítima por movimiento. Con un ratón de 125 Hz da las 126/s del log original.
+   `MapTooltipCanvas` es `IsHitTestVisible=False`: el tooltip no puede quedar bajo el cursor y crear un
+   bucle enter/leave.
+5. **Clasificación: inestabilidad del canario** (entrada real del usuario durante la medida de
+   "reposo"), NO un congelamiento. La 3.3.0 publicada no está afectada -> sin parche 3.3.1.
+6. **Arreglo del canario** (`e1dc2457`, solo test): cuenta los movimientos REALES del ratón sobre su
+   ventana (`PreviewMouseMove` con posición distinta; los MouseMove sintéticos que WPF lanza tras una
+   pasada con el cursor quieto repiten posición y no cuentan, así que un bucle sin entrada nunca suma).
+   Si hubo movimiento, repite la medida y solo una ventana sin movimiento decide; si el ratón no para
+   en 3 reintentos -> INCONCLUSIVE (se imprime y NO cuenta como verde). Umbral (2/s) sin tocar. Al
+   superar el umbral vuelca la firma (SizeChanged por elemento con min/max, operaciones del Dispatcher,
+   posición del ratón, 4 segundos siguientes). `LAYOUT_REPOSO_INYECTAR_RATON=1` lo demuestra (solo con
+   el PC >= 120 s sin uso). Demostración real de propina: el usuario volvió durante una pasada rápida;
+   `Cofres-PorTipo` midió 17 pasadas/s con 701 movimientos reales (la lógica vieja = FALLO), el
+   reintento 2 sin movimiento dio 0.
+7. **Sigue detectando el bucle original**: guarda de `7d801dfe` revertida en local (sin comitear,
+   restaurada con `git checkout -- Terrakeep.App/MainWindow.xaml.cs`) -> `FALLO:
+   LAYOUT_REPOSO_SOLO-BLOQUEO` en "rueda hasta el final de la lista interna", barra 910,82<->941,45,
+   lista 1031,13<->1061,76 (idéntico al volcado).
+8. **Verificación** (Debug, `TERRAKEEP_ARNES_DPI_POR_MONITOR=1`): `LAYOUT_REPOSO_SOLO` x3 seguidas =
+   540 medidas / 0 fallos / 0 inconclusas las tres; RESTO/EQUIP/INVALM/LIBRARY/PERSONAJE_RESPONSIVE_SOLO
+   0 FALLO; Core.Tests 789/789; ViewModels.Tests 825/825; build incremental 0/0 (el `--no-incremental`
+   saca 5 CS0649 preexistentes de `WldWriterWriteWorldTests.cs`, ajenos). SHA256 de 25 partidas
+   reales + 4 JSON de `%LOCALAPPDATA%\Terrakeep` + nº de carpetas de `Backups`: idénticos antes y
+   después. Turno de pantalla respetado (`PANTALLA.lock` tomado y liberado).
+9. **Observación aparte, no es bug**: mover el ratón sobre el mapa cuesta hasta ~600 ms de CPU/s en
+   el arnés (Debug + DoEvents) por el re-maquetado de la barra de estado dentro de su `Viewbox`. No
+   bloquea ni se acumula; si algún día se quiere aligerar, el candidato es no re-maquetar la barra de
+   estado en cada píxel.
