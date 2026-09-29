@@ -319,7 +319,10 @@ internal static partial class Program
                     Fallo("COMPARAR", $"{cab}: ShowResults=True y no se encuentra CompareResultsScrollViewer");
                 // Comparar es la familia UNBOUNDED_COLLECTION (resultados de la comparacion, s23) - su
                 // propio scroll de RESULTADOS es legitimo y esperado, solo se informa (nunca Fallo()).
-                if (w == 1080)
+                // Captura tambien en el tamaño grande (2560x1440), ademas del minimo - reapertura
+                // 6b59710e (29-sep-2026): el coordinador necesita abrir Comparar en el minimo Y en
+                // el grande para revisar la evidencia con sus propios ojos.
+                if (w == 1080 || w == 2560)
                 {
                     string shot = Path.Combine(outDir, $"personaje-{etiqueta}-comparar-{w:0}x{h:0}-{idioma}.png");
                     File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
