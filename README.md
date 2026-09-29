@@ -30,6 +30,9 @@ instantáneo.
 - **Español e inglés en vivo**, sin reiniciar la aplicación.
 - Deshacer/rehacer, copia de seguridad automática antes de cada guardado, y ninguna escritura
   sin confirmación explícita.
+- **Ventana totalmente responsive**, desde 1080x700 hasta pantallas grandes, y arrastre de
+  objetos entre Librería/Equipamiento/Inventario/Almacenes con un cursor propio de mano que
+  agarra, sprite del objeto incluido.
 
 ![Personaje y Librería](docs/screenshots/02-personaje.png)
 
