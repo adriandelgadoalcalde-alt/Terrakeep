@@ -41,19 +41,47 @@ internal static partial class Program
             var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
                 (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
             rtb.Render(window);
+            // Aviso real del coordinador (29-sep-2026, tras abrir 01-inicio.png/02-personaje.png a
+            // mano): franjas blancas de ~40px abajo y ~16px a la derecha. Mismo bug real ya
+            // diagnosticado y arreglado en Starvekeep (App.xaml.cs, RecortarAlContenidoReal): el
+            // RenderTargetBitmap mide la VENTANA entera (ActualWidth/ActualHeight), pero el arbol
+            // visual real (Grid.Margin, bordes con sombra, elementos que se miden a su propio
+            // contenido) no siempre pinta hasta el borde exacto - la franja sin pintar queda con
+            // alfa=0, y la mayoria de visores de imagen componen ese alfa 0 sobre blanco. Arreglo
+            // real: recortar al rectangulo REALMENTE pintado (alfa>0), calculado pixel a pixel
+            // sobre lo que se acaba de renderizar - nunca un margen fijo adivinado a mano.
+            var recortada = RecortarAlContenidoReal(rtb);
             var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
-            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(recortada));
             string destino = Path.Combine(dirDocs, nombreArchivo);
             using (var fs = File.Create(destino)) enc.Save(fs);
-            Console.WriteLine($"README_SHOTS: {nombreArchivo} <- {window.ActualWidth:0}x{window.ActualHeight:0}, {new FileInfo(destino).Length} bytes");
+            Console.WriteLine($"README_SHOTS: {nombreArchivo} <- {window.ActualWidth:0}x{window.ActualHeight:0} (lienzo) -> {recortada.PixelWidth}x{recortada.PixelHeight} (recortado al contenido real), {new FileInfo(destino).Length} bytes");
         }
 
         vm.Settings.Language = "es";
         FijarTamaño(window, 1920, 1080);
 
-        // Personaje sintetico presentable ("Aventurero" - nunca el nombre del usuario real):
-        // Hallowed completo (551/552/553) + Angel Wings (493) equipados, Terra Blade (757) e
-        // Iron Pickaxe/Axe (1/10) en el inventario, monedas reales. IDs vanilla confirmados contra
+        // Personaje sintetico presentable ("Aventurero" - nunca el nombre del usuario real).
+        // Correccion real (29-sep-2026, aviso del coordinador tras abrir 02-personaje.png a mano):
+        // la primera version confundia dos arrays distintos de PlrCharacter. Investigado de verdad
+        // contra el codigo real antes de tocar nada (EquipmentGroupViewModel.cs, MainViewModel.cs
+        // RebuildContainers, DefenseCalculator.cs):
+        //   - El panel "Armadura" (Cabeza/Cuerpo/Piernas + 7 accesorios) sale de
+        //     PrimaryLoadout.Items[0..9] - Items[0]=Cabeza, [1]=Cuerpo, [2]=Piernas, [3..9]=accesorios
+        //     (MainViewModel.cs, RebuildContainers, contenedor "loadout0Items"). Ahi es donde iba la
+        //     Terra Blade en la version anterior (Items[0], el hueco de casco) - por eso aparecia
+        //     ahi en vez de en el inventario, y la armadura Hallowed no aparecia en ningun sitio.
+        //   - EquipmentItems (el array de 5 que se uso antes para "armadura") NO es armadura: es
+        //     miscEquips - Mascota/Mascota de luz/Vagoneta/Montura/Gancho (MainViewModel.cs,
+        //     comentario real de MountsContainer) - ahi fueron a parar las piezas Hallowed la vez
+        //     anterior, como iconos irreconocibles en la columna "Mascota/Montura".
+        //   - DefenseCalculator.Total() suma la Defense real de VanillaItemStatsCatalog sobre
+        //     Items[0..2]+accesorios - por eso "Defensa total" salia 0 (esos slots no tenian
+        //     armadura de verdad, solo la espada en el hueco de casco).
+        // Ahora: Hallowed completo (551/552/553) en Items[0..2], 3 accesorios reales en Items[3..5]
+        // (Angel Wings/Hermes Boots/Band of Regeneration), Terra Blade (757) SOLO en el inventario
+        // (hotbar, slot 0) - nunca en un hueco de armadura. Vida/mana ACTUALES = maximo (antes
+        // quedaban en 0/400 y 0/200 por no fijar HealthNow/ManaNow). IDs vanilla confirmados contra
         // Terrakeep.App/Assets/vanilla_item_names_en.json (catalogo real del propio repo, nunca
         // inventados). Version=279 (misma linea base que el resto del arnes).
         var personaje = new PlrCharacter
@@ -63,7 +91,9 @@ internal static partial class Program
             Difficulty = 0,
             PlayTimeLow = 5_400_000, // ~1h30 a 60 ticks/s, solo para que no salga "0h" en la tarjeta
             HealthMax = 400,
+            HealthNow = 400,
             ManaMax = 200,
+            ManaNow = 200,
             HairColor = [90, 60, 35],
             SkinColor = [255, 200, 165],
             EyeColor = [105, 90, 75],
@@ -71,14 +101,7 @@ internal static partial class Program
             UnderColor = [85, 85, 180],
             PantsColor = [170, 140, 90],
             ShoesColor = [130, 90, 60],
-            EquipmentItems =
-            [
-                new PlrItemSlot(553, 1, 0, false), // Hallowed Helmet
-                new PlrItemSlot(551, 1, 0, false), // Hallowed Plate Mail
-                new PlrItemSlot(552, 1, 0, false), // Hallowed Greaves
-                new PlrItemSlot(493, 1, 0, false), // Angel Wings
-                PlrItemSlot.Empty,
-            ],
+            EquipmentItems = new PlrItemSlot[5], // miscEquips (mascota/montura/gancho) - vacio a proposito, no es armadura
             EquipmentDyes = new PlrItemSlot[5],
             Inventory = CrearInventarioPresentable(),
             Coins =
@@ -290,26 +313,78 @@ internal static partial class Program
         }
     }
 
-    // Inventario sintetico presentable para "Aventurero" (README_SHOTS): un pico/hacha de hierro
-    // en los dos primeros slots y una Terra Blade bien visible - IDs vanilla confirmados contra
-    // Terrakeep.App/Assets/vanilla_item_names_en.json (catalogo real del propio repo).
+    // Recorta un RenderTargetBitmap al rectangulo real que tiene algo pintado (alfa > 0), quitando
+    // cualquier franja sin pintar que haya quedado en los bordes - ver el comentario real de
+    // Capturar() para el porque. Adaptado de Starvekeep.App/App.xaml.cs
+    // (RecortarAlContenidoReal, mismo bug real ya diagnosticado y arreglado ahi el 29-sep-2026).
+    // Nunca recorta un pixel con contenido de verdad: solo el margen exterior totalmente
+    // transparente. Si no hay ningun margen asi, devuelve la misma imagen sin tocar.
+    private static System.Windows.Media.Imaging.BitmapSource RecortarAlContenidoReal(System.Windows.Media.Imaging.RenderTargetBitmap mapa)
+    {
+        int ancho = mapa.PixelWidth;
+        int alto = mapa.PixelHeight;
+        int bytesPorFila = ancho * 4;
+        var pixeles = new byte[bytesPorFila * alto];
+        mapa.CopyPixels(pixeles, bytesPorFila, 0);
+
+        int minX = ancho, minY = alto, maxX = -1, maxY = -1;
+        for (int y = 0; y < alto; y++)
+        {
+            int filaBase = y * bytesPorFila;
+            for (int x = 0; x < ancho; x++)
+            {
+                // Formato Pbgra32: byte 3 de cada pixel es el alfa (B,G,R,A).
+                if (pixeles[filaBase + x * 4 + 3] == 0) continue;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return mapa; // nada pintado - red de seguridad, no deberia pasar
+
+        int anchoReal = maxX - minX + 1;
+        int altoReal = maxY - minY + 1;
+        if (minX == 0 && minY == 0 && anchoReal == ancho && altoReal == alto) return mapa; // ya llena el lienzo entero
+
+        return new System.Windows.Media.Imaging.CroppedBitmap(mapa, new System.Windows.Int32Rect(minX, minY, anchoReal, altoReal));
+    }
+
+    // Inventario sintetico presentable para "Aventurero" (README_SHOTS): Terra Blade en la hotbar
+    // (slot 0, nunca en un hueco de armadura - ver el comentario real de mas arriba) mas
+    // pico/hacha de hierro y unas cuantas pociones/materiales variados para que el inventario no
+    // se vea vacio. IDs vanilla confirmados contra vanilla_item_names_en.json.
     private static PlrItemSlot[] CrearInventarioPresentable()
     {
         var inventario = new PlrItemSlot[50];
         Array.Fill(inventario, PlrItemSlot.Empty);
-        inventario[0] = new PlrItemSlot(757, 1, 0, false); // Terra Blade
-        inventario[1] = new PlrItemSlot(1, 1, 0, false);   // Iron Pickaxe
-        inventario[2] = new PlrItemSlot(10, 1, 0, false);  // Iron Axe
+        inventario[0] = new PlrItemSlot(757, 1, 0, false);   // Terra Blade
+        inventario[1] = new PlrItemSlot(1, 1, 0, false);     // Iron Pickaxe
+        inventario[2] = new PlrItemSlot(10, 1, 0, false);    // Iron Axe
+        inventario[3] = new PlrItemSlot(84, 1, 0, false);    // Grappling Hook
+        inventario[4] = new PlrItemSlot(28, 20, 0, false);   // Lesser Healing Potion
+        inventario[10] = new PlrItemSlot(8, 100, 0, false);  // Torch
+        inventario[11] = new PlrItemSlot(9, 50, 0, false);   // Wood
         return inventario;
     }
 
-    // Loadout principal sintetico para "Aventurero": la Terra Blade tambien en el primer slot de
-    // Items del loadout activo (loadouts[0], el "mirror" - PlrLoadout.CreateEmpty(isPrimary: true)
-    // ya deja Hide=null como corresponde a ese loadout).
+    // Loadout principal sintetico para "Aventurero": armadura Hallowed real en los 3 huecos de
+    // verdad (Items[0]=Cabeza, [1]=Cuerpo, [2]=Piernas - confirmado contra MainViewModel.
+    // RebuildContainers/EquipmentGroupViewModel, nunca un hueco cualquiera a ciegas) + 3
+    // accesorios reales en Items[3..5]. DefenseCalculator suma la Defense real del catalogo
+    // vanilla sobre estos mismos slots, asi que "Defensa total" sale calculada de verdad, no a 0.
+    // PlrLoadout.CreateEmpty(isPrimary: true) ya deja Hide=null, como corresponde al loadout
+    // "mirror" activo (loadouts[0]).
     private static PlrLoadout CrearLoadoutPrincipal()
     {
         var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
-        loadout.Items[0] = new PlrItemSlot(757, 1, 0, false); // Terra Blade
+        loadout.Items[0] = new PlrItemSlot(553, 1, 0, false); // Hallowed Helmet (Cabeza)
+        loadout.Items[1] = new PlrItemSlot(551, 1, 0, false); // Hallowed Plate Mail (Cuerpo)
+        loadout.Items[2] = new PlrItemSlot(552, 1, 0, false); // Hallowed Greaves (Piernas)
+        loadout.Items[3] = new PlrItemSlot(493, 1, 0, false); // Angel Wings (accesorio)
+        loadout.Items[4] = new PlrItemSlot(54, 1, 0, false);  // Hermes Boots (accesorio)
+        loadout.Items[5] = new PlrItemSlot(49, 1, 0, false);  // Band of Regeneration (accesorio)
         return loadout;
     }
 }
