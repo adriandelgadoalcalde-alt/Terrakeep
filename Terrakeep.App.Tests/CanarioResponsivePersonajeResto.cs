@@ -323,9 +323,27 @@ internal static partial class Program
             // que seguir IDENTICOS byte a byte (s34: "en tamaños mayores debe verse EXACTAMENTE
             // igual que ahora"). scr(1366,col1)=66,1 es residuo YA conocido y aceptado del propio
             // ancho de columna, sin relacion con esta ronda (Apariencia no toca AppearanceContentMaxWidth).
+            //
+            // FASE G del responsive global (WARN-01, 29-sep-2026, aplicador-fix-responsive-faseG):
+            // referencia de 1366x768 ACTUALIZADA a proposito (pedido explicito del encargo: "el
+            // canario de Apariencia ya congela la geometria: si hay que actualizar la referencia de
+            // 1366, justificarlo"). Causa real: AppearanceCompactMaxHeight subio de 768 a 800 (WARN-
+            // 01, el revisor midio 66,1px de scroll REAL a 1366x768 porque ese alto exacto quedaba
+            // en factor 0 - cero recorte - pese a tener menos alto util que el resto del barrido).
+            // 1366x768 (alto=768) ahora cae DENTRO del rango compactable (factor=0,32) y SI debe
+            // verse mas bajo que antes - eso es la correccion, no una regresion. 1520x860 (alto=860,
+            // todavia por ENCIMA de la nueva frontera 800) se queda con los valores viejos sin
+            // cambiar - confirmado con el arnes que sigue en factor 0 exacto, misma referencia de
+            // siempre. Valores nuevos medidos con el arnes libre en HEAD (feb490b9 + el arreglo):
+            // col0 553,7->547,9 (la columna del preview/doll, que SI vuelve a 6x/240x336 igual que
+            // antes - factor 0,32 < 0,5, ver AppearancePreviewWidth/Height - el resto de su contenido,
+            // como AppearancePreviewBorderPadding, si interpola un poco), col1 626,8->550,4 (la
+            // columna editable, la que de verdad tenia el residuo de scroll - 76,4px menos de
+            // contenido, mas que suficiente para que los 66,1px de scroll medidos por el revisor
+            // desaparezcan, scr=0 confirmado mas abajo).
             var extReferenciaAfe51344 = new Dictionary<(double w, double h, int col), double>
             {
-                [(1366, 768, 0)] = 553.7, [(1366, 768, 1)] = 626.8,
+                [(1366, 768, 0)] = 547.9, [(1366, 768, 1)] = 550.4,
                 [(1520, 860, 0)] = 553.7, [(1520, 860, 1)] = 626.8,
                 [(1920, 1080, 0)] = 563.0, [(1920, 1080, 1)] = 480.2,
                 [(2560, 1440, 0)] = 563.0, [(2560, 1440, 1)] = 480.2,

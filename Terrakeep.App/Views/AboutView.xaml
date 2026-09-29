@@ -41,8 +41,10 @@
          Amplio/Extra (IsDetailSideBySide) - visible SIN scroll junto a Autoria/Ajustes en vez de
          requerir bajar hasta el final de la pagina. Apilado debajo en Compacto/Normal, igual que
          siempre. -->
+    <!-- FASE G (hallazgo propio, segunda vuelta): SIN HorizontalAlignment="Left" en este Grid - ver
+         el comentario real de GuideView.xaml (mismo Grid de 2 columnas, mismo bug real). -->
     <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-        <Grid MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+        <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />

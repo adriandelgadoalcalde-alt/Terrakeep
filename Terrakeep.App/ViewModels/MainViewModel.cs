@@ -649,8 +649,25 @@ public partial class MainViewModel : ObservableObject
     // que no se vea borroso") - 6x (240x336, el de siempre) en >=768, 5x (200x280) en el minimo
     // real de 700. RenderOptions.BitmapScalingMode sigue en NearestNeighbor sin cambios (MainWindow.
     // xaml), asi que los valores intermedios durante un resize en caliente tampoco se ven borrosos.
-    public double AppearancePreviewWidth => Lerp(240, 200);
-    public double AppearancePreviewHeight => Lerp(336, 280);
+    //
+    // FASE G del responsive global (29-sep-2026, negative acceptance real de PERSONAJE_RESPONSIVE_
+    // SOLO, PERSONAJE-MUÑECO): un Lerp CONTINUO (igual que el resto de margenes/paddings de esta
+    // pantalla) daba escala NO ENTERA en cuanto AppearanceCompactFactor dejaba de ser exactamente 0
+    // o 1 - invisible mientras el tope (AppearanceCompactMaxHeight) coincidia exactamente con un
+    // tamaño real probado (768), pero en cuanto WARN-01 subio el tope a 800 (para que 1366x768 SI
+    // se recorte un poco y deje de desplazar), 768 paso a caer DENTRO del tramo interpolado
+    // (factor=0,32) y el doll salio a 5,68x - "se veria borroso o distorsionado" (s34), justo lo que
+    // el canario existe para cazar. El doll es la UNICA pieza de esta pantalla que de verdad necesita
+    // escala entera (sprite de pixel art); el resto (padding/margin/Slider.Height) es solido/vectorial
+    // y no tiene ese problema, asi que se queda con Lerp continuo. Aqui, en vez de interpolar,
+    // ESCALON unico en factor=0,5 (el punto medio del tramo 700-800, sin coincidir con NINGUN tamaño
+    // real del barrido de s2 - no se ve el salto en ninguna captura): por debajo de la mitad de
+    // compactacion se mantiene 6x (240x336, igual que 1366x768 ya se veia ANTES de esta fase), por
+    // encima salta a 5x (200x280, igual que el minimo 700 ya se veia). Sigue siendo "regla continua"
+    // para todo lo demas de la pantalla (s24) - solo el doll, por su naturaleza de sprite, necesita
+    // el escalon en vez de la rampa.
+    public double AppearancePreviewWidth => AppearanceCompactFactor >= 0.5 ? 200 : 240;
+    public double AppearancePreviewHeight => AppearanceCompactFactor >= 0.5 ? 280 : 336;
     public Thickness AppearancePreviewBorderPadding => ThU(10, 6, AppearanceCompactFactor);
     public Thickness AppearancePreviewBorderMargin => ThBottom(8, 4);
     public Thickness AppearanceLeftControlsMargin => ThBottom(4, 2);

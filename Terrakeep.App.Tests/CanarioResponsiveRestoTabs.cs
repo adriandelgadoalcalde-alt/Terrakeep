@@ -57,7 +57,13 @@ internal static partial class Program
     private static double MedirAnchoContenidoVisible(MainWindow window, ScrollViewer sv)
     {
         Rect viewportEnVentana;
-        try { viewportEnVentana = sv.TransformToAncestor(window).TransformBounds(new Rect(0, 0, sv.ActualWidth, sv.ActualHeight)); }
+        // OJO real (hallazgo propio, corregido antes de sacar ninguna conclusion): sv.ActualWidth
+        // INCLUYE el ancho de la barra de scroll vertical cuando esta visible (~17px), pero
+        // sv.ViewportWidth (con la que se compara la fraccion mas abajo) NO la incluye - usar
+        // ActualWidth aqui daba un rectangulo de viewport mas ancho que el real, y la interseccion
+        // con el podia superar el 100% de uso (medido: Guia/AcercaDe daban 101% en vez de un numero
+        // real). sv.ViewportWidth/ViewportHeight son el tamaño real del area de contenido visible.
+        try { viewportEnVentana = sv.TransformToAncestor(window).TransformBounds(new Rect(0, 0, sv.ViewportWidth, sv.ViewportHeight)); }
         catch (InvalidOperationException) { return 0; }
 
         double minX = double.PositiveInfinity, maxX = double.NegativeInfinity;
@@ -138,8 +144,17 @@ internal static partial class Program
                 // scroll, falso positivo real medido en AcercaDe) frente al ancho real disponible
                 // (sv.ViewportWidth) - solo se exige a partir de 1920 (el propio s17 habla de "ventana
                 // grande"/1920-2560, nunca del minimo).
+                // HALLAZGO PROPIO (segunda vuelta, corregido antes de fiarse del numero): el barrido
+                // de tamaños NUNCA vuelve a poner el ScrollViewer en offset=0 entre una medida y la
+                // siguiente - a un tamaño mas pequeño (1366/1520) el usuario real tuvo que bajar para
+                // ver el Changelog, y ese offset queda "pegado" cuando la ventana crece a 1920/2560,
+                // colando el Changelog en el viewport aunque una visita FRESCA a ese tamaño (offset=0,
+                // justo lo que muestran las capturas reales del revisor) no lo veria. ScrollToTop()
+                // fuerza la misma foto que ve el usuario real la primera vez que abre la pagina a este
+                // tamaño - s22, "de un plumazo".
                 if (w >= 1920)
                 {
+                    sv.ScrollToVerticalOffset(0); DoEvents(); DoEvents(); WaitForDispatcher(30);
                     double anchoUsado = MedirAnchoContenidoVisible(window, sv);
                     double anchoDisponible = sv.ViewportWidth;
                     double fraccion = anchoDisponible > 0 ? anchoUsado / anchoDisponible : 0;
@@ -147,7 +162,11 @@ internal static partial class Program
                     if (fraccion < 0.5)
                         Fallo(nombre.ToUpperInvariant() + "-ANCHO", $"{cab}: el contenido VISIBLE solo usa {fraccion:P0} del ancho disponible ({anchoUsado:0.#}px de {anchoDisponible:0.#}px) - columna estrecha + mas de la mitad de fondo vacio (s17)");
                 }
-                if (w == 1080 || primeraEntrada)
+                // FASE G (s32/docs evidencia): tambien 1920x1080 y 2560x1440, no solo el minimo -
+                // criterio explicito del cierre "capturas antes y despues a 1080x700/1920x1080/
+                // 2560x1440" y para poder JUZGAR CON LOS OJOS (no solo con el numero de anchoUsado)
+                // el resultado real de WARN-02 en las 6 vistas.
+                if (w == 1080 || w == 1920 || w == 2560 || primeraEntrada)
                 {
                     string shot = Path.Combine(outDir, $"resto-{etiqueta}-{nombre.ToLowerInvariant()}-{w:0}x{h:0}-{idioma}{(primeraEntrada ? "-primeraentrada" : "")}.png");
                     File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight));
@@ -182,9 +201,11 @@ internal static partial class Program
                     Console.WriteLine($"RESTO {cab}: vp={sv.ViewportHeight:0.#} ext={sv.ExtentHeight:0.#} scr={sv.ScrollableHeight:0.#} (scroll de resultados FINITE_PAGEABLE, solo se informa)");
                     if (sv.HorizontalScrollBarVisibility == ScrollBarVisibility.Disabled && sv.ExtentWidth > sv.ViewportWidth + 0.5)
                         Fallo(nombre.ToUpperInvariant() + "-HSCROLL", $"{cab}: overflow horizontal real ({sv.ExtentWidth:0.#}px en {sv.ViewportWidth:0.#}px)");
-                    // Mismo criterio de uso de ancho VISIBLE que MedirPaginaSimple (WARN-02, s17).
+                    // Mismo criterio de uso de ancho VISIBLE que MedirPaginaSimple (WARN-02, s17),
+                    // incluido el ScrollToTop() (ver su comentario real arriba).
                     if (w >= 1920)
                     {
+                        sv.ScrollToVerticalOffset(0); DoEvents(); DoEvents(); WaitForDispatcher(30);
                         double anchoUsado = MedirAnchoContenidoVisible(window, sv);
                         double anchoDisponible = sv.ViewportWidth;
                         double fraccion = anchoDisponible > 0 ? anchoUsado / anchoDisponible : 0;
@@ -196,7 +217,7 @@ internal static partial class Program
                     // TabControl nunca lo mete dentro del propio ScrollViewer de contenido (confirmado
                     // por estructura XAML, BuildsView/WhatsNewView: TabControl es el padre, no un hijo).
                     if (!interno.IsVisible) Fallo(nombre.ToUpperInvariant() + "-SELECTOR", $"{cab}: el TabControl interno (selector de sub-pestañas) no esta visible");
-                    if (w == 1080) { string shot = Path.Combine(outDir, $"resto-{etiqueta}-{nombre.ToLowerInvariant()}-sub{i}-{w:0}x{h:0}-{idioma}.png"); File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight)); }
+                    if (w == 1080 || w == 1920 || w == 2560) { string shot = Path.Combine(outDir, $"resto-{etiqueta}-{nombre.ToLowerInvariant()}-sub{i}-{w:0}x{h:0}-{idioma}.png"); File.WriteAllBytes(shot, CapturarPng(window, window.ActualWidth, window.ActualHeight)); }
                 }
                 interno.SelectedIndex = subTabsOriginal; DoEvents(); DoEvents();
             }

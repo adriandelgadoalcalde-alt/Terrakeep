@@ -33203,3 +33203,174 @@ con los ojos (no solo el numero) una vez arreglado, y que Builds/Novedades sigan
 sin cambio de produccion). Archivos tocados en esta correccion: `Terrakeep.App.Tests/
 CanarioResponsiveRestoTabs.cs`, `Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Views/
 AboutView.xaml`, `Terrakeep.App.ViewModels.Tests/AppearanceCompactFactorFaseGTests.cs`.
+
+## 29-sep-2026 - FASE G del responsive global: CIERRE con el arnes libre ("via libre para el arnes")
+
+Agente: `aplicador-fix-responsive-faseG-29sep2026`. El coordinador dio via libre (la prueba de DST
+habia terminado). Base `f83548fa` (segundo checkpoint). Ejecutada la lista pendiente completa (sin
+`SendInput`, con `TERRAKEEP_FORCE_SOFTWARE_RENDER=1`).
+
+### 1. Dos hallazgos propios mas, investigados y corregidos ANTES de fiarse de ningun numero
+Al confirmar el rojo real contra `feb490b9` con la metrica de ancho visible (worktree limpio
+`Keep\Terrasavr-Win\TKfeG-red`, canario copiado sin comitear, retirado despues), aparecieron DOS
+bugs reales en mi propia metrica que corregi antes de dar nada por bueno:
+- **`sv.ActualWidth` vs `sv.ViewportWidth`**: el rectangulo del viewport se construia con
+  `ActualWidth` (incluye el ancho de la barra de scroll, ~17px) pero la fraccion se comparaba
+  contra `ViewportWidth` (sin la barra) - Guia/AcercaDe daban 101% de uso (matematicamente
+  imposible, señal clara de bug). Corregido: el rectangulo usa `ViewportWidth`/`ViewportHeight`.
+- **Scroll "pegado" entre tamaños**: el barrido de tamaños nunca ponia el `ScrollViewer` en
+  offset=0 entre una medida y la siguiente - a un tamaño menor (1366/1520) hacia falta bajar para
+  ver el Changelog, y ese offset se quedaba "pegado" al crecer a 1920/2560, colando contenido en el
+  viewport que una visita FRESCA a ese tamaño no veria. `sv.ScrollToVerticalOffset(0)` antes de
+  medir (misma foto que ve un usuario real la primera vez, s22 "de un plumazo").
+Con las dos correcciones, el rojo real contra `feb490b9` (produccion SIN los arreglos de WARN-02,
+metrica YA corregida): **4 FALLO** - `GUIA-ANCHO` 40%/29% y `HOSTING-ANCHO` 38%/28% a 1920/2560
+(AcercaDe confirma PASS incluso sin arreglo, 99%/72% - el Changelog SI esta dentro del viewport a
+offset=0 con el contenido real actual, contrario a la sospecha inicial del coordinador pero
+consistente con lo que la propia captura real del revisor mostraba en su momento - dato, no
+opinion). Log completo: `scratchpad\rojo-faseG-final.log`.
+
+### 2. TERCER hallazgo propio: el Grid de 2 columnas no estiraba su columna "*" - corregido
+Con el arreglo de WARN-02 aplicado (columna derecha + `IsDetailSideBySide`), Guia/Hosting SI subian
+a 1920 (61%/55%, ambos PASS) pero seguian FALLANDO a 2560 (44%/40%, por debajo del 50% de s17) -
+investigado antes de dar la ronda por cerrada. Causa real: `<Grid MaxWidth="..."
+HorizontalAlignment="Left">` (copiado sin pensar del `StackPanel` que sustituia) es INCOMPATIBLE
+con una `ColumnDefinition Width="*"` - un `Grid` alineado a la izquierda se mide con ancho
+INFINITO (el que le ofrece cualquier `ScrollViewer`) y se auto-dimensiona a su contenido NATURAL,
+nunca crece hasta `MaxWidth`, asi que la columna `*` nunca tiene "sobrante" real que repartir. Sin
+`HorizontalAlignment` (Stretch, el valor por defecto), `MaxWidth` SI actua como tope real del ancho
+efectivo de Measure (WPF clampa el available size a `MaxWidth` antes de `MeasureOverride`, incluso
+con un ancestro que ofrece infinito) - la columna `*` pasa a calcularse sobre un numero REAL
+(`MaxWidth - AutoColumnWidth`), y en ventanas angostas sigue sin desbordar (Stretch tambien respeta
+el ancho real disponible cuando es MENOR que `MaxWidth`). Corregido en las 3 vistas
+(`GuideView.xaml`/`HostingView.xaml`/`AboutView.xaml`) quitando `HorizontalAlignment="Left"` del
+`Grid` raiz. De paso, tambien se quito el `MaxWidth="680"` de las tarjetas individuales de la
+columna derecha (arbol de Guia, instancias de Hosting) - un tope de legibilidad de PARRAFO no
+aplica a una fila compacta de icono+titulo+badges, y sin quitarlo la tarjeta seguia topada aunque
+la columna ya tuviera mas sitio real.
+
+### 3. Verde real confirmado (worktree retirado, todo en HEAD)
+`RESTO_RESPONSIVE_SOLO` en HEAD (con los 3 arreglos): **0 FALLO**. Medidas finales (uso real del
+ancho VISIBLE, offset=0):
+| Vista | 1920x1080 | 2560x1440 |
+|---|---|---|
+| Inicio | 94% | 83% |
+| Guia | 99% | 72% |
+| Hosting | 99% | 72% |
+| Acerca de | 99% | 72% |
+| Builds | 100% | 100% |
+| Novedades | 99-100% | 72% |
+Log: `scratchpad\verde-faseG3.log`. Capturas reales revisadas con mis propios ojos (no solo el
+numero, pedido explicito) a 1920/2560 de las 6 vistas: Guia y AcercaDe con el Changelog/arbol
+visible de verdad junto al contenido de siempre (antes cortado por el borde de la ventana o fuera
+del viewport), Hosting con "Servidores activos" visible en columna propia (vacio porque REALMENTE
+no hay ninguno arrancado en este entorno de pruebas, no por bug), Inicio con 6 tarjetas de personaje
+por fila (antes 5), Builds a ancho completo (sin cambios) y Novedades con sus 2 tarjetas reales de
+cambios sin recortar. Sin overlap, sin clipping, sin scrollbar tapado en ninguna. Capturas en
+`docs\evidencia\responsive-global\faseG\` (36 "despues" + 8 "antes" reales, tomadas de las capturas
+del propio revisor en `feb490b9` para comparacion directa).
+
+### 4. WARN-01 (Apariencia, 1366x768) - CERRADO, con 2 hallazgos propios mas del canario
+`PERSONAJE_RESPONSIVE_SOLO` en HEAD: primera pasada, **3 FALLO** - `scr=0` en ambas columnas de
+Apariencia a 1366x768 (WARN-01 confirmado resuelto: el objetivo del encargo, cero scroll, se
+cumple), pero el propio canario cazo 2 consecuencias reales de subir `AppearanceCompactMaxHeight` a
+800 que hacian falta corregir antes de cerrar:
+- **`PERSONAJE-MUÑECO`** (negative acceptance real, s34 "escalado entero"): con el tope en 800,
+  1366x768 (factor=0,32) interpolaba `AppearancePreviewWidth/Height` de forma CONTINUA igual que el
+  resto de margenes/paddings - a factor 0,32 el doll salia a 5,68x, no entero, "se veria borroso".
+  Antes de esta ronda el tope coincidia exactamente con un tamaño real probado (768), asi que el
+  factor SOLO tomaba 0 o 1 en los tamaños testeados y el bug nunca se veia. Arreglado: el doll deja
+  de interpolar continuo y salta a un ESCALON unico en factor=0,5 (240x336/6x por debajo,
+  200x280/5x por encima) - el unico salto cae en alto=750, un tamaño que ningun tamaño real del
+  barrido de s2 toca, asi que sigue sin verse ningun salto brusco en ninguna captura (s24). El resto
+  de la pantalla (padding/margin/Slider.Height, todo solido/vectorial) se queda con el Lerp continuo
+  de siempre - solo el sprite de pixel art necesitaba el escalon.
+- **`APARIENCIA-GEOMETRIA`**: la referencia congelada de geometria (commit `afe51344`) asumia
+  ext=553,7/626,8 a 1366x768 porque ANTES de esta ronda ese tamaño quedaba en factor 0 (identico a
+  1520x860). Actualizada a los valores reales medidos con el arnes tras el arreglo (547,9/550,4,
+  justificado en el propio comentario del archivo) - 1520x860 (alto=860, sigue por ENCIMA de la
+  nueva frontera 800) se queda con la referencia vieja sin cambiar, confirmado que sigue en factor 0
+  exacto.
+Segunda pasada, tras los 2 arreglos: **0 FALLO**. `scr=0` confirmado en ES y EN a 1366x768 (antes
+66,1px medidos por el revisor). Log: `scratchpad\personaje-faseG3.log`.
+
+### 5. §31 MINIMUM_COMFORTABLE_VIEWPORT - barrido a 1080x700 con el arnes real
+Pedido del coordinador: barrido a 1080x700 (no los 15 tamaños completos de s2). Los 6 canarios que
+miden 1080x700 como parte de su barrido, TODOS con el arnes real de esta ronda (no evidencia
+antigua): `EQUIP_RESPONSIVE_SOLO` 0 FALLO, `INVALM_RESPONSIVE_SOLO` 0 FALLO, `LIBRARY_RESPONSIVE_
+SOLO` 0 FALLO, `PERSONAJE_RESPONSIVE_SOLO` 0 FALLO (incluye Apariencia en el minimo real, ya
+cerrado), `RESTO_RESPONSIVE_SOLO` 0 FALLO, `COFRES_INSPECTOR_SOLO` 1 FALLO (el pre-existente
+`COFRES-INSPECTOR-FASED-R1`, ver punto 6). **Decision: MANTENER 1080x700.** `MinWidth`/`MinHeight`
+de `MainWindow.xaml` no se tocan.
+
+### 6. Sin regresion
+`EQUIP_RESPONSIVE_SOLO`: 0 FALLO. `INVALM_RESPONSIVE_SOLO`: 0 FALLO. `LIBRARY_RESPONSIVE_SOLO`: 0
+FALLO (646 lineas de log, arnes tarda >5min por el volumen real de capturas). `COFRES_INSPECTOR_
+SOLO`: 1 FALLO, el mismo pre-existente `COFRES-INSPECTOR-FASED-R1` ya documentado en el cierre de la
+FASE F (219px de ancho real del Inspector vs 230-245px de Browse) - confirmado otra vez que NO tiene
+relacion con esta ronda (scroll/ancho de columnas de Guia/Hosting/Apariencia), fuera de alcance,
+anotado para el coordinador, no arreglado (no es "sencillo": requiere investigar el padding real del
+sidebar de Exploracion, ajeno a los 3 archivos tocados esta ronda). `dotnet build Terrakeep.slnx -c
+Debug`: 0/0. `Terrakeep.App.ViewModels.Tests`: **825/825** (un `HomeRefreshAsyncTests` fallo una vez
+por timing bajo carga del resto de la suite - confirmado FLAKY, no relacionado: verde en aislado y
+verde en una segunda pasada completa). `Terrakeep.Core.Tests`: **789/789** (no tocado).
+
+### 7. Hashes de seguridad (antes/despues de TODA la ronda del arnes, incluida la fase pausada)
+Mismo script `hash-faseF.ps1` (scratchpad), etiquetas `antes-faseG`/`despues-faseG`, esperados >10s
+entre la ultima ejecucion del arnes y la comparacion. `diff` VACIO en los 55 hashes de partidas/JSON
+reales y en las 20 carpetas de `Backups` - ni un hash cambio, ni una carpeta se creo/borro.
+
+### 8. Despliegue
+Worktree limpio, `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` + `robocopy /MIR` a `%LocalAppData%\Programs\Terrakeep\` (Terrakeep.exe
+confirmado NO corriendo con `tasklist` antes de copiar, sin forzar ningun cierre). SHA256
+publicado==instalado (ver el commit de cierre para el hash real). Debug de `herramientas.json`
+(`terrakeep_native`) recompilado 0/0 en el arbol principal.
+
+### 9. Tabla completa de §33 (19 condiciones), estado final de esta ronda
+| # | Condicion | Estado | Evidencia |
+|---|---|---|---|
+| 1 | minimum viewport medido | **OK** | §31 arriba - barrido a 1080x700 con los 6 canarios, 0 FALLO salvo el pre-existente sin relacion; decision MANTENER 1080x700 |
+| 2 | toda la app auditada | OK (rondas B-G) | bitacora.md, entradas FASE B-G |
+| 3 | structural controls visibles | **OK** | WARN-02 cerrado (Guia/Hosting/AcercaDe/Inicio), canarios EQUIP/INVALM/LIBRARY/PERSONAJE/RESTO 0 FALLO |
+| 4 | navegacion descubrible | OK (rondas B-G) | idem |
+| 5 | paginacion Equipamiento/Vanidad/Tintes | OK (FASE B) | `IsEquipmentSideBySide`, `EQUIP_RESPONSIVE_SOLO` 0 FALLO |
+| 6 | categorias accesibles | OK (FASE D) | `LIBRARY_RESPONSIVE_SOLO` 0 FALLO |
+| 7 | adaptive grids | OK (FASE A-G) | `SlotGridPanel.AdaptiveColumns`, `ChestInspectorColumnsConverter`, `InicioContentMaxWidth` sin tope en Extra |
+| 8 | nested same-axis scroll = 0 salvo waiver | OK (FASE F) | `COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO`: 0 |
+| 9 | clipping = 0 | **OK** | capturas `docs\evidencia\responsive-global\faseG\` revisadas a ojo, sin clipping en ninguna |
+| 10 | overlap = 0 | **OK** | idem, sin overlap |
+| 11 | scroll horizontal inesperado = 0 | OK | canario HSCROLL en todos los `_RESPONSIVE_SOLO`, 0 FALLO |
+| 12 | ningun scrollbar tapado | **OK** | capturas revisadas a ojo |
+| 13 | resize en caliente | OK (FASE F, RESIZE de `CanarioResponsiveRestoTabs.cs`) | log FASE F, no tocado esta ronda |
+| 14 | ES/EN | OK (FASE F, bloque EN) | idem |
+| 15 | perfil responsive de KeepQA actualizado | **PENDIENTE, fuera de esta ronda** | `__perfiles-responsive__/Terrakeep.json` en KeepQA no tocado - los `ScrollViewer` de Guia/Hosting/AcercaDe no tienen `x:Name` real, declarar `scrollOwnership` sin inventar uno exigiria añadirlo primero (fuera del alcance de WARN-01/WARN-02/s31/s33 de esta ronda) |
+| 16 | revisor-visual PASS | **PENDIENTE** | lo lanza el coordinador |
+| 17 | verificador-qa PASS | **PENDIENTE** | lo lanza el coordinador |
+| 18 | evidencia fresca | **OK** | esta entrada + 36 capturas "despues" + 8 "antes" reales, logs de las 6 pasadas del arnes de esta ronda |
+| 19 | Supersession Gate PASS | **PENDIENTE, fuera de esta ronda** | `requirement precheck` no ejecutado - queda para el coordinador antes de DONE |
+
+### 10. Commits de esta ronda
+Ver el commit que sigue a esta entrada - archivos exactos: `Terrakeep.App.Tests/
+CanarioResponsivePersonajeResto.cs`, `Terrakeep.App.Tests/CanarioResponsiveRestoTabs.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Views/AboutView.xaml`, `Terrakeep.App/
+Views/GuideView.xaml`, `Terrakeep.App/Views/HostingView.xaml`, `docs/evidencia/responsive-global/
+faseG/` (36+8 capturas), esta entrada de `bitacora.md`. Mas los 2 checkpoints previos de esta misma
+ronda (`1e312d66`, `f83548fa`). Sin `git add -A` (cambios ajenos de otros agentes en paralelo, sin
+tocar: `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, 17 archivos de `Terrakeep.Core.Tests/`, 2
+scripts, `Terrasavr-Native.zip`). Sin `git push`.
+
+### Pendiente real para el coordinador
+1. `COFRES-INSPECTOR-FASED-R1` (pre-existente, ancho del Inspector) - sin relacion con esta ronda,
+   no arreglado (no es sencillo).
+2. Perfil responsive de KeepQA (condicion 15 de s33) - necesitaria `x:Name` reales en los
+   `ScrollViewer` de Guia/Hosting/AcercaDe antes de poder declarar `scrollOwnership` sin inventar
+   nombres; fuera del alcance de WARN-01/WARN-02/s31/s33 de esta ronda.
+3. Barrido completo de los 15 tamaños de s2 (esta ronda solo confirmo 1080x700, el minimo, a peticion
+   explicita del coordinador) - los 5 tamaños principales (1080x700/1366x768/1520x860/1920x1080/
+   2560x1440) ya estan cubiertos por `RESTO_RESPONSIVE_SOLO`/`PERSONAJE_RESPONSIVE_SOLO`, faltan los
+   10 intermedios (1100x720/1120x740/1180x760/1180x800/1200x800/1280x720/1280x800/1280x900/1320x800/
+   1440x900/1600x900).
+4. `revisor-visual`/`verificador-qa` independientes + `requirement precheck` (condiciones 16/17/19 de
+   s33) - lo lanza el coordinador antes de marcar DONE el requirement `6b59710e-e57b-4677-89a1-
+   2c4c58c29b5a`.

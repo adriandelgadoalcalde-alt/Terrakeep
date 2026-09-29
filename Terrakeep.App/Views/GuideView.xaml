@@ -57,7 +57,19 @@
          Compacto/Normal sigue apilado debajo, igual que siempre (columna derecha colapsa a Auto/0
          via BoolToGridLength, ya usado en el resto del repo). -->
     <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-        <Grid MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+        <!-- FASE G (hallazgo propio, segunda vuelta): HorizontalAlignment="Left" en este Grid
+             (copiado del StackPanel original que sustituye) es INCOMPATIBLE con una columna "*" -
+             un Grid alineado a la izquierda se auto-dimensiona a su contenido NATURAL (measure con
+             ancho infinito, como da cualquier ScrollViewer), nunca crece hasta MaxWidth, asi que la
+             columna "*" nunca tiene "sobrante" real que repartir (medido: la tarjeta de la columna
+             derecha se quedaba en su ancho natural, ~330-400px, ignorando por completo el MaxWidth=
+             680 que se le habia quitado). Sin HorizontalAlignment (Stretch, el valor por defecto),
+             MaxWidth actua como TOPE del ancho efectivo de Measure (WPF clampa el available size a
+             MaxWidth antes de MeasureOverride, incluso con un ScrollViewer ancestro ofreciendo
+             infinito) - la columna "*" pasa a calcularse sobre MaxWidth-AutoColumnWidth, un numero
+             REAL, y en ventanas angostas (Compacto, MaxWidth=900) sigue sin desbordar porque Stretch
+             tambien respeta el ancho real disponible cuando es MENOR que MaxWidth. -->
+        <Grid MaxWidth="{Binding DetailContentMaxWidth}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="{Binding IsDetailSideBySide, Converter={StaticResource BoolToGridLength}, ConverterParameter=1}" />
@@ -220,8 +232,16 @@
             <ItemsControl ItemsSource="{Binding Guide.Tramos}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <!-- FASE G del responsive global (WARN-02, s17): SIN MaxWidth=680 a proposito
+                             (a diferencia de los bloques de texto corrido de mas arriba) - esta
+                             tarjeta vive en la columna derecha (arbol de progresion) en Amplio/Extra,
+                             donde el ancho real de la columna crece con la ventana (1038px medidos a
+                             1920, mas a 2560); un tope de legibilidad de parrafo no aplica a una fila
+                             compacta de icono+titulo+badges. Medido: sin este cambio, Guia se quedaba
+                             en 44% de uso a 2560x1440 (por debajo del 50% de s17) porque cada tarjeta
+                             de tramo seguia topada a 680px pese a que la columna tenia mas sitio. -->
                         <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
-                                CornerRadius="8" Padding="12,8" Margin="0,0,0,8" MaxWidth="680" HorizontalAlignment="Left">
+                                CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
                             <Expander Foreground="{StaticResource TextPrimaryBrush}" IsExpanded="False">
                                 <Expander.Header>
                                     <StackPanel Orientation="Horizontal">
