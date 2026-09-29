@@ -33374,3 +33374,120 @@ scripts, `Terrasavr-Native.zip`). Sin `git push`.
 4. `revisor-visual`/`verificador-qa` independientes + `requirement precheck` (condiciones 16/17/19 de
    s33) - lo lanza el coordinador antes de marcar DONE el requirement `6b59710e-e57b-4677-89a1-
    2c4c58c29b5a`.
+
+## 29-sep-2026 - Cierre tecnico de la condicion 15 (perfil responsive de KeepQA) y verificacion de la 19 (Supersession Gate)
+
+Agente: `aplicador-fix-responsive-condicion15-29sep2026`. Alcance: SOLO condiciones 15/19 de s33 +
+preparacion de 16/17 (no ejecutadas, requieren escritorio/`Terrakeep.App.Tests` - otro agente
+probando en paralelo con el raton, restriccion explicita del encargo). Base HEAD `5f366010`.
+
+### Condicion 15 - perfil `__perfiles-responsive__/Terrakeep.json` (KeepQA)
+Antes: `contenedoresCriticos=[]`, `scrollOwnership` solo con los 3 contextos de
+`Exploration.World.*` (nadie lo habia tocado desde el 26-sep, ver "Pendiente real" #2 de la
+entrada anterior). Investigado que lo consume (`reglasScroll.js` Reglas C/E,
+`contratoScrollOwnership.js`, `handoffGate.js` check12/check14) antes de tocarlo. Ahora:
+- `contenedoresCriticos`: 6 x:Name STRUCTURAL_FINITE reales verificados con `analizarXaml.js`
+  (nunca a ojo) - `EquipamientoSelectorVista`, `CajaMascotasTintes`, `EquipamientoCabecera`,
+  `EditarTarjeta` (Views/ObjetosView.xaml), `CategoriasPrincipales` (Views/NavegadorCategorias.xaml),
+  `AlmacenesCabecera`.
+- `scrollOwnership`: 15 contextos reales (antes 3) - Equipamiento/Inventario/Almacenes/Buffs/
+  Library.Results/BuffLibrary.Results/Research.Results/Comparar.Results (owner
+  `CompareResultsScrollViewer`, ya tenia x:Name) + Inicio/Guia/Servidor/AcercaDe.
+- **x:Name anadidos en Terrakeep** (cambio minimo, sin tocar layout, comentado en el propio XAML):
+  `HomeContentScroll` (Views/HomeView.xaml), `GuideContentScroll` (Views/GuideView.xaml),
+  `HostingContentScroll` (Views/HostingView.xaml), `AboutContentScroll` (Views/AboutView.xaml) -
+  bloqueaban la condicion 15 (bitacora Fase G, "Pendiente real" #2). `dotnet build Terrakeep.App -c
+  Debug`: 0 Advertencias/0 Errores. `Terrakeep.App.Tests` NO ejecutado (restriccion del encargo).
+
+### Hallazgo real durante la investigacion (no estaba en el encargo, necesario para que la condicion 15 sirviera de algo)
+`ARCHIVOS_XAML_CLAVE.Terrakeep` (KeepQA, `handoffGate.js`) solo listaba `MainWindow.xaml` desde su
+creacion (25-sep). Tras la extraccion real de MainWindow.xaml en `Terrakeep.App/Views/*.xaml`
+(ADR-TERRAKEEP-016 y siguientes, terminada antes de esta ronda per la precondicion s0), `check12`/
+`check14` llevaban dando PASS SIN ANALIZAR Equipamiento/Inventario/Almacenes/Biblioteca (
+`ObjetosView.xaml`), Comparar (`CompareView.xaml`), Inicio/Guia/Servidor/Acerca de y el resto de
+Views reales - un PASS que no probaba lo que decia probar (mismo principio "el oraculo actual no
+basta" de s21). Corregido en KeepQA: `ARCHIVOS_XAML_CLAVE.Terrakeep` ahora lista las 18 rutas reales
+(`MainWindow.xaml` + 17 `Views/*.xaml`). Ademas, `contratoScrollOwnership.js` solo sabia evaluar UN
+archivo a la vez (asumia que todo vivia en MainWindow.xaml) - añadida `analizarArchivos()` (localiza
+el archivo real que define cada `scrollOwner` antes de evaluar) sin tocar `analizar()`/
+`evaluarScrollOwnership()` existentes (tienen su propio caso de regresion real). Con esto:
+`check12('Terrakeep')` -> PASS (reglasScroll contra los 18 archivos, 0 hallazgos activos, 2
+aceptados con waiver real). `check14('Terrakeep')` -> PASS (15 contextos, 0 violaciones sin
+waiver). Log completo en el commit de KeepQA de esta ronda (evidencia del requirement
+`6b59710e-e57b-4677-89a1-2c4c58c29b5a`).
+
+De paso, `__waivers__/Terrakeep.json` tenia 4 entradas MUERTAS (mecanismo Equipamiento OLD MODEL,
+lineas 3111-3318 de un `MainWindow.xaml` que ya no existe asi de grande) y 3 entradas INERTES
+(MissingNpcsScroll/NpcResultsList/Minerales - siguen siendo tecnica legitima pero invisibles al
+linter por-archivo tras la extraccion de `BrowseView.xaml`, documentado con nota, no eliminadas).
+Se eliminaron las 4 muertas y se re-ancalaron los 2 waivers legitimos que quedaban (pickers de
+tinte MaxHeight=240/peinado MaxHeight=360) a sus lineas REALES actuales (1725/1762, antes 4497/4534
+antes de la extraccion) - sin esto, `reglasScroll.js` daba 2 hallazgos activos reales (falsos
+positivos de verdad: el waiver seguia siendo valido, solo apuntaba a lineas que ya no existian).
+
+### Condicion 19 - Supersession Gate
+Verificados con grep real (no solo confiando en el JSON del requirement) los 9 `oldMechanisms`
+declarados: `IsEquipmentExpanded`, `ContainerCompactTemplate`, `CategoryNodeTemplate`/
+`ObjetosCategoryNodeTemplate`, `LibraryRowMaxHeight`, `BuffContainerCompactTemplate`,
+`ChestInspectorColumnsConverter`, el par de ScrollViewer de `ItemEditTemplate`/
+`ChestInspectorItemEditTemplate` y los 5 ScrollViewer anidados originales de Equipamiento - los 9
+confirmados RETIRADOS de verdad (0 coincidencias activas, solo comentarios historicos explicando el
+retiro). `evaluarSupersessionGate(req,x)` -> `{ok:true,fails:[]}`. `checkL` (Supersession Gate del
+`reconciliacionGate`) no aplica todavia porque el requirement sigue en `OPEN` (solo se activa en
+VERIFYING/DONE) - verificado manualmente para adelantar el trabajo, confirmado PASS.
+
+### Resto del precheck DONE - SIN resolver esta ronda (fuera del alcance de 15/19)
+`node task.js requirement precheck 6b59710e-e57b-4677-89a1-2c4c58c29b5a DONE` sigue en `ok:false`
+con 3 motivos, NINGUNO relacionado con 15/19/16/17:
+- `SIN_ORACLE`: el requirement nunca declaro `oracle` (creado directo con `requirement-add`, no via
+  flujo de items). Necesita una decision real de que tipo de oracle representa esta ronda completa
+  (candidato: `VISUAL_ORACLE` o `EXTERNAL_ORACLE` combinando los canarios E2E) - NO decidido aqui
+  para no inventar una clasificacion sin criterio del coordinador.
+- `SIN_ITEMS`: `itemIds=[]` - el requirement no esta vinculado a ningun item del Task Context.
+- `EVIDENCE_STALE`: el gate de frescura (`evidenciaStaleDeRequirement`) exige que TODA evidencia
+  `ACTIVE` cite un commit que sea el HEAD actual o se pare en la PRIMERA que no lo sea - el
+  requirement acumulo **54 evidenciaIds** a lo largo de las Fases B-G, cada fase citando su propio
+  commit de entonces; con el HEAD avanzando en cada fase posterior, la enorme mayoria de esas 54
+  quedan STALE por diseño (el motivo textual solo reporta la primera que encuentra, `a5b10c56`,
+  Fase B, commit `002a6b59`). Resolverlo de verdad exige recorrer las 54 una a una y decidir, para
+  cada una, si corresponde `requirement-evidence-mark-historical` (documenta lo que esa fase hizo
+  en su momento, no pretende seguir "vigente" hoy) o `requirement-supersede-evidence` (una
+  evidencia mas fresca reconfirma el mismo hallazgo) - una decision de fondo con 54 casos reales,
+  fuera del alcance de la condicion 15/19 de esta ronda y con riesgo real de ocultar un hallazgo si
+  se hace deprisa. Queda como pendiente explicito para el coordinador, NO resuelto aqui.
+
+### Checklist real para 16/17 (revisor-visual/verificador-qa finales, NO ejecutados esta ronda)
+Sobre el HEAD final (Terrakeep `5c0b3156` tras esta ronda + lo que venga despues), comandos reales:
+- `EQUIP_RESPONSIVE_SOLO=1` -> `CanarioResponsiveEquipamiento.cs` (Equipamiento/Vanidad/Tintes).
+- `INVALM_RESPONSIVE_SOLO=1` -> `CanarioResponsiveInventarioAlmacenes.cs` (Inventario/Almacenes).
+- `LIBRARY_RESPONSIVE_SOLO=1` -> `CanarioResponsiveLibrerias.cs` (Biblioteca/Biblioteca de
+  buffs/Investigacion, incluye `CategoriasPrincipales`).
+- `PERSONAJE_RESPONSIVE_SOLO=1` -> `CanarioResponsivePersonajeResto.cs` (Apariencia/Spawn
+  Points/Desbloqueos/Version/Comparar) - escrito y compilado en la Fase E/F, confirmado 0 FALLO en
+  Fase G (§5 de la entrada anterior), NO re-ejecutado esta ronda (restriccion del encargo).
+- `RESTO_RESPONSIVE_SOLO=1` -> `CanarioResponsiveRestoTabs.cs` (Inicio/Guia/Servidor/Acerca
+  de/Builds/Novedades) - 0 FALLO confirmado en Fase G; los 4 x:Name nuevos (`HomeContentScroll`/
+  `GuideContentScroll`/`HostingContentScroll`/`AboutContentScroll`) son puramente aditivos (no
+  cambian layout/bindings) pero el canario NO se ha re-ejecutado tras anadirlos esta ronda -
+  re-ejecutar antes de dar la condicion 16/17 por buena, por disciplina de evidencia fresca.
+- `COFRES_INSPECTOR_SOLO=1` -> `CanarioClusterCofresInspector.cs` (Exploracion, incluye el
+  `COFRES-INSPECTOR-FASED-R1` pre-existente sin relacion, documentado en la Fase G).
+- Barrido completo de los 15 tamaños de s2 (solo se confirmo 1080x700 en Fase G) - 10 intermedios
+  pendientes: 1100x720/1120x740/1180x760/1180x800/1200x800/1280x720/1280x800/1280x900/1320x800/
+  1440x900/1600x900.
+- KeepQA: `node src/task-context/handoffGate.js Terrakeep <proyectoEntrante>` completo (check1-14,
+  no solo check12/check14 aislados como en esta ronda) antes de dar el handoff por bueno.
+
+### Commits de esta ronda
+KeepQA `df8dc109` (perfil + waivers + `analizarArchivos` + `handoffGate` + regresion). Terrakeep
+`5c0b3156` (4 x:Name). Sin `git add -A` en ninguno de los dos repos (arbol de KeepQA con decenas de
+archivos modificados por otros agentes en paralelo, sin tocar ninguno; arbol de Terrakeep con
+cambios ajenos en `Terrakeep.App.Tests/AuditoriaMaquetacion.cs` y 17 archivos de
+`Terrakeep.Core.Tests/`, sin tocar). Sin `git push`.
+
+### Despliegue
+NO redesplegado. El cambio de esta ronda en Terrakeep es puramente de nombre (`x:Name`, sin efecto
+visual ni de comportamiento) y el encargo restringe explicitamente el uso del escritorio ("otro
+agente probando con el raton en paralelo") - `dotnet build` confirma que compila, pero no se ha
+generado ni copiado un nuevo `Terrakeep.exe` de Release. Queda pendiente para cuando haya escritorio
+libre (mismo momento en que se lancen 16/17).
