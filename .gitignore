@@ -4,6 +4,11 @@ obj/
 *.user
 *.suo
 
+# Export/backup accidental de todo el repo en la raiz (visto de verdad: Terrasavr-Native.zip,
+# 380 MB, 23-sep-2026 - duplicaba el repo entero incluido .codebase-memory, sin valor de
+# recuperacion adicional sobre el propio git). Nunca se comitea un backup asi, solo se borra.
+/*.zip
+
 # BaseOutputPath aislados de sesiones concurrentes de KeepQA (21-sep-2026, mismo motivo que
 # bin/obj de arriba: artefacto de build, nunca fuente). Convencion real: "bin_<algo>/" cuando una
 # sesion necesita construir sin chocar con el bin/ compartido de otra sesion activa en paralelo

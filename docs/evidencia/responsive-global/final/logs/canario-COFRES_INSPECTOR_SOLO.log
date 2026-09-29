@@ -1,0 +1,142 @@
+SESION-ESTADO: sesion 1 WTSConnectState=WTSActive SM_REMOTESESSION=0 SM_CMONITORS=1 UserInteractive=True; Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable=True
+RENDER-SONDA: OK - 64/64 pixeles pintados
+AISLAMIENTO: 12 .plr/.tplr y 11 .wld/.twld reales COPIADOS a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-376744; carpetas reales de personajes y mundos sustituidas; carpeta de estado redirigida a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-376744\estado-app (5 fichero(s) de estado copiados como siembra; los reales no se escriben).
+T12-RENDER: local sin RDP -> ShouldForceSoftwareRendering()=True (esperado False en esta maquina)
+T12-RENDER: con TERRAKEEP_FORCE_SOFTWARE_RENDER=1 -> ShouldForceSoftwareRendering()=True (esperado True)
+T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo 754ms
+T-G-ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)=True (esperado True - el escaneo real corre en segundo plano, no bloquea la construccion de la ventana)
+T3-RESTAURADO: Left=674 Top=243 Width=1476 Height=1081
+ARNES-TAMAÑO-BASE: Width=1180 Height=860 (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)
+COFRES-INSPECTOR-P1: CurrentChestMarker IsHitTestVisible=True, tiene MouseBinding LeftClick directo=True (esperado True/True - clicable SIN hover previo)
+COFRES-INSPECTOR-P1: boton 'Editar' (ChestRowTemplate, fila real ya realizada) Visibility=Visible sin ningun IsMouseOver simulado (esperado Visible - MainWindow.xaml:1809-1813 documenta 'SIEMPRE visible')
+COFRES-INSPECTOR-P1: Style del boton 'Editar' con trigger IsMouseOver sobre Visibility/Opacity=False (esperado False)
+COFRES-INSPECTOR-P3: modo 'Cofre a cofre' -> WorldSearchResults.Count=0 (esperado 0), ChestRows.Count=359 (esperado >0, hay contenido real que SI se ve), ExplorationResultsBlock.Visibility=Visible, ActualHeight real medido=0px
+COFRES-INSPECTOR-P3: modo 'Por tipo de cofre' (sin buscar aun) -> WorldSearchResults.Count=0 (esperado 0), ActualHeight real medido=0px
+COFRES-INSPECTOR-P2: cofre real con objeto prefijable localizado (Items.Count=16), CanHavePrefix=True, ContentControl del editor encontrado=True, lista Metas encontrada=True, lista Groups encontrada=True
+COFRES-INSPECTOR-P2: ContentControl (host de ItemEditTemplate dentro del cofre) ActualHeight real=460px (MaxHeight XAML=320, MainWindow.xaml:1882)
+COFRES-INSPECTOR-P2: WrapPanel 'Metas' (Biblioteca/Positivos/Negativos) IsVisible=True, posicion real relativa al ContentControl=0;310,53333333333336;219;27,630000000000003, ContentControl.ActualHeight=460px
+COFRES-INSPECTOR-P2: WrapPanel 'Groups' (Mejor/Daño/Critico, etc.) posicion real relativa al ContentControl=0;344,16333333333336;219;26,96666666666667
+COFRES-INSPECTOR-P3: modo 'Por lo que contienen' (misma causa, sin buscar aun) -> WorldSearchResults.Count=0 (esperado 0), ExplorationResultsBlock.Visibility=Visible, ActualHeight real medido=0px
+COFRES-INSPECTOR-P2-PICARO: objeto real colocado='Hacha Arrojadiza de Adamantita' (Id=20002398), CanHavePrefix=True, Groups.Count=3, Prefixes.Count=7 (esperado 17 prefijos legales reales, rogue_prefixes.json 'weapon':17)
+COFRES-INSPECTOR-P2-PICARO: ContentControl.ActualHeight=460px, Metas.Bottom=338,2px, Groups.Bottom=371,1px (esperado: los dos DENTRO o el ContentControl ya crecio para alojarlos - sin corte a media altura)
+COFRES-INSPECTOR-FASEB: SidebarMode antes de abrir ningun cofre=Browse (esperado Browse)
+COFRES-INSPECTOR-FASEB-R1: tras EditChestCommand (fila 'Editar') -> SidebarMode=ChestInspector (esperado ChestInspector)
+COFRES-INSPECTOR-FASEB-R1: tras CancelEditingChestCommand -> SidebarMode=Browse (esperado Browse)
+COFRES-INSPECTOR-FASEB-R2: TryOpenChestAtTile(5579,1036) -> encontro cofre=True, SidebarMode=ChestInspector (esperado True/ChestInspector)
+COFRES-INSPECTOR-FASEB-R2: tras SaveEditingChestAsync -> SidebarMode=Browse (esperado Browse), EditingChest=null
+COFRES-INSPECTOR-FASEB-R3: tras GoToWorldSearchHitCommand (resultado ChestItem) -> SidebarMode=ChestInspector (esperado ChestInspector), EditingChest=(5579,1036) (esperado (5579, 1036))
+COFRES-INSPECTOR-FASEB-R3: tras CancelEditingChestCommand -> SidebarMode=Browse (esperado Browse)
+COFRES-INSPECTOR-FASEC: SidebarMode=Browse (esperado Browse) -> BrowseContent.Visibility=Visible (esperado Visible), Placeholder.Visibility=Collapsed (esperado Collapsed)
+COFRES-INSPECTOR-FASEC: captura real Browse/cofres -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasec-browse-cofres.png
+COFRES-INSPECTOR-FASEC: captura real Browse/minerales -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasec-browse-minerales.png
+COFRES-INSPECTOR-FASEC: captura real Browse/objetos -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasec-browse-objetos.png
+COFRES-INSPECTOR-FASEC: captura real Browse/npcs -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasec-browse-npcs.png
+COFRES-INSPECTOR-FASEC: cofre abierto -> SidebarMode=ChestInspector (esperado ChestInspector), BrowseContent.Visibility=Collapsed (esperado Collapsed), Placeholder.Visibility=Visible (esperado Visible)
+COFRES-INSPECTOR-FASEC: texto real del placeholder='← Cofres' (esperado no vacio, Loc[explore_inspector_placeholder])
+COFRES-INSPECTOR-FASEC: captura real del placeholder abierto -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasec-inspector-placeholder.png
+COFRES-INSPECTOR-FASEC: tras Cancelar -> SidebarMode=Browse (esperado Browse), BrowseContent.Visibility=Visible (esperado Visible), Placeholder.Visibility=Collapsed (esperado Collapsed)
+COFRES-INSPECTOR-FASED: ChestByChestList encontrada=True, ContentControl->ChestItemEdit DUPLICADO dentro de la fila=False (esperado False)
+COFRES-INSPECTOR-FASED-R1: SidebarMode=ChestInspector (esperado ChestInspector), Placeholder.Visibility=Visible (esperado Visible)
+COFRES-INSPECTOR-FASED-R1: boton '<- Cofres' encontrado=True, IsVisible=True, ContentControl(ItemEditTemplate) encontrado=True, rejilla de slots encontrada=True, ancho real del ContentControl=219px, ancho real del Placeholder=219px
+COFRES-INSPECTOR-FASED-R1: titulo dinamico encontrado (Text==VariantName 'Cofre de champiñón')=True
+FALLO: COFRES-INSPECTOR-FASED-R1 - el Inspector mide solo 219px de ancho real, por debajo del ancho real de contenido de Browse en este mismo sidebar (230-245px) - no parece estar aprovechando el ancho completo
+COFRES-INSPECTOR-FASED-R1: tras boton '<- Cofres' (CancelEditingChestCommand) -> SidebarMode=Browse (esperado Browse)
+COFRES-INSPECTOR-FASED-PICARO: objeto real colocado='Hacha Arrojadiza de Adamantita' (Id=20002398), CanHavePrefix=True, Groups.Count=3 (esperado 17 prefijos legales reales)
+COFRES-INSPECTOR-FASED: captura real de la cabecera+rejilla del Inspector (sin scroll forzado) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fased-inspector-cabecera-y-rejilla.png
+COFRES-INSPECTOR-FASED-PICARO: ContentControl.ActualWidth=219px (ancho completo del Inspector, antes ~250px indentado en la fila), ContentControl.ActualHeight=460px, Metas.Bottom=338,2px, Groups.Bottom=371,1px (esperado: los dos DENTRO del ContentControl, sin corte)
+COFRES-INSPECTOR-FASED: captura real del Inspector con Metas/Groups (17 prefijos, objeto real) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fased-inspector-completo-picaro.png
+COFRES-INSPECTOR-FASED-SCROLLDEBUG: antes de ScrollToBottom -> VerticalOffset=368, ScrollableHeight=497,5, ExtentHeight=1031,7, ViewportHeight=534,2
+COFRES-INSPECTOR-FASED-SCROLLDEBUG: despues de ScrollToBottom -> VerticalOffset=466,9, ScrollableHeight=466,9, ExtentHeight=1031,7, ViewportHeight=564,8
+COFRES-INSPECTOR-FASED: captura real del final del Inspector (Prefixes de los 17 reales + Guardar/Cancelar) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fased-inspector-prefijos-guardar-cancelar.png
+COFRES-INSPECTOR-FASED: Guardar/Cancelar real (natural, sin recortar) -> Y=999,1px, Bottom=1023,7px, DockPanel.ActualHeight=1031,7px (MinHeight XAML=1000)
+COFRES-INSPECTOR-FASEF-SINSCROLLANIDADO: ScrollViewer descendientes de ChestInspectorItemEditTemplate (Picaro, 17 prefijos)=0 (esperado 0 - unico scroll owner real es ExplorationSidebarScroll exterior)
+COFRES-INSPECTOR-FASEH-MIN1080x700: tras ScrollToBottom -> VerticalOffset=626,9px, ScrollableHeight=626,9px, ExtentHeight=1031,7px, ViewportHeight=404,8px (esperado VerticalOffset≈ScrollableHeight)
+COFRES-INSPECTOR-FASEH-MIN1080x700: Guardar/Cancelar rect real tras ScrollToBottom=800;575,7433333333333;219;24,626666666666665, ventana=1080x700 -> alcanzableEnPantalla=True (esperado True)
+COFRES-INSPECTOR-FASEH-MIN1080x700: captura real a 1080x700 -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\faseh-inspector-1080x700-guardar-cancelar.png
+COFRES-INSPECTOR-FASED-R-GUARDAR: tras Guardar -> SidebarMode=Browse (esperado Browse), EditingChest=null
+COFRES-INSPECTOR-FASED-R2: TryOpenChestAtTile(5579,1036) -> encontro=True, SidebarMode=ChestInspector (esperado ChestInspector), cabecera real '<- Cofres' presente=True
+COFRES-INSPECTOR-FASED-R3: GoToWorldSearchHitCommand (ChestItem) -> SidebarMode=ChestInspector (esperado ChestInspector), cabecera real '<- Cofres' presente=True
+EXPLORACION-FASEF: selector 'Buscar' encontrado=True, selector 'Mundo' encontrado=True, ExplorationSidebarWorldToolsContent encontrado=True, ExplorationSidebarBrowseContent encontrado=True
+EXPLORACION-FASEF: estado inicial -> SidebarMode=Browse (esperado Browse), selector Buscar.IsChecked=True (esperado True), selector Mundo.IsChecked=False (esperado False), Browse.Visibility=Visible (esperado Visible), WorldTools.Visibility=Collapsed (esperado Collapsed)
+EXPLORACION-FASEF: captura real de Browse (sin los 3 Expanders de Mundo compartiendo viewport) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasef-browse-sin-expanders.png
+EXPLORACION-FASEF: tras ShowSidebarWorldToolsCommand -> SidebarMode=WorldTools (esperado WorldTools), selector Buscar.IsChecked=False (esperado False), selector Mundo.IsChecked=True (esperado True), Browse.Visibility=Collapsed (esperado Collapsed), WorldTools.Visibility=Visible (esperado Visible)
+EXPLORACION-FASEF: pastillas/subvistas de Mundo -> 'Este mundo' pastilla=True/subvista=True; 'Editar mundo' pastilla=True/subvista=True; 'Bestiario' pastilla=True/subvista=True (HasBestiary=True); WorldToolsSection inicial=Overview (esperado Overview)
+EXPLORACION-FASEF: BrowseContent.IsVisible=False (esperado False, colapsado de verdad, no solo Visibility local)
+EXPLORACION-FASEF: captura real de WorldTools/Overview (subvista exclusiva, Browse oculto) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasef-worldtools-overview.png
+EXPLORACION-FASEF: captura real de WorldTools/Edit (subvista exclusiva, Browse oculto) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasef-worldtools-edit.png
+EXPLORACION-FASEF: captura real de WorldTools/Bestiary (subvista exclusiva, Browse oculto) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\fasef-worldtools-bestiary.png
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Overview tras ScrollToBottom -> VerticalOffset=0px, ScrollableHeight=0px, ExtentHeight=385,8px, ViewportHeight=404,8px (esperado VerticalOffset≈ScrollableHeight)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Overview WorldToolsContent rect real tras ScrollToBottom=800;288,75333333333333;236;319,6166666666667, ventana=1080x700 -> alcanzableEnPantalla=True (esperado True)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 (Overview, fondo del scroll) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\faseh-worldtools-overview-1080x700-fondo.png
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Edit tras ScrollToBottom -> VerticalOffset=500,8px, ScrollableHeight=500,8px, ExtentHeight=905,7px, ViewportHeight=404,8px (esperado VerticalOffset≈ScrollableHeight)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Edit WorldToolsContent rect real tras ScrollToBottom=800;-212,0933333333333;219;820,4633333333333, ventana=1080x700 -> alcanzableEnPantalla=True (esperado True)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 (Edit, fondo del scroll) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\faseh-worldtools-edit-1080x700-fondo.png
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Bestiary tras ScrollToBottom -> VerticalOffset=7854,8px, ScrollableHeight=7854,8px, ExtentHeight=8259,6px, ViewportHeight=404,8px (esperado VerticalOffset≈ScrollableHeight)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: Bestiary WorldToolsContent rect real tras ScrollToBottom=800;-7566,066666666677;219;8174,4366666666765, ventana=1080x700 -> alcanzableEnPantalla=True (esperado True)
+EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 (Bestiary, fondo del scroll) -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\keepqa-evidencia\faseh-worldtools-bestiary-1080x700-fondo.png
+EXPLORACION-FASEF-CHESTINSPECTOR: cofre abierto -> SidebarMode=ChestInspector (esperado ChestInspector), EditingChest=NO-NULL (esperado NO-NULL)
+EXPLORACION-FASEF-CHESTINSPECTOR: tras pulsar 'Mundo' con un cofre en edicion -> SidebarMode=WorldTools (esperado WorldTools), EditingChest=null (esperado null, cancelado primero)
+EXPLORACION-FASEF-GUARDADO-SPAWN: ida -> WorldSpawnX=3206 (esperado 3206), SpawnSaveStatus='Guardado en el archivo - copia de seguridad en Blando_Río.wld.bak'
+EXPLORACION-FASEF-GUARDADO-SPAWN: vuelta -> WorldSpawnX=3205, WorldSpawnY=432 (esperado 3205,432 - mundo de prueba restaurado)
+EXPLORACION-FASEF-GUARDADO-TIEMPO: ida -> EditMoonPhase=6 (esperado 6), TimeSaveStatus='Guardado en el archivo - copia de seguridad en Blando_Río.wld.bak'
+EXPLORACION-FASEF-GUARDADO-TIEMPO: vuelta -> EditMoonPhase=5 (esperado 5 - mundo de prueba restaurado)
+EXPLORACION-FASEF-GUARDADO-BANDERAS: ida -> EditDownedGoblinArmy=False (esperado False), FlagsSaveStatus='Guardado en el archivo - copia de seguridad en Blando_Río.wld.bak'
+EXPLORACION-FASEF-GUARDADO-BANDERAS: vuelta -> EditDownedGoblinArmy=True (esperado True - mundo de prueba restaurado)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: 40 slots reales encontrados en el arbol visual del Inspector (esperado >0)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: vacios=24 (minCell real=36px), ocupados=16 (minCell real=36px), MinCell esperado (tras margen propio del Border)>=36px
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860-DIAG: ExplorationSidebarScroll ViewportWidth=219px ExtentWidth=216px ScrollableWidth=0px
+COFRES-INSPECTOR-SLOTSVACIOS-1180x860: placeholder.ActualWidth=219px, algun slot fuera del ancho real del placeholder=False (esperado False)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: 40 slots reales encontrados en el arbol visual del Inspector (esperado >0)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: slot VACIO ActualWidth=36px ActualHeight=36px cuadrado=True (tolerancia 1px)
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: vacios=24 (minCell real=36px), ocupados=16 (minCell real=36px), MinCell esperado (tras margen propio del Border)>=36px
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700-DIAG: ExplorationSidebarScroll ViewportWidth=219px ExtentWidth=216px ScrollableWidth=0px
+COFRES-INSPECTOR-SLOTSVACIOS-1080x700: placeholder.ActualWidth=219px, algun slot fuera del ancho real del placeholder=False (esperado False)
+CAPTURAS-VALIDACION: 22 captura(s) de esta ejecucion revisadas, 22 con contenido real, 0 INCONCLUSIVE (en blanco)
+AISLAMIENTO-ESTADO: los 4 JSON reales de C:\Users\adrian\AppData\Local\Terrakeep siguen con el MISMO SHA256 que al arrancar (ProcessExit); escrituras bloqueadas por la guarda=0

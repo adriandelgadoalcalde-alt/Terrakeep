@@ -1,0 +1,65 @@
+SESION-ESTADO: sesion 1 WTSConnectState=WTSActive SM_REMOTESESSION=0 SM_CMONITORS=1 UserInteractive=True; Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable=True
+RENDER-SONDA: OK - 64/64 pixeles pintados
+AISLAMIENTO: 12 .plr/.tplr y 11 .wld/.twld reales COPIADOS a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-229892; carpetas reales de personajes y mundos sustituidas; carpeta de estado redirigida a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-229892\estado-app (5 fichero(s) de estado copiados como siembra; los reales no se escriben).
+T12-RENDER: local sin RDP -> ShouldForceSoftwareRendering()=True (esperado False en esta maquina)
+T12-RENDER: con TERRAKEEP_FORCE_SOFTWARE_RENDER=1 -> ShouldForceSoftwareRendering()=True (esperado True)
+T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo 778ms
+T-G-ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)=True (esperado True - el escaneo real corre en segundo plano, no bloquea la construccion de la ventana)
+T3-RESTAURADO: Left=674 Top=243 Width=1476 Height=1081
+ARNES-TAMAÑO-BASE: Width=1180 Height=860 (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)
+HOME-SCAN: 6 personaje(s) encontrado(s) en la carpeta AISLADA del arnes (copias de los .plr reales en C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-229892, nunca los originales)
+  - Eldelgas | Núcleo medio | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 28/09/2026 12:22
+  - Zenith | Clásico | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 26/09/2026 11:19
+  - Terrariano | Clásico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 22/09/2026 02:26
+  - Eldelgas | Clásico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 20/09/2026 16:44
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 16/09/2026 08:01
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp' | 29/08/2026 00:21
+INSIGNIAS-TMOD-SIN-CALAMITY: Vanilla=False tModLoader=True Calamity=False tooltip='Mods usados la última vez: HEROsMod' (esperado False/True/False)
+  Captura -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\inicio-lanzador.png
+HOME-OPEN: click en 'Eldelgas' -> SelectedTabIndex=1 (esperado 1), CharacterName=Eldelgas, IsCharacterLoaded=True
+I-a IsCurrent tras abrir 'Eldelgas'=True (esperado True)
+A9-13-IDIOMA: Inicio en español -> TextBlock encontrado=True, contiene 'Aplicación nativa de Windows'=True (esperado True en los dos)
+A9-13-IDIOMA: tras cambiar a ingles EN VIVO (mismo TextBlock, sin reiniciar) -> contiene 'Native Windows app'=True (esperado True)
+A9-13-IDIOMA: vuelta a español -> contiene 'Aplicación nativa de Windows'=True (esperado True)
+I-b: 4 item(s) de menu, comandos sin resolver= (esperado ninguno)
+H5-04-HISTORIAL: MenuItem 'Historial de versiones' presente=True, comando resuelto=True (esperado True, True)
+H6-01-DOLL: copia aislada del personaje real 'Eldelgas' (C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-229892\tModLoader\Players\Eldelgas.plr), IsMale=True, HairStyle=20, pixeles opacos=1480/2240 (esperado > 700)
+Captura doll con brazos, copia aislada del personaje real -> h6-doll-personaje-real.png
+MEDICION-PERSONAJE: 17ms
+LOAD: OK - Cargado 'UIA-Test' - personaje 100% vanilla (sin .tplr).
+BUILDCODE-CANEXECUTE: tras cargar personaje (sin ningun evento de entrada real de por medio) -> BuildCodeButton.IsEnabled=True (esperado True, IsCharacterLoaded=True)
+BUILDCODE-CANEXECUTE: captura real -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\buildcode-boton-activado-tras-cargar.png
+EXPLORATION_LAYOUT-MINHEIGHT: ExplorationSidebarBrowseContent.MinHeight real=300px (limite permitido<=350px)
+EXPLORATION_LAYOUT-CONTENIDO: Browse a 1180x860-defecto -> encontrado=True, IsVisible=True, con pildoras de categoria reales visibles=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_Browse_1180x860-defecto ViewportWidth=219px ExtentWidth=203,7px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-CONTENIDO: ChestInspector a 1180x860-defecto -> placeholder encontrado=True, IsVisible=True, cabecera '<- Cofres' visible=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_ChestInspector_1180x860-defecto ViewportWidth=219px ExtentWidth=219px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-GUARDARCANCELAR: 1180x860-defecto tras ScrollToBottom -> VerticalOffset=472,9px, ScrollableHeight=472,9px (esperado VerticalOffset≈ScrollableHeight)
+EXPLORATION_LAYOUT-GUARDARCANCELAR: 1180x860-defecto Guardar/Cancelar rect real tras ScrollToBottom=900;735,7433333333333;219;24,626666666666665, ventana=1180x860 -> alcanzable=True (esperado True)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Overview a 1180x860-defecto -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Overview_1180x860-defecto ViewportWidth=236px ExtentWidth=216,7px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Overview a 1180x860-defecto -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Edit a 1180x860-defecto -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Edit_1180x860-defecto ViewportWidth=219px ExtentWidth=219px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Edit a 1180x860-defecto -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Bestiary a 1180x860-defecto -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Bestiary_1180x860-defecto ViewportWidth=219px ExtentWidth=211,6px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Bestiary a 1180x860-defecto -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+EXPLORATION_LAYOUT-CONTENIDO: Browse a 1080x700-minimo -> encontrado=True, IsVisible=True, con pildoras de categoria reales visibles=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_Browse_1080x700-minimo ViewportWidth=219px ExtentWidth=203,7px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-CONTENIDO: ChestInspector a 1080x700-minimo -> placeholder encontrado=True, IsVisible=True, cabecera '<- Cofres' visible=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_ChestInspector_1080x700-minimo ViewportWidth=219px ExtentWidth=219px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-GUARDARCANCELAR: 1080x700-minimo tras ScrollToBottom -> VerticalOffset=632,9px, ScrollableHeight=632,9px (esperado VerticalOffset≈ScrollableHeight)
+EXPLORATION_LAYOUT-GUARDARCANCELAR: 1080x700-minimo Guardar/Cancelar rect real tras ScrollToBottom=800;575,7433333333333;219;24,626666666666665, ventana=1080x700 -> alcanzable=True (esperado True)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Overview a 1080x700-minimo -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Overview_1080x700-minimo ViewportWidth=219px ExtentWidth=216,7px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Overview a 1080x700-minimo -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Edit a 1080x700-minimo -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Edit_1080x700-minimo ViewportWidth=219px ExtentWidth=219px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Edit a 1080x700-minimo -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+EXPLORATION_LAYOUT-CONTENIDO: WorldTools/Bestiary a 1080x700-minimo -> encontrado=True, IsVisible=True, subvista encontrada=True, visible=True, con contenido real=True
+EXPLORATION_LAYOUT-HSCROLL: ExplorationSidebarScroll_WorldTools_Bestiary_1080x700-minimo ViewportWidth=219px ExtentWidth=211,6px ScrollableWidth=0px (esperado<=0.5px, cero overflow horizontal real)
+EXPLORATION_LAYOUT-SCROLLINTERNO: WorldTools/Bestiary a 1080x700-minimo -> ScrollViewer descendientes de ExplorationSidebarWorldToolsContent=0 (esperado 0 - maximo un scroll vertical real, el exterior)
+DONE (EXPLORATION_LAYOUT_SOLO)
+CAPTURAS-VALIDACION: 14 captura(s) de esta ejecucion revisadas, 14 con contenido real, 0 INCONCLUSIVE (en blanco)
+AISLAMIENTO-ESTADO: los 4 JSON reales de C:\Users\adrian\AppData\Local\Terrakeep siguen con el MISMO SHA256 que al arrancar (ProcessExit); escrituras bloqueadas por la guarda=0

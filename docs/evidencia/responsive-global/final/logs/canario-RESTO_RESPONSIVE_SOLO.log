@@ -1,0 +1,128 @@
+SESION-ESTADO: sesion 1 WTSConnectState=WTSActive SM_REMOTESESSION=0 SM_CMONITORS=1 UserInteractive=True; Switch.System.Windows.Media.ShouldRenderEvenWhenNoDisplayDevicesAreAvailable=True
+RENDER-SONDA: OK - 64/64 pixeles pintados
+AISLAMIENTO: 12 .plr/.tplr y 11 .wld/.twld reales COPIADOS a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-19448; carpetas reales de personajes y mundos sustituidas; carpeta de estado redirigida a C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-19448\estado-app (5 fichero(s) de estado copiados como siembra; los reales no se escriben).
+T12-RENDER: local sin RDP -> ShouldForceSoftwareRendering()=True (esperado False en esta maquina)
+T12-RENDER: con TERRAKEEP_FORCE_SOFTWARE_RENDER=1 -> ShouldForceSoftwareRendering()=True (esperado True)
+T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo 775ms
+T-G-ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)=True (esperado True - el escaneo real corre en segundo plano, no bloquea la construccion de la ventana)
+T3-RESTAURADO: Left=674 Top=243 Width=1476 Height=1081
+ARNES-TAMAÑO-BASE: Width=1180 Height=860 (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)
+HOME-SCAN: 6 personaje(s) encontrado(s) en la carpeta AISLADA del arnes (copias de los .plr reales en C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-19448, nunca los originales)
+  - Eldelgas | Núcleo medio | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 28/09/2026 12:22
+  - Zenith | Clásico | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 26/09/2026 11:19
+  - Terrariano | Clásico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 22/09/2026 02:26
+  - Eldelgas | Clásico | Vanilla=True tModLoader=False Calamity=False | mods='Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado' | 20/09/2026 16:44
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp, HEROsMod, KeepQAFpsProbe, TerrakeepMod, TModLoaderMod' | 16/09/2026 08:01
+  - adrian | Viaje | Vanilla=False tModLoader=True Calamity=True | mods='Mods usados la última vez: CalamityModMusic, CalamityMod, CalamityModEsp' | 29/08/2026 00:21
+INSIGNIAS-TMOD-SIN-CALAMITY: Vanilla=False tModLoader=True Calamity=False tooltip='Mods usados la última vez: HEROsMod' (esperado False/True/False)
+  Captura -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\inicio-lanzador.png
+HOME-OPEN: click en 'Eldelgas' -> SelectedTabIndex=1 (esperado 1), CharacterName=Eldelgas, IsCharacterLoaded=True
+I-a IsCurrent tras abrir 'Eldelgas'=True (esperado True)
+A9-13-IDIOMA: Inicio en español -> TextBlock encontrado=True, contiene 'Aplicación nativa de Windows'=True (esperado True en los dos)
+A9-13-IDIOMA: tras cambiar a ingles EN VIVO (mismo TextBlock, sin reiniciar) -> contiene 'Native Windows app'=True (esperado True)
+A9-13-IDIOMA: vuelta a español -> contiene 'Aplicación nativa de Windows'=True (esperado True)
+I-b: 4 item(s) de menu, comandos sin resolver= (esperado ninguno)
+H5-04-HISTORIAL: MenuItem 'Historial de versiones' presente=True, comando resuelto=True (esperado True, True)
+H6-01-DOLL: copia aislada del personaje real 'Eldelgas' (C:\Users\adrian\AppData\Local\Temp\TerrakeepArnes-19448\tModLoader\Players\Eldelgas.plr), IsMale=True, HairStyle=20, pixeles opacos=1480/2240 (esperado > 700)
+Captura doll con brazos, copia aislada del personaje real -> h6-doll-personaje-real.png
+MEDICION-PERSONAJE: 18ms
+LOAD: OK - Cargado 'UIA-Test' - personaje 100% vanilla (sin .tplr).
+BUILDCODE-CANEXECUTE: tras cargar personaje (sin ningun evento de entrada real de por medio) -> BuildCodeButton.IsEnabled=True (esperado True, IsCharacterLoaded=True)
+BUILDCODE-CANEXECUTE: captura real -> C:\Users\adrian\Downloads\Keep\Terrasavr-Win\Terrasavr-Native-vqa-final\Terrakeep.App.Tests\bin\Release\net10.0-windows\buildcode-boton-activado-tras-cargar.png
+RESTO Inicio 1080x700 idioma=es primeraEntrada: vp=572 ext=862 scr=290 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1080x700 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1080x700 idioma=es primeraEntrada: vp=572 ext=1057,6 scr=485,6 (contenido documental/lista real, solo se informa)
+RESTO Hosting 1080x700 idioma=es primeraEntrada: vp=572 ext=423,5 scr=0
+RESTO AcercaDe 1080x700 idioma=es primeraEntrada: vp=572 ext=11214,3 scr=10642,3 (contenido documental/lista real, solo se informa)
+RESTO Builds[0] 1080x700 idioma=es: vp=491,7 ext=4266,6 scr=3774,9 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1080x700 idioma=es: vp=491,7 ext=3688,1 scr=3196,4 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1080x700 idioma=es: vp=494,7 ext=754,3 scr=259,6 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1080x700 idioma=es: vp=494,7 ext=2954,8 scr=2460,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Inicio 1080x700 idioma=es: vp=572 ext=862 scr=290 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1080x700 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1080x700 idioma=es: vp=572 ext=1057,6 scr=485,6 (contenido documental/lista real, solo se informa)
+RESTO Hosting 1080x700 idioma=es: vp=572 ext=423,5 scr=0
+RESTO AcercaDe 1080x700 idioma=es: vp=572 ext=11214,3 scr=10642,3 (contenido documental/lista real, solo se informa)
+RESTO Builds[0] 1080x700 idioma=es: vp=491,7 ext=4266,6 scr=3774,9 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1080x700 idioma=es: vp=491,7 ext=3688,1 scr=3196,4 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1080x700 idioma=es: vp=494,7 ext=754,3 scr=259,6 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1080x700 idioma=es: vp=494,7 ext=2954,8 scr=2460,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Inicio 1366x768 idioma=es: vp=640 ext=862 scr=222 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1366x768 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1366x768 idioma=es: vp=640 ext=1057,6 scr=417,6 (contenido documental/lista real, solo se informa)
+RESTO Hosting 1366x768 idioma=es: vp=640 ext=423,5 scr=0
+RESTO AcercaDe 1366x768 idioma=es: vp=640 ext=11214,3 scr=10574,3 (contenido documental/lista real, solo se informa)
+RESTO Builds[0] 1366x768 idioma=es: vp=559,7 ext=2255,1 scr=1695,4 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1366x768 idioma=es: vp=559,7 ext=3680,9 scr=3121,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1366x768 idioma=es: vp=562,7 ext=754,3 scr=191,6 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1366x768 idioma=es: vp=562,7 ext=2954,8 scr=2392,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Inicio 1520x860 idioma=es: vp=732 ext=621,5 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1520x860 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1520x860 idioma=es: vp=732 ext=1057,6 scr=325,6 (contenido documental/lista real, solo se informa)
+RESTO Hosting 1520x860 idioma=es: vp=732 ext=423,5 scr=0
+RESTO AcercaDe 1520x860 idioma=es: vp=732 ext=18932 scr=18200 (contenido documental/lista real, solo se informa)
+RESTO Builds[0] 1520x860 idioma=es: vp=651,7 ext=2255,1 scr=1603,4 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1520x860 idioma=es: vp=651,7 ext=2007,7 scr=1356 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1520x860 idioma=es: vp=654,7 ext=497,2 scr=0 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1520x860 idioma=es: vp=654,7 ext=2022,3 scr=1367,5 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Inicio 1920x1080 idioma=es: vp=952 ext=623 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1920x1080 idioma=es: anchoContenidoVisible=1630 anchoDisponible=1725,8 uso=94 %
+RESTO Inicio 1920x1080 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1920x1080 idioma=es: vp=952 ext=1057,6 scr=105,6 (contenido documental/lista real, solo se informa)
+RESTO Guia 1920x1080 idioma=es: anchoContenidoVisible=1700 anchoDisponible=1708,8 uso=99 %
+RESTO Hosting 1920x1080 idioma=es: vp=952 ext=446,1 scr=0
+RESTO Hosting 1920x1080 idioma=es: anchoContenidoVisible=1700 anchoDisponible=1725,8 uso=99 %
+RESTO AcercaDe 1920x1080 idioma=es: vp=952 ext=11252 scr=10300 (contenido documental/lista real, solo se informa)
+RESTO AcercaDe 1920x1080 idioma=es: anchoContenidoVisible=1700 anchoDisponible=1708,8 uso=99 %
+RESTO Builds[0] 1920x1080 idioma=es: vp=871,7 ext=2292,4 scr=1420,6 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[0] 1920x1080 idioma=es: anchoContenidoVisible=1700,8 anchoDisponible=1704,8 uso=100 %
+RESTO Builds[1] 1920x1080 idioma=es: vp=871,7 ext=2048,8 scr=1177,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1920x1080 idioma=es: anchoContenidoVisible=1700,8 anchoDisponible=1704,8 uso=100 %
+RESTO Novedades[0] 1920x1080 idioma=es: vp=873,4 ext=558,5 scr=0 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1920x1080 idioma=es: anchoContenidoVisible=1698,8 anchoDisponible=1721,7 uso=99 %
+RESTO Novedades[1] 1920x1080 idioma=es: vp=873,4 ext=1566,3 scr=692,9 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1920x1080 idioma=es: anchoContenidoVisible=1697,1 anchoDisponible=1704,7 uso=100 %
+RESTO Inicio 2560x1440 idioma=es: vp=1312 ext=487,2 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Inicio 2560x1440 idioma=es: anchoContenidoVisible=1956 anchoDisponible=2365,8 uso=83 %
+RESTO Inicio 2560x1440 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 2560x1440 idioma=es: vp=1312 ext=1057,6 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Guia 2560x1440 idioma=es: anchoContenidoVisible=1700 anchoDisponible=2365,8 uso=72 %
+RESTO Hosting 2560x1440 idioma=es: vp=1312 ext=446,1 scr=0
+RESTO Hosting 2560x1440 idioma=es: anchoContenidoVisible=1700 anchoDisponible=2365,8 uso=72 %
+RESTO AcercaDe 2560x1440 idioma=es: vp=1312 ext=11252 scr=9940 (contenido documental/lista real, solo se informa)
+RESTO AcercaDe 2560x1440 idioma=es: anchoContenidoVisible=1700 anchoDisponible=2348,8 uso=72 %
+RESTO Builds[0] 2560x1440 idioma=es: vp=1231,7 ext=2292,4 scr=1060,6 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[0] 2560x1440 idioma=es: anchoContenidoVisible=2340,8 anchoDisponible=2344,8 uso=100 %
+RESTO Builds[1] 2560x1440 idioma=es: vp=1231,7 ext=2048,8 scr=817,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 2560x1440 idioma=es: anchoContenidoVisible=2340,8 anchoDisponible=2344,8 uso=100 %
+RESTO Novedades[0] 2560x1440 idioma=es: vp=1233,4 ext=558,5 scr=0 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 2560x1440 idioma=es: anchoContenidoVisible=1698,8 anchoDisponible=2361,7 uso=72 %
+RESTO Novedades[1] 2560x1440 idioma=es: vp=1233,4 ext=1566,3 scr=332,9 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 2560x1440 idioma=es: anchoContenidoVisible=1697,1 anchoDisponible=2344,7 uso=72 %
+RESTO Inicio 1080x700 idioma=en: vp=572 ext=862 scr=290 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1080x700 idioma=en: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO Guia 1080x700 idioma=en: vp=572 ext=1057,6 scr=485,6 (contenido documental/lista real, solo se informa)
+RESTO Hosting 1080x700 idioma=en: vp=572 ext=423,5 scr=0
+RESTO AcercaDe 1080x700 idioma=en: vp=572 ext=11214,3 scr=10642,3 (contenido documental/lista real, solo se informa)
+RESTO Builds[0] 1080x700 idioma=en: vp=491,7 ext=4250 scr=3758,2 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Builds[1] 1080x700 idioma=en: vp=491,7 ext=3641,9 scr=3150,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[0] 1080x700 idioma=en: vp=494,7 ext=720,1 scr=225,4 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO Novedades[1] 1080x700 idioma=en: vp=494,7 ext=2954,8 scr=2460,1 (scroll de resultados FINITE_PAGEABLE, solo se informa)
+RESTO RESIZE grande 1920x1080: pestaña=0 idioma=es
+RESTO Inicio 1920x1080 idioma=es: vp=952 ext=623 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1920x1080 idioma=es: anchoContenidoVisible=1630 anchoDisponible=1725,8 uso=94 %
+RESTO Inicio 1920x1080 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO RESIZE normal 1366x768: pestaña=0 idioma=es
+RESTO Inicio 1366x768 idioma=es: vp=640 ext=862 scr=222 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1366x768 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO RESIZE minimo 1080x700: pestaña=0 idioma=es
+RESTO Inicio 1080x700 idioma=es: vp=572 ext=862 scr=290 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1080x700 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO RESIZE grande-vuelta 1920x1080: pestaña=0 idioma=es
+RESTO Inicio 1920x1080 idioma=es: vp=952 ext=623 scr=0 (contenido documental/lista real, solo se informa)
+RESTO Inicio 1920x1080 idioma=es: anchoContenidoVisible=1630 anchoDisponible=1725,8 uso=94 %
+RESTO Inicio 1920x1080 idioma=es: tarjetas de navegacion visibles=4 (esperado >=3, Libreria/Builds/Exploracion siempre presentes)
+RESTO_RESPONSIVE_SOLO: 0 fallo(s)
+DONE (RESTO_RESPONSIVE_SOLO)
+CAPTURAS-VALIDACION: 40 captura(s) de esta ejecucion revisadas, 40 con contenido real, 0 INCONCLUSIVE (en blanco)
+AISLAMIENTO-ESTADO: los 4 JSON reales de C:\Users\adrian\AppData\Local\Terrakeep siguen con el MISMO SHA256 que al arrancar (ProcessExit); escrituras bloqueadas por la guarda=0
