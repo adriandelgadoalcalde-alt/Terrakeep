@@ -33838,3 +33838,30 @@ tras el push: **0 coincidencias**. Los PNG de evidencia nuevos comiteados en
 reales (Eldelgas/Zenith/Terrariano/adrian) en varias capturas de muestra abiertas al azar - riesgo
 bajo ya clasificado por el inventario de cierre de familia, NO se ha reescrito la historia ni
 borrado nada, solo reportado aqui como pedia el encargo.
+
+### 7. Correccion real tras revision del coordinador (commit `6b1c3725`)
+El coordinador abrio `01-inicio.png`/`02-personaje.png` a mano y encontro dos bugs reales que mi
+propia revision de la ronda anterior no habia detectado:
+- **Franja blanca** (~40px abajo, ~16px derecha, las 6 capturas): el `RenderTargetBitmap` media la
+  ventana entera (`ActualWidth`/`ActualHeight`), pero el arbol visual real no pintaba hasta el
+  borde exacto - esa franja quedaba con alfa=0 y los visores la componen sobre blanco. Mismo bug
+  ya diagnosticado y arreglado en Starvekeep (`App.xaml.cs`, `RecortarAlContenidoReal`) - adaptado
+  aqui: recorta el bitmap al rectangulo real con alfa>0, pixel a pixel. Las 6 capturas pasan de
+  1920x1080 a 1904x1041 (recorte consistente en las 6). Verificado con un script PowerShell nuevo
+  (`comprobar-bordes.ps1`, scratchpad de la sesion) que recorre el perimetro completo de los 6 PNG:
+  0 pixeles blancos, 0 transparentes.
+- **Personaje "Aventurero" mal construido**: la Terra Blade estaba en `PrimaryLoadout.Items[0]`
+  (el hueco de casco - ese array son los 3 slots de armadura + 7 accesorios del loadout activo,
+  confirmado contra `MainViewModel.RebuildContainers`/`EquipmentGroupViewModel`/
+  `DefenseCalculator`), y la armadura Hallowed se habia puesto en `PlrCharacter.EquipmentItems`,
+  que en realidad es "miscEquips" (mascota/mascota de luz/vagoneta/montura/gancho), no armadura -
+  de ahi que la armadura no apareciera en el panel "Armadura" y "Defensa total" saliera 0.
+  Corregido: Hallowed Helmet/Plate Mail/Greaves en `Items[0..2]` (defensa real: 35), 3 accesorios
+  reales en `Items[3..5]` (Angel Wings/Hermes Boots/Band of Regeneration), Terra Blade solo en el
+  inventario (hotbar), `HealthNow`/`ManaNow` al maximo (400/400, 200/200), inventario con varios
+  objetos variados (pico, hacha, gancho, pocion, antorchas, madera).
+Las 6 capturas regeneradas y revisadas una a una otra vez. `git push origin master` normal
+(`58b9d8f7..6b1c3725`). Instalador de la release v3.3.0 NO tocado (mismo digest SHA256
+`600e4a0a...`, confirmado con `gh release view`); las notas de la release no enlazan capturas, asi
+que la release en si no necesitaba ningun cambio. Verificado que GitHub sirve ya las 6 capturas
+nuevas (`curl -I` a raw.githubusercontent.com, Content-Length identico al de cada PNG regenerado).
