@@ -39,6 +39,10 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
     public float Preparacion(PasoGuia paso, GuideContext contexto, out int cumplidos, out int totalObligatorios)
         => GuideEvaluationEngine.Preparacion(paso, Proveedor(contexto), out cumplidos, out totalObligatorios);
 
+    /// <summary>Guia v2 (F0): fuente de estado de escritorio para GuiaV2Evaluador, con las
+    /// capacidades nuevas (IGuideStateProviderV2) y los mismos catalogos que la v1.</summary>
+    public IGuideStateProviderV2 CrearProveedor(GuideContext contexto) => Proveedor(contexto);
+
     private DesktopGuideStateProvider Proveedor(GuideContext contexto)
         => new(vanillaItems, npcNames, calamityItems, vanillaStats, prefixEffects, prefixRules, contexto);
 }

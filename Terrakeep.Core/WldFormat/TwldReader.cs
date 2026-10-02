@@ -118,6 +118,24 @@ public static class TwldReader
     // - GuideFlags.Existe la reutiliza tal cual, para no mantener la misma lista dos veces.
     public static readonly IReadOnlySet<string> CalamityCanonicalFlagNames = CalamityDownedFlagMap.Values.ToHashSet();
 
+    // Guia v2 (F0, 02-oct-2026): banderas reales de DownedBossSystem que la guia v2 usa y la v1 no
+    // (Leviathan y Anahita, los tres niveles de Lluvia acida, Gigantoalmeja en modo dificil, Terror
+    // nuclear y Boss Rush). Clave guardada -> nombre de la propiedad publica real, leidas de
+    // DownedBossSystem.SaveWorldData (decompilado 2.2.4, mismas lineas en 2.2.2: "leviathan",
+    // "eocRain", "hmRain", "clamHardmode", "nuclearTerror", "bossRush"). Tabla APARTE para no
+    // cambiar CalamityCanonicalFlagNames (contrato de la guia v1 cubierto por sus propios tests).
+    private static readonly IReadOnlyDictionary<string, string> CalamityDownedFlagMapGuiaV2 = new Dictionary<string, string>
+    {
+        ["leviathan"] = "downedLeviathan",
+        ["eocRain"] = "downedEoCAcidRain",
+        ["hmRain"] = "downedAquaticScourgeAcidRain",
+        ["clamHardmode"] = "downedCLAMHardMode",
+        ["nuclearTerror"] = "downedNuclearTerror",
+        ["bossRush"] = "downedBossRush",
+    };
+
+    public static readonly IReadOnlySet<string> CalamityCanonicalFlagNamesGuiaV2 = CalamityDownedFlagMapGuiaV2.Values.ToHashSet();
+
     // Guia Encargo A "GuiaCalamity" (25-sep-2026): lee `modData` (lista de TagCompound
     // {mod,name,data} que WorldIO.SaveModData/LoadModData escriben de verdad, confirmado contra el
     // decompilado real) buscando la entrada de CalamityMod.DownedBossSystem, y traduce cada clave
@@ -145,7 +163,8 @@ public static class TwldReader
             {
                 foreach (var flagTag in flags.Items)
                 {
-                    if (flagTag is NbtString s && CalamityDownedFlagMap.TryGetValue(s.Value, out string? canonico))
+                    if (flagTag is NbtString s && (CalamityDownedFlagMap.TryGetValue(s.Value, out string? canonico) ||
+                                                     CalamityDownedFlagMapGuiaV2.TryGetValue(s.Value, out canonico)))
                         result.Add(canonico);
                 }
             }

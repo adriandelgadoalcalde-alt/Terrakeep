@@ -91,7 +91,8 @@ public static class GuideFlags
     public static bool Existe(string nombre) =>
         !string.IsNullOrEmpty(nombre) &&
         (_deMundo.ContainsKey(nombre) || nombre == "downedDD2EventAnyDifficulty" ||
-         TwldReader.CalamityCanonicalFlagNames.Contains(nombre));
+         TwldReader.CalamityCanonicalFlagNames.Contains(nombre) ||
+         TwldReader.CalamityCanonicalFlagNamesGuiaV2.Contains(nombre));
 
     /// <summary>Valor real, o null si no se puede comprobar ahora (bandera desconocida, o
     /// conocida pero sin el mundo/personaje que la guarda cargado).</summary>
@@ -114,7 +115,7 @@ public static class GuideFlags
         // valido con DownedBossSystem - ver el comentario de CalamityDownedFlags en GuideContext)
         // se propaga tal cual como "sin datos todavia"; un HashSet ya resuelto (vacio o no)
         // contesta con un true/false real, nunca inventado.
-        if (TwldReader.CalamityCanonicalFlagNames.Contains(nombre))
+        if (TwldReader.CalamityCanonicalFlagNames.Contains(nombre) || TwldReader.CalamityCanonicalFlagNamesGuiaV2.Contains(nombre))
             return contexto.CalamityDownedFlags?.Contains(nombre);
 
         return null;

@@ -88,6 +88,15 @@ public static class GuideEvaluationEngine
                 EvaluarBandera(r, requisito, ds);
                 break;
 
+            case TipoRequisitoGuia.ObjetoPoseido:
+            case TipoRequisitoGuia.Equipado:
+            case TipoRequisitoGuia.MejoraPermanente:
+            case TipoRequisitoGuia.EstadoMundo:
+            case TipoRequisitoGuia.FrutasVida:
+            case TipoRequisitoGuia.ManaMaxima:
+                EvaluarV2(r, requisito, ds);
+                break;
+
             default:
                 r.NoEvaluable = true;
                 r.TextoClave = "Guia.Req.NoEvaluable";
@@ -306,6 +315,79 @@ public static class GuideEvaluationEngine
         r.Cumplido = lleva;
         r.TextoClave = lleva ? "Guia.Req.GanchoSi" : "Guia.Req.GanchoNo";
         r.TextoArgs = lleva ? [nombre] : [];
+    }
+
+    // Guia v2 (F0, 02-oct-2026): los tipos nuevos. Un proveedor que solo implementa la interfaz v1
+    // (p.ej. un TerrakeepMod que aun no se ha actualizado) no puede contestarlos: limite
+    // estructural con motivo, que no bloquea la parada ni cuenta como cumplido.
+    private static void EvaluarV2(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds)
+    {
+        if (ds is not IGuideStateProviderV2 v2) { NoEvaluableFijo(r, "guide_motive_v2_unsupported"); return; }
+
+        switch (requisito.Tipo)
+        {
+            case TipoRequisitoGuia.ObjetoPoseido:
+            {
+                int[] ids = requisito.Ids is { Length: > 0 } ? requisito.Ids : (requisito.Id > 0 ? [requisito.Id] : []);
+                string nombres = string.Join(" / ", ids.Select(ds.NombreDeObjeto));
+                if (ids.Length == 0) { NoEvaluableFijo(r, "guide_motive_unresolved_ref"); r.TextoArgs = [nombres]; return; }
+                if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "guide_motive_load_character", nombres); return; }
+                int mejor = ids.Max(v2.CuantosPosee);
+                r.Actual = mejor;
+                r.Pedido = requisito.Cantidad;
+                r.Cumplido = mejor >= requisito.Cantidad;
+                r.TextoClave = requisito.Cantidad > 1 ? "Guia.Req.ObjetoPoseidoVarios" : "Guia.Req.ObjetoPoseido";
+                r.TextoArgs = requisito.Cantidad > 1 ? [nombres, mejor, requisito.Cantidad] : [nombres];
+                return;
+            }
+            case TipoRequisitoGuia.Equipado:
+            {
+                int[] ids = requisito.Ids is { Length: > 0 } ? requisito.Ids : (requisito.Id > 0 ? [requisito.Id] : []);
+                string nombres = string.Join(" / ", ids.Select(ds.NombreDeObjeto));
+                if (ids.Length == 0) { NoEvaluableFijo(r, "guide_motive_unresolved_ref"); r.TextoArgs = [nombres]; return; }
+                if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "guide_motive_load_character", nombres); return; }
+                bool lleva = ids.Any(v2.LlevaEquipado);
+                r.Actual = lleva ? 1 : 0;
+                r.Pedido = 1;
+                r.Cumplido = lleva;
+                r.TextoClave = "Guia.Req.Equipado";
+                r.TextoArgs = [nombres];
+                return;
+            }
+            case TipoRequisitoGuia.MejoraPermanente:
+            case TipoRequisitoGuia.EstadoMundo:
+            {
+                bool esMejora = requisito.Tipo == TipoRequisitoGuia.MejoraPermanente;
+                bool conocida = esMejora ? v2.MejoraConocida(requisito.Clave) : v2.EstadoMundoConocido(requisito.Clave);
+                if (!conocida)
+                {
+                    NoEvaluableFijo(r, "guide_motive_unknown_key");
+                    r.TextoClave = "Guia.Req.NoEvaluable";
+                    r.TextoArgs = [requisito.Clave];
+                    return;
+                }
+                bool? valor = esMejora ? v2.MejoraPermanente(requisito.Clave) : v2.EstadoMundo(requisito.Clave);
+                if (valor == null)
+                {
+                    NoEvaluableSinDatos(r, esMejora ? "guide_motive_load_character" : "guide_motive_load_world");
+                    return;
+                }
+                r.Actual = valor.Value ? 1 : 0;
+                r.Pedido = 1;
+                r.Cumplido = valor.Value;
+                r.TextoClave = (esMejora ? "Guia.Mejora." : "Guia.EstadoMundo.") + requisito.Clave;
+                r.TextoArgs = [];
+                return;
+            }
+            case TipoRequisitoGuia.FrutasVida:
+                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); return; }
+                Contar(r, v2.FrutasVida, requisito.Valor, "Guia.Req.FrutasVida");
+                return;
+            case TipoRequisitoGuia.ManaMaxima:
+                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); return; }
+                Contar(r, v2.ManaMaxima, requisito.Valor, "Guia.Req.ManaMaxima");
+                return;
+        }
     }
 
     private static void EvaluarBandera(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds)

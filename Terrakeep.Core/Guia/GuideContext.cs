@@ -33,5 +33,11 @@ public sealed class GuideContext
     // le pasaria a TerrakeepMod con NPC.downedXxx=false en una partida sin esos jefes derrotados.
     public IReadOnlySet<string>? CalamityDownedFlags { get; init; }
 
+    // Guia v2 (F0, 02-oct-2026): mismo contrato null/"vacio" que CalamityDownedFlags.
+    // Mejoras permanentes de CalamityPlayer (.tplr, "boost") - ver CalamityEstadoGuardado.
+    public IReadOnlySet<string>? CalamityPlayerBoosts { get; init; }
+    // Estado de mundo de MiscWorldStateSystem (.twld, "downed": revenge, death, esquemas...).
+    public IReadOnlySet<string>? CalamityWorldState { get; init; }
+
     public static readonly GuideContext Empty = new();
 }

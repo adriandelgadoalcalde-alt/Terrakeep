@@ -16,7 +16,7 @@ internal sealed class DesktopGuideStateProvider(
     VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems,
     VanillaItemStatsCatalog? vanillaStats, PrefixEffectCatalog? prefixEffects, PrefixRulesCatalog? prefixRules,
     GuideContext contexto)
-    : IGuideStateProvider
+    : IGuideStateProviderV2
 {
     public bool HasCharacterData => contexto.Character != null;
     public bool HasWorldData => contexto.World != null;
@@ -176,6 +176,80 @@ internal sealed class DesktopGuideStateProvider(
         TipoRequisitoGuia.NpcActivo => "guide_motive_active_npc",
         _ => "guide_motive_load_data",
     };
+
+    // ---- Guia v2 (F0, 02-oct-2026): IGuideStateProviderV2 -------------------------------------
+
+    // TODOS los contenedores fusionados (vanilla+Calamity) que CalamityCharacterSync.MergeAll
+    // devuelve: inventory, bank..bank4 (hucha, caja fuerte, forja defensiva, bolsa del vacio),
+    // miscEquips/miscDyes y loadout{0..2}Items/Social/Dyes. Monedas y municion del .plr no pasan
+    // por MergeAll (sin objetos de Calamity) y se suman aparte desde PlrCharacter.
+    public int CuantosPosee(int id)
+    {
+        if (id <= 0) return 0;
+        int total = 0;
+        if (contexto.MergedContainers != null)
+            foreach (var contenedor in contexto.MergedContainers.Values)
+                foreach (var item in contenedor)
+                    if (!item.IsEmpty && item.Id == id) total += item.Count;
+        if (contexto.Character != null)
+        {
+            foreach (var slot in contexto.Character.Coins) if (slot.Id == id) total += slot.Count;
+            foreach (var slot in contexto.Character.Ammo) if (slot.Id == id) total += slot.Count;
+        }
+        return total;
+    }
+
+    // Mismo criterio que Defensa: loadout0Items es "lo que lleva puesto de verdad al guardar".
+    public bool LlevaEquipado(int id) => id > 0 && ArmaduraActiva()?.Any(i => !i.IsEmpty && i.Id == id) == true;
+
+    // Mejoras permanentes vanilla del .plr (Player.cs 1.4.4.9, SavePlayer ~linea 55950: extraAccessory,
+    // unlockedBiomeTorches y, desde la version 269, ateArtisanBread, usedAegisCrystal, usedAegisFruit,
+    // usedArcaneCrystal, usedGalaxyPearl, usedGummyWorm, usedAmbrosia = ExtraUsingFlags[0..6]).
+    private static readonly Dictionary<string, Func<Terrakeep.Core.PlrFormat.PlrCharacter, bool>> MejorasVanilla = new()
+    {
+        ["demonHeart"] = c => c.ExtraAccessory,
+        ["torchGod"] = c => c.UnlockedBiomeTorches,
+        ["artisanBread"] = c => c.ExtraUsingFlags[0],
+        ["aegisCrystal"] = c => c.ExtraUsingFlags[1],
+        ["aegisFruit"] = c => c.ExtraUsingFlags[2],
+        ["arcaneCrystal"] = c => c.ExtraUsingFlags[3],
+        ["galaxyPearl"] = c => c.ExtraUsingFlags[4],
+        ["gummyWorm"] = c => c.ExtraUsingFlags[5],
+        ["ambrosia"] = c => c.ExtraUsingFlags[6],
+    };
+
+    public bool MejoraConocida(string clave) =>
+        MejorasVanilla.ContainsKey(clave) || CalamityEstadoGuardado.MejorasConocidas.Contains(clave);
+
+    public bool? MejoraPermanente(string clave)
+    {
+        if (MejorasVanilla.TryGetValue(clave, out var leer))
+            return contexto.Character != null ? leer(contexto.Character) : null;
+        if (CalamityEstadoGuardado.MejorasConocidas.Contains(clave))
+            return contexto.CalamityPlayerBoosts?.Contains(clave);
+        return null;
+    }
+
+    public bool EstadoMundoConocido(string clave) =>
+        clave == "mundoCarmesi" || CalamityEstadoGuardado.EstadosMundoConocidos.Contains(clave);
+
+    public bool? EstadoMundo(string clave)
+    {
+        if (clave == "mundoCarmesi") return contexto.World?.Header.IsCrimson;
+        if (CalamityEstadoGuardado.EstadosMundoConocidos.Contains(clave))
+            return contexto.CalamityWorldState?.Contains(clave);
+        return null;
+    }
+
+    // Player.cs: cada Fruta de vida suma 5 por encima de 400 (tope 500 = 20 frutas).
+    public int FrutasVida => Math.Clamp((VidaMaxima - 400) / 5, 0, 20);
+    public int ManaMaxima => contexto.Character?.ManaMax ?? 0;
+
+    public ModoPartida? Modo => contexto.World == null
+        ? null
+        : new ModoPartida(contexto.World.Header.GameMode,
+            contexto.CalamityWorldState?.Contains("revenge"),
+            contexto.CalamityWorldState?.Contains("death"));
 
     private GameItem[]? Inventario() =>
         contexto.MergedContainers != null && contexto.MergedContainers.TryGetValue("inventory", out var inv) ? inv : null;

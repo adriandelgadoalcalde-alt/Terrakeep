@@ -55,21 +55,7 @@ public sealed class GuideCatalog
 
                 foreach (var req in paso.Requisitos)
                 {
-                    req.Tipo = req.TipoBruto switch
-                    {
-                        "cristales_vida" => TipoRequisitoGuia.CristalesVida,
-                        "vida_maxima" => TipoRequisitoGuia.VidaMaxima,
-                        "defensa" => TipoRequisitoGuia.Defensa,
-                        "npcs_pueblo" => TipoRequisitoGuia.NpcsPueblo,
-                        "npc" => TipoRequisitoGuia.Npc,
-                        "npc_activo" => TipoRequisitoGuia.NpcActivo,
-                        "objeto" => TipoRequisitoGuia.Objeto,
-                        "objeto_cualquiera" => TipoRequisitoGuia.ObjetoCualquiera,
-                        "dano_arma" => TipoRequisitoGuia.DanoArma,
-                        "gancho" => TipoRequisitoGuia.Gancho,
-                        "bandera" => TipoRequisitoGuia.Bandera,
-                        _ => TipoRequisitoGuia.Desconocido,
-                    };
+                    req.Tipo = TipoDesdeTexto(req.TipoBruto);
 
                     ResolverReferenciasDeMod(req, calamityCatalog);
                 }
@@ -78,6 +64,30 @@ public sealed class GuideCatalog
 
         return new GuideCatalog(doc);
     }
+
+    /// <summary>Vocabulario cerrado de tipos de requisito, compartido por la guia v1 (este
+    /// catalogo) y la v2 (GuiaV2Cargador). Lo que no este aqui es Desconocido -> no evaluable.</summary>
+    public static TipoRequisitoGuia TipoDesdeTexto(string? tipo) => tipo switch
+    {
+        "cristales_vida" => TipoRequisitoGuia.CristalesVida,
+        "vida_maxima" => TipoRequisitoGuia.VidaMaxima,
+        "defensa" => TipoRequisitoGuia.Defensa,
+        "npcs_pueblo" => TipoRequisitoGuia.NpcsPueblo,
+        "npc" => TipoRequisitoGuia.Npc,
+        "npc_activo" => TipoRequisitoGuia.NpcActivo,
+        "objeto" => TipoRequisitoGuia.Objeto,
+        "objeto_cualquiera" => TipoRequisitoGuia.ObjetoCualquiera,
+        "dano_arma" => TipoRequisitoGuia.DanoArma,
+        "gancho" => TipoRequisitoGuia.Gancho,
+        "bandera" => TipoRequisitoGuia.Bandera,
+        "objeto_poseido" => TipoRequisitoGuia.ObjetoPoseido,
+        "equipado" => TipoRequisitoGuia.Equipado,
+        "mejora_permanente" => TipoRequisitoGuia.MejoraPermanente,
+        "estado_mundo" => TipoRequisitoGuia.EstadoMundo,
+        "frutas_vida" => TipoRequisitoGuia.FrutasVida,
+        "mana_maxima" => TipoRequisitoGuia.ManaMaxima,
+        _ => TipoRequisitoGuia.Desconocido,
+    };
 
     // "CalamityMod/DesertMedallion" -> (mod: "CalamityMod", interno: "DesertMedallion") ->
     // CalamityCatalog.ByModAndInternal -> id sintetico real (CalamityIds.ItemIdBase + indice),

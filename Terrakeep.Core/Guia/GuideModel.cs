@@ -49,6 +49,16 @@ public enum TipoRequisitoGuia
     DanoArma,
     Gancho,
     Bandera,
+    // Guia v2 (F0, 02-oct-2026): tipos nuevos AÑADIDOS AL FINAL a proposito - TerrakeepMod consume
+    // Terrakeep.Core.dll y compara estos valores numericamente; insertarlos en medio desplazaria
+    // los de arriba. Se evaluan solo si el proveedor implementa IGuideStateProviderV2 (si no,
+    // limite estructural honesto, nunca "cumplido"). Ver GuideEvaluationEngine.EvaluarV2.
+    ObjetoPoseido,
+    Equipado,
+    MejoraPermanente,
+    EstadoMundo,
+    FrutasVida,
+    ManaMaxima,
 }
 
 public sealed class RequisitoGuia
@@ -67,6 +77,8 @@ public sealed class RequisitoGuia
     [JsonPropertyName("cantidad")] public int Cantidad { get; set; } = 1;
     [JsonPropertyName("bandera")] public string Bandera { get; set; } = "";
     [JsonPropertyName("recomendado")] public bool Recomendado { get; set; }
+    // Guia v2: clave de mejora permanente / estado de mundo (tipos MejoraPermanente/EstadoMundo).
+    [JsonPropertyName("clave")] public string Clave { get; set; } = "";
 
     [JsonIgnore] public TipoRequisitoGuia Tipo { get; set; } = TipoRequisitoGuia.Desconocido;
 }

@@ -55,6 +55,14 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Guia v2 (F0, 02-oct-2026): los datos de la guia (contenido + tabla de referencias) van
+       INCRUSTADOS en la DLL para que Terrakeep y TerrakeepMod (que consume esta misma DLL desde
+       lib\Terrakeep.Core.dll) lean exactamente el mismo contenido. LogicalName = nombre de
+       archivo, ver GuiaV2Cargador. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Guia\V2\Datos\*.json" LogicalName="%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <!-- Auditoria final de Opus (5-sep-2026): mismo criterio que Terrakeep.App.csproj - la
        carpeta de publish no debe llevar simbolos de depuracion al equipo del usuario final. Sin
        esto, el .pdb de Core seguia colandose en el publish de Release aunque el de la App ya no
