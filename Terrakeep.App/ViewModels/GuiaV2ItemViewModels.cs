@@ -35,6 +35,9 @@ public sealed partial class ObjetoGuiaViewModel : ObservableObject
     public string Motivo { get; }
     public string Nota { get; }
     public string Marcas { get; }
+    /// <summary>Significado de las marcas de la wiki (†, C, +, Δ...) para el tooltip: sueltas bajo el
+    /// objeto eran crípticas (revisión del usuario, F4).</summary>
+    public string MarcasAyuda => _guia.ExplicarMarcas(Marcas);
     public string Nombre => _guia.NombreObjeto(Ref);
     public string? Icono => _guia.IconoObjeto(Ref);
     public string RefCorta => Ref.StartsWith("Terraria/", StringComparison.Ordinal) && GuiaV2Recursos.Referencias.Objetos.TryGetValue(Ref, out var o) && o.Id is int id

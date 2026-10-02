@@ -244,6 +244,12 @@ sesión:
   nunca depender de la carpeta temporal "por defecto".
 
 ## Reglas
+- **Badges SIEMPRE rectangulares con cantos redondeados (`CornerRadius` 8), NUNCA píldora** (literal del
+  usuario, 2-oct-2026: "el badge que me gusta ya lo sabes cuál es: es el rectangular con los cantos redondos,
+  ya hemos cambiado muchas veces estos badges"). Usa los estilos de `Styles/Theme.xaml`
+  (`SemanticStateChip`, `StateTagNeutral`, `HeroKpiPill` ya a 8); no definas estilos de badge/chip en las
+  vistas. Lo vigilan `BadgesRectangularesTests` (estático) y el canario por render `PILDORAS_SOLO=1`
+  (todas las pestañas, umbral 0). Los botones reales de acción pueden seguir siendo botones.
 - Commit antes de cualquier cambio grande, y TAMBIÉN después de cada cambio
   verificado (`dotnet build`/`dotnet test` en verde + verificación real),
   sin esperar a que se pida cada vez - mismo criterio que

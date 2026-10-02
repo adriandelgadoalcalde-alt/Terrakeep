@@ -1258,8 +1258,11 @@
     </Style>
 
     <SolidColorBrush x:Key="HeroKpiOverlayBrush" Color="#26FFFFFF" />
+    <!-- F4 (02-oct-2026): el usuario rechaza las pildoras en TODA la app ("el badge que me gusta ... es el
+         rectangular con los cantos redondos"): HeroKpiPill pasa a CornerRadius 8 como el resto. El nombre
+         se conserva para no tocar sus usos. Ver CLAUDE.md (regla de badges) y el canario PILDORAS_SOLO. -->
     <Style x:Key="HeroKpiPill" TargetType="Border">
-        <Setter Property="CornerRadius" Value="99" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="8,4" />
         <Setter Property="Background" Value="{StaticResource HeroKpiOverlayBrush}" />
     </Style>

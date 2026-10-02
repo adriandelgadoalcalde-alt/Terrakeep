@@ -2427,6 +2427,14 @@ internal static partial class Program
         // GUIAV2_SOLO=1 (02-oct-2026, Guia v2 F2): pestaña Guia nueva sobre un personaje y un mundo de
         // PRUEBA sinteticos - evaluacion, progreso manual, ficha, mapa y geometria de cada pantalla a
         // 1080x700/2560x1440 en es/en. Ver CanarioGuiaV2.cs.
+        // PILDORAS_SOLO=1 (02-oct-2026, F4): auditoria por render de badges con forma de pildora en todas
+        // las pestañas, umbral 0. Ver CanarioPildoras.cs.
+        if (Environment.GetEnvironmentVariable("PILDORAS_SOLO") == "1")
+        {
+            int fallosPildoras = EjecutarPildorasSolo(window, vm);
+            Console.WriteLine("DONE (PILDORAS_SOLO)");
+            Environment.Exit(fallosPildoras == 0 ? 0 : 1);
+        }
         if (Environment.GetEnvironmentVariable("GUIAV2_SOLO") == "1")
         {
             int fallosGuia = EjecutarGuiaV2Solo(window, vm);

@@ -104,14 +104,10 @@
             <Setter Property="GroupName" Value="GuiaSecciones" />
             <Setter Property="Margin" Value="0,0,6,6" />
         </Style>
-        <Style x:Key="GuiaChip" TargetType="Border">
-            <Setter Property="CornerRadius" Value="999" />
-            <Setter Property="Padding" Value="10,3" />
-            <Setter Property="Margin" Value="0,0,6,6" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
-            <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
-        </Style>
+        <!-- Badges de la Guia (F4, 02-oct-2026): el usuario rechazo la pildora (CornerRadius 999) propia
+             de la Guia - "el badge que me gusta ... es el rectangular con los cantos redondos". Todas
+             las etiquetas de la Guia usan SemanticStateChip de Theme.xaml (CornerRadius 8). Lo vigila
+             el canario PILDORAS_SOLO (auditoria por render, umbral 0). -->
 
         <!-- Objeto como ficha compacta (escalera, conserva): sprite + nombre + tengo/no tengo. -->
         <DataTemplate x:Key="ObjetoChip" DataType="{x:Type vm:ObjetoGuiaViewModel}">
@@ -122,7 +118,7 @@
                         <Image Source="{Binding Icono}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"
                                Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
                     </Grid>
-                    <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="8" Margin="8,0,0,0" VerticalAlignment="Center"
+                    <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="4" Margin="8,0,0,0" VerticalAlignment="Center"
                             Background="{StaticResource EquippedGreenBrush}" Visibility="{Binding LoTiene, Converter={StaticResource GuiaBoolToVis}}">
                         <TextBlock Text="✓" FontSize="10" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
@@ -132,7 +128,7 @@
                              ("ID 65" vanilla, "CalamityMod/Nombre" Calamity). F4, 2-oct-2026. -->
                         <TextBlock Text="{Binding RefCorta}" FontFamily="Consolas" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}"
                                    TextWrapping="Wrap" MaxWidth="190" />
-                        <TextBlock Text="{Binding Marcas}" FontSize="10" Foreground="{StaticResource MasterGoldBrush}"
+                        <TextBlock Text="{Binding Marcas}" FontSize="10" Foreground="{StaticResource MasterGoldBrush}" ToolTip="{Binding MarcasAyuda}" Background="Transparent"
                                    Visibility="{Binding Marcas, Converter={StaticResource EmptyToCollapsed}}" />
                     </StackPanel>
                 </DockPanel>
@@ -159,7 +155,7 @@
                     <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,2" />
                     <TextBlock Text="{Binding TextoCantidad}" FontSize="11" TextAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"
                                Visibility="{Binding TextoCantidad, Converter={StaticResource EmptyToCollapsed}}" />
-                    <Border HorizontalAlignment="Center" CornerRadius="999" Padding="8,2" Margin="0,4,0,0">
+                    <Border HorizontalAlignment="Center" CornerRadius="8" Padding="8,4" Margin="0,4,0,0">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
@@ -281,7 +277,7 @@
                         <StackPanel>
                             <WrapPanel>
                                 <TextBlock Text="{Binding [tab_guide], Source={StaticResource L}}" Style="{StaticResource TitleText}" FontSize="24" Margin="0,0,14,0" VerticalAlignment="Center" />
-                                <Border VerticalAlignment="Center" CornerRadius="999" Padding="10,3" Margin="0,4,6,4">
+                                <Border VerticalAlignment="Center" CornerRadius="8" Padding="8,4" Margin="0,4,6,4">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="{StaticResource TealBrush}" />
@@ -294,14 +290,14 @@
                                     </Border.Style>
                                     <TextBlock Text="{Binding AmbitoTexto}" FontSize="11" FontWeight="SemiBold" Foreground="White" />
                                 </Border>
-                                <Border Style="{StaticResource GuiaChip}" VerticalAlignment="Center" Margin="0,4,6,4">
+                                <!-- Sin partida no hay modo que enseñar (el aviso de arriba ya pide cargar un mundo). -->
+                                <Border Style="{StaticResource SemanticStateChip}" BorderBrush="{StaticResource BorderBrush0}" VerticalAlignment="Center" Margin="0,4,6,4"
+                                        Visibility="{Binding ModoTexto, Converter={StaticResource EmptyToCollapsed}}">
                                     <TextBlock Text="{Binding ModoTexto}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </Border>
-                                <Border Style="{StaticResource GuiaChip}" VerticalAlignment="Center" Margin="0,4,6,4" BorderBrush="{StaticResource AccentBrush}">
-                                    <TextBlock FontSize="11" Foreground="{StaticResource TextPrimaryBrush}">
-                                        <Run Text="{Binding ClaseTexto, Mode=OneWay}" FontWeight="SemiBold" />
-                                    </TextBlock>
-                                </Border>
+                                <!-- La clase es un CONTROL (lleva a Equipo, donde se elige), no una etiqueta. -->
+                                <Button Style="{StaticResource GuiaBotonEnlace}" Command="{Binding IrACommand}" CommandParameter="Equipo" VerticalAlignment="Center" Margin="4,4,6,4"
+                                        ToolTip="{Binding [guia2_cambiar_clase], Source={StaticResource L}}" AutomationProperties.Name="{Binding ClaseTexto}" Content="{Binding ClaseControlTexto}" />
                             </WrapPanel>
                             <TextBlock Text="{Binding PersonajeTexto}" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis"
                                        Visibility="{Binding PersonajeTexto, Converter={StaticResource EmptyToCollapsed}}" />
@@ -364,14 +360,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="{Binding [guia2_portada_rotulo], Source={StaticResource L}}" FontSize="11" FontWeight="Bold" Foreground="#FFE9D7A0" Margin="0,0,0,10" TextWrapping="Wrap" />
-                                    <WrapPanel Margin="0,0,0,8">
-                                        <Border CornerRadius="999" BorderBrush="#66FFFFFF" BorderThickness="1" Padding="10,3" Margin="0,0,6,6">
-                                            <TextBlock Foreground="White" FontSize="11"><Run Text="{Binding ClaseTexto, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding ModoTexto, Mode=OneWay}" /></TextBlock>
-                                        </Border>
-                                        <Border CornerRadius="999" BorderBrush="#66FFFFFF" BorderThickness="1" Padding="10,3" Margin="0,0,6,6">
-                                            <TextBlock Text="{Binding AmbitoTexto}" Foreground="White" FontSize="11" />
-                                        </Border>
-                                    </WrapPanel>
+                                    <!-- Clase, modo y ambito ya salen en la cabecera: no se repiten aqui (F4). -->
                                     <TextBlock Text="{Binding Titulo}" Foreground="White" FontSize="34" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,10" />
                                     <TextBlock Text="{Binding Subtitulo}" Foreground="#E6FFFFFF" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,18" />
                                     <WrapPanel>
@@ -461,16 +450,16 @@
                                     <ctl:TextoGuia Marcado="{Binding Siguiente.Preparate}" Style="{StaticResource GuiaCuerpo}" Margin="0,0,0,8"
                                                    Visibility="{Binding Siguiente.TienePreparate, Converter={StaticResource GuiaBoolToVis}}" />
                                     <WrapPanel Margin="0,0,0,6">
-                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.TieneVida, Converter={StaticResource GuiaBoolToVis}}">
+                                        <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}" Visibility="{Binding Siguiente.TieneVida, Converter={StaticResource GuiaBoolToVis}}">
                                             <TextBlock FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}"><Run Text="♥ " Foreground="{StaticResource CalamityTextBrush}" /><Run Text="{Binding Siguiente.VidaEtiqueta, Mode=OneWay}" /><Run Text=": " /><Run Text="{Binding Siguiente.VidaTexto, Mode=OneWay}" FontWeight="SemiBold" /></TextBlock>
                                         </Border>
-                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.VidaActualTexto, Converter={StaticResource EmptyToCollapsed}}">
+                                        <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}" Visibility="{Binding Siguiente.VidaActualTexto, Converter={StaticResource EmptyToCollapsed}}">
                                             <TextBlock Text="{Binding Siguiente.VidaActualTexto}" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" />
                                         </Border>
-                                        <Border Style="{StaticResource GuiaChip}">
+                                        <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}">
                                             <TextBlock Text="{Binding Siguiente.ProgresoTareas}" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" />
                                         </Border>
-                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.TieneDonde, Converter={StaticResource GuiaBoolToVis}}">
+                                        <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}" Visibility="{Binding Siguiente.TieneDonde, Converter={StaticResource GuiaBoolToVis}}">
                                             <TextBlock FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"><Run Text="⌖ " Foreground="{StaticResource TealBrush}" /><Run Text="{Binding Siguiente.Parada.Donde, Mode=OneWay}" /></TextBlock>
                                         </Border>
                                     </WrapPanel>
@@ -624,7 +613,7 @@
                                                 </Style>
                                             </Button.Style>
                                             <DockPanel>
-                                                <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="13" Margin="0,0,8,0" VerticalAlignment="Top">
+                                                <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="6" Margin="0,0,8,0" VerticalAlignment="Top">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
@@ -669,10 +658,10 @@
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Cabecera}" Style="{StaticResource GuiaRotulo}" />
                                                 <WrapPanel Margin="0,2,0,6">
-                                                    <Border Style="{StaticResource GuiaChip}" Visibility="{Binding TieneEtiqueta, Converter={StaticResource GuiaBoolToVis}}">
+                                                    <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}" Visibility="{Binding TieneEtiqueta, Converter={StaticResource GuiaBoolToVis}}">
                                                         <TextBlock Text="{Binding Etiqueta}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
                                                     </Border>
-                                                    <Border CornerRadius="999" Padding="10,3" Margin="0,0,6,6">
+                                                    <Border CornerRadius="8" Padding="8,4" Margin="0,0,6,6">
                                                         <Border.Style>
                                                             <Style TargetType="Border">
                                                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
@@ -992,7 +981,7 @@
                                                         <ColumnDefinition Width="1.4*" />
                                                     </Grid.ColumnDefinitions>
                                                     <StackPanel>
-                                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="999" Padding="8,2" HorizontalAlignment="Left" Margin="0,0,0,6"
+                                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="8" Padding="8,4" HorizontalAlignment="Left" Margin="0,0,0,6"
                                                                 Visibility="{Binding EsActual, Converter={StaticResource GuiaBoolToVis}}">
                                                             <TextBlock Text="{Binding [guia2_eq_ahora], Source={StaticResource L}}" FontSize="10" FontWeight="Bold" Foreground="White" />
                                                         </Border>
@@ -1057,7 +1046,7 @@
                                         <StackPanel>
                                             <WrapPanel>
                                                 <TextBlock Text="{Binding Nombre}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,8,4" TextWrapping="Wrap" />
-                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="999" Padding="7,1" Margin="0,1,6,4" VerticalAlignment="Top"
+                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="8" Padding="8,4" Margin="0,1,6,4" VerticalAlignment="Top"
                                                         Visibility="{Binding EsCalamity, Converter={StaticResource GuiaBoolToVis}}">
                                                     <TextBlock Text="Calamity" FontSize="10" Foreground="White" />
                                                 </Border>
@@ -1160,7 +1149,7 @@
                                 <DataTemplate DataType="{x:Type vm:ResultadoBusquedaV2ViewModel}">
                                     <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="0,0,0,6" Command="{Binding AbrirCommand}" AutomationProperties.Name="{Binding Titulo}">
                                         <DockPanel>
-                                            <Border DockPanel.Dock="Left" Style="{StaticResource GuiaChip}" VerticalAlignment="Top" Margin="0,0,10,0" MinWidth="86">
+                                            <Border DockPanel.Dock="Left" Style="{StaticResource SemanticStateChip}" BorderBrush="{StaticResource BorderBrush0}" VerticalAlignment="Top" Margin="0,0,10,0" MinWidth="86">
                                                 <TextBlock Text="{Binding Tipo}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
                                             </Border>
                                             <Image DockPanel.Dock="Left" Source="{Binding Icono}" Width="26" Height="26" Margin="0,0,10,0" VerticalAlignment="Top"
@@ -1212,10 +1201,10 @@
                             <TextBlock Text="{Binding Nombre}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
                             <TextBlock Text="{Binding NombreOtroIdioma}" Style="{StaticResource CaptionText}" Visibility="{Binding TieneNombreOtroIdioma, Converter={StaticResource GuiaBoolToVis}}" />
                             <WrapPanel Margin="0,8,0,0">
-                                <Border Style="{StaticResource GuiaChip}">
+                                <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}">
                                     <TextBlock Text="{Binding Identificador}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </Border>
-                                <Border Style="{StaticResource GuiaChip}">
+                                <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}">
                                     <TextBlock Text="{Binding Objeto.TextoTenencia}" FontSize="11">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
