@@ -59,6 +59,10 @@ const REESCRITURAS = [
   ['articulo:inicio-guia', 'Qué quiere decir «melee» aquí', 'Si juegas cuerpo a cuerpo: qué quiere decir «melee»'],
   ['articulo:inicio-guia', 'Esta guía no lee tu instalación: en Mod Browser puedes comprobar tu número real.', 'Esta guía sí lee tu partida (personaje y mundo) para marcar sola lo que ya has hecho, pero no tu lista de mods: en el navegador de mods puedes comprobar tu versión real de Calamity.'],
   ['articulo:inicio-guia', 'Los nombres ingleses se conservan para encontrarlos en tu juego. Las traducciones de títulos son explicativas, no prometen coincidir con una traducción instalada.', 'Los nombres de objetos, jefes y biomas salen de la traducción oficial al español de Terraria y de la traducción española de Calamity (CalamityModEsp); lo que no tiene traducción se queda con su nombre original.'],
+  // El esquema dibujado de su HTML no existe aqui (el mapa es el del mundo real del jugador).
+  ['articulo:mapa', 'Esquema orientativo, sin escala. ', ''],
+  ['articulo:mapa', ' Los dos extremos de este dibujo se intercambian si tu mundo está invertido.', ''],
+  ['articulo:mapa', ' En móvil puedes deslizar el esquema horizontalmente.', ''],
   ['parada:acid1.desbloquea', 'no tu siguiente armadura melee obligatoria', 'no una armadura obligatoria para las demás clases'],
 ];
 function reescribir(donde, texto) {
@@ -67,7 +71,7 @@ function reescribir(donde, texto) {
   return t;
 }
 
-const MAPA_REAL = 'El mapa de esta guía es el de **tu propio mundo**: en Terrakeep lo ves en Exploración y en TerrakeepMod en el mapa del juego, con la siguiente parada marcada. El lado de la {z:mazmorra} (y con él el {z:mar_sulfuroso} y el {z:abismo}) puede ser el izquierdo o el derecho según tu mundo.';
+const MAPA_REAL = 'El mapa de esta guía es el de **tu propio mundo**: en Terrakeep lo ves en Exploración y en TerrakeepMod en el mapa del juego, con la siguiente parada marcada. El lado de {z:mazmorra|la mazmorra} (y con él el {z:mar_sulfuroso} y el {z:abismo}) puede ser el izquierdo o el derecho según tu mundo.';
 
 function arreglarBloques(bloques, donde) {
   for (const b of bloques) {
@@ -217,7 +221,7 @@ function nombreZona(n) {
   if (!n1) throw new Error('Zona sin nombre oficial: ' + JSON.stringify(n));
   if (n.sufijo) {
     const [n2, f2] = parte(n.sufijo);
-    return [n1.replace(/^Laboratorios/, 'Laboratorio') + ' (' + n2.toLowerCase() + ')', f1 + ' + ' + f2];
+    return [n1.replace(/^Laboratorios/, 'Laboratorio') + ' (' + n2.toLowerCase().replace(/^(la|el|lo|los|las) /, '') + ')', f1 + ' + ' + f2];
   }
   return [n1, f1];
 }
@@ -239,6 +243,36 @@ const zonas = A.zonas.map(z => {
     resumen: '', bloques: [], fuentes: [],
   };
 });
+
+// Resumen de cada zona: sale del propio capitulo «Mapa y biomas» de la guia del usuario (cajas de
+// los biomas de Calamity y filas de la tabla de biomas de Terraria), para el tooltip del mapa.
+const RESUMEN_ZONA = {
+  mar_hundido: 'caja:Mar Hundido', mar_sulfuroso: 'caja:Mar Sulfúrico', abismo: 'caja:Abismo', penascos_azufre: 'caja:Peñascos de Azufre',
+  infeccion_astral: 'caja:Infección Astral', superficie: 'fila:Bosque y superficie', desierto: 'fila:Desierto', desierto_subterraneo: 'fila:Desierto',
+  nieve: 'fila:Nieve', jungla: 'fila:Jungla', jungla_subterranea: 'fila:Jungla', corrupcion: 'fila:Corrupción o Carmesí', carmesi: 'fila:Corrupción o Carmesí',
+  setas: 'fila:Setas luminosas', mazmorra: 'fila:{z:mazmorra', sagrado: 'fila:{z:sagrado', oceano: 'fila:Océano normal', cavernas: 'fila:Cavernas',
+  cielo: 'fila:Espacio', inframundo: 'fila:{z:inframundo',
+};
+{
+  const mapa = articulos.find(a => a.id === 'mapa');
+  const todas = [];
+  const recorrerB = bs => { for (const b of bs) { todas.push(b); if (b.bloques) recorrerB(b.bloques); } };
+  recorrerB(mapa.bloques);
+  for (const z of zonas) {
+    const clave = RESUMEN_ZONA[z.id];
+    if (!clave) continue;
+    const [tipo, texto] = [clave.slice(0, clave.indexOf(':')), clave.slice(clave.indexOf(':') + 1)];
+    if (tipo === 'caja') {
+      const caja = todas.find(b => b.tipo === 'caja' && b.titulo.includes(texto.replace('Mar Hundido', '{z:mar_hundido}').replace('Mar Sulfúrico', '{z:mar_sulfuroso}').replace('Abismo', '{z:abismo}').replace('Peñascos de Azufre', '{z:penascos_azufre}').replace('Infección Astral', '{z:infeccion_astral}')));
+      if (!caja) throw new Error('Resumen de zona sin caja: ' + z.id);
+      z.resumen = caja.bloques.filter(b => b.tipo === 'parrafo').map(b => b.texto).join(' ');
+    } else {
+      const fila = todas.filter(b => b.tipo === 'tabla').flatMap(b => b.filas).find(f => f[0].startsWith(texto));
+      if (!fila) throw new Error('Resumen de zona sin fila: ' + z.id + ' ' + texto);
+      z.resumen = fila[1];
+    }
+  }
+}
 
 // ---- 6. escaleras por clase (wiki oficial + verificacion contra el decompilado)
 const ESC = JSON.parse(fs.readFileSync(path.join(__dirname, 'datos', 'escaleras_calamity_wiki.json'), 'utf8'));

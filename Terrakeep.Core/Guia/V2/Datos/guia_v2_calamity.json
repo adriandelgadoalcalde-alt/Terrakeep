@@ -5494,12 +5494,12 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Esquema orientativo, sin escala. **El lado de la mazmorra puede ser izquierda o derecha.** Los dos extremos de este dibujo se intercambian si tu mundo está invertido. Las estructuras exactas varían por generación. En móvil puedes deslizar el esquema horizontalmente."
+     "texto": "**El lado de la mazmorra puede ser izquierda o derecha.** Las estructuras exactas varían por generación."
     },
     {
      "tipo": "aviso",
      "estilo": "nota",
-     "texto": "El mapa de esta guía es el de **tu propio mundo**: en Terrakeep lo ves en Exploración y en TerrakeepMod en el mapa del juego, con la siguiente parada marcada. El lado de la {z:mazmorra} (y con él el {z:mar_sulfuroso} y el {z:abismo}) puede ser el izquierdo o el derecho según tu mundo."
+     "texto": "El mapa de esta guía es el de **tu propio mundo**: en Terrakeep lo ves en Exploración y en TerrakeepMod en el mapa del juego, con la siguiente parada marcada. El lado de {z:mazmorra|la mazmorra} (y con él el {z:mar_sulfuroso} y el {z:abismo}) puede ser el izquierdo o el derecho según tu mundo."
     },
     {
      "tipo": "fuentes",
@@ -55778,7 +55778,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Base, primeros cofres, NPC y arena general. Mantén una salida clara hacia ambas direcciones.",
    "bloques": [],
    "fuentes": []
   },
@@ -55808,7 +55808,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Minerales, cofres, santuario y laboratorio secundario de cavernas. El brillo tecnológico no implica un jefe.",
    "bloques": [],
    "fuentes": []
   },
@@ -55823,7 +55823,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Islas, {o:Terraria/Starfury}, Aerialite y Planetoids. {n:CalamityMod/StormWeaverHead} usa esta altura.",
    "bloques": [],
    "fuentes": []
   },
@@ -55841,7 +55841,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Botín de movilidad, cabaña mecánica, laboratorio y {n:CalamityMod/Cryogen}. {o:CalamityMod/CryonicOre} tras {n:CalamityMod/Cryogen}; se extrae con un pico adecuado.",
    "bloques": [],
    "fuentes": []
   },
@@ -55858,7 +55858,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{n:CalamityMod/DesertScourgeHead}, mandíbulas de {n:CalamityMod/Stormlion} y {n:Terraria/Antlion}; acceso al {z:mar_hundido}. Después: arena y materiales de Tormenta de arena.",
    "bloques": [],
    "fuentes": []
   },
@@ -55876,7 +55876,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{n:CalamityMod/DesertScourgeHead}, mandíbulas de {n:CalamityMod/Stormlion} y {n:Terraria/Antlion}; acceso al {z:mar_hundido}. Después: arena y materiales de Tormenta de arena.",
    "bloques": [],
    "fuentes": []
   },
@@ -55893,7 +55893,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{n:Terraria/QueenBee}, {n:Terraria/Plantera}, templo/{n:Terraria/Golem}, laboratorio, plaga post-{n:Terraria/Golem}, {n:CalamityMod/Dragonfolly}. No destruyas el bioma de tus arenas.",
    "bloques": [],
    "fuentes": []
   },
@@ -55911,7 +55911,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{n:Terraria/QueenBee}, {n:Terraria/Plantera}, templo/{n:Terraria/Golem}, laboratorio, plaga post-{n:Terraria/Golem}, {n:CalamityMod/Dragonfolly}. No destruyas el bioma de tus arenas.",
    "bloques": [],
    "fuentes": []
   },
@@ -55928,7 +55928,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{n:CalamityMod/Crabulon}. Una zona superficial permite alojar al {n:Terraria/Truffle} en modo difícil y sirve para colecciones.",
    "bloques": [],
    "fuentes": []
   },
@@ -55946,7 +55946,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Jefe del mal y {n:CalamityMod/HiveMind} o {n:CalamityMod/PerforatorHive}. Materiales de almas en modo difícil; no necesitas ambos jefes de Calamity para desbloquear Aerialite.",
    "bloques": [],
    "fuentes": []
   },
@@ -55964,7 +55964,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Jefe del mal y {n:CalamityMod/HiveMind} o {n:CalamityMod/PerforatorHive}. Materiales de almas en modo difícil; no necesitas ambos jefes de Calamity para desbloquear Aerialite.",
    "bloques": [],
    "fuentes": []
   },
@@ -56001,7 +56001,7 @@
     "minimo": 40
    },
    "punto": "mazmorra",
-   "resumen": "",
+   "resumen": "Entra después de {n:Terraria/SkeletronHead}. Tras {n:Terraria/Plantera} cambia el botín; después de {n:Terraria/MoonLordHead} aparecen recursos y peligros fantasmales.",
    "bloques": [],
    "fuentes": []
   },
@@ -56019,7 +56019,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "{o:Terraria/Hellstone}, {n:Terraria/WallofFlesh}, {z:penascos_azufre}, laboratorio y {n:CalamityMod/Signus}. {n:CalamityMod/Providence} también puede combatirse aquí.",
    "bloques": [],
    "fuentes": []
   },
@@ -56037,7 +56037,7 @@
     "tilesMod": [],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "Aparece al entrar en modo difícil. {o:Terraria/SoulofLight}, {o:CalamityMod/HallowedOre} con la reestructuración, {n:CalamityMod/Providence} y {n:Terraria/HallowBoss}.",
    "bloques": [],
    "fuentes": []
   },
@@ -56070,7 +56070,7 @@
     "minimo": 40
    },
    "punto": "oceano_lado_opuesto",
-   "resumen": "",
+   "resumen": "Pesca, {n:CalamityMod/Anahita} + {n:CalamityMod/Leviathan} y {n:Terraria/DukeFishron}. No es el mar verde.",
    "bloques": [],
    "fuentes": []
   },
@@ -56089,7 +56089,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "**Cuándo:** visita breve al principio; Lluvia Ácida I tras el Ojo, II tras {n:CalamityMod/AquaticScourgeHead}, III tras {n:CalamityMod/Polterghast}. **Para qué:** evento, materiales y entrada al {z:abismo}. Se encuentra en el extremo del lado {z:mazmorra|mazmorra}. Construye una pasarela por encima del agua y aprende sus peligros antes de sumergirte. {p:acid1}",
    "bloques": [],
    "fuentes": []
   },
@@ -56108,7 +56108,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Scoria, recursos abisales y {o:CalamityMod/Terminus}. Cuanto más profundo, peor respiración, visión y defensa. La expedición temprana es una visita corta a los cofres accesibles, no una bajada hasta el fondo. {p:abyss1}",
    "bloques": [],
    "fuentes": []
   },
@@ -56144,7 +56144,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "**Cuándo:** tras {n:CalamityMod/DesertScourgeHead}. **Para qué:** materiales acuáticos, {n:CalamityMod/GiantClam}, {n:CalamityMod/SeaKing} y primer esquema. Desciende desde el desierto subterráneo. No confundas sus lagunas con el {z:mar_sulfuroso}. Evita provocar todo lo que encuentres antes de estar preparado. {p:sunken}",
    "bloques": [],
    "fuentes": []
   },
@@ -56162,7 +56162,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "**Cuándo:** puedes reconocerlo antes; combate contra {n:CalamityMod/BrimstoneElemental} en modo difícil. **Para qué:** {o:CalamityMod/EssenceofHavoc}, materiales infernales y botín de etapas posteriores. Está en el infierno del lado de {z:mazmorra|mazmorra}. Su lava es especialmente peligrosa: construye una zona de combate segura. {p:brimstone}",
    "bloques": [],
    "fuentes": []
   },
@@ -56181,7 +56181,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "",
+   "resumen": "**Cuándo:** aparece tras {n:Terraria/WallofFlesh}. **Para qué:** Aureus, Deus, {o:CalamityMod/AstralBeaconItem}, mineral y equipo Astral. La conversión del impacto no se propaga como Corrupción/Carmesí. Aureus habilita botín y el cofre Astral; **Deus** habilita extraer {o:CalamityMod/AstralOre}. {p:deus}",
    "bloques": [],
    "fuentes": []
   },
@@ -56236,7 +56236,7 @@
   },
   {
    "id": "lab_jungla",
-   "nombre": "Laboratorio del Arsenal (la jungla)",
+   "nombre": "Laboratorio del Arsenal (jungla)",
    "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Jungle)",
    "ambito": "calamity",
    "capa": "cualquiera",
@@ -56252,7 +56252,7 @@
   },
   {
    "id": "lab_infierno",
-   "nombre": "Laboratorio del Arsenal (el inframundo)",
+   "nombre": "Laboratorio del Arsenal (inframundo)",
    "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.TheUnderworld)",
    "ambito": "calamity",
    "capa": "cualquiera",
