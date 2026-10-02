@@ -47,6 +47,8 @@ public sealed class GuiaV2Doc
     /// <summary>Capitulos de manual (mapa y biomas, equipo, vida, estoy perdido...).</summary>
     [JsonPropertyName("articulos")] public List<Articulo> Articulos { get; set; } = [];
     [JsonPropertyName("escaleras")] public List<EscaleraClase> Escaleras { get; set; } = [];
+    /// <summary>Significado de las marcas de las escaleras (simbolo -> explicacion).</summary>
+    [JsonPropertyName("leyendaEscaleras")] public Dictionary<string, string> LeyendaEscaleras { get; set; } = [];
     [JsonPropertyName("zonas")] public List<Zona> Zonas { get; set; } = [];
     /// <summary>Avisos generales segun el modo de juego (ademas de los de cada parada).</summary>
     [JsonPropertyName("avisosModo")] public List<AvisoModo> AvisosModo { get; set; } = [];
@@ -234,7 +236,17 @@ public sealed class EtapaEscalera
 public sealed class OpcionEquipo
 {
     [JsonPropertyName("ref")] public string Ref { get; set; } = "";
+    /// <summary>De donde sale, si la fuente lo dice expresamente. Lo normal es dejarlo vacio: la
+    /// UI enseña la obtencion real de la tabla de referencias (recetas/botin/tiendas del codigo).</summary>
     [JsonPropertyName("origen")] public string Origen { get; set; } = "";
+    /// <summary>Consejo de uso de la fuente (wiki), en español.</summary>
+    [JsonPropertyName("nota")] public string Nota { get; set; } = "";
+    /// <summary>Papel del objeto segun la fuente ("principal", "apoyo", "control de masas"...).</summary>
+    [JsonPropertyName("rol")] public string Rol { get; set; } = "";
+    /// <summary>Conjunto de armadura al que pertenece la pieza (para agrupar en la UI).</summary>
+    [JsonPropertyName("conjunto")] public string Conjunto { get; set; } = "";
+    /// <summary>Marcas de la wiki (†, C, +, ≤, Δ, *, Ω); su significado va en la leyenda de la guia.</summary>
+    [JsonPropertyName("marcas")] public List<string> Marcas { get; set; } = [];
 }
 
 /// <summary>Aviso que solo aplica en ciertos modos ("clasico","experto","maestro","viaje",

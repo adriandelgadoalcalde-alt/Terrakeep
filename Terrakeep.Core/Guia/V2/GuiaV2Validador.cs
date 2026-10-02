@@ -22,7 +22,7 @@ public static class GuiaV2Validador
     public static readonly IReadOnlySet<string> PuntosConocidos = new HashSet<string>
     {
         // vanilla (cabecera del .wld)
-        "spawn", "mazmorra",
+        "spawn", "mazmorra", "oceano_lado_mazmorra", "oceano_lado_opuesto",
         // Calamity (MiscWorldStateSystem del .twld, ver CalamityEstadoGuardado)
         "SunkenSeaLabCenter", "PlanetoidLabCenter", "JungleLabCenter", "HellLabCenter", "IceLabCenter", "CavernLabCenter",
     };
@@ -74,7 +74,7 @@ public static class GuiaV2Validador
         {
             if (!refs.Npcs.TryGetValue(r, out var n)) { e.Add($"{donde}: NPC sin referencia '{r}'"); return; }
             if (string.IsNullOrWhiteSpace(n.Es)) e.Add($"{donde}: NPC '{r}' sin nombre");
-            if (r.StartsWith("Terraria/", StringComparison.Ordinal) && n.Id is null or <= 0) e.Add($"{donde}: NPC vanilla '{r}' sin id");
+            if (r.StartsWith("Terraria/", StringComparison.Ordinal) && n.Id is null or 0) e.Add($"{donde}: NPC vanilla '{r}' sin id");
         }
 
         void Bloques(IEnumerable<Bloque> bloques, string donde)
@@ -214,7 +214,13 @@ public static class GuiaV2Validador
                 if (!paradas.Contains(et.Desde)) e.Add($"{d}/{et.Id}: parada 'desde' desconocida '{et.Desde}'");
                 Texto(et.Momento, d);
                 Texto(et.Nota, d);
-                foreach (var o in et.Armas.Concat(et.Armadura).Concat(et.Accesorios).Concat(et.Otros)) { RefObjeto(o.Ref, $"{d}/{et.Id}"); Texto(o.Origen, d); }
+                foreach (var o in et.Armas.Concat(et.Armadura).Concat(et.Accesorios).Concat(et.Otros))
+                {
+                    RefObjeto(o.Ref, $"{d}/{et.Id}");
+                    Texto(o.Origen, d);
+                    Texto(o.Nota, d);
+                    foreach (var m in o.Marcas) if (m.Length == 0 || !doc.LeyendaEscaleras.ContainsKey(m[..1])) e.Add($"{d}/{et.Id}: marca sin leyenda '{m}'");
+                }
                 Fuentes(et.Fuentes, d);
             }
         }
@@ -277,7 +283,12 @@ public sealed record GuiaV2Cifras(int Capitulos, int Articulos, int Paradas, int
         foreach (var z in doc.Zonas) { textos.Add(z.Resumen); B(z.Bloques); }
         foreach (var f in doc.Problemas.Concat(doc.Hallazgos)) { textos.Add(f.Titulo); B(f.Bloques); }
         foreach (var a in doc.AvisosModo) textos.Add(a.Texto);
-        foreach (var et in doc.Escaleras.SelectMany(e => e.Etapas)) { textos.Add(et.Momento); textos.Add(et.Nota); }
+        foreach (var et in doc.Escaleras.SelectMany(e => e.Etapas))
+        {
+            textos.Add(et.Momento);
+            textos.Add(et.Nota);
+            textos.AddRange(et.Armas.Concat(et.Armadura).Concat(et.Accesorios).Concat(et.Otros).Select(o => o.Nota));
+        }
 
         int palabras = textos.Sum(t => GuiaV2Texto.Plano(t, refs).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length);
         var tareas = doc.Paradas.SelectMany(p => p.Tareas).ToList();

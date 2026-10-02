@@ -36,7 +36,7 @@ public static class GuiaV2Ubicaciones
         if (zona.Punto != null)
         {
             var p = PuntoConocido(zona.Punto, mundo);
-            if (p != null) return new UbicacionResuelta(p.Value.X, p.Value.Y, false, "punto:" + zona.Punto);
+            if (p != null) return new UbicacionResuelta(p.Value.X, p.Value.Y, PuntoEsAproximado(zona.Punto), "punto:" + zona.Punto);
         }
 
         var tiles = zona.Firma.Tiles.ToHashSet();
@@ -102,8 +102,18 @@ public static class GuiaV2Ubicaciones
     {
         "spawn" => (mundo.SpawnX, mundo.SpawnY),
         "mazmorra" => (mundo.MazmorraX, mundo.MazmorraY),
+        // Oceanos: Terraria siempre los genera en los dos bordes del mundo (WorldGen, paso
+        // "Beaches"); la Mazmorra queda en uno de ellos y el mar sulfuroso de Calamity en ese mismo.
+        // Punto aproximado (a ~60 casillas del borde, un poco por encima de la superficie).
+        "oceano_lado_mazmorra" => (MazmorraALaIzquierda(mundo) ? 60 : mundo.Ancho - 60, mundo.NivelSuperficie - 30),
+        "oceano_lado_opuesto" => (MazmorraALaIzquierda(mundo) ? mundo.Ancho - 60 : 60, mundo.NivelSuperficie - 30),
         _ => mundo.Punto(clave),
     };
+
+    private static bool MazmorraALaIzquierda(IMundoGuia mundo) => mundo.MazmorraX < mundo.Ancho / 2;
+
+    /// <summary>true si el punto es una estimacion (no una coordenada guardada por el juego).</summary>
+    public static bool PuntoEsAproximado(string clave) => clave is "oceano_lado_mazmorra" or "oceano_lado_opuesto";
 
     /// <summary>Primera ubicacion de la parada que se puede situar en este mundo (respetando
     /// siMundo corrupcion/carmesi). Las de tipo npc/jefe las resuelve la app (posicion de un NPC
@@ -117,7 +127,7 @@ public static class GuiaV2Ubicaciones
             if (u.Tipo == "punto")
             {
                 var p = PuntoConocido(u.Id, mundo);
-                if (p != null) return new UbicacionResuelta(p.Value.X, p.Value.Y, false, "punto:" + u.Id);
+                if (p != null) return new UbicacionResuelta(p.Value.X, p.Value.Y, PuntoEsAproximado(u.Id), "punto:" + u.Id);
                 continue;
             }
             if (u.Tipo != "zona") continue;
