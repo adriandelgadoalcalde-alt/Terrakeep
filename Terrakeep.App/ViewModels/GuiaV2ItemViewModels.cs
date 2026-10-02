@@ -368,7 +368,9 @@ public sealed partial class FichaV2ViewModel(GuiaV2ViewModel guia, EntradaFicha 
 {
     public EntradaFicha Ficha { get; } = f;
     public string Id => Ficha.Id;
-    public string Titulo => Ficha.Titulo;
+    // El titulo de algunas fichas lleva marcado ({z:mazmorra|mazmorra}) y se pinta en un TextBlock
+    // plano: sin Plano salia el token crudo (revision visual F4, "Algo raro" de Calamity).
+    public string Titulo => guia.Plano(Ficha.Titulo);
     public IReadOnlyList<Bloque> Bloques => Ficha.Bloques;
     public IReadOnlyList<Fuente> Fuentes => Ficha.Fuentes;
     public bool TieneFuentes => Ficha.Fuentes.Count > 0;

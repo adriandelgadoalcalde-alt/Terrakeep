@@ -73,6 +73,18 @@ public sealed class GuiaV2ViewModelTests : IDisposable
         return vm;
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LosTitulosDeLasFichasNoEnseñanMarcadoCrudo(bool calamity)
+    {
+        // Revision visual F4: "Una sala enorme al fondo de {z:mazmorra|mazmorra}" en He encontrado algo raro.
+        var vm = Vm(Personaje(100), null, calamity);
+        var titulos = vm.Problemas.Select(f => f.Titulo).Concat(vm.Hallazgos.Select(f => f.Titulo)).ToList();
+        Assert.NotEmpty(titulos);
+        Assert.All(titulos, t => Assert.DoesNotContain("{", t));
+    }
+
     [Fact]
     public void SinDatos_EnseñaLaGuiaEnteraSinMarcarNadaPorPartida()
     {
