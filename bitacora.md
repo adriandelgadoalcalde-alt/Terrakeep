@@ -34147,3 +34147,27 @@ detalle técnico: `docs/guia-v2-diseno.md` §13.
   existir); ahora a `GuiaV2View.xaml`, los dos en PASS (commit `006bef2` de KeepQA).
 - **Pendiente** (ver §13 del diseño): «Te toca» de Inicio y el chip/bandas del mapa siguen en la guía v1;
   el contenido solo existe en español.
+
+
+## 2-oct-2026 - Guía v2, Fase F2b: una sola guía en toda la app y nombres oficiales
+
+- **Una sola guía.** La tarjeta «Te toca» y el KPI de capítulo de Inicio, y el chip y las bandas del mapa de
+  Exploración, leen ya la guía v2 (en una captura salía «Guía: Subterráneo» junto al marcador del Rey slime).
+  `GuiaV2ViewModel.EvaluarPartida` es común a la pestaña Guía y a `SiguienteParadaPara` (Inicio, personaje no
+  cargado); Inicio se recalcula con cada evaluación (`Evaluada`). El mapa usa `MarcadorCapa`/`ChipMapaTexto`
+  del marcador v2; se retiró el marcador v1 de «objetivo en la Mazmorra» y las claves `guide_zone_chip_*`.
+  La v1 (`GuideViewModel`) ya no tiene pantalla; se conserva por sus pruebas de motor.
+- **Bug de paso:** el rótulo del marcador comparaba la parada por referencia; un `Refresh` durante el `await`
+  lo dejaba en «Parada N» en vez de «Siguiente parada (N)». Ahora por id.
+- **Nombres oficiales.** `scripts/guia-v2/conjuntos.js`: tabla única de conjuntos sacada de las piezas
+  oficiales (65 rótulos Calamity, 36 vanilla; «Silver armor» → «Armadura de plata»; marcas `{o:}` como
+  rótulo eliminadas). Textos sueltos en inglés con nombre oficial corregidos en las dos guías (Exo Mecas,
+  Estado de caos, Escoria/Criónico/Perenne, Llave del templo, Médico brujo, Zoóloga, «(casco Mask)»...).
+  Los de Calamity sin traducción oficial se quedan. `GuiaV2IdiomaTests` lo vigila (rojo con los datos
+  anteriores: 258+122 rótulos y 22 textos).
+- **Textos que faltaban:** `Guia.Bandera.downedMechBoss1/2/3` (salía la clave cruda en la fila del requisito),
+  en `textos.*.json` y en los `.hjson` del mod, con prueba en los dos repos.
+- **Canarios adaptados (misma fuerza o más):** IDEA7_SOLO y GUIACHIP_SOLO (cuerpo en `CanariosGuiaUnica.cs`),
+  BADGES_ESTADO_SOLO, HOMECARDS_SOLO y KPI3_SOLO; además GUIAV2_SOLO y RESTO_RESPONSIVE_SOLO en verde. Los
+  únicos FALLO de la salida son los tres `A9-13-IDIOMA` del arranque, que ya fallaban en F2 (no relacionados).
+- Hashes de las 23 partidas reales idénticos antes y después.

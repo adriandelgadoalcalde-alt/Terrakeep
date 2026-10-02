@@ -242,6 +242,29 @@ public sealed class GuiaV2ViewModelTests : IDisposable
         Assert.Equal("", sinMundo.ChipMapaTexto);
     }
 
+    // F2b: toda bandera que usan las guias v2 tiene su texto "Guia.Bandera.<nombre>" en ES y EN (la
+    // fila del requisito lo enseña; sin el salia la clave cruda). Faltaban downedMechBoss1-3.
+    [Theory]
+    [InlineData("textos.es.json")]
+    [InlineData("textos.en.json")]
+    public void CadaBanderaDeLasGuiasTieneTexto(string archivo)
+    {
+        var textos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Assets", "guia", archivo)))!;
+        static IEnumerable<Condicion> Hojas(Condicion? c)
+        {
+            if (c == null) yield break;
+            foreach (var h in c.Condiciones ?? []) foreach (var x in Hojas(h)) yield return x;
+            yield return c;
+        }
+        var faltan = GuiaV2Cargador.GuiasDisponibles()
+            .SelectMany(g => GuiaV2Cargador.CargarGuiaIncrustada(g).Paradas)
+            .SelectMany(p => Hojas(p.CompletadaCuando).Concat(p.Tareas.SelectMany(t => Hojas(t.Condicion))))
+            .Where(h => h.Tipo == "bandera").Select(h => h.Bandera!).Distinct()
+            .Where(b => !textos.ContainsKey("Guia.Bandera." + b)).OrderBy(b => b).ToList();
+        Assert.True(faltan.Count == 0, $"{archivo} sin texto para: {string.Join(", ", faltan)}");
+    }
+
     // F2b: la tarjeta "Te toca" de Inicio pregunta por un personaje que puede NO estar cargado. Su
     // respuesta tiene que ser la misma parada que enseña la pestaña Guia en cuanto se carga.
     [Fact]

@@ -533,9 +533,25 @@ NavigateToTile` centra ahora en el ancho NO tapado por el panel lateral flotante
 8 secciones, `RESTO_RESPONSIVE_SOLO`, `LAYOUT_REPOSO_SOLO`. Detalle en `bitacora.md` (2-oct-2026, F2).
 
 **Pendiente (fuera del alcance de F2, decisión del coordinador):**
-- La tarjeta «Te toca» de Inicio y el chip/bandas «Guía: <capa>» del mapa siguen leyendo la guía v1
+- (Resuelto en F2b, §14.) La tarjeta «Te toca» de Inicio y el chip/bandas «Guía: <capa>» del mapa leían la guía v1
   (`GuideViewModel`), con tramos distintos de la v2. Migrarlos exige rehacer IDEA7_SOLO, GUIACHIP_SOLO,
   BADGES_ESTADO y HOMECARDS_SOLO.
 - El contenido de la guía (títulos, párrafos y tareas) solo existe en español: en inglés cambian la interfaz
   y los nombres de objetos/NPC (`en` de la tabla de referencias), no los textos del contenido.
-- TerrakeepMod (F3) necesita las mismas seis claves `Guia.Bandera.*` nuevas en sus `textos.*.json`.
+- (Hecho en F3: están en los `.hjson` del mod, que son su fuente de textos.) TerrakeepMod necesitaba las seis claves `Guia.Bandera.*` nuevas.
+
+
+---
+
+## 14. Fase F2b: una sola guía y nombres oficiales (02-oct-2026)
+
+- Inicio («Te toca» + KPI de capítulo) y el mapa (chip y banda de capa) salen de la guía v2. Contrato:
+  `GuiaV2ViewModel.SiguienteParadaPara(personaje)` (misma `EvaluarPartida` que `Refresh`),
+  `MarcadorCapa` (`CapaDe(y)`, umbrales de las bandas) y `ChipMapaTexto`. El chip y la banda siguen al
+  marcador: siguiente parada por defecto, o la parada/zona pedida con «Ver en el mapa».
+- Rótulos de conjunto: `scripts/guia-v2/conjuntos.js` (común a las dos guías); el rótulo es completo
+  («Armadura de plata») y la UI ya no antepone «Armadura ·».
+- Gate de idioma: `GuiaV2IdiomaTests` (rótulos derivados de las piezas oficiales; ningún nombre inglés con
+  traducción oficial en los textos). Excepción documentada: «Calamity» (nombre del mod).
+- TerrakeepMod: la brújula v1 deja de pintarse en el mapa cuando la marca v2 está activa
+  (`ContratoGuiaV2.BrujulaV1EnElMapa`), y la sub-pestaña Brújula dice qué marca el mapa.
