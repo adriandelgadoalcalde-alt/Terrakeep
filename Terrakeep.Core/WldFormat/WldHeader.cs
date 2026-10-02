@@ -114,6 +114,25 @@ public sealed class WldHeader
     public bool? DownedQueenSlime { get; init; }
     public bool? DownedDeerclops { get; init; }
 
+    // Guia v2 (F1, 02-oct-2026): mas banderas reales del .wld para evaluar la guia vanilla sola.
+    // Orden y guardas de version confirmados contra WorldFile.LoadHeaderFlags del tModLoader
+    // 1.4.4.9 decompilado (Terraria/IO/WorldFile.cs ~lineas 2038-2390): ShadowOrbSmashed va en el
+    // tramo fijo; Halloween/Navidad justo tras DownedMoonlord (>=131); SavedBartender + DD2 T1-T3
+    // (>=178); combatBookWasUsed (>=204); combatBookVolumeTwoWasUsed (>=259); peddlersSatchelWasUsed
+    // (>=260). null = el archivo es demasiado viejo para guardar ese campo (nunca un false fingido).
+    public bool? ShadowOrbSmashed { get; init; }
+    public bool? DownedHalloweenKing { get; init; }
+    public bool? DownedHalloweenTree { get; init; }
+    public bool? DownedChristmasIceQueen { get; init; }
+    public bool? DownedChristmasSantank { get; init; }
+    public bool? DownedChristmasTree { get; init; }
+    public bool? DownedDD2InvasionT1 { get; init; }
+    public bool? DownedDD2InvasionT2 { get; init; }
+    public bool? DownedDD2InvasionT3 { get; init; }
+    public bool? CombatBookWasUsed { get; init; }
+    public bool? CombatBookVolumeTwoWasUsed { get; init; }
+    public bool? PeddlersSatchelWasUsed { get; init; }
+
     public int TilesSectionOffset => Pointers[1];
     // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit
     // (LoadWorld real) - Pointers[N] es donde EMPIEZA la seccion N (= donde termina la anterior),
@@ -210,6 +229,12 @@ public sealed class WldHeader
         DownedCelestialNebula = DownedCelestialNebula, DownedCelestialStardust = DownedCelestialStardust,
         DownedEmpressOfLight = DownedEmpressOfLight, DownedQueenSlime = DownedQueenSlime,
         DownedDeerclops = DownedDeerclops,
+        ShadowOrbSmashed = ShadowOrbSmashed, DownedHalloweenKing = DownedHalloweenKing, DownedHalloweenTree = DownedHalloweenTree,
+        DownedChristmasIceQueen = DownedChristmasIceQueen, DownedChristmasSantank = DownedChristmasSantank,
+        DownedChristmasTree = DownedChristmasTree, DownedDD2InvasionT1 = DownedDD2InvasionT1,
+        DownedDD2InvasionT2 = DownedDD2InvasionT2, DownedDD2InvasionT3 = DownedDD2InvasionT3,
+        CombatBookWasUsed = CombatBookWasUsed, CombatBookVolumeTwoWasUsed = CombatBookVolumeTwoWasUsed,
+        PeddlersSatchelWasUsed = PeddlersSatchelWasUsed,
     };
 
     // Ver el comentario de WldReader.Read sobre por que este puntero (y no Pointers[9], el

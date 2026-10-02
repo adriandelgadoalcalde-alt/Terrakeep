@@ -107,13 +107,30 @@ public static class GuiaV2Ubicaciones
         // Punto aproximado (a ~60 casillas del borde, un poco por encima de la superficie).
         "oceano_lado_mazmorra" => (MazmorraALaIzquierda(mundo) ? 60 : mundo.Ancho - 60, mundo.NivelSuperficie - 30),
         "oceano_lado_opuesto" => (MazmorraALaIzquierda(mundo) ? mundo.Ancho - 60 : 60, mundo.NivelSuperficie - 30),
+        // Guia v2 (F1): el Eter (fulgor). WorldGen.cs (tModLoader 1.4.4.9, paso "Shimmer", ~linea
+        // 11455) lo genera SIEMPRE en el lado opuesto a la Mazmorra, en el 11 % exterior del mundo
+        // (x entre 0,89*ancho y ancho-200, o entre 200 y 0,11*ancho), y en profundidad entre
+        // (superficie+roca)/2+50 y min((2*(alto-250)+roca)/3, alto-460). El .wld no guarda su
+        // posicion: se devuelve el centro de esa franja, marcado como aproximado.
+        "eter" => PuntoEter(mundo),
         _ => mundo.Punto(clave),
     };
+
+    private static (int X, int Y) PuntoEter(IMundoGuia mundo)
+    {
+        int x = MazmorraALaIzquierda(mundo)
+            ? ((int)(mundo.Ancho * 0.89) + mundo.Ancho - 200) / 2
+            : (200 + (int)(mundo.Ancho * 0.11)) / 2;
+        int arriba = (mundo.NivelSuperficie + mundo.NivelRoca) / 2 + 50;
+        int abajo = Math.Min((2 * (mundo.Alto - 250) + mundo.NivelRoca) / 3, mundo.Alto - 460);
+        if (abajo <= arriba) abajo = arriba + 50;
+        return (x, (arriba + abajo) / 2);
+    }
 
     private static bool MazmorraALaIzquierda(IMundoGuia mundo) => mundo.MazmorraX < mundo.Ancho / 2;
 
     /// <summary>true si el punto es una estimacion (no una coordenada guardada por el juego).</summary>
-    public static bool PuntoEsAproximado(string clave) => clave is "oceano_lado_mazmorra" or "oceano_lado_opuesto";
+    public static bool PuntoEsAproximado(string clave) => clave is "oceano_lado_mazmorra" or "oceano_lado_opuesto" or "eter";
 
     /// <summary>Primera ubicacion de la parada que se puede situar en este mundo (respetando
     /// siMundo corrupcion/carmesi). Las de tipo npc/jefe las resuelve la app (posicion de un NPC

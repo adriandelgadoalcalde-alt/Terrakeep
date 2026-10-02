@@ -433,6 +433,19 @@ public class GuiaV2Tests
     }
 
     [Fact]
+    public void Ubicacion_Eter_LadoOpuestoALaMazmorraYAproximado()
+    {
+        // Guia v2 (F1): WorldGen.cs, paso "Shimmer": lado opuesto a la Mazmorra, 11 % exterior.
+        var mundo = new MundoFalso(4200, 1200); // Mazmorra en x=30 (izquierda)
+        var zona = new Zona { Id = "eter", Nombre = "Éter", Punto = "eter", Capa = "cavernas" };
+        var r = GuiaV2Ubicaciones.Resolver(zona, mundo)!;
+        Assert.True(r.Aproximada);
+        Assert.InRange(r.X, (int)(4200 * 0.89), 4200 - 200);
+        Assert.InRange(r.Y, (100 + 200) / 2 + 50, 1200 - 460);
+        Assert.Contains("eter", GuiaV2Validador.PuntosConocidos);
+    }
+
+    [Fact]
     public void Ubicacion_PorFirmaDeTiles_EncuentraElCentroDelBloque()
     {
         var mundo = new MundoFalso(400, 400);

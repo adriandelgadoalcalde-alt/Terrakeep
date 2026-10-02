@@ -23,8 +23,10 @@ public class WldReaderLateBossFlagsTests
         uint version,
         bool downedFishron = false, bool downedMartians = false, bool downedLunaticCultist = false, bool downedMoonlord = false,
         bool downedCelestialSolar = false, bool downedCelestialVortex = false, bool downedCelestialNebula = false, bool downedCelestialStardust = false,
-        bool downedEmpressOfLight = false, bool downedQueenSlime = false, bool downedDeerclops = false)
+        bool downedEmpressOfLight = false, bool downedQueenSlime = false, bool downedDeerclops = false,
+        IReadOnlyDictionary<string, bool>? extra = null)
     {
+        bool X(string k) => extra != null && extra.TryGetValue(k, out var v) && v;
         var ms = new MemoryStream();
         using var w = new BinaryWriter(ms);
 
@@ -93,7 +95,7 @@ public class WldReaderLateBossFlagsTests
         if (version >= 118) w.Write(false); // downedSlimeKing
         w.Write(false); w.Write(false); w.Write(false); // SavedGoblin/Wizard/Mech
         w.Write(false); w.Write(false); w.Write(false); w.Write(false); // DownedGoblins/Clown/Frost/Pirates
-        w.Write(false); w.Write(false); // ShadowOrbSmashed/SpawnMeteor
+        w.Write(X("shadowOrbSmashed")); w.Write(false); // ShadowOrbSmashed/SpawnMeteor
         w.Write((byte)0); // ShadowOrbCount
         w.Write(0); // AltarCount
         w.Write(false); // hardMode
@@ -145,7 +147,8 @@ public class WldReaderLateBossFlagsTests
             w.Write(downedMoonlord);
         }
 
-        w.Write(false); w.Write(false); w.Write(false); w.Write(false); w.Write(false); // Halloween/Navidad x5
+        w.Write(X("downedHalloweenKing")); w.Write(X("downedHalloweenTree")); // Halloween/Navidad x5
+        w.Write(X("downedChristmasIceQueen")); w.Write(X("downedChristmasSantank")); w.Write(X("downedChristmasTree"));
 
         if (version < 140) return Finish(w, ms);
         w.Write(downedCelestialSolar);
@@ -164,11 +167,11 @@ public class WldReaderLateBossFlagsTests
         {
             w.Write(false); w.Write(0); w.Write(0f); w.Write(0f); // SandStorm*
         }
-        if (version >= 178) { w.Write(false); w.Write(false); w.Write(false); w.Write(false); } // SavedBartender + DD2 T1/T2/T3
+        if (version >= 178) { w.Write(false); w.Write(X("downedDD2InvasionT1")); w.Write(X("downedDD2InvasionT2")); w.Write(X("downedDD2InvasionT3")); } // SavedBartender + DD2 T1/T2/T3
         if (version > 194) w.Write((byte)0); // MushroomBg
         if (version >= 215) w.Write((byte)0); // UnderworldBg
         if (version >= 195) { w.Write((byte)0); w.Write((byte)0); w.Write((byte)0); } // BgTree2/3/4
-        if (version >= 204) w.Write(false); // CombatBookUsed
+        if (version >= 204) w.Write(X("combatBookWasUsed")); // CombatBookUsed
         if (version >= 207) { w.Write(0); w.Write(false); w.Write(false); w.Write(false); } // LanternNight*
         if (version >= 211) w.Write(0); // TreeTopVariations count = 0
         if (version >= 212) { w.Write(false); w.Write(false); } // ForceHalloween/XMasForToday
@@ -182,6 +185,10 @@ public class WldReaderLateBossFlagsTests
         }
 
         if (version >= 240) w.Write(downedDeerclops);
+        if (version >= 250) w.Write(false); // unlockedSlimeBlueSpawn
+        if (version >= 251) w.Write(new byte[8]); // unlocked*Spawn x8
+        if (version >= 259) w.Write(X("combatBookVolumeTwoWasUsed"));
+        if (version >= 260) w.Write(X("peddlersSatchelWasUsed"));
 
         return Finish(w, ms);
     }
@@ -374,5 +381,63 @@ public class WldReaderLateBossFlagsTests
         var contexto = new GuideContext { World = ToMinimalWorld(header) };
 
         Assert.False(GuideFlags.Valor("downedTowers", contexto));
+    }
+
+    // Guia v2 (F1, 02-oct-2026): banderas que el lector ya atravesaba y ahora captura - orden
+    // confirmado contra WorldFile.LoadHeaderFlags del tModLoader 1.4.4.9 decompilado.
+    private static readonly string[] BanderasF1 =
+    [
+        "shadowOrbSmashed", "downedHalloweenKing", "downedHalloweenTree", "downedChristmasIceQueen", "downedChristmasSantank",
+        "downedChristmasTree", "downedDD2InvasionT1", "downedDD2InvasionT2", "downedDD2InvasionT3", "combatBookWasUsed",
+        "combatBookVolumeTwoWasUsed", "peddlersSatchelWasUsed",
+    ];
+
+    [Fact]
+    public void GuiaV2F1_CadaBanderaNuevaSeLeeEnSuSitioSinArrastrarALasVecinas()
+    {
+        // Una a una a true: si un offset estuviera mal, saldria true otra bandera (o ninguna).
+        foreach (var unica in BanderasF1)
+        {
+            var header = WldReader.ReadHeader(BuildHeaderBytes(version: 279, downedDeerclops: true,
+                extra: new Dictionary<string, bool> { [unica] = true }));
+            var contexto = new GuideContext { World = ToMinimalWorld(header) };
+            foreach (var b in BanderasF1)
+            {
+                Assert.True(GuideFlags.Existe(b), b);
+                Assert.Equal(b == unica, GuideFlags.Valor(b, contexto));
+            }
+            Assert.True(header.DownedDeerclops); // lo de antes sigue en su sitio
+            Assert.Equal("Mi Mundo de Verdad", header.Title);
+        }
+    }
+
+    [Fact]
+    public void GuiaV2F1_VersionesViejasDanNullNoFalse()
+    {
+        // v200: tiene Halloween/Navidad (>=131) y DD2 (>=178), pero no el primer libro (>=204),
+        // ni el segundo (>=259) ni la bolsa del buhonero (>=260).
+        var h = WldReader.ReadHeader(BuildHeaderBytes(version: 200, extra: new Dictionary<string, bool>
+        {
+            ["downedHalloweenKing"] = true, ["downedDD2InvasionT3"] = true,
+        }));
+        Assert.True(h.DownedHalloweenKing);
+        Assert.False(h.DownedChristmasTree);
+        Assert.True(h.DownedDD2InvasionT3);
+        Assert.Null(h.CombatBookWasUsed);
+        Assert.Null(h.CombatBookVolumeTwoWasUsed);
+        Assert.Null(h.PeddlersSatchelWasUsed);
+        Assert.False(h.ShadowOrbSmashed);
+    }
+
+    [Fact]
+    public void GuiaV2F1_WithSpawn_NoBorraLasBanderasNuevas()
+    {
+        var h = WldReader.ReadHeader(BuildHeaderBytes(version: 279, extra: new Dictionary<string, bool>
+        {
+            ["downedChristmasSantank"] = true, ["peddlersSatchelWasUsed"] = true, ["shadowOrbSmashed"] = true,
+        })).WithSpawn(5, 6);
+        Assert.True(h.DownedChristmasSantank);
+        Assert.True(h.PeddlersSatchelWasUsed);
+        Assert.True(h.ShadowOrbSmashed);
     }
 }

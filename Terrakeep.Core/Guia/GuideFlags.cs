@@ -84,6 +84,25 @@ public static class GuideFlags
         { "downedQueenSlime", h => h.DownedQueenSlime },
         { "downedDeerclops", h => h.DownedDeerclops },
         { "downedEmpressOfLight", h => h.DownedEmpressOfLight },
+
+        // Guia v2 (F1, 02-oct-2026): banderas que el lector del .wld ya atravesaba y ahora captura
+        // (WldReader, orden confirmado contra WorldFile.LoadHeaderFlags del tModLoader 1.4.4.9).
+        // Las 6 primeras tienen el MISMO nombre que BanderasGuia.cs de TerrakeepMod (campos
+        // publicos NPC.downedHalloweenKing..., WorldGen.shadowOrbSmashed). Las 6 ultimas son
+        // nuevas en toda la familia: DD2Event.DownedInvasionT1/T2/T3 y NPC.combatBookWasUsed /
+        // combatBookVolumeTwoWasUsed / peddlersSatchelWasUsed (campos publicos estaticos reales).
+        { "shadowOrbSmashed", h => h.ShadowOrbSmashed },
+        { "downedHalloweenKing", h => h.DownedHalloweenKing },
+        { "downedHalloweenTree", h => h.DownedHalloweenTree },
+        { "downedChristmasIceQueen", h => h.DownedChristmasIceQueen },
+        { "downedChristmasSantank", h => h.DownedChristmasSantank },
+        { "downedChristmasTree", h => h.DownedChristmasTree },
+        { "downedDD2InvasionT1", h => h.DownedDD2InvasionT1 },
+        { "downedDD2InvasionT2", h => h.DownedDD2InvasionT2 },
+        { "downedDD2InvasionT3", h => h.DownedDD2InvasionT3 },
+        { "combatBookWasUsed", h => h.CombatBookWasUsed },
+        { "combatBookVolumeTwoWasUsed", h => h.CombatBookVolumeTwoWasUsed },
+        { "peddlersSatchelWasUsed", h => h.PeddlersSatchelWasUsed },
     };
 
     /// <summary>true si Terrakeep sabe (en principio) leer esta bandera - independientemente de

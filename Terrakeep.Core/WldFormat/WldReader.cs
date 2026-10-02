@@ -232,7 +232,7 @@ public static class WldReader
         reader.ReadBoolean(); // DownedClown
         bool downedFrostLegion = reader.ReadBoolean(); // DownedFrost
         bool downedPirates = reader.ReadBoolean(); // DownedPirates
-        reader.ReadBoolean(); // ShadowOrbSmashed
+        bool shadowOrbSmashed = reader.ReadBoolean(); // ShadowOrbSmashed (Guia v2 F1: ahora se captura)
         reader.ReadBoolean(); // SpawnMeteor
         reader.ReadByte();    // ShadowOrbCount
         reader.ReadInt32();   // AltarCount
@@ -288,6 +288,18 @@ public static class WldReader
             DownedEmpressOfLight = lateBossFlags.DownedEmpressOfLight,
             DownedQueenSlime = lateBossFlags.DownedQueenSlime,
             DownedDeerclops = lateBossFlags.DownedDeerclops,
+            ShadowOrbSmashed = shadowOrbSmashed,
+            DownedHalloweenKing = lateBossFlags.DownedHalloweenKing,
+            DownedHalloweenTree = lateBossFlags.DownedHalloweenTree,
+            DownedChristmasIceQueen = lateBossFlags.DownedChristmasIceQueen,
+            DownedChristmasSantank = lateBossFlags.DownedChristmasSantank,
+            DownedChristmasTree = lateBossFlags.DownedChristmasTree,
+            DownedDD2InvasionT1 = lateBossFlags.DownedDD2InvasionT1,
+            DownedDD2InvasionT2 = lateBossFlags.DownedDD2InvasionT2,
+            DownedDD2InvasionT3 = lateBossFlags.DownedDD2InvasionT3,
+            CombatBookWasUsed = lateBossFlags.CombatBookWasUsed,
+            CombatBookVolumeTwoWasUsed = lateBossFlags.CombatBookVolumeTwoWasUsed,
+            PeddlersSatchelWasUsed = lateBossFlags.PeddlersSatchelWasUsed,
         };
     }
 
@@ -373,7 +385,16 @@ public static class WldReader
             };
         }
 
-        reader.ReadBytes(5); // DownedHalloweenKing/Tree, DownedChristmasQueen/Santa/Tree - siempre presentes
+        // Guia v2 (F1): DownedHalloweenKing/Tree, DownedChristmasIceQueen/Santank/Tree - antes se
+        // saltaban; ahora se capturan (mismo orden que WorldFile.LoadHeaderFlags real).
+        flags = flags with
+        {
+            DownedHalloweenKing = reader.ReadBoolean(),
+            DownedHalloweenTree = reader.ReadBoolean(),
+            DownedChristmasIceQueen = reader.ReadBoolean(),
+            DownedChristmasSantank = reader.ReadBoolean(),
+            DownedChristmasTree = reader.ReadBoolean(),
+        };
 
         if (version < 140) return flags;
         flags = flags with
@@ -399,11 +420,20 @@ public static class WldReader
             reader.ReadSingle();   // SandStormSeverity
             reader.ReadSingle();   // SandStormIntendedSeverity
         }
-        if (version >= 178) reader.ReadBytes(4); // SavedBartender + DownedDD2InvasionT1/T2/T3
+        if (version >= 178)
+        {
+            reader.ReadBoolean(); // SavedBartender
+            flags = flags with
+            {
+                DownedDD2InvasionT1 = reader.ReadBoolean(),
+                DownedDD2InvasionT2 = reader.ReadBoolean(),
+                DownedDD2InvasionT3 = reader.ReadBoolean(),
+            };
+        }
         if (version > 194) reader.ReadByte();    // MushroomBg
         if (version >= 215) reader.ReadByte();   // UnderworldBg
         if (version >= 195) reader.ReadBytes(3); // BgTree2/BgTree3/BgTree4
-        if (version >= 204) reader.ReadBoolean(); // CombatBookUsed
+        if (version >= 204) flags = flags with { CombatBookWasUsed = reader.ReadBoolean() };
         if (version >= 207)
         {
             reader.ReadInt32();   // LanternNightCooldown
@@ -429,6 +459,14 @@ public static class WldReader
 
         if (version >= 240) flags = flags with { DownedDeerclops = reader.ReadBoolean() };
 
+        // Guia v2 (F1): libros de combate y bolsa del buhonero (WorldFile.LoadHeaderFlags real:
+        // >=250 unlockedSlimeBlueSpawn, >=251 ocho unlocked*Spawn, >=259 combatBookVolumeTwoWasUsed,
+        // >=260 peddlersSatchelWasUsed). Nada mas alla de esto se lee aqui.
+        if (version >= 250) reader.ReadBoolean(); // unlockedSlimeBlueSpawn
+        if (version >= 251) reader.ReadBytes(8);  // unlockedMerchant/Demolitionist/PartyGirl/DyeTrader/Truffle/ArmsDealer/Nurse/PrincessSpawn
+        if (version >= 259) flags = flags with { CombatBookVolumeTwoWasUsed = reader.ReadBoolean() };
+        if (version >= 260) flags = flags with { PeddlersSatchelWasUsed = reader.ReadBoolean() };
+
         return flags;
     }
 
@@ -437,7 +475,11 @@ public static class WldReader
     private readonly record struct LateBossFlags(
         bool? DownedFishron, bool? DownedMartians, bool? DownedLunaticCultist, bool? DownedMoonlord,
         bool? DownedCelestialSolar, bool? DownedCelestialVortex, bool? DownedCelestialNebula, bool? DownedCelestialStardust,
-        bool? DownedEmpressOfLight, bool? DownedQueenSlime, bool? DownedDeerclops);
+        bool? DownedEmpressOfLight, bool? DownedQueenSlime, bool? DownedDeerclops,
+        bool? DownedHalloweenKing = null, bool? DownedHalloweenTree = null, bool? DownedChristmasIceQueen = null,
+        bool? DownedChristmasSantank = null, bool? DownedChristmasTree = null,
+        bool? DownedDD2InvasionT1 = null, bool? DownedDD2InvasionT2 = null, bool? DownedDD2InvasionT3 = null,
+        bool? CombatBookWasUsed = null, bool? CombatBookVolumeTwoWasUsed = null, bool? PeddlersSatchelWasUsed = null);
 
     // Int16 length + esa cantidad de bits empaquetados en bytes, orden LSB-primero dentro de
     // cada byte (confirmado con una traza manual del algoritmo real del lector JS - coincide

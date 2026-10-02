@@ -78,5 +78,10 @@ internal static class LateBossFlagsTestBytes
 
         if (version >= 223) { w.Write(false); w.Write(false); } // EmpressOfLight/QueenSlime
         if (version >= 240) w.Write(false); // Deerclops
+        // Guia v2 (F1): el lector sigue hasta peddlersSatchelWasUsed (WorldFile.LoadHeaderFlags real).
+        if (version >= 250) w.Write(false); // unlockedSlimeBlueSpawn
+        if (version >= 251) w.Write(new byte[8]); // unlocked*Spawn x8
+        if (version >= 259) w.Write(false); // combatBookVolumeTwoWasUsed
+        if (version >= 260) w.Write(false); // peddlersSatchelWasUsed
     }
 }

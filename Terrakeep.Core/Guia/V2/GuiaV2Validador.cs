@@ -22,7 +22,7 @@ public static class GuiaV2Validador
     public static readonly IReadOnlySet<string> PuntosConocidos = new HashSet<string>
     {
         // vanilla (cabecera del .wld)
-        "spawn", "mazmorra", "oceano_lado_mazmorra", "oceano_lado_opuesto",
+        "spawn", "mazmorra", "oceano_lado_mazmorra", "oceano_lado_opuesto", "eter",
         // Calamity (MiscWorldStateSystem del .twld, ver CalamityEstadoGuardado)
         "SunkenSeaLabCenter", "PlanetoidLabCenter", "JungleLabCenter", "HellLabCenter", "IceLabCenter", "CavernLabCenter",
     };
