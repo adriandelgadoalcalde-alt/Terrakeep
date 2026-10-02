@@ -1,0 +1,1258 @@
+<!-- Guia v2 (F2, 02-oct-2026, encargo literal del usuario: "Haz lo de la guía calamity y vanilla con todo
+     lo ya mencionado tanto para terrakeep como para el mod y que estén así de curradas"). Pestaña Guia
+     de Terrakeep sobre el modelo compartido de Terrakeep.Core/Guia/V2: la jerarquia de la guia HTML del
+     usuario (Downloads\Guia-Calamity\Guia-Calamity.html: portada, ruta, equipo, mapa y biomas, estoy
+     perdido, he encontrado algo raro, buscador y ficha de objeto) con el tema oscuro de Terrakeep.
+
+     Estructura (contrato de responsive de la familia, RESTO_RESPONSIVE_SOLO):
+       - cabecera ESTRUCTURAL fuera del scroll (titulo, ambito/modo/clase, secciones y buscador);
+       - UN SOLO ScrollViewer de pagina (x:Name="GuideContentScroll", el mismo nombre que declara el
+         perfil de KeepQA __perfiles-responsive__/Terrakeep.json) - ninguna seccion trae su propio scroll;
+       - la ficha de objeto es una capa modal encima (su scroll solo existe mientras esta abierta).
+     El DataContext heredado es el MainViewModel; todo lo de la guia cuelga de GuiaV2. -->
+<UserControl x:Class="Terrakeep.App.Views.GuiaV2View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:svc="clr-namespace:Terrakeep.App.Services"
+             xmlns:ctl="clr-namespace:Terrakeep.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="700" d:DesignWidth="1000">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="GuiaBoolToVis" />
+        <x:Static x:Key="L" Member="svc:LocalizationService.Instance" />
+
+        <!-- Rotulo pequeño en versalitas, como "TU SIGUIENTE PARADA" en la guia HTML. -->
+        <Style x:Key="GuiaRotulo" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="GuiaTituloSeccion" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Margin" Value="0,18,0,8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="GuiaCuerpo" TargetType="ctl:TextoGuia">
+            <Setter Property="FontSize" Value="13.5" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="LineHeight" Value="21" />
+        </Style>
+        <Style x:Key="GuiaTarjeta" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="18,16" />
+        </Style>
+        <!-- Tarjeta clicable (brujula de Mi guia, capitulos, lista de paradas, resultados). -->
+        <Style x:Key="GuiaBotonTarjeta" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Enlace de texto ("Abrir esta parada →", "Ver en el mapa"). -->
+        <Style x:Key="GuiaBotonEnlace" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{StaticResource GuiaEnlaceBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" Padding="0,2">
+                            <TextBlock x:Name="Tx" Text="{TemplateBinding Content}" TextWrapping="Wrap" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tx" Property="TextDecorations" Value="Underline" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="GuiaSeccionBoton" TargetType="RadioButton" BasedOn="{StaticResource CategorySelector}">
+            <Setter Property="GroupName" Value="GuiaSecciones" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
+        <Style x:Key="GuiaChip" TargetType="Border">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+            <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
+        </Style>
+
+        <!-- Objeto como ficha compacta (escalera, conserva): sprite + nombre + tengo/no tengo. -->
+        <DataTemplate x:Key="ObjetoChip" DataType="{x:Type vm:ObjetoGuiaViewModel}">
+            <Button Command="{Binding AbrirCommand}" Style="{StaticResource GuiaBotonTarjeta}" Padding="8,6" Margin="0,0,6,6"
+                    ToolTip="{Binding TextoTenencia}" AutomationProperties.Name="{Binding Nombre}">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Left" Width="28" Height="28" Margin="0,0,8,0">
+                        <Image Source="{Binding Icono}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                    </Grid>
+                    <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="8" Margin="8,0,0,0" VerticalAlignment="Center"
+                            Background="{StaticResource EquippedGreenBrush}" Visibility="{Binding LoTiene, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="✓" FontSize="10" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Nombre}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="190" />
+                        <TextBlock Text="{Binding Marcas}" FontSize="10" Foreground="{StaticResource MasterGoldBrush}"
+                                   Visibility="{Binding Marcas, Converter={StaticResource EmptyToCollapsed}}" />
+                    </StackPanel>
+                </DockPanel>
+            </Button>
+        </DataTemplate>
+
+        <!-- Objeto como tarjeta grande (Prepárate/necesitas e invocacion): como las tarjetas de la ruta HTML. -->
+        <DataTemplate x:Key="ObjetoTarjeta" DataType="{x:Type vm:ObjetoGuiaViewModel}">
+            <Button Command="{Binding AbrirCommand}" Style="{StaticResource GuiaBotonTarjeta}" Width="176" Margin="0,0,8,8" Padding="10,12"
+                    AutomationProperties.Name="{Binding Nombre}">
+                <StackPanel>
+                    <Grid Height="44">
+                        <Ellipse Width="70" Height="40" Opacity="0.35">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#806C63FF" Offset="0" />
+                                    <GradientStop Color="#006C63FF" Offset="1" />
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Image Source="{Binding Icono}" Width="40" Height="40" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                    </Grid>
+                    <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,2" />
+                    <TextBlock Text="{Binding TextoCantidad}" FontSize="11" TextAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"
+                               Visibility="{Binding TextoCantidad, Converter={StaticResource EmptyToCollapsed}}" />
+                    <Border HorizontalAlignment="Center" CornerRadius="999" Padding="8,2" Margin="0,4,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LoTiene}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource GuiaHechaBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding TextoTenencia}" FontSize="10.5" TextWrapping="Wrap" TextAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LoTiene}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource EquippedGreenBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding NoLoTiene}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource OrangeBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                    <ctl:TextoGuia Marcado="{Binding Motivo}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextAlignment="Center"
+                                   Margin="0,6,0,0" TamanoIcono="14" Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
+        <!-- Fila de escalera: grupos (armas, armadura por conjunto, accesorios...) con sus fichas. -->
+        <DataTemplate x:Key="GruposEquipo" DataType="{x:Type vm:EtapaEscaleraViewModel}">
+            <ItemsControl ItemsSource="{Binding Grupos}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:GrupoEquipoViewModel}">
+                        <StackPanel Margin="0,0,0,6">
+                            <TextBlock Text="{Binding Titulo}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding Objetos}" ItemTemplate="{StaticResource ObjetoChip}" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+        <!-- Ficha desplegable de "Estoy perdido" / "He encontrado algo raro": sintoma -> que hacer. -->
+        <DataTemplate x:Key="FichaDesplegable" DataType="{x:Type vm:FichaV2ViewModel}">
+            <Border CornerRadius="12" BorderThickness="1" Margin="0,0,0,8">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Resaltada}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <Button Command="{Binding AlternarCommand}" Style="{StaticResource GuiaBotonTarjeta}" Background="Transparent" BorderBrush="Transparent"
+                            Padding="16,12" AutomationProperties.Name="{Binding Titulo}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="10,0,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="▸" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Abierta}" Value="True">
+                                                <Setter Property="Text" Value="▾" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding Titulo}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </DockPanel>
+                    </Button>
+                    <StackPanel Margin="16,0,16,12" Visibility="{Binding Abierta, Converter={StaticResource GuiaBoolToVis}}">
+                        <ctl:BloquesGuia Bloques="{Binding Bloques}" />
+                        <ctl:TextoGuia Marcado="{Binding EnlacesParadas}" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"
+                                       Visibility="{Binding TieneParadas, Converter={StaticResource GuiaBoolToVis}}" />
+                        <ctl:BloquesGuia Bloques="{Binding Fuentes, Converter={x:Static ctl:FuentesComoBloque.Instance}}"
+                                         Visibility="{Binding TieneFuentes, Converter={StaticResource GuiaBoolToVis}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid DataContext="{Binding GuiaV2}" ctl:TextoGuia.Contexto="{Binding}">
+        <DockPanel>
+            <!-- ===== Cabecera estructural (fuera del scroll) ===== -->
+            <Border DockPanel.Dock="Top" Padding="14,12,14,4" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="0,0,0,1">
+                <Grid MaxWidth="{Binding DataContext.DetailContentMaxWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Margin="0,0,0,10">
+                        <Border DockPanel.Dock="Right" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                                BorderThickness="1" CornerRadius="10" Width="300" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <Grid>
+                                <TextBlock Text="{Binding [guia2_buscar_placeholder], Source={StaticResource L}}" Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding TextoBusqueda, Converter={StaticResource EmptyToVisible}}" />
+                                <TextBox x:Name="GuiaBuscador" Text="{Binding TextoBusqueda, UpdateSourceTrigger=PropertyChanged, Delay=180}"
+                                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimaryBrush}" Padding="10,6"
+                                         CaretBrush="{StaticResource TextPrimaryBrush}" VerticalContentAlignment="Center"
+                                         AutomationProperties.Name="{Binding [guia2_buscar_placeholder], Source={StaticResource L}}" />
+                            </Grid>
+                        </Border>
+                        <StackPanel>
+                            <WrapPanel>
+                                <TextBlock Text="{Binding [tab_guide], Source={StaticResource L}}" Style="{StaticResource TitleText}" FontSize="24" Margin="0,0,14,0" VerticalAlignment="Center" />
+                                <Border VerticalAlignment="Center" CornerRadius="999" Padding="10,3" Margin="0,4,6,4">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource TealBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding EsCalamity}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource CalamityBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding AmbitoTexto}" FontSize="11" FontWeight="SemiBold" Foreground="White" />
+                                </Border>
+                                <Border Style="{StaticResource GuiaChip}" VerticalAlignment="Center" Margin="0,4,6,4">
+                                    <TextBlock Text="{Binding ModoTexto}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </Border>
+                                <Border Style="{StaticResource GuiaChip}" VerticalAlignment="Center" Margin="0,4,6,4" BorderBrush="{StaticResource AccentBrush}">
+                                    <TextBlock FontSize="11" Foreground="{StaticResource TextPrimaryBrush}">
+                                        <Run Text="{Binding ClaseTexto, Mode=OneWay}" FontWeight="SemiBold" />
+                                    </TextBlock>
+                                </Border>
+                            </WrapPanel>
+                            <TextBlock Text="{Binding PersonajeTexto}" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis"
+                                       Visibility="{Binding PersonajeTexto, Converter={StaticResource EmptyToCollapsed}}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <WrapPanel Grid.Row="1">
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_mi_guia], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=MiGuia}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_ruta], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Ruta}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_equipo], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Equipo}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_biomas], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Biomas}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_manual], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Manual}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_perdido], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Perdido}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_raro], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Raro}" />
+                        <RadioButton Style="{StaticResource GuiaSeccionBoton}" Content="{Binding [guia2_sec_buscar], Source={StaticResource L}}"
+                                     IsChecked="{Binding Seccion, Converter={StaticResource EnumEquals}, ConverterParameter=Buscar}" />
+                    </WrapPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== Contenido: UN unico scroll de pagina ===== -->
+            <ScrollViewer x:Name="GuideContentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <Grid Margin="14,14,14,24" MaxWidth="{Binding DataContext.DetailContentMaxWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
+
+                    <!-- ================= MI GUIA ================= -->
+                    <StackPanel x:Name="SeccionMiGuia" Visibility="{Binding IsMiGuia, Converter={StaticResource GuiaBoolToVis}}">
+                        <!-- Avisos de estado de datos (sin personaje/mundo, guia vanilla aun no disponible). -->
+                        <Border Style="{StaticResource GuiaTarjeta}" Margin="0,0,0,12" BorderBrush="{StaticResource OrangeBrush}"
+                                Visibility="{Binding HayDatos, Converter={StaticResource InverseBoolToVis}}">
+                            <TextBlock Text="{Binding [guia2_aviso_sin_datos], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                        </Border>
+                        <!-- Mismos avisos que ya tenia la guia v1 (bug real reportado en directo el 16-sep-2026:
+                             con solo personaje o solo mundo, explicar UNA vez arriba por que parte de la
+                             guia no se puede comprobar todavia, en vez de dejarlo en cada tarea). -->
+                        <Border Style="{StaticResource GuiaTarjeta}" Margin="0,0,0,12" BorderBrush="{StaticResource OrangeBrush}"
+                                Visibility="{Binding MostrarAvisoSinMundo, Converter={StaticResource GuiaBoolToVis}}">
+                            <TextBlock Text="{Binding [guide_no_world_notice], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                        </Border>
+                        <Border Style="{StaticResource GuiaTarjeta}" Margin="0,0,0,12" BorderBrush="{StaticResource OrangeBrush}"
+                                Visibility="{Binding MostrarAvisoSinPersonaje, Converter={StaticResource GuiaBoolToVis}}">
+                            <TextBlock Text="{Binding [guide_no_character_notice], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                        </Border>
+                        <Border Style="{StaticResource GuiaTarjeta}" Margin="0,0,0,12" BorderBrush="{StaticResource OrangeBrush}"
+                                Visibility="{Binding VanillaPendiente, Converter={StaticResource GuiaBoolToVis}}">
+                            <TextBlock Text="{Binding [guia2_aviso_vanilla_pendiente], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- Portada (hero), como la cabecera verde de la guia HTML con el degradado de Terrakeep. -->
+                        <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="16" Padding="30,26" Effect="{StaticResource CardShadow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [guia2_portada_rotulo], Source={StaticResource L}}" FontSize="11" FontWeight="Bold" Foreground="#FFE9D7A0" Margin="0,0,0,10" TextWrapping="Wrap" />
+                                    <WrapPanel Margin="0,0,0,8">
+                                        <Border CornerRadius="999" BorderBrush="#66FFFFFF" BorderThickness="1" Padding="10,3" Margin="0,0,6,6">
+                                            <TextBlock Foreground="White" FontSize="11"><Run Text="{Binding ClaseTexto, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding ModoTexto, Mode=OneWay}" /></TextBlock>
+                                        </Border>
+                                        <Border CornerRadius="999" BorderBrush="#66FFFFFF" BorderThickness="1" Padding="10,3" Margin="0,0,6,6">
+                                            <TextBlock Text="{Binding AmbitoTexto}" Foreground="White" FontSize="11" />
+                                        </Border>
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding Titulo}" Foreground="White" FontSize="34" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                    <TextBlock Text="{Binding Subtitulo}" Foreground="#E6FFFFFF" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,18" />
+                                    <WrapPanel>
+                                        <Button Command="{Binding ContinuarRutaCommand}" Padding="16,9" Margin="0,0,10,6" Background="#FFE9D7A0">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Bd" Background="#FFF1D58A" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#FFFFE3A1" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock Text="{Binding [guia2_btn_continuar], Source={StaticResource L}}" Foreground="#FF2A2410" FontWeight="SemiBold" />
+                                        </Button>
+                                        <Button Command="{Binding IrACommand}" CommandParameter="Perdido" Padding="14,9" Margin="0,0,10,6">
+                                            <TextBlock Text="{Binding [guia2_sec_perdido], Source={StaticResource L}}" />
+                                        </Button>
+                                    </WrapPanel>
+                                </StackPanel>
+                                <!-- Retrato del protagonista de la siguiente parada (sprite real). -->
+                                <Grid Grid.Column="1" Width="132" Height="132" Margin="16,0,0,0" VerticalAlignment="Center"
+                                      Visibility="{Binding Siguiente.Icono, Converter={StaticResource NullToVis}}">
+                                    <Ellipse Fill="#26FFFFFF" />
+                                    <Image Source="{Binding Siguiente.Icono}" Width="84" Height="84" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Cifras -->
+                        <UniformGrid Columns="4" Margin="-6,14,-6,0">
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="6">
+                                <StackPanel>
+                                    <TextBlock FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"><Run Text="{Binding ParadasHechas, Mode=OneWay}" /><Run Text="/" Foreground="{StaticResource TextSecondaryBrush}" /><Run Text="{Binding ParadasTotal, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" /></TextBlock>
+                                    <TextBlock Text="{Binding [guia2_kpi_paradas], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                                    <ProgressBar Value="{Binding FraccionParadas, Mode=OneWay}" Maximum="1" Height="6" Margin="0,8,0,0"
+                                                 Foreground="{StaticResource EquippedGreenBrush}" Background="{StaticResource BgHoverBrush}" BorderThickness="0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="6">
+                                <StackPanel>
+                                    <TextBlock FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"><Run Text="{Binding TareasHechas, Mode=OneWay}" /><Run Text="/" Foreground="{StaticResource TextSecondaryBrush}" /><Run Text="{Binding TareasTotal, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" /></TextBlock>
+                                    <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap">
+                                        <Run Text="{Binding [guia2_kpi_tareas], Source={StaticResource L}, Mode=OneWay}" />
+                                        <Run Text="{Binding TareasAutomaticas, Mode=OneWay}" Foreground="{StaticResource TealBrush}" /><Run Text=" " /><Run Text="{Binding [guia2_kpi_tareas_auto], Source={StaticResource L}, Mode=OneWay}" Foreground="{StaticResource TealBrush}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="6">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ZonasExplicadas}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <TextBlock Text="{Binding [guia2_kpi_zonas], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="6">
+                                <StackPanel>
+                                    <TextBlock FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}">
+                                        <Run Text="♥" Foreground="{StaticResource CalamityTextBrush}" FontSize="22" /><Run Text=" " /><Run Text="{Binding VidaActual, Mode=OneWay, TargetNullValue='—'}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding [guia2_kpi_vida], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Tu siguiente parada -->
+                        <Border x:Name="GuiaSiguienteParada" Style="{StaticResource GuiaTarjeta}" Margin="0,14,0,0" Padding="22,18"
+                                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1,3,1,1"
+                                Visibility="{Binding Siguiente, Converter={StaticResource NullToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Width="64" Height="64" Margin="0,0,18,0" VerticalAlignment="Top" Visibility="{Binding Siguiente.Icono, Converter={StaticResource NullToVis}}">
+                                    <Border CornerRadius="12" Background="{StaticResource BgHoverBrush}" />
+                                    <Image Source="{Binding Siguiente.Icono}" Width="48" Height="48" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                </Grid>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding [guia2_tu_siguiente_parada], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                                    <TextBlock FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
+                                        <Run Text="{Binding Siguiente.NumeroTexto, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Siguiente.TituloPlano, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Siguiente.CapituloTitulo}" Style="{StaticResource CaptionText}" Margin="0,2,0,8" />
+                                    <ctl:TextoGuia Marcado="{Binding Siguiente.Preparate}" Style="{StaticResource GuiaCuerpo}" Margin="0,0,0,8"
+                                                   Visibility="{Binding Siguiente.TienePreparate, Converter={StaticResource GuiaBoolToVis}}" />
+                                    <WrapPanel Margin="0,0,0,6">
+                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.TieneVida, Converter={StaticResource GuiaBoolToVis}}">
+                                            <TextBlock FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}"><Run Text="♥ " Foreground="{StaticResource CalamityTextBrush}" /><Run Text="{Binding Siguiente.VidaEtiqueta, Mode=OneWay}" /><Run Text=": " /><Run Text="{Binding Siguiente.VidaTexto, Mode=OneWay}" FontWeight="SemiBold" /></TextBlock>
+                                        </Border>
+                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.VidaActualTexto, Converter={StaticResource EmptyToCollapsed}}">
+                                            <TextBlock Text="{Binding Siguiente.VidaActualTexto}" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        </Border>
+                                        <Border Style="{StaticResource GuiaChip}">
+                                            <TextBlock Text="{Binding Siguiente.ProgresoTareas}" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        </Border>
+                                        <Border Style="{StaticResource GuiaChip}" Visibility="{Binding Siguiente.TieneDonde, Converter={StaticResource GuiaBoolToVis}}">
+                                            <TextBlock FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"><Run Text="⌖ " Foreground="{StaticResource TealBrush}" /><Run Text="{Binding Siguiente.Parada.Donde, Mode=OneWay}" /></TextBlock>
+                                        </Border>
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding SiguienteUbicacionTexto}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8"
+                                               Visibility="{Binding SiguienteUbicacionTexto, Converter={StaticResource EmptyToCollapsed}}" />
+                                    <WrapPanel>
+                                        <Button Style="{StaticResource GuiaBotonEnlace}" Command="{Binding Siguiente.AbrirCommand}" Margin="0,0,18,0"
+                                                Content="{Binding [guia2_abrir_parada], Source={StaticResource L}}" />
+                                        <Button Style="{StaticResource GuiaBotonEnlace}" Command="{Binding VerParadaEnMapaCommand}" CommandParameter="{Binding Siguiente}"
+                                                Content="{Binding [guia2_ver_en_mapa], Source={StaticResource L}}"
+                                                Visibility="{Binding SiguienteTieneUbicacion, Converter={StaticResource GuiaBoolToVis}}" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource GuiaTarjeta}" Margin="0,14,0,0" Visibility="{Binding RutaTerminada, Converter={StaticResource GuiaBoolToVis}}">
+                            <TextBlock Text="{Binding [guia2_ruta_terminada], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <!-- Avisos segun el modo real de la partida -->
+                        <ItemsControl ItemsSource="{Binding AvisosGenerales}" Margin="0,14,0,0" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:AvisoGuiaViewModel}">
+                                    <Border Background="{StaticResource GuiaListoBrush}" BorderBrush="{StaticResource MasterGoldBrush}" BorderThickness="4,0,0,0"
+                                            CornerRadius="6" Padding="16,11" Margin="0,0,0,8">
+                                        <ctl:TextoGuia Marcado="{Binding Texto}" Style="{StaticResource GuiaCuerpo}" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Tu brujula durante la partida -->
+                        <TextBlock Text="{Binding [guia2_brujula], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" FontSize="18" />
+                        <UniformGrid Columns="2" Margin="-5,0,-5,0">
+                            <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="5" Command="{Binding IrACommand}" CommandParameter="Perdido">
+                                <StackPanel>
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="? " Foreground="{StaticResource OrangeBrush}" /><Run Text="{Binding [guia2_sec_perdido], Source={StaticResource L}, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding [guia2_brujula_perdido], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="5" Command="{Binding IrACommand}" CommandParameter="Raro">
+                                <StackPanel>
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="◇ " Foreground="{StaticResource TealBrush}" /><Run Text="{Binding [guia2_sec_raro], Source={StaticResource L}, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding [guia2_brujula_raro], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="5" Command="{Binding IrACommand}" CommandParameter="Biomas">
+                                <StackPanel>
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="⌖ " Foreground="{StaticResource GuiaEnlaceZonaBrush}" /><Run Text="{Binding [guia2_sec_biomas], Source={StaticResource L}, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding [guia2_brujula_biomas], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="5" Command="{Binding IrACommand}" CommandParameter="Equipo">
+                                <StackPanel>
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="⚔ " Foreground="{StaticResource AccentHoverBrush}" /><Run Text="{Binding [guia2_sec_equipo], Source={StaticResource L}, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding [guia2_brujula_equipo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+
+                        <!-- Como orientarte en diez segundos -->
+                        <TextBlock Text="{Binding [guia2_orientarte], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" FontSize="18" />
+                        <UniformGrid Columns="3" Margin="-5,0,-5,0">
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [guia2_orientarte_1_t], Source={StaticResource L}}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding [guia2_orientarte_1], Source={StaticResource L}}" Style="{StaticResource CaptionText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [guia2_orientarte_2_t], Source={StaticResource L}}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding [guia2_orientarte_2], Source={StaticResource L}}" Style="{StaticResource CaptionText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource GuiaTarjeta}" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [guia2_orientarte_3_t], Source={StaticResource L}}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding [guia2_orientarte_3], Source={StaticResource L}}" Style="{StaticResource CaptionText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock Text="{Binding [guia2_progreso_se_guarda], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,14,0,0" />
+                        <TextBlock Text="{Binding ReferenciaTexto}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" Opacity="0.8" />
+                    </StackPanel>
+
+                    <!-- ================= RUTA PASO A PASO ================= -->
+                    <StackPanel x:Name="SeccionRuta" Visibility="{Binding IsRuta, Converter={StaticResource GuiaBoolToVis}}">
+                        <DockPanel Margin="0,0,0,12">
+                            <Button DockPanel.Dock="Right" Tag="Accent" Command="{Binding ContinuarRutaCommand}" VerticalAlignment="Center"
+                                    Content="{Binding [guia2_btn_continuar], Source={StaticResource L}}" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding [guia2_ruta_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                                <TextBlock Text="{Binding [guia2_ruta_titulo], Source={StaticResource L}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding [guia2_ruta_subtitulo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DockPanel>
+                        <!-- Capitulos (eras) -->
+                        <ItemsControl ItemsSource="{Binding Capitulos}" Margin="-4,0,-4,10" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:CapituloV2ViewModel}">
+                                    <Button Margin="4" Padding="12,9" Command="{Binding DataContext.ElegirCapituloCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" AutomationProperties.Name="{Binding Titulo}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource GuiaBotonTarjeta}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EsSeleccionado}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <StackPanel>
+                                            <TextBlock FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"><Run Text="{Binding [guia2_capitulo], Source={StaticResource L}, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding NumeroTexto, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Progreso, Mode=OneWay}" /></TextBlock>
+                                            <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" FontSize="12.5" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="250" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <!-- Lista de paradas del capitulo -->
+                            <ItemsControl ItemsSource="{Binding ParadasDelCapitulo}" Margin="0,0,14,0" Focusable="False" VerticalAlignment="Top">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ParadaV2ViewModel}">
+                                        <Button Command="{Binding AbrirCommand}" Padding="10,9" Margin="0,0,0,6" AutomationProperties.Name="{Binding TituloPlano}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource GuiaBotonTarjeta}">
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Completada}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource GuiaHechaBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding EsSeleccionada}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="13" Margin="0,0,8,0" VerticalAlignment="Top">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Completada}" Value="True">
+                                                                    <Setter Property="Background" Value="{StaticResource EquippedGreenBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding EsSiguiente}" Value="True">
+                                                                    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Glifo}" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" />
+                                                </Border>
+                                                <Image DockPanel.Dock="Left" Source="{Binding Icono}" Width="24" Height="24" Margin="0,1,8,0" VerticalAlignment="Top"
+                                                       RenderOptions.BitmapScalingMode="NearestNeighbor" Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding TituloPlano}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Etiqueta}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                                                               Visibility="{Binding TieneEtiqueta, Converter={StaticResource GuiaBoolToVis}}" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Parada completa -->
+                            <StackPanel Grid.Column="1" x:Name="GuiaDetalleParada" DataContext="{Binding ParadaSeleccionada}"
+                                        Visibility="{Binding Converter={StaticResource NullToVis}}">
+                                <DockPanel Margin="0,0,0,10">
+                                    <Button DockPanel.Dock="Right" Padding="12,6" Command="{Binding DataContext.ParadaPosteriorCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                            Content="{Binding [guia2_btn_siguiente], Source={StaticResource L}}" />
+                                    <Button DockPanel.Dock="Left" Padding="12,6" HorizontalAlignment="Left" Command="{Binding DataContext.ParadaAnteriorCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                            Content="{Binding [guia2_btn_anterior], Source={StaticResource L}}" />
+                                </DockPanel>
+                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1" CornerRadius="14">
+                                    <StackPanel>
+                                        <!-- Cabecera de la parada -->
+                                        <Border CornerRadius="14,14,0,0" Padding="24,20" Background="{StaticResource AccentMutedBrush}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Cabecera}" Style="{StaticResource GuiaRotulo}" />
+                                                <WrapPanel Margin="0,2,0,6">
+                                                    <Border Style="{StaticResource GuiaChip}" Visibility="{Binding TieneEtiqueta, Converter={StaticResource GuiaBoolToVis}}">
+                                                        <TextBlock Text="{Binding Etiqueta}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    </Border>
+                                                    <Border CornerRadius="999" Padding="10,3" Margin="0,0,6,6">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Completada}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource GuiaHechaBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding EsSiguiente}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding EstadoTexto}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    </Border>
+                                                </WrapPanel>
+                                                <ctl:TextoGuia Marcado="{Binding Titulo}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TamanoIcono="26" />
+                                                <WrapPanel Margin="0,12,0,0">
+                                                    <StackPanel Margin="0,0,28,8" Visibility="{Binding TieneVida, Converter={StaticResource GuiaBoolToVis}}">
+                                                        <TextBlock Text="{Binding VidaEtiqueta}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        <TextBlock FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"><Run Text="♥ " Foreground="{StaticResource CalamityTextBrush}" /><Run Text="{Binding VidaTexto, Mode=OneWay}" /></TextBlock>
+                                                        <TextBlock Text="{Binding VidaActualTexto}" FontSize="11" Visibility="{Binding VidaActualTexto, Converter={StaticResource EmptyToCollapsed}}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{StaticResource OrangeBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding VidaSuficiente}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource EquippedGreenBrush}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <StackPanel Margin="0,0,28,8" MaxWidth="320" Visibility="{Binding TieneDonde, Converter={StaticResource GuiaBoolToVis}}">
+                                                        <TextBlock Text="{Binding [guia2_donde], Source={StaticResource L}}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        <TextBlock Text="{Binding Parada.Donde}" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <StackPanel Margin="0,0,0,8" MaxWidth="360" Visibility="{Binding UbicacionTexto, Converter={StaticResource EmptyToCollapsed}}">
+                                                        <TextBlock Text="{Binding [guia2_en_tu_mundo], Source={StaticResource L}}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        <TextBlock Text="{Binding UbicacionTexto}" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                                        <Button Style="{StaticResource GuiaBotonEnlace}" HorizontalAlignment="Left" Content="{Binding [guia2_ver_en_mapa], Source={StaticResource L}}"
+                                                                Command="{Binding DataContext.VerParadaEnMapaCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="{Binding}"
+                                                                Visibility="{Binding TieneUbicacion, Converter={StaticResource GuiaBoolToVis}}" />
+                                                    </StackPanel>
+                                                </WrapPanel>
+                                                <ItemsControl ItemsSource="{Binding Jefes}" Focusable="False" Visibility="{Binding TieneJefes, Converter={StaticResource GuiaBoolToVis}}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:JefeGuiaViewModel}">
+                                                            <Border Background="#33000000" CornerRadius="10" Padding="14,10" Margin="0,4,8,0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Image Source="{Binding Icono}" Width="44" Height="44" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" Margin="0,0,10,0"
+                                                                           Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                                                                    <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <StackPanel Margin="24,18,24,20">
+                                            <!-- Avisos de esta parada segun el modo -->
+                                            <ItemsControl ItemsSource="{Binding Avisos}" Focusable="False">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:AvisoGuiaViewModel}">
+                                                        <Border Background="{StaticResource GuiaListoBrush}" BorderBrush="{StaticResource MasterGoldBrush}" BorderThickness="4,0,0,0"
+                                                                CornerRadius="6" Padding="14,10" Margin="0,0,0,10">
+                                                            <ctl:TextoGuia Marcado="{Binding Texto}" Style="{StaticResource GuiaCuerpo}" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <!-- Como empezar este encuentro -->
+                                            <Border Background="{StaticResource GuiaInvocacionBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" CornerRadius="10"
+                                                    Padding="16,12" Margin="0,0,0,8" Visibility="{Binding TieneInvocacion, Converter={StaticResource GuiaBoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding [guia2_sec_invocacion], Source={StaticResource L}}" FontWeight="SemiBold" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                                    <DockPanel>
+                                                        <ContentControl DockPanel.Dock="Left" Content="{Binding ObjetoInvocacion}" ContentTemplate="{StaticResource ObjetoChip}" Focusable="False"
+                                                                        VerticalAlignment="Top" Margin="0,0,10,0" Visibility="{Binding ObjetoInvocacion, Converter={StaticResource NullToVis}}" />
+                                                        <StackPanel>
+                                                            <ctl:TextoGuia Marcado="{Binding InvocacionDonde}" Style="{StaticResource GuiaCuerpo}" />
+                                                            <ctl:TextoGuia Marcado="{Binding InvocacionNotas}" Style="{StaticResource GuiaCuerpo}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"
+                                                                           Visibility="{Binding TieneInvocacionNotas, Converter={StaticResource GuiaBoolToVis}}" />
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- 1 · Preparate -->
+                                            <TextBlock Text="{Binding [guia2_sec_preparate], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" />
+                                            <ctl:TextoGuia Marcado="{Binding Preparate}" Style="{StaticResource GuiaCuerpo}" Margin="0,0,0,8"
+                                                           Visibility="{Binding TienePreparate, Converter={StaticResource GuiaBoolToVis}}" />
+                                            <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="3,0,0,0" Padding="12,4" Margin="0,0,0,10"
+                                                    Visibility="{Binding TienePreparateClase, Converter={StaticResource GuiaBoolToVis}}">
+                                                <ctl:TextoGuia Marcado="{Binding PreparateClase}" Style="{StaticResource GuiaCuerpo}" />
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding Necesitas}" ItemTemplate="{StaticResource ObjetoTarjeta}" Focusable="False"
+                                                          Visibility="{Binding TieneNecesitas, Converter={StaticResource GuiaBoolToVis}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
+                                            <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="10" Padding="14,12" Margin="0,6,0,0"
+                                                    Visibility="{Binding TieneEtapa, Converter={StaticResource GuiaBoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock Style="{StaticResource GuiaRotulo}" Margin="0,0,0,2">
+                                                        <Run Text="{Binding [guia2_equipo_de_etapa], Source={StaticResource L}, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding DataContext.ClaseTexto, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                    <ctl:TextoGuia Marcado="{Binding Etapa.Momento}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" TamanoIcono="16" />
+                                                    <ContentControl Content="{Binding Etapa}" ContentTemplate="{StaticResource GruposEquipo}" Focusable="False" />
+                                                    <ctl:TextoGuia Marcado="{Binding Etapa.Nota}" FontSize="12.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"
+                                                                   Visibility="{Binding Etapa.TieneNota, Converter={StaticResource GuiaBoolToVis}}" />
+                                                    <Button Style="{StaticResource GuiaBotonEnlace}" HorizontalAlignment="Left" Margin="0,6,0,0" Content="{Binding [guia2_ver_escalera], Source={StaticResource L}}"
+                                                            Command="{Binding DataContext.IrACommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="Equipo" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- 2 · Haz esto, en este orden -->
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding ProgresoTareas}" Style="{StaticResource CaptionText}" VerticalAlignment="Bottom" Margin="0,0,0,10" />
+                                                <TextBlock Text="{Binding [guia2_sec_tareas], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" />
+                                            </DockPanel>
+                                            <ItemsControl ItemsSource="{Binding Tareas}" Focusable="False">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:TareaV2ViewModel}">
+                                                        <Border BorderBrush="{StaticResource BorderBrush0}" BorderThickness="0,0,0,1" Padding="0,9">
+                                                            <DockPanel>
+                                                                <Button DockPanel.Dock="Left" Command="{Binding AlternarCommand}" Width="24" Height="24" Margin="0,0,12,0" VerticalAlignment="Top"
+                                                                        Cursor="Hand" IsEnabled="{Binding PuedeMarcar}" AutomationProperties.Name="{Binding Id}" ToolTip="{Binding Estado}">
+                                                                    <Button.Template>
+                                                                        <ControlTemplate TargetType="Button">
+                                                                            <Border x:Name="Caja" CornerRadius="6" BorderThickness="2" BorderBrush="{StaticResource BorderStrongBrush}" Background="{StaticResource BgSecondaryBrush}">
+                                                                                <TextBlock Text="{Binding Glifo}" FontWeight="Bold" FontSize="13" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                            </Border>
+                                                                            <ControlTemplate.Triggers>
+                                                                                <DataTrigger Binding="{Binding Hecha}" Value="True">
+                                                                                    <Setter TargetName="Caja" Property="Background" Value="{StaticResource EquippedGreenBrush}" />
+                                                                                    <Setter TargetName="Caja" Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
+                                                                                </DataTrigger>
+                                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                                    <Setter TargetName="Caja" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                                                </Trigger>
+                                                                            </ControlTemplate.Triggers>
+                                                                        </ControlTemplate>
+                                                                    </Button.Template>
+                                                                </Button>
+                                                                <StackPanel>
+                                                                    <DockPanel>
+                                                                        <TextBlock DockPanel.Dock="Left" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,6,0"><Run Text="{Binding Numero, Mode=OneWay}" /><Run Text="." /></TextBlock>
+                                                                        <ctl:TextoGuia Marcado="{Binding Texto}" Style="{StaticResource GuiaCuerpo}">
+                                                                            <ctl:TextoGuia.Opacity>
+                                                                                <Binding Path="Hecha" Converter="{x:Static ctl:BoolAValor.Instance}" ConverterParameter="0.6|1" FallbackValue="1" />
+                                                                            </ctl:TextoGuia.Opacity>
+                                                                        </ctl:TextoGuia>
+                                                                    </DockPanel>
+                                                                    <TextBlock Text="{Binding Estado}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Automatica}" Value="True">
+                                                                                        <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                    <ProgressBar Value="{Binding Fraccion, Mode=OneWay}" Maximum="1" Height="4" Margin="0,5,0,0" MaxWidth="260" HorizontalAlignment="Left"
+                                                                                 Foreground="{StaticResource TealBrush}" Background="{StaticResource BgHoverBrush}" BorderThickness="0"
+                                                                                 Visibility="{Binding TieneProgresoParcial, Converter={StaticResource GuiaBoolToVis}}" />
+                                                                </StackPanel>
+                                                            </DockPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <!-- 3 · Durante el combate / la exploracion -->
+                                            <StackPanel Visibility="{Binding TieneCombate, Converter={StaticResource GuiaBoolToVis}}">
+                                                <TextBlock Text="{Binding CombateTitulo}" Style="{StaticResource GuiaTituloSeccion}" />
+                                                <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="3,0,0,0" Padding="14,2">
+                                                    <ctl:TextoGuia Marcado="{Binding Combate}" Style="{StaticResource GuiaCuerpo}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <!-- 4 · Lo que acaba de desbloquearse -->
+                                            <StackPanel Visibility="{Binding TieneDesbloquea, Converter={StaticResource GuiaBoolToVis}}">
+                                                <TextBlock Text="{Binding [guia2_sec_desbloquea], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" />
+                                                <Border BorderBrush="{StaticResource TealBrush}" BorderThickness="3,0,0,0" Padding="14,2">
+                                                    <ctl:TextoGuia Marcado="{Binding Desbloquea}" Style="{StaticResource GuiaCuerpo}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <!-- Listo para seguir cuando... -->
+                                            <Border Background="{StaticResource GuiaListoBrush}" BorderBrush="{StaticResource GuiaListoBordeBrush}" BorderThickness="1" CornerRadius="10"
+                                                    Padding="18,14" Margin="0,18,0,0" Visibility="{Binding TieneListoCuando, Converter={StaticResource GuiaBoolToVis}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding [guia2_sec_listo], Source={StaticResource L}}" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource MasterGoldBrush}" Margin="0,0,0,6" />
+                                                    <ctl:TextoGuia Marcado="{Binding ListoCuando}" Style="{StaticResource GuiaCuerpo}" />
+                                                </StackPanel>
+                                            </Border>
+                                            <!-- No vendas / conserva -->
+                                            <StackPanel Visibility="{Binding TieneConserva, Converter={StaticResource GuiaBoolToVis}}">
+                                                <TextBlock Text="{Binding [guia2_sec_conserva], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" />
+                                                <ctl:TextoGuia Marcado="{Binding Conserva}" Style="{StaticResource GuiaCuerpo}" Margin="0,0,0,8" />
+                                                <ItemsControl ItemsSource="{Binding ConservaObjetos}" ItemTemplate="{StaticResource ObjetoChip}" Focusable="False">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                            <!-- Fuentes -->
+                                            <StackPanel Visibility="{Binding TieneFuentes, Converter={StaticResource GuiaBoolToVis}}" Margin="0,12,0,0">
+                                                <TextBlock Text="{Binding [guia2_fuentes], Source={StaticResource L}}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                <ctl:BloquesGuia x:Name="GuiaFuentesParada" Bloques="{Binding Fuentes, Converter={x:Static ctl:FuentesComoBloque.Instance}}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Pie: Etapa hecha / Aplazar -->
+                                        <Border BorderBrush="{StaticResource BorderBrush0}" BorderThickness="0,1,0,0" Padding="24,14" Background="{StaticResource BgSecondaryBrush}" CornerRadius="0,0,14,14">
+                                            <StackPanel>
+                                                <WrapPanel>
+                                                    <Button Tag="Accent" Margin="0,0,10,6" Content="{Binding TextoBotonHecha}" IsEnabled="{Binding PuedeMarcarHecha}"
+                                                            Command="{Binding DataContext.AlternarParadaHechaCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="{Binding}" />
+                                                    <Button Margin="0,0,10,6" Content="{Binding TextoBotonAplazar}" Visibility="{Binding Opcional, Converter={StaticResource GuiaBoolToVis}}"
+                                                            Command="{Binding DataContext.AlternarAplazarCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="{Binding}" />
+                                                </WrapPanel>
+                                                <TextBlock Text="{Binding [guia2_pie_hecha], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- ================= EQUIPO (escalera por clase) ================= -->
+                    <StackPanel x:Name="SeccionEquipo" Visibility="{Binding IsEquipo, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="{Binding [guia2_equipo_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                        <TextBlock FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"><Run Text="{Binding [guia2_equipo_titulo], Source={StaticResource L}, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding ClaseTexto, Mode=OneWay}" /></TextBlock>
+                        <TextBlock Text="{Binding [guia2_equipo_subtitulo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,12" />
+                        <!-- Selector de clase -->
+                        <ItemsControl ItemsSource="{Binding Clases}" Focusable="False" Margin="-4,0,-4,4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:OpcionClaseViewModel}">
+                                    <Button Command="{Binding ElegirCommand}" Margin="4" Padding="10,10" AutomationProperties.Name="{Binding Nombre}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource GuiaBotonTarjeta}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Seleccionada}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding Glifo}" FontSize="20" HorizontalAlignment="Center" Foreground="{StaticResource AccentHoverBrush}" />
+                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" FontSize="12.5" TextAlignment="Center" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding [guia2_clase_detectada_badge], Source={StaticResource L}}" FontSize="10" Foreground="{StaticResource TealBrush}"
+                                                       HorizontalAlignment="Center" Visibility="{Binding Detectada, Converter={StaticResource GuiaBoolToVis}}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding ClaseDetectadaTexto}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" />
+
+                        <!-- Escalera: Momento | Opciones y origen | Que haces despues -->
+                        <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1" CornerRadius="12">
+                            <StackPanel>
+                                <Border Background="{StaticResource BgHoverBrush}" CornerRadius="12,12,0,0" Padding="16,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.1*" />
+                                            <ColumnDefinition Width="3*" />
+                                            <ColumnDefinition Width="1.4*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding [guia2_eq_momento], Source={StaticResource L}}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="1" Text="{Binding [guia2_eq_opciones], Source={StaticResource L}}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="12,0" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" Text="{Binding [guia2_eq_despues], Source={StaticResource L}}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Etapas}" Focusable="False">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:EtapaEscaleraViewModel}">
+                                            <Border BorderBrush="{StaticResource BorderBrush0}" BorderThickness="0,1,0,0" Padding="16,12">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding EsActual}" Value="True">
+                                                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="1.1*" />
+                                                        <ColumnDefinition Width="3*" />
+                                                        <ColumnDefinition Width="1.4*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <Border Background="{StaticResource AccentBrush}" CornerRadius="999" Padding="8,2" HorizontalAlignment="Left" Margin="0,0,0,6"
+                                                                Visibility="{Binding EsActual, Converter={StaticResource GuiaBoolToVis}}">
+                                                            <TextBlock Text="{Binding [guia2_eq_ahora], Source={StaticResource L}}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                                        </Border>
+                                                        <ctl:TextoGuia Marcado="{Binding Momento}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" TamanoIcono="22" />
+                                                        <TextBlock FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap"><Run Text="{Binding Tengo, Mode=OneWay}" /><Run Text="/" /><Run Text="{Binding Total, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding [guia2_eq_ya_tienes], Source={StaticResource L}, Mode=OneWay}" /></TextBlock>
+                                                    </StackPanel>
+                                                    <ContentControl Grid.Column="1" Margin="12,0" Content="{Binding}" ContentTemplate="{StaticResource GruposEquipo}" Focusable="False" />
+                                                    <ctl:TextoGuia Grid.Column="2" Marcado="{Binding Nota}" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" LineHeight="19" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <!-- Leyenda de marcas -->
+                        <TextBlock Text="{Binding [guia2_eq_leyenda], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" FontSize="13" />
+                        <ItemsControl ItemsSource="{Binding Leyenda}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,0,18,4" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" MaxWidth="360">
+                                        <Run Text="{Binding Key, Mode=OneWay}" Foreground="{StaticResource MasterGoldBrush}" FontWeight="Bold" /><Run Text="  " /><Run Text="{Binding Value, Mode=OneWay}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- ================= MAPA Y BIOMAS ================= -->
+                    <StackPanel x:Name="SeccionBiomas" Visibility="{Binding IsBiomas, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="{Binding [guia2_biomas_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                        <TextBlock Text="{Binding [guia2_biomas_titulo], Source={StaticResource L}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding [guia2_biomas_subtitulo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,14" />
+                        <ItemsControl x:Name="GuiaZonas" ItemsSource="{Binding Zonas}" Focusable="False" Margin="-5,0,-5,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- Filas de alto natural (como las tarjetas de version de Acerca de), nunca todas
+                                         estiradas a la mas alta de la coleccion. -->
+                                    <ctl:TarjetasEnFilasPanel Columnas="{Binding DataContext.IsDetailSideBySide, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static ctl:BoolAValor.Instance}, ConverterParameter=3|2, FallbackValue=2}" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ZonaV2ViewModel}">
+                                    <Border Margin="5" CornerRadius="12" BorderThickness="1" Padding="16,14">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Resaltada}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+                                                        <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <WrapPanel>
+                                                <TextBlock Text="{Binding Nombre}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,8,4" TextWrapping="Wrap" />
+                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="999" Padding="7,1" Margin="0,1,6,4" VerticalAlignment="Top"
+                                                        Visibility="{Binding EsCalamity, Converter={StaticResource GuiaBoolToVis}}">
+                                                    <TextBlock Text="Calamity" FontSize="10" Foreground="White" />
+                                                </Border>
+                                            </WrapPanel>
+                                            <TextBlock Text="{Binding Capa}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"
+                                                       Visibility="{Binding MostrarCapa, Converter={StaticResource GuiaBoolToVis}}" />
+                                            <ctl:TextoGuia Marcado="{Binding Resumen}" FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}" LineHeight="19"
+                                                           Visibility="{Binding TieneResumen, Converter={StaticResource GuiaBoolToVis}}" />
+                                            <ctl:BloquesGuia Bloques="{Binding Bloques}" Margin="0,6,0,0" />
+                                            <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="10,7" Margin="0,8,0,0"
+                                                    Visibility="{Binding UbicacionTexto, Converter={StaticResource EmptyToCollapsed}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding UbicacionTexto}" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                                    <Button Style="{StaticResource GuiaBotonEnlace}" HorizontalAlignment="Left" Command="{Binding VerEnMapaCommand}"
+                                                            Content="{Binding [guia2_ver_en_mapa], Source={StaticResource L}}"
+                                                            Visibility="{Binding TieneUbicacion, Converter={StaticResource GuiaBoolToVis}}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Margin="0,18,0,0" Visibility="{Binding ArticuloMapa, Converter={StaticResource NullToVis}}">
+                            <TextBlock Text="{Binding ArticuloMapa.Titulo}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding ArticuloMapa.Subtitulo}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,10" />
+                            <ctl:BloquesGuia Bloques="{Binding ArticuloMapa.Bloques}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ================= MANUAL ================= -->
+                    <Grid x:Name="SeccionManual" Visibility="{Binding IsManual, Converter={StaticResource GuiaBoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="230" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ItemsControl ItemsSource="{Binding ArticulosManual}" Focusable="False" Margin="0,0,16,0" VerticalAlignment="Top">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ArticuloV2ViewModel}">
+                                    <Button Command="{Binding AbrirCommand}" Padding="12,9" Margin="0,0,0,4" AutomationProperties.Name="{Binding Titulo}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource GuiaBotonTarjeta}">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Seleccionado}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding Glifo}" Width="22" Foreground="{StaticResource AccentHoverBrush}" FontSize="14" />
+                                            <TextBlock Text="{Binding Titulo}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        </DockPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Grid.Column="1" DataContext="{Binding ArticuloSeleccionado}" Visibility="{Binding Converter={StaticResource NullToVis}}">
+                            <TextBlock Text="{Binding [guia2_manual_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                            <TextBlock Text="{Binding Titulo}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Subtitulo}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,12"
+                                       Visibility="{Binding TieneSubtitulo, Converter={StaticResource GuiaBoolToVis}}" />
+                            <ctl:BloquesGuia x:Name="GuiaArticuloBloques" Bloques="{Binding Bloques}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- ================= ESTOY PERDIDO / HE ENCONTRADO ALGO RARO ================= -->
+                    <StackPanel x:Name="SeccionPerdido" Visibility="{Binding IsPerdido, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="{Binding [guia2_perdido_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                        <TextBlock Text="{Binding [guia2_sec_perdido], Source={StaticResource L}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding [guia2_perdido_subtitulo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,14" />
+                        <ItemsControl x:Name="GuiaProblemas" ItemsSource="{Binding Problemas}" ItemTemplate="{StaticResource FichaDesplegable}" Focusable="False" />
+                        <StackPanel Margin="0,16,0,0" Visibility="{Binding ArticuloProblemas, Converter={StaticResource NullToVis}}">
+                            <ctl:BloquesGuia Bloques="{Binding ArticuloProblemas.Bloques}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="SeccionRaro" Visibility="{Binding IsRaro, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="{Binding [guia2_raro_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                        <TextBlock Text="{Binding [guia2_sec_raro], Source={StaticResource L}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding [guia2_raro_subtitulo], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,14" />
+                        <ItemsControl x:Name="GuiaHallazgos" ItemsSource="{Binding Hallazgos}" ItemTemplate="{StaticResource FichaDesplegable}" Focusable="False" />
+                        <StackPanel Margin="0,16,0,0" Visibility="{Binding ArticuloEstructuras, Converter={StaticResource NullToVis}}">
+                            <ctl:BloquesGuia Bloques="{Binding ArticuloEstructuras.Bloques}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ================= BUSCADOR ================= -->
+                    <StackPanel x:Name="SeccionBuscar" Visibility="{Binding IsBuscar, Converter={StaticResource GuiaBoolToVis}}">
+                        <TextBlock Text="{Binding [guia2_buscar_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                        <TextBlock FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"><Run Text="{Binding [guia2_buscar_titulo], Source={StaticResource L}, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding TextoBusqueda, Mode=OneWay}" Foreground="{StaticResource AccentHoverBrush}" /></TextBlock>
+                        <TextBlock Text="{Binding [guia2_buscar_ayuda], Source={StaticResource L}}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,2,0,14" />
+                        <Border Style="{StaticResource GuiaTarjeta}" Visibility="{Binding SinResultados, Converter={StaticResource GuiaBoolToVis}}">
+                            <TextBlock Text="{Binding [guia2_buscar_sin_resultados], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                        </Border>
+                        <ItemsControl x:Name="GuiaResultados" ItemsSource="{Binding Resultados}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ResultadoBusquedaV2ViewModel}">
+                                    <Button Style="{StaticResource GuiaBotonTarjeta}" Margin="0,0,0,6" Command="{Binding AbrirCommand}" AutomationProperties.Name="{Binding Titulo}">
+                                        <DockPanel>
+                                            <Border DockPanel.Dock="Left" Style="{StaticResource GuiaChip}" VerticalAlignment="Top" Margin="0,0,10,0" MinWidth="86">
+                                                <TextBlock Text="{Binding Tipo}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                            </Border>
+                                            <Image DockPanel.Dock="Left" Source="{Binding Icono}" Width="26" Height="26" Margin="0,0,10,0" VerticalAlignment="Top"
+                                                   RenderOptions.BitmapScalingMode="NearestNeighbor" Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" FontSize="13.5" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Extracto}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,3,0,0"
+                                                           Visibility="{Binding TieneExtracto, Converter={StaticResource GuiaBoolToVis}}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+
+        <!-- ===== Ficha de objeto: como conseguirlo (capa modal) ===== -->
+        <Grid x:Name="GuiaFichaObjeto" Background="#B3080A12" Visibility="{Binding HayFicha, Converter={StaticResource GuiaBoolToVis}}">
+            <Border DataContext="{Binding FichaObjeto}" Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
+                    CornerRadius="16" MaxWidth="640" Margin="24" VerticalAlignment="Center" Effect="{StaticResource CardShadowHover}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="0,1,0,0" Padding="22,12">
+                        <WrapPanel>
+                            <Button Margin="0,0,8,4" Command="{Binding VolverCommand}" Visibility="{Binding PuedeVolver, Converter={StaticResource GuiaBoolToVis}}"
+                                    Content="{Binding [guia2_btn_volver], Source={StaticResource L}}" />
+                            <Button Margin="0,0,8,4" Tag="Accent" Command="{Binding LlevarALibreriaCommand}" Content="{Binding TextoLibreria}"
+                                    Visibility="{Binding PuedeLlevarALibreria, Converter={StaticResource GuiaBoolToVis}}" />
+                            <Button Margin="0,0,8,4" Command="{Binding CerrarCommand}" Content="{Binding [guia2_btn_cerrar], Source={StaticResource L}}" IsCancel="True" />
+                        </WrapPanel>
+                    </Border>
+                    <ScrollViewer x:Name="GuiaFichaScroll" VerticalScrollBarVisibility="Auto" MaxHeight="560">
+                        <StackPanel Margin="26,22,26,16">
+                            <TextBlock Text="{Binding [guia2_ficha_rotulo], Source={StaticResource L}}" Style="{StaticResource GuiaRotulo}" />
+                            <Grid Height="120">
+                                <Ellipse Width="240" Height="110">
+                                    <Ellipse.Fill>
+                                        <RadialGradientBrush>
+                                            <GradientStop Color="#556C63FF" Offset="0" />
+                                            <GradientStop Color="#006C63FF" Offset="1" />
+                                        </RadialGradientBrush>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <Image Source="{Binding Icono}" Width="72" Height="72" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
+                            </Grid>
+                            <TextBlock Text="{Binding Nombre}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            <TextBlock Text="{Binding NombreOtroIdioma}" Style="{StaticResource CaptionText}" Visibility="{Binding TieneNombreOtroIdioma, Converter={StaticResource GuiaBoolToVis}}" />
+                            <WrapPanel Margin="0,8,0,0">
+                                <Border Style="{StaticResource GuiaChip}">
+                                    <TextBlock Text="{Binding Identificador}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </Border>
+                                <Border Style="{StaticResource GuiaChip}">
+                                    <TextBlock Text="{Binding Objeto.TextoTenencia}" FontSize="11">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Objeto.LoTiene}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource EquippedGreenBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Objeto.NoLoTiene}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource OrangeBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                            </WrapPanel>
+                            <TextBlock Text="{Binding [guia2_ficha_como], Source={StaticResource L}}" Style="{StaticResource GuiaTituloSeccion}" />
+                            <ItemsControl ItemsSource="{Binding Obtenciones}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ObtencionV2ViewModel}">
+                                        <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="10" Padding="14,10" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Tipo}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,0,4" />
+                                                <ctl:TextoGuia Marcado="{Binding Marcado}" Style="{StaticResource GuiaCuerpo}" TamanoIcono="22" />
+                                                <TextBlock Text="{Binding Detalle}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           Visibility="{Binding TieneDetalle, Converter={StaticResource GuiaBoolToVis}}" />
+                                                <TextBlock Text="{Binding FuenteCodigo}" FontFamily="Consolas" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="10" Padding="14,10" Visibility="{Binding SeConsigueEnElMundo, Converter={StaticResource GuiaBoolToVis}}">
+                                <TextBlock Text="{Binding [guia2_ficha_en_el_mundo], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                            </Border>
+                            <TextBlock Text="{Binding FuenteNombre}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" Opacity="0.8" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

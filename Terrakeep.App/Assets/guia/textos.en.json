@@ -606,5 +606,11 @@
   "Guia.Bandera.downedAquaticScourgeAcidRain": "Complete Acid Rain tier 2",
   "Guia.Bandera.downedCLAMHardMode": "Defeat the Giant Clam in Hardmode",
   "Guia.Bandera.downedNuclearTerror": "Defeat the Nuclear Terror",
-  "Guia.Bandera.downedBossRush": "Complete the Boss Rush"
+  "Guia.Bandera.downedBossRush": "Complete the Boss Rush",
+  "Guia.Bandera.downedDD2InvasionT1": "Beat the Old One's Army at tier 1 (after the Eye of Cthulhu or an evil boss)",
+  "Guia.Bandera.downedDD2InvasionT2": "Beat the Old One's Army at tier 2 (after a mechanical boss)",
+  "Guia.Bandera.downedDD2InvasionT3": "Beat the Old One's Army at tier 3 (after Golem)",
+  "Guia.Bandera.combatBookWasUsed": "Advanced Combat Techniques used in this world",
+  "Guia.Bandera.combatBookVolumeTwoWasUsed": "Advanced Combat Techniques: Volume Two used in this world",
+  "Guia.Bandera.peddlersSatchelWasUsed": "Peddler's Satchel used in this world"
 }

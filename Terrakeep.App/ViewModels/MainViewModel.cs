@@ -468,7 +468,10 @@ public partial class MainViewModel : ObservableObject
         // vuelve a evaluar al ENTRAR en su pestaña (por si se cargo/edito el personaje o el
         // mundo desde la ultima vez que se miro), no en cada tecla de otra pestaña.
         if (value == (int)AppTab.Guia)
+        {
             Guide.Refresh();
+            GuiaV2.Refresh();
+        }
         OnPropertyChanged(nameof(IsExplorationTabActive));
         OnPropertyChanged(nameof(ShowVitalsStrip));
     }
@@ -1262,6 +1265,10 @@ public partial class MainViewModel : ObservableObject
     // ServidorKeep.Core embebido (lanzar/gestionar un servidor dedicado real de Terraria/
     // tModLoader desde la misma app) - ver Terrakeep.App/ViewModels/HostingViewModel.cs.
     public GuideViewModel Guide { get; }
+    // Guia v2 (F2, 02-oct-2026): la guia grande (vanilla/Calamity) que muestra la pestaña Guia - ver
+    // GuiaV2ViewModel. La v1 (Guide) se mantiene como motor de la tarjeta "Te toca" de Inicio y de
+    // las bandas de profundidad del mapa, que siguen sobre su arbol de tramos.
+    public GuiaV2ViewModel GuiaV2 { get; }
     public HostingViewModel Hosting { get; }
     public LibraryViewModel Library { get; }
     public AppearanceViewModel Appearance { get; }
@@ -1371,6 +1378,24 @@ public partial class MainViewModel : ObservableObject
         // ahi dentro seria null en ese primer Refresh). CharacterLoaded/limpieza de personaje
         // vuelven a llamar a Refresh() mas abajo en este mismo constructor.
         Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData, () => Exploration.CurrentWorldPath);
+        GuiaV2 = new GuiaV2ViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData, () => Exploration.CurrentWorldPath);
+        // "Ver en el mapa" desde la guia: Exploracion centrada en la casilla (mismo camino real que
+        // "ver spawn en el mapa", NavigateToTile con auto-zoom).
+        GuiaV2.VerEnMapaSolicitado += (x, y) =>
+        {
+            SelectedTabIndex = (int)AppTab.Exploracion;
+            // Diferido: el mapa acaba de hacerse visible y su ScrollViewer aun no tiene viewport
+            // medido; centrar ahora usaria ViewportWidth=0 y dejaria la casilla fuera de la vista.
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                () => Exploration.NavigateToTile(x, y, autoZoom: true), System.Windows.Threading.DispatcherPriority.Loaded);
+        };
+        // Un mundo nuevo cambia banderas, NPC, modo y la ubicacion del marcador de la guia: se
+        // re-evalua cuando la carga termina (WorldImage es lo ultimo que cambia en cada carga real).
+        Exploration.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ExplorationViewModel.WorldImage))
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(GuiaV2.Refresh, System.Windows.Threading.DispatcherPriority.Background);
+        };
         // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia dinamica real "Te toca: X" de
         // Inicio: carga el personaje de la ultima sesion (mismo aviso real de cambios sin
         // guardar que ContinueCommand/CharacterChosen ya respeta) y aterriza en la pestaña Guia
@@ -1394,11 +1419,18 @@ public partial class MainViewModel : ObservableObject
         // se re-evalua ya (ademas de al entrar en la pestaña, ver OnSelectedTabIndexChanged, por
         // si el usuario ya estaba mirandola cuando cargo otro personaje).
         CharacterLoaded += () => Guide.Refresh();
+        CharacterLoaded += () => GuiaV2.Refresh();
         // Catalogo de ideas Keep, idea 9 (20-sep-2026, "modo reparar personaje" - version real
         // reducida, ver el LIMITE documentado en RebuildIllegalPrefixDiagnostics): mismo momento
         // real que el refresco de la Guia de arriba.
         CharacterLoaded += RebuildIllegalPrefixDiagnostics;
         Library = new LibraryViewModel(_service);
+        // Guia v2 (F2): "Buscar en la Libreria" desde la ficha de un objeto: Libreria desplegada con el objeto exacto.
+        GuiaV2.LibreriaSolicitada += busqueda =>
+        {
+            GoToTab("Libreria");
+            Library.SearchText = busqueda;
+        };
         Research = new ResearchViewModel(_service);
         // C-15 (informe de pulido final, cierra A1): Apariencia empuja al MISMO UndoStack
         // compartido, via un callback (mismo criterio ya establecido - ExplorationViewModel/

@@ -165,6 +165,8 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
     public bool IsRaro => Seccion == SeccionGuiaV2.Raro;
     public bool IsBuscar => Seccion == SeccionGuiaV2.Buscar;
     public bool HayFicha => FichaObjeto != null;
+    public bool MostrarAvisoSinMundo => HayPersonaje && !HayMundo;
+    public bool MostrarAvisoSinPersonaje => HayMundo && !HayPersonaje;
 
     partial void OnSeccionChanged(SeccionGuiaV2 value)
     {
@@ -325,7 +327,8 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
 
         foreach (var nombre in new[] { nameof(Titulo), nameof(Subtitulo), nameof(AmbitoTexto), nameof(ReferenciaTexto), nameof(ClaseTexto),
                      nameof(ClaseDetectadaTexto), nameof(RutaTerminada), nameof(ZonasExplicadas), nameof(ArticulosManual), nameof(ArticuloMapa),
-                     nameof(ArticuloProblemas), nameof(ArticuloEstructuras), nameof(Documento) })
+                     nameof(ArticuloProblemas), nameof(ArticuloEstructuras), nameof(Documento), nameof(MostrarAvisoSinMundo),
+                     nameof(MostrarAvisoSinPersonaje) })
             OnPropertyChanged(nombre);
 
         _ = ActualizarMarcadorAsync();
@@ -585,11 +588,13 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
     /// <summary>Formas REALES de conseguir el objeto (tabla de referencias, extraida del codigo
     /// decompilado), en marcado para que ingredientes, jefes y vendedores sean clicables. Vacio =
     /// se consigue en el mundo (minado, cofres, pesca...); la ficha lo dice asi, sin inventar.</summary>
-    internal IReadOnlyList<ObtencionV2ViewModel> Obtenciones(string referencia)
+    public IReadOnlyList<ObtencionV2ViewModel> Obtenciones(string referencia)
     {
         var lista = new List<ObtencionV2ViewModel>();
         if (!GuiaV2Recursos.Referencias.Objetos.TryGetValue(referencia, out var o)) return lista;
-        foreach (var ob in o.Obtencion)
+        // La tabla de referencias es comun a las dos guias: en la vanilla se ocultan las recetas y
+        // el botin que añade Calamity (RefObjeto.ObtencionPara, F1) - una partida sin mods no los tiene.
+        foreach (var ob in o.ObtencionPara(GuiaId))
         {
             switch (ob.Tipo)
             {
@@ -750,7 +755,7 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
 
     // ---- Buscador ---------------------------------------------------------------------------------
 
-    private List<(string Tipo, string Titulo, string Plano, Action Abrir, string? Icono)>? _indiceBusqueda;
+    private List<(string Tipo, string Titulo, string Plano, string Original, Action Abrir, string? Icono)>? _indiceBusqueda;
 
     private void Buscar(string consulta)
     {
@@ -763,7 +768,7 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
         {
             string tituloF = LibrarySearchGrammar.Fold(e.Titulo);
             if (!palabras.All(p => tituloF.Contains(p) || e.Plano.Contains(p))) continue;
-            Resultados.Add(new ResultadoBusquedaV2ViewModel(e.Tipo, e.Titulo, Extracto(e.Plano, palabras[0]), e.Abrir, e.Icono));
+            Resultados.Add(new ResultadoBusquedaV2ViewModel(e.Tipo, e.Titulo, Extracto(e.Plano, e.Original, palabras[0]), e.Abrir, e.Icono));
             if (Resultados.Count >= 80) break;
         }
         OnPropertyChanged(nameof(SinResultados));
@@ -771,19 +776,24 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
 
     public bool SinResultados => !string.IsNullOrWhiteSpace(TextoBusqueda) && TextoBusqueda.Trim().Length >= 2 && Resultados.Count == 0;
 
-    private static string Extracto(string planoFold, string palabra)
+    /// <summary>Fragmento alrededor de la coincidencia, del texto ORIGINAL (con mayusculas y
+    /// tildes): el plegado de LibrarySearchGrammar.Fold conserva la longitud de cada caracter del
+    /// español, asi que el indice encontrado en el texto plegado vale para el original.</summary>
+    private static string Extracto(string planoFold, string original, string palabra)
     {
         int i = planoFold.IndexOf(palabra, StringComparison.Ordinal);
         if (i < 0) return "";
+        string fuente = original.Length == planoFold.Length ? original : planoFold;
         int desde = Math.Max(0, i - 50);
-        int hasta = Math.Min(planoFold.Length, i + 110);
-        return (desde > 0 ? "…" : "") + planoFold[desde..hasta].Trim() + (hasta < planoFold.Length ? "…" : "");
+        int hasta = Math.Min(fuente.Length, i + 110);
+        return (desde > 0 ? "…" : "") + fuente[desde..hasta].Trim() + (hasta < fuente.Length ? "…" : "");
     }
 
-    private List<(string, string, string, Action, string?)> ConstruirIndice()
+    private List<(string, string, string, string, Action, string?)> ConstruirIndice()
     {
-        var idx = new List<(string, string, string, Action, string?)>();
+        var idx = new List<(string, string, string, string, Action, string?)>();
         string Fold(string s) => LibrarySearchGrammar.Fold(PlanoConNombres(s));
+        string Orig(string s) => PlanoConNombres(s);
         string Bloques(IEnumerable<Bloque> bs) => string.Join(" ", bs.Select(TextoDeBloque));
 
         foreach (var p in _doc.Paradas)
@@ -791,28 +801,28 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
             string id = p.Id;
             string todo = string.Join(" ", new[] { p.Titulo, p.Donde, p.Preparate, p.Combate, p.Desbloquea, p.ListoCuando, p.Conserva, p.Invocacion?.Notas ?? "" }
                 .Concat(p.Tareas.Select(t => t.Texto)).Concat(p.Jefes.Select(j => "{n:" + j + "}")));
-            idx.Add((L("guia2_buscar_tipo_parada"), PlanoConNombres(p.Titulo), Fold(todo), () => AbrirParada(id),
+            idx.Add((L("guia2_buscar_tipo_parada"), PlanoConNombres(p.Titulo), Fold(todo), Orig(todo), () => AbrirParada(id),
                 p.Jefes.Select(GuiaV2Recursos.IconoNpc).FirstOrDefault(i => i != null)));
         }
         foreach (var a in _doc.Articulos)
         {
             string id = a.Id;
-            idx.Add((L("guia2_buscar_tipo_articulo"), PlanoConNombres(a.Titulo), Fold(a.Subtitulo + " " + Bloques(a.Bloques)), () => AbrirArticulo(id), null));
+            idx.Add((L("guia2_buscar_tipo_articulo"), PlanoConNombres(a.Titulo), Fold(a.Subtitulo + " " + Bloques(a.Bloques)), Orig(a.Subtitulo + " " + Bloques(a.Bloques)), () => AbrirArticulo(id), null));
         }
         foreach (var z in _doc.Zonas)
         {
             string id = z.Id;
-            idx.Add((L("guia2_buscar_tipo_zona"), z.Nombre, Fold(z.Resumen + " " + Bloques(z.Bloques)), () => AbrirZona(id), null));
+            idx.Add((L("guia2_buscar_tipo_zona"), z.Nombre, Fold(z.Resumen + " " + Bloques(z.Bloques)), Orig(z.Resumen + " " + Bloques(z.Bloques)), () => AbrirZona(id), null));
         }
         foreach (var f in _doc.Problemas)
         {
             string id = f.Id;
-            idx.Add((L("guia2_buscar_tipo_problema"), f.Titulo, Fold(Bloques(f.Bloques)), () => AbrirFicha(Problemas, id, SeccionGuiaV2.Perdido), null));
+            idx.Add((L("guia2_buscar_tipo_problema"), f.Titulo, Fold(Bloques(f.Bloques)), Orig(Bloques(f.Bloques)), () => AbrirFicha(Problemas, id, SeccionGuiaV2.Perdido), null));
         }
         foreach (var f in _doc.Hallazgos)
         {
             string id = f.Id;
-            idx.Add((L("guia2_buscar_tipo_hallazgo"), f.Titulo, Fold(Bloques(f.Bloques)), () => AbrirFicha(Hallazgos, id, SeccionGuiaV2.Raro), null));
+            idx.Add((L("guia2_buscar_tipo_hallazgo"), f.Titulo, Fold(Bloques(f.Bloques)), Orig(Bloques(f.Bloques)), () => AbrirFicha(Hallazgos, id, SeccionGuiaV2.Raro), null));
         }
         // Objetos citados por la guia: ficha "como conseguirlo".
         var citados = new HashSet<string>();
@@ -831,7 +841,7 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
         {
             string referencia = r;
             string otro = GuiaV2Recursos.Referencias.Objetos.TryGetValue(r, out var o) ? o.Es + " " + o.En : "";
-            idx.Add((L("guia2_buscar_tipo_objeto"), NombreObjeto(r), LibrarySearchGrammar.Fold(otro + " " + r), () => AbrirObjeto(referencia), IconoObjeto(r)));
+            idx.Add((L("guia2_buscar_tipo_objeto"), NombreObjeto(r), LibrarySearchGrammar.Fold(otro + " " + r), "", () => AbrirObjeto(referencia), IconoObjeto(r)));
         }
         return idx;
     }
@@ -946,7 +956,8 @@ public sealed partial class GuiaV2ViewModel : ObservableObject, IContextoTextoGu
         int dx = (x - centro) * 2; // el GPS del juego cuenta en pies (2 por casilla)
         string horizontal = dx == 0 ? L("guia2_pos_centro") : F(dx > 0 ? "guia2_pos_este" : "guia2_pos_oeste", Math.Abs(dx).ToString("N0"));
         int dy = (int)((y - world.Header.GroundLevel) * 2);
-        string vertical = dy <= 0 ? F("guia2_pos_superficie", Math.Abs(dy).ToString("N0")) : F("guia2_pos_profundidad", dy.ToString("N0"));
+        string vertical = Math.Abs(dy) < 20 ? L("guia2_pos_nivel_superficie")
+            : dy < 0 ? F("guia2_pos_superficie", Math.Abs(dy).ToString("N0")) : F("guia2_pos_profundidad", dy.ToString("N0"));
         return horizontal + ", " + vertical;
     }
 

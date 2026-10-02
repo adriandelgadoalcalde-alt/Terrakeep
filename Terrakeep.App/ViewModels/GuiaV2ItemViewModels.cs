@@ -350,6 +350,8 @@ public sealed partial class ZonaV2ViewModel(GuiaV2ViewModel guia, Zona z) : Obse
     public IReadOnlyList<Bloque> Bloques => Zona.Bloques;
     public bool EsCalamity => Zona.Ambito == "calamity";
     public string Capa => guia.L("guia2_capa_" + Zona.Capa);
+    /// <summary>La capa solo se enseña si añade algo al nombre ("Superficie / Superficie" no).</summary>
+    public bool MostrarCapa => !string.Equals(Capa, Zona.Nombre, StringComparison.OrdinalIgnoreCase);
     [ObservableProperty] private string _ubicacionTexto = "";
     [ObservableProperty] private bool _tieneUbicacion;
     [ObservableProperty] private bool _resaltada;

@@ -606,5 +606,11 @@
   "Guia.Bandera.downedAquaticScourgeAcidRain": "Completar la Lluvia Ácida de nivel 2",
   "Guia.Bandera.downedCLAMHardMode": "Derrotar a la Almeja Gigante en modo difícil",
   "Guia.Bandera.downedNuclearTerror": "Derrotar al Terror Nuclear",
-  "Guia.Bandera.downedBossRush": "Completar el Boss Rush"
+  "Guia.Bandera.downedBossRush": "Completar el Boss Rush",
+  "Guia.Bandera.downedDD2InvasionT1": "Superar el Antiguo Ejército D2 en el nivel 1 (tras el Ojo de Cthulhu o un jefe de la maldad)",
+  "Guia.Bandera.downedDD2InvasionT2": "Superar el Antiguo Ejército D2 en el nivel 2 (tras un jefe mecánico)",
+  "Guia.Bandera.downedDD2InvasionT3": "Superar el Antiguo Ejército D2 en el nivel 3 (tras el Gólem)",
+  "Guia.Bandera.combatBookWasUsed": "Haber usado Técnicas de combate avanzadas en este mundo",
+  "Guia.Bandera.combatBookVolumeTwoWasUsed": "Haber usado Técnicas de combate avanzadas: volumen 2 en este mundo",
+  "Guia.Bandera.peddlersSatchelWasUsed": "Haber usado la Mochila de vendedor ambulante en este mundo"
 }

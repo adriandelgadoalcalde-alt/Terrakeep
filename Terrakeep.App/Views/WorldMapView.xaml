@@ -424,6 +424,72 @@
                                                 </TextBlock>
                                             </Canvas>
 
+                                            <!-- Guia v2 (F2, 02-oct-2026): marcador de la SIGUIENTE PARADA de la guia
+                                                 nueva sobre el mundo real cargado (GuiaV2ViewModel.Marcador*, resuelto con
+                                                 GuiaV2Ubicaciones sobre las casillas reales del .wld/.twld). Si la ubicacion
+                                                 es APROXIMADA (zona sin punto exacto: capa, oceano...), se nota: un circulo
+                                                 translucido que escala CON el mapa (radio en casillas) en vez de solo un
+                                                 alfiler. El alfiler mantiene tamaño constante en pantalla, como el resto de
+                                                 marcadores (ScaleTransform inverso al Zoom). -->
+                                            <Canvas Width="0" Height="0" Panel.ZIndex="3" IsHitTestVisible="False"
+                                                    Canvas.Left="{Binding GuiaV2.MarcadorX, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                    Canvas.Top="{Binding GuiaV2.MarcadorY, Converter={x:Static conv:TileCenterConverter.Instance}}">
+                                                <Canvas.Style>
+                                                    <Style TargetType="Canvas">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                    <Condition Binding="{Binding GuiaV2.MarcadorVisible}" Value="True" />
+                                                                    <Condition Binding="{Binding GuiaV2.MarcadorAproximado}" Value="True" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Canvas.Style>
+                                                <Ellipse x:Name="GuiaMarcadorZona" Width="180" Height="180" Canvas.Left="-90" Canvas.Top="-90"
+                                                         Fill="#336C63FF" Stroke="#CC8079FF" StrokeThickness="3" StrokeDashArray="4 3" />
+                                            </Canvas>
+                                            <Canvas x:Name="GuiaMarcadorSiguiente" Width="0" Height="0" RenderTransformOrigin="0,0" Panel.ZIndex="4" Cursor="Hand"
+                                                    Canvas.Left="{Binding GuiaV2.MarcadorX, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                    Canvas.Top="{Binding GuiaV2.MarcadorY, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                    AutomationProperties.Name="{Binding GuiaV2.MarcadorTitulo}">
+                                                <Canvas.ToolTip>
+                                                    <StackPanel MaxWidth="320">
+                                                        <TextBlock Text="{Binding GuiaV2.MarcadorTitulo}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding GuiaV2.MarcadorDetalle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                                    </StackPanel>
+                                                </Canvas.ToolTip>
+                                                <Canvas.Style>
+                                                    <Style TargetType="Canvas">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                    <Condition Binding="{Binding GuiaV2.MarcadorVisible}" Value="True" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Canvas.Style>
+                                                <Canvas.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                </Canvas.RenderTransform>
+                                                <!-- Alfiler: punta en el punto exacto (abajo-centro), cabeza con el numero de parada. -->
+                                                <Grid Canvas.Left="-14" Canvas.Top="-40" Width="28" Height="40">
+                                                    <Grid.Effect>
+                                                        <DropShadowEffect ShadowDepth="0" BlurRadius="5" Color="Black" Opacity="0.95" />
+                                                    </Grid.Effect>
+                                                    <Path Data="M14,40 L4,22 A12,12 0 1 1 24,22 Z" Fill="{StaticResource AccentBrush}" Stroke="White" StrokeThickness="2" />
+                                                    <TextBlock Text="&#9733;" Foreground="White" FontSize="12" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                                                </Grid>
+                                            </Canvas>
+
                                         <!-- Banda de zona real (Superficie/Subterraneo/Cavernas/Infierno, mismos umbrales que WldHeader.ZoneFor), sin ScaleTransform inverso a proposito: representa una region real del mundo, escala CON el zoom igual que el mapa. IsHitTestVisible=False: capa puramente informativa, nunca roba el clic al mapa. Color DISTINTO por banda y ninguno coincide con los marcadores de punto ya existentes - sin esto se leia como un bug real ("niebla azul"). Historial completo: ADR-TERRAKEEP-014. -->
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
                                                    Fill="{StaticResource MasterGoldBrush}" Opacity="0.30">

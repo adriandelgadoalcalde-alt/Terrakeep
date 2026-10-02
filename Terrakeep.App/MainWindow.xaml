@@ -1991,7 +1991,9 @@
                  patron ya fijado por ADR-017/018/019/020 (WhatsNewView/BuildsView/HostingView/
                  AboutView). x:Name="GuideView" en el host: window.FindName("GuideView") seguido
                  de GuideView.FindName("GuideObjetivoBanner") en PruebasGuiaYServidor.cs. -->
-            <views:GuideView x:Name="GuideView" />
+            <!-- Guia v2 (F2, 02-oct-2026): la guia grande vanilla/Calamity (Views/GuiaV2View.xaml)
+                 sustituye a la vista de tramos de la v1 (Views/GuideView.xaml, retirada). -->
+            <views:GuiaV2View x:Name="GuiaV2View" />
         </TabItem>
 
         <!-- ===================== EXPLORACION ===================== -->

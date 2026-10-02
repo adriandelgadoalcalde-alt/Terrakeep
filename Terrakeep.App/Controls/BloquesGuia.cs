@@ -330,3 +330,35 @@ public static class FuentesGuia
         return w;
     }
 }
+
+/// <summary>Lista de fuentes de una parada/etapa como un unico bloque "fuentes" (para reutilizar
+/// el mismo pie de enlaces que los articulos).</summary>
+public sealed class FuentesComoBloque : System.Windows.Data.IValueConverter
+{
+    public static readonly FuentesComoBloque Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        value is IEnumerable<Fuente> f ? new List<Bloque> { new() { Tipo = "fuentes", Fuentes = f.ToList() } } : null;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>bool -> uno de dos valores ("siVerdadero|siFalso" en ConverterParameter), convertido al
+/// tipo de la propiedad destino (int para UniformGrid.Columns, double para Opacity...).</summary>
+public sealed class BoolAValor : System.Windows.Data.IValueConverter
+{
+    public static readonly BoolAValor Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        var partes = (parameter as string ?? "1|0").Split('|');
+        string elegido = value is true ? partes[0] : partes.Length > 1 ? partes[1] : partes[0];
+        var tipo = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        try { return System.Convert.ChangeType(elegido, tipo, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception) { return elegido; }
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
