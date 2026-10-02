@@ -190,7 +190,10 @@ public class ContenidoBilingueRealTests
 
         var traje = catalogo.ByModAndInternal("CalamityMod", "AbyssalDivingSuit");
         Assert.NotNull(traje);
-        Assert.Equal("Traje de Buceo Abisal", traje.DisplayNameFor(Es));
+        // Desde el 2-oct-2026 el nombre español sale de CalamityKeep-Traduccion-ES (la traduccion propia
+        // de la familia, scripts/sincronizar-nombres-calamity-es.js), no de CalamityModEsp: mayuscula solo
+        // inicial, como los nombres oficiales de Terraria.
+        Assert.Equal("Traje de buceo abisal", traje.DisplayNameFor(Es));
         Assert.Equal("Abyssal Diving Suit", traje.DisplayNameFor(En));
 
         // El nombre ingles sale del `DisplayName` REAL del hjson en-US, no del
@@ -199,7 +202,7 @@ public class ContenidoBilingueRealTests
         // "Aerospec Head Melee" y el mod real dice "Aerospec Helm".
         var casco = catalogo.ByModAndInternal("CalamityMod", "AerospecHeadMelee");
         Assert.NotNull(casco);
-        Assert.Equal("Yelmo de Aerospec", casco.DisplayNameFor(Es));
+        Assert.Equal("Yelmo de aerospec", casco.DisplayNameFor(Es));
         Assert.Equal("Aerospec Helm", casco.DisplayNameFor(En));
 
         // Bono de set real: en ingles es texto LITERAL del mod (esta instalacion de Calamity
