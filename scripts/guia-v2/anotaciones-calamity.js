@@ -29,7 +29,7 @@ const M = 'manual';
 const Z = id => ({ tipo: 'zona', id });
 const PT = id => ({ tipo: 'punto', id });
 
-// Zonas del mundo (nombre oficial: Terraria es-ES Bestiary_Biomes / CalamityModEsp Biomes; firma
+// Zonas del mundo (nombre oficial: Terraria es-ES Bestiary_Biomes / CalamityKeep-Traduccion-ES Biomes; firma
 // con TileID 1.4.4.9 por nombre interno y tiles de Calamity 2.2.4 por clase real).
 const zonas = [
   { id: 'superficie', nombre: { terraria: 'Surface' }, capa: 'superficie' },
@@ -73,11 +73,12 @@ const glosario = {
   // Con texto propio sin articulo: el nombre oficial ya lo lleva («La Mazmorra», «Lo Sagrado») y
   // la frase del usuario pone el suyo ("delante de Dungeon", "en el Hallow subterráneo").
   'Dungeon': '{z:mazmorra|mazmorra}', 'Underworld': '{z:inframundo|Inframundo}', 'Hallow': '{z:sagrado|Sagrado}', 'Space': '{z:cielo|cielo}',
-  // Opcion de configuracion: su etiqueta en CalamityModEsp (Configs...EarlyHardmodeProgressionRework.Label).
-  'Early Hardmode Progression Rework': '«Rework de Progresión del Hardmode Temprano»',
-  'Rework de Progresión del Hardmode Temprano': 'Rework de Progresión del Hardmode Temprano',
+  // Opcion de configuracion: su etiqueta en CalamityKeep-Traduccion-ES (Configs...EarlyHardmodeProgressionRework.Label,
+  // sin el icono [i:Pwnhammer]). La forma antigua de CalamityModEsp que pudiera traer el texto se reescribe igual.
+  'Early Hardmode Progression Rework': '«Rediseño del inicio del modo Difícil»',
+  'Rework de Progresión del Hardmode Temprano': 'Rediseño del inicio del modo Difícil',
   'Arsenal Lab': 'laboratorio del Arsenal', 'Arsenal Labs': 'laboratorios del Arsenal',
-  'Acid Rain': 'Lluvia Ácida', 'pre-Hardmode': 'prehardmode', 'Hardmode': 'modo difícil',
+  'Acid Rain': 'Lluvia ácida', 'pre-Hardmode': 'prehardmode', 'Hardmode': 'modo difícil',
   'Expert': 'Experto', 'Treasure Bag': 'bolsa del tesoro', 'Treasure Bags': 'bolsas del tesoro',
   // Eventos: nombre oficial de Terraria es-ES (Game.json, Bestiary_Events / Bestiary_Invasions).
   'Solar Eclipse': 'Eclipse', 'Frost Moon': 'Luna Gélida', 'Pumpkin Moon': 'Luna calabaza',
@@ -94,35 +95,34 @@ const glosario = {
   // "Solar Flare" en la guia es la armadura lunar, no el enemigo homonimo (NPCID.SolarFlare).
   'Solar Flare': 'armadura de fulguración solar',
   // Exo Mechs es el grupo, no Ares; Apollo es su propio NPC (la ficha del usuario los junta).
-  // F2b: nombre oficial del grupo en CalamityModEsp (DraedonBag «Caja del Tesoro (Exo Mecas)»).
-  'Exo Mechs': 'Exo Mecas', 'Apollo': '{n:CalamityMod/Apollo}', 'Artemis': '{n:CalamityMod/Artemis}',
+  // Nombre del grupo en CalamityKeep-Traduccion-ES (DraedonBag «Caja del tesoro (Exomecas)», BossChecklist «Exomecas»).
+  'Exo Mechs': 'Exomecas', 'Apollo': '{n:CalamityMod/Apollo}', 'Artemis': '{n:CalamityMod/Artemis}',
   'The Codebreaker': 'el {o:CalamityMod/CodebreakerBase}',
-  // Mecanicas de Revengeance: termino de CalamityModEsp (Configs: «Medidor de Ira», «Medidor de
-  // Adrenalina»), no la Pocion de furia homonima.
+  // Mecanicas de Revengeance: termino de CalamityKeep-Traduccion-ES (UI.Rage «Rabia», UI.Adrenaline
+  // «Adrenalina»; glosario: meter = barra), no la Pocion de furia homonima.
   // F2b: nombres que la guia del usuario deja en ingles y SI tienen nombre oficial: estado de
-  // Terraria es-ES (Game.json BuffName.ChaosState), minerales de CalamityModEsp (ScoriaOre «Mineral de
-  // Escoria», CryonicOre «Mineral Criónico», PerennialOre «Mineral Perenne»), la familia de
-  // mecanismos de Draedon (CyanSeekingMechanism «Mecanismo de Búsqueda cian»...), la llave
-  // OnyxExcavatorKey «Llave de excavadora de ónice» y piezas sueltas de su conjunto.
-  'Chaos State': 'Estado de caos', 'Scoria': 'Escoria', 'Cryonic': 'Criónico', 'Perennial': 'Perenne',
-  'Seeking Mechanisms': 'Mecanismos de Búsqueda', 'con el Onyx Excavator': 'con la excavadora de ónice', 'Onyx Excavator': 'excavadora de ónice',
+  // Terraria es-ES (Game.json BuffName.ChaosState), minerales de CalamityKeep-Traduccion-ES (ScoriaOre
+  // «Mineral de escoria», CryonicOre «Mineral criónico», PerennialOre «Mineral perenne»), la familia de
+  // mecanismos de Draedon (CyanSeekingMechanism «Mecanismo rastreador cian»...), la llave
+  // OnyxExcavatorKey «Llave del excavador de ónice» y piezas sueltas de su conjunto.
+  'Chaos State': 'Estado de caos', 'Scoria': 'escoria', 'Cryonic': 'criónico', 'Perennial': 'perenne',
+  'Seeking Mechanisms': 'mecanismos rastreadores', 'con el Onyx Excavator': 'con el excavador de ónice', 'Onyx Excavator': 'excavador de ónice',
   'Scale Mail': '{o:Terraria/BeetleScaleMail}', 'Ram Mask': '{o:CalamityMod/BloodflareHeadMelee}',
   'Horned Greathelm': '{o:CalamityMod/GodSlayerHeadMelee}', 'Royal Helm': '{o:CalamityMod/AuricTeslaHeadMelee}',
-  'Rage': 'Ira', 'Adrenaline': 'Adrenalina', 'Adrenaline Meter': 'medidor de Adrenalina',
+  'Rage': 'Rabia', 'Adrenaline': 'Adrenalina', 'Adrenaline Meter': 'barra de Adrenalina',
   // El texto español del usuario ya nombra estos biomas: se enlazan a su zona.
   'mar sulfuroso': '{z:mar_sulfuroso}', 'mar hundido': '{z:mar_hundido}',
 };
 
-// Conjuntos de armadura de Calamity: nombre del conjunto tal como aparece en los nombres
-// oficiales de sus piezas en CalamityModEsp (p.ej. GodSlayerHeadMelee = «Gran Yelmo Astado de
-// Asesino de Dioses», AuricTeslaHeadMelee = «Casco Real de Tesla Áurica»). Sin pieza traducida
-// (Aerospec, Silva) se queda el nombre original.
+// Conjuntos de armadura de Calamity: nombre del conjunto tal como aparece en los nombres de sus
+// piezas en CalamityKeep-Traduccion-ES (p.ej. GodSlayerHeadMelee = «Gran yelmo cornudo matadioses»,
+// AuricTeslaHeadMelee = «Yelmo real de Tesla áurica»). Forma suelta, en minuscula a mitad de frase.
 const CONJUNTOS = {
-  'God Slayer': 'Asesino de Dioses', 'Auric Tesla': 'Tesla Áurica', 'Tarragon': 'Estragón', 'Bloodflare': 'Llamarada de Sangre',
-  'Victide': 'Victida', 'Statigel': 'Estatigel', 'Daedalus': 'Dédalo', 'Hydrothermic': 'Hidrotérmica', 'Demonshade': 'Sombra Demoníaca',
-  'Sulphurous': 'Sulfúrica', 'Reaver': 'Saqueador', 'Mollusk': 'Molusco', 'Astral': 'Astral', 'Omega Blue': 'Azul Omega',
-  'Prismatic': 'Prismática', 'Empyrean': 'Empírea', 'Umbraphile': 'Umbrófila', 'Plague Reaper': 'Segador de la plaga',
-  'Fathom Swarmer': 'Enjambrador de las profundidades', 'Snow Ruffian': 'Rufián de la nieve', 'Desert Prowler': 'Merodeador del desierto',
+  'God Slayer': 'matadioses', 'Auric Tesla': 'Tesla áurica', 'Tarragon': 'tarragon', 'Bloodflare': 'sangrellama',
+  'Victide': 'victide', 'Statigel': 'statigel', 'Daedalus': 'Dédalo', 'Hydrothermic': 'hidrotermal', 'Demonshade': 'sombra demoníaca',
+  'Sulphurous': 'sulfurosa', 'Reaver': 'saqueador', 'Mollusk': 'molusco', 'Astral': 'astral', 'Omega Blue': 'azul omega',
+  'Prismatic': 'prismática', 'Empyrean': 'empírea', 'Umbraphile': 'umbrófila', 'Plague Reaper': 'segador de la Plaga',
+  'Fathom Swarmer': 'enjambre abisal', 'Snow Ruffian': 'rufián de las nieves', 'Desert Prowler': 'acechador del desierto',
 };
 // Conjuntos vanilla: [con preposicion para "armadura ...", forma suelta], de los nombres
 // oficiales de Terraria es-ES de sus piezas (MoltenHelmet «Casco fundido», BeetleHelmet «Casco de
@@ -201,7 +201,7 @@ const paradas = {
       1: { condicion: ALGUNA(P('CalamityMod/StormlionMandible', 2), P('CalamityMod/DesertMedallion'), B('downedDesertScourge')) },
       2: { condicion: M },
       3: { condicion: B('downedDesertScourge'), texto: 'Invoca con el {o:CalamityMod/DesertMedallion}. En Experto, atiende a los Desert Nuisances cuando aparezcan.' },
-      4: { condicion: P('CalamityMod/PearlShard'), texto: 'Tras ganar, revisa los {o:CalamityMod/PearlShard} y la receta de la armadura Victida (tiene casco para cada clase).' },
+      4: { condicion: P('CalamityMod/PearlShard'), texto: 'Tras ganar, revisa los {o:CalamityMod/PearlShard} y la receta de la armadura de victide (tiene casco para cada clase).' },
     },
     completadaCuando: B('downedDesertScourge'),
     necesitas: [{ ref: 'CalamityMod/DesertMedallion', motivo: 'invocador' }, { ref: 'CalamityMod/StormlionMandible', cantidad: 2, motivo: 'receta del invocador' }],
@@ -233,7 +233,7 @@ const paradas = {
     avisos: [{ modos: ['clasico', 'viaje'], texto: 'En Clásico no hay bolsa del tesoro ni {o:Terraria/EoCShield}: busca otro dash (por ejemplo, la Capa de Tabi tras Plantera o los accesorios de dash de Calamity) y marca la tarea a mano.' }],
   },
   acid1: {
-    titulo: 'Lluvia Ácida (nivel 1)', tipo: 'evento', opcional: true,
+    titulo: 'Lluvia ácida (nivel 1)', tipo: 'evento', opcional: true,
     ubicaciones: [Z('mar_sulfuroso'), PT('oceano_lado_mazmorra')],
     preparate: 'Un arma con proyectil o esbirros que ataquen a distancia; combate desde plataformas sobre el agua, nunca nadando.',
     vida: { min: 300, max: 360 },
@@ -256,7 +256,7 @@ const paradas = {
       3: { condicion: B('downedCrabulon'), texto: 'Deja suficiente anchura y varias alturas para pasar por encima de sus saltos, y derrótalo.' },
     },
     completadaCuando: B('downedCrabulon'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Ira.' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Rabia.' }],
   },
   evil: {
     titulo: '{n:Terraria/EaterofWorldsHead} o {n:Terraria/BrainofCthulhu}', tipo: 'jefe', jefes: ['Terraria/EaterofWorldsHead', 'Terraria/BrainofCthulhu'],
@@ -403,14 +403,14 @@ const paradas = {
       4: { condicion: ALGUNA(EST('HasFoundJungleSchematic'), P('CalamityMod/LongRangedSensorArray')) },
     },
     completadaCuando: B('downedMechBossAny'),
-    // Cifras de la propia opcion de Calamity (CalamityModEsp, EarlyHardmodeProgressionRework.Tooltip).
+    // Cifras de la propia opcion de Calamity (EarlyHardmodeProgressionRework.Tooltip; nombre de la opcion en CalamityKeep-Traduccion-ES).
     avisos: [
-      { modos: ['clasico', 'viaje'], texto: 'Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 20 % menos de vida y daño, y el segundo un 10 % menos.' },
-      { modos: ['experto', 'maestro'], texto: 'Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 10 % menos de vida y daño (en Clásico sería un 20 %), y el segundo un 5 % menos.' },
+      { modos: ['clasico', 'viaje'], texto: 'Con el «Rediseño del inicio del modo Difícil» activado, el primer jefe mecánico que luches tiene un 20 % menos de vida y daño, y el segundo un 10 % menos.' },
+      { modos: ['experto', 'maestro'], texto: 'Con el «Rediseño del inicio del modo Difícil» activado, el primer jefe mecánico que luches tiene un 10 % menos de vida y daño (en Clásico sería un 20 %), y el segundo un 5 % menos.' },
     ],
   },
   aquatic: {
-    titulo: '{n:CalamityMod/AquaticScourgeHead} y Lluvia Ácida (nivel 2)', tipo: 'jefe', jefes: ['CalamityMod/AquaticScourgeHead'],
+    titulo: '{n:CalamityMod/AquaticScourgeHead} y Lluvia ácida (nivel 2)', tipo: 'jefe', jefes: ['CalamityMod/AquaticScourgeHead'],
     ubicaciones: [Z('mar_sulfuroso'), PT('oceano_lado_mazmorra')],
     preparate: 'Armadura de la etapa mithril/oricalco, un arma que cubra distancia y una plataforma sobre el mar.',
     vida: { min: 500, max: 500 },
@@ -549,7 +549,7 @@ const paradas = {
       4: { condicion: M },
     },
     completadaCuando: B('downedRavager'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Ira.' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Rabia.' }],
   },
   hardextras: {
     titulo: '{n:Terraria/DukeFishron}, {n:Terraria/HallowBoss} y eventos', tipo: 'evento', opcional: true, jefes: ['Terraria/DukeFishron', 'Terraria/HallowBoss'],
@@ -629,7 +629,7 @@ const paradas = {
       3: { condicion: M },
     },
     completadaCuando: B('downedDragonfolly'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Ira.' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Rabia.' }],
   },
   providence: {
     titulo: '{n:CalamityMod/Providence}', tipo: 'jefe', jefes: ['CalamityMod/Providence'],
@@ -673,7 +673,7 @@ const paradas = {
     avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/Ectoheart}: amplía tu Adrenalina.' }],
   },
   oldduke: {
-    titulo: 'Lluvia Ácida (nivel 3) y {n:CalamityMod/OldDuke}', tipo: 'jefe', opcional: true, jefes: ['CalamityMod/OldDuke'],
+    titulo: 'Lluvia ácida (nivel 3) y {n:CalamityMod/OldDuke}', tipo: 'jefe', opcional: true, jefes: ['CalamityMod/OldDuke'],
     ubicaciones: [Z('mar_sulfuroso'), PT('oceano_lado_mazmorra')],
     preparate: 'Bloodflare con el casco de tu clase, el arma de la etapa de Polterghast, dash y buenas alas.',
     vida: { min: 575, max: 575 },
@@ -727,7 +727,7 @@ const paradas = {
     completadaCuando: B('downedYharon'),
   },
   exo: {
-    titulo: 'Exo Mecas', tipo: 'jefe', jefes: ['CalamityMod/AresBody', 'CalamityMod/ThanatosHead', 'CalamityMod/Artemis', 'CalamityMod/Apollo'],
+    titulo: 'Exomecas', tipo: 'jefe', jefes: ['CalamityMod/AresBody', 'CalamityMod/ThanatosHead', 'CalamityMod/Artemis', 'CalamityMod/Apollo'],
     ubicaciones: [Z('superficie')],
     preparate: 'Auric Tesla de tu clase, el arma post-Yharon de tu escalera, alas tardías y la {o:CalamityMod/AsgardianAegis}.',
     vida: { min: 600, max: 600 },
@@ -806,7 +806,7 @@ const avisosModo = [
   { id: 'clasico-bolsas', modos: ['clasico', 'viaje'], texto: 'Tu mundo está en Clásico: los jefes no dan bolsa del tesoro, así que los accesorios exclusivos de Experto (como el {o:Terraria/EoCShield} o el {o:Terraria/DemonHeart}) no aparecerán. Las tareas que los piden se pueden marcar a mano.' },
   { id: 'experto', modos: ['experto'], texto: 'Experto: la ruta de esta guía está pensada para esta dificultad. Revengeance es opcional y se activa con el selector de dificultad de Calamity, sin jefes activos.' },
   { id: 'maestro', modos: ['maestro'], texto: 'Maestro: los jefes pegan más y tienes un hueco de accesorio extra del {o:Terraria/DemonHeart}. Calamity activa Revengeance automáticamente en mundos de Maestro; revisa los avisos de Revengeance.' },
-  { id: 'rev', modos: ['revengeance'], texto: 'Revengeance: aparecen los medidores de Ira y Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles.' },
+  { id: 'rev', modos: ['revengeance'], texto: 'Revengeance: aparecen las barras de Rabia y Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles.' },
   { id: 'death', modos: ['death'], texto: 'Death: los jefes y enemigos cambian todavía más. Ve con margen de vida y defensa sobre las cifras de la guía y practica cada pelea antes de gastar invocadores caros.' },
 ];
 

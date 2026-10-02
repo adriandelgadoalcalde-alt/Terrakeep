@@ -5,7 +5,7 @@
 //   1. Lista curada del usuario (Guia-Calamity/inventario-sprites.json: 534 fichas con su id
 //      verificado contra Terrakeep y Calamity 2.2.4) - la misma que usa su HTML para los sprites.
 //   2. Glosario de zonas/eventos/terminos (abajo), con nombre oficial (Terraria es-ES /
-//      CalamityModEsp) o token de zona.
+//      CalamityKeep-Traduccion-ES) o token de zona.
 //   3. Diccionario completo de nombres ingleses (todos los objetos y NPC de Terraria 1.4.4.9 y
 //      Calamity 2.2.4), solo para nombres de 2+ palabras o de 6+ letras que no esten en la
 //      lista negra (palabras que en la guia significan otra cosa: "Calamity" es el mod, no el

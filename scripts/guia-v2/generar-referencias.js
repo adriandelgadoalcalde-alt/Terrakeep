@@ -1,7 +1,7 @@
 // Guia v2 (F0, 02-oct-2026): genera Terrakeep.Core/Guia/V2/Datos/guia_v2_referencias.json, la
 // tabla de TODO lo que citan las guias v2 (objetos, NPC, estaciones, grupos de receta) con:
 //   - id real (ItemID/NPCID de tModLoader 1.4.4.9) o nombre interno verificado (Calamity 2.2.4);
-//   - nombre en español oficial (Terraria es-ES; CalamityModEsp para Calamity) y en ingles;
+//   - nombre en español oficial (Terraria es-ES; CalamityKeep-Traduccion-ES para Calamity) y en ingles;
 //     sin traduccion -> se queda el ingles, con fuenteEs = "sin traduccion" (nunca inventado);
 //   - como conseguir cada objeto (recetas, botin, bolsas, tiendas) del codigo decompilado real
 //     (extraer-obtencion.js), con archivo:linea, para los objetos citados y sus ingredientes
@@ -76,7 +76,7 @@ function refObjeto(ref) {
   if (mod === 'CalamityMod') {
     if (!clases.Items[interno]) { problemas.push('objeto de Calamity sin clase en el decompilado 2.2.4: ' + ref); return null; }
     const en = cal.en.Items[interno], es = cal.es.Items[interno];
-    return { es: es || en || interno, en: en || interno, fuenteEs: es ? `CalamityModEsp ${cal.versionEsp} (es-ES)` : 'sin traduccion' };
+    return { es: es || en || interno, en: en || interno, fuenteEs: es ? `CalamityKeep-Traduccion-ES ${cal.versionEsp} (es-ES)` : 'sin traduccion' };
   }
   problemas.push('mod desconocido: ' + ref);
   return null;
@@ -92,7 +92,7 @@ function refNpc(ref) {
   if (mod === 'CalamityMod') {
     if (!clases.NPCs[interno]) { problemas.push('NPC de Calamity sin clase en el decompilado 2.2.4: ' + ref); return null; }
     const en = cal.en.NPCs[interno], es = cal.es.NPCs[interno];
-    return { es: es || en || interno, en: en || interno, fuenteEs: es ? `CalamityModEsp ${cal.versionEsp} (es-ES)` : 'sin traduccion' };
+    return { es: es || en || interno, en: en || interno, fuenteEs: es ? `CalamityKeep-Traduccion-ES ${cal.versionEsp} (es-ES)` : 'sin traduccion' };
   }
   problemas.push('mod desconocido: ' + ref);
   return null;
@@ -128,10 +128,10 @@ function nombreEstacion(clave) {
   if (m) {
     for (const cand of [m[1], m[1] + 'Item', m[1].replace(/Tile$/, ''), m[1].replace(/Tile$/, 'Item')]) {
       if (clases.Items[cand] && (cal.es.Items[cand] || cal.en.Items[cand]))
-        return { es: cal.es.Items[cand] || cal.en.Items[cand], en: cal.en.Items[cand] || cand, fuenteEs: cal.es.Items[cand] ? `CalamityModEsp ${cal.versionEsp} (objeto ${cand})` : 'sin traduccion' };
+        return { es: cal.es.Items[cand] || cal.en.Items[cand], en: cal.en.Items[cand] || cand, fuenteEs: cal.es.Items[cand] ? `CalamityKeep-Traduccion-ES ${cal.versionEsp} (objeto ${cand})` : 'sin traduccion' };
     }
     const especiales = { SCalAltar: 'AltarOfTheAccursedItem', AshenAltar: null };
-    if (especiales[m[1]]) { const c = especiales[m[1]]; return { es: cal.es.Items[c] || cal.en.Items[c], en: cal.en.Items[c], fuenteEs: `CalamityModEsp ${cal.versionEsp} (objeto ${c})` }; }
+    if (especiales[m[1]]) { const c = especiales[m[1]]; return { es: cal.es.Items[c] || cal.en.Items[c], en: cal.en.Items[c], fuenteEs: `CalamityKeep-Traduccion-ES ${cal.versionEsp} (objeto ${c})` }; }
     problemas.push('estacion de Calamity sin objeto: ' + clave);
     return { es: m[1], en: m[1], fuenteEs: 'sin traduccion' };
   }
@@ -235,7 +235,7 @@ fase++;
 tabla.fuentes = {
   ids: 'ItemID.cs / NPCID.cs / TileID.cs del tModLoader 1.4.4.9 decompilado',
   nombresVanilla: 'Terraria.Localization.Content.es-ES/en-US (incrustados en tModLoader 1.4.4.9)',
-  nombresCalamity: `Calamity ${cal.versionCalamity} Localization/en-US + CalamityModEsp ${cal.versionEsp} Localization/es-ES (Calamity no trae es-ES propia)`,
+  nombresCalamity: `Calamity ${cal.versionCalamity} Localization/en-US + CalamityKeep-Traduccion-ES ${cal.versionEsp} Localization/es-ES (traduccion propia de la familia Keep; Calamity no trae es-ES)`,
   obtencion: `extraer-obtencion.js sobre el decompilado de Calamity ${cal.versionCalamity} y tModLoader 1.4.4.9 (${obtencion.estadisticas?.porcentajeNoReconocido ?? '?'} % de patrones sin reconocer, listados en su salida)`,
   generado: new Date().toISOString().slice(0, 10),
 };

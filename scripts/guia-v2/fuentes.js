@@ -4,8 +4,11 @@
 //     su localizacion oficial incrustada (Terraria.Localization.Content.<idioma>.*.json).
 //   - Calamity 2.2.4: clases reales (decompilado con ilspycmd del CalamityMod.dll del .tmod
 //     instalado) y su Localization/en-US del .tmod.
-//   - Nombres de Calamity en español: Localization/es-ES de CalamityModEsp (workshop 2829795471),
-//     la traduccion al español que existe para Calamity (Calamity 2.2.4 no trae es-ES propia).
+//   - Nombres de Calamity en español: la traduccion PROPIA de la familia Keep,
+//     CalamityKeep-Traduccion-ES (repo hermano Downloads\Keep\CalamityKeep-Traduccion-ES, carpeta
+//     CalamityKeepTraduccionES/Localization/es-ES, GENERADA y verificada 1 a 1 contra Calamity 2.2.4:
+//     9 793/9 793 claves). Hasta el 2-oct-2026 se leia CalamityModEsp (workshop 2829795471), que dejaba
+//     186 objetos y 21 NPC sin traducir y no usa nuestro glosario (T6 de CalamityKeep-Traduccion-ES).
 // Rutas locales de este PC: los scripts son de mantenimiento, no forman parte de la build.
 'use strict';
 const fs = require('fs');
@@ -20,7 +23,7 @@ const CAL = path.join(DECOMP, 'CalamityMod-2.2.4');
 const TMOD_EXTRACT = path.join(KEEP, 'Terrasavr-Win', 'Terrasavr-Calamity-Beta', 'resources', 'app', 'tmod-extract.js');
 const WORKSHOP = process.env.TK_WORKSHOP || path.join('C:\\', 'Program Files (x86)', 'Steam', 'steamapps', 'workshop', 'content', '1281930');
 const TMOD_CALAMITY = path.join(WORKSHOP, '2824688072', '2026.6', 'CalamityMod.tmod');
-const TMOD_CALAMITY_ESP = path.join(WORKSHOP, '2829795471', '2026.6', 'CalamityModEsp.tmod');
+const TRADUCCION_CALAMITY = process.env.TK_TRADUCCION_CALAMITY || path.join(KEEP, 'CalamityKeep-Traduccion-ES', 'CalamityKeepTraduccionES');
 
 function leerConstantes(archivo) {
   const txt = fs.readFileSync(archivo, 'utf8');
@@ -132,9 +135,35 @@ function locCalamity() {
     return { plano, version: m.version };
   };
   const en = cargar(TMOD_CALAMITY, 'Localization/en-US/');
-  const es = cargar(TMOD_CALAMITY_ESP, 'Localization/es-ES/');
+  const es = cargarTraduccionKeep();
   _calLoc = { en: en.plano, es: es.plano, versionCalamity: en.version, versionEsp: es.version };
   return _calLoc;
+}
+
+// CalamityKeep-Traduccion-ES: sus .hjson GENERADOS son JSON estricto (con comentarios // de
+// cabecera); la clave es el nombre del archivo + la ruta, igual que en tModLoader. Las referencias
+// {$Clave} se resuelven como tModLoader: primero con el prefijo de la clave que la contiene (de mas
+// largo a mas corto) y despues tal cual. Sin la carpeta, error claro: nunca se cae a otra fuente.
+function cargarTraduccionKeep() {
+  const dir = path.join(TRADUCCION_CALAMITY, 'Localization', 'es-ES');
+  if (!fs.existsSync(dir)) throw new Error('No existe la traduccion de Calamity de la familia Keep: ' + dir + ' (repo CalamityKeep-Traduccion-ES)');
+  const plano = {};
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.hjson')).sort()) {
+    const txt = fs.readFileSync(path.join(dir, f), 'utf8').replace(/^\uFEFF/, '').replace(/^\s*\/\/.*$/gm, '');
+    aplanar(JSON.parse(txt), path.basename(f, '.hjson'), plano);
+  }
+  const resolver = (clave, valor, prof) => (prof > 8 ? valor : valor.replace(/\{\$([\w.]+)\}/g, (todo, ref) => {
+    const partes = clave.split('.').slice(0, -1);
+    for (let i = partes.length; i >= 0; i--) {
+      const c = (i ? partes.slice(0, i).join('.') + '.' : '') + ref;
+      if (c in plano) return resolver(c, plano[c], prof + 1);
+    }
+    return todo;
+  }));
+  for (const k of Object.keys(plano)) if (plano[k].includes('{$')) plano[k] = resolver(k, plano[k], 0);
+  const build = fs.readFileSync(path.join(TRADUCCION_CALAMITY, 'build.txt'), 'utf8');
+  const version = (/^version\s*=\s*(\S+)/m.exec(build) || [])[1] || '?';
+  return { plano, version };
 }
 
 function indiceCalamity(plano) {
@@ -152,6 +181,21 @@ function nombresCalamity() {
   if (_idxCal) return _idxCal;
   const l = locCalamity();
   _idxCal = { en: indiceCalamity(l.en), es: indiceCalamity(l.es), versionCalamity: l.versionCalamity, versionEsp: l.versionEsp, planoEn: l.en, planoEs: l.es };
+  // Clases que NO tienen DisplayName propio en la localizacion porque lo toman de otra en el codigo
+  // (p.ej. AstralachneaWall.cs:27 "DisplayName => CalamityUtils.GetText("NPCs.AstralachneaGround.DisplayName")",
+  // PhantomSpiritL/M/S, PlagueChargerLarge): mismo nombre que la clave a la que apuntan.
+  const clases = clasesCalamity();
+  for (const tipo of ['Items', 'NPCs']) {
+    for (const [interno, rel] of Object.entries(clases[tipo])) {
+      if (_idxCal.en[tipo][interno]) continue;
+      const m = /DisplayName\s*=>\s*CalamityUtils\.GetText\("(Items|NPCs)\.(?:[\w.]+\.)?(\w+)\.DisplayName"\)/.exec(fs.readFileSync(path.join(CAL, rel), 'utf8'));
+      if (!m) continue;
+      for (const idioma of ['en', 'es']) {
+        const v = _idxCal[idioma][m[1]][m[2]];
+        if (v) _idxCal[idioma][tipo][interno] = v;
+      }
+    }
+  }
   return _idxCal;
 }
 
@@ -173,6 +217,6 @@ function clasesCalamity() {
 }
 
 module.exports = {
-  DECOMP, TML, CAL, TMOD_CALAMITY, TMOD_CALAMITY_ESP,
+  DECOMP, TML, CAL, TMOD_CALAMITY, TRADUCCION_CALAMITY,
   ids, locTerraria, nombreObjetoVanilla, nombreNpcVanilla, nombresCalamity, clasesCalamity, parseHjson, jsonTolerante,
 };

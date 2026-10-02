@@ -2,7 +2,7 @@
 // equipo, comunes a la guia vanilla y a la de Calamity.
 //
 // Terraria y Calamity no tienen una cadena oficial "nombre del conjunto": el nombre oficial esta en
-// cada PIEZA (es-ES de Terraria 1.4.4.9 y CalamityModEsp). Aqui va el complemento que comparten las
+// cada PIEZA (es-ES de Terraria 1.4.4.9 y CalamityKeep-Traduccion-ES). Aqui va el complemento que comparten las
 // piezas oficiales de cada conjunto (SilverHelmet «Casco de plata», SilverChainmail «Cota de malla
 // de plata» -> «de plata»; GemTechHeadgear «Casco Tecnogema» -> «Tecnogema»). La prueba de contenido
 // (GuiaV2ContenidoTests) comprueba que cada rotulo sale de las piezas reales del grupo y que no queda
@@ -23,16 +23,24 @@ const CONJUNTOS_ARMADURA = {
   Monk: 'de monje', 'Dark Artist': 'de Artista Oscuro', 'Valhalla Knight': 'de Caballero del Valhalla',
   'Shinobi Infiltrator': 'de infiltrador shinobi', 'Solar Flare': 'de fulguración solar', Vortex: 'del vórtice',
   Nebula: 'de nebulosa', Stardust: 'de polvo estelar',
-  // Calamity (nombres de CalamityModEsp; mayusculas tal como las escriben sus piezas)
-  Wulfrum: 'de wulfrum', Aerospec: 'de Aerospec', Victide: 'de victida', 'Snow Ruffian': 'de rufián de la nieve',
-  'Desert Prowler': 'de merodeador del desierto', Sulphurous: 'sulfúrica', Statigel: 'de estatigel',
-  Daedalus: 'de Dédalo', Reaver: 'de saqueador', 'Fathom Swarmer': 'de enjambrador de las profundidades',
-  Hydrothermic: 'hidrotérmica', Astral: 'astral', 'Titan Heart': 'de corazón de titán', 'Plague Reaper': 'de segador de la plaga',
-  Plaguebringer: 'de portadora de la plaga', 'Lunic Corps': 'del cuerpo lúnico', Brimflame: 'de llama de azufre',
-  Umbraphile: 'umbrófila', Fearmonger: 'del Intimidador', Tarragon: 'de Estragón', 'Omega Blue': 'Azul Omega',
-  Bloodflare: 'de Llamarada de Sangre', 'God Slayer': 'de Asesino de Dioses', Silva: 'de Silva', 'Gem Tech': 'Tecnogema',
-  'Auric Tesla': 'de Tesla Áurica', Demonshade: 'de Sombra Demoníaca', Prismatic: 'Prismática', Empyrean: 'Empírea',
 };
+
+// Calamity: complemento comun de los nombres de sus piezas en CalamityKeep-Traduccion-ES (la
+// traduccion propia de la familia Keep, T6 del 2-oct-2026; antes se tomaba de CalamityModEsp).
+// verificarConjuntosCalamity() comprueba al construir la guia que cada uno sale de verdad de los
+// nombres de las piezas reales (clase <Conjunto>*): si la traduccion cambia, la guia no se construye.
+const CONJUNTOS_CALAMITY = {
+  Wulfrum: 'de wulfrum', Aerospec: 'de aerospec', Victide: 'de victide', 'Snow Ruffian': 'del rufián de las nieves',
+  'Desert Prowler': 'del acechador del desierto', Sulphurous: 'sulfurosa', Statigel: 'de statigel',
+  Daedalus: 'de Dédalo', Reaver: 'de saqueador', 'Fathom Swarmer': 'del enjambre abisal',
+  Hydrothermic: 'hidrotermal', Astral: 'astral', 'Titan Heart': 'de corazón de titán', 'Plague Reaper': 'del segador de la Plaga',
+  Plaguebringer: 'portaplagas', 'Lunic Corps': 'del Cuerpo Lúnico', Brimflame: 'de llama de azufre',
+  Umbraphile: 'umbrófila', Fearmonger: 'del sembrador de terror', Tarragon: 'de tarragon', 'Omega Blue': 'azul omega',
+  Bloodflare: 'de sangrellama', 'God Slayer': 'matadioses', Silva: 'de silva', 'Gem Tech': 'tecnogema',
+  'Auric Tesla': 'de Tesla áurica', Demonshade: 'de sombra demoníaca', Prismatic: 'prismática', Empyrean: 'empírea',
+};
+
+Object.assign(CONJUNTOS_ARMADURA, CONJUNTOS_CALAMITY);
 
 const base = conjunto => String(conjunto).replace(/\s+armou?r$/i, '').trim();
 
@@ -49,4 +57,19 @@ function armaduraEnTexto(conjuntoWiki) {
   return rotuloConjunto(conjuntoWiki).replace(/^Armadura/, 'armadura');
 }
 
-module.exports = { CONJUNTOS_ARMADURA, rotuloConjunto, armaduraEnTexto };
+/** Cada conjunto de Calamity tiene que leerse en el nombre de alguna de sus piezas reales
+ *  (Mods.CalamityMod.Items.Armor.*.<Conjunto sin espacios>*.DisplayName de la traduccion Keep).
+ *  Devuelve la lista de fallos (vacia = OK). */
+function verificarConjuntosCalamity(planoEs) {
+  const fallos = [];
+  for (const [en, es] of Object.entries(CONJUNTOS_CALAMITY)) {
+    const nucleo = es.replace(/^(?:de |del )/, '').toLowerCase();
+    const re = new RegExp('^Mods\\.CalamityMod\\.Items\\.Armor\\.\\w+\\.' + en.replace(/ /g, '') + '\\w*\\.DisplayName$');
+    const piezas = Object.entries(planoEs).filter(([k]) => re.test(k)).map(([, v]) => v);
+    if (!piezas.length) fallos.push(en + ': sin piezas en la traduccion');
+    else if (!piezas.some(v => v.toLowerCase().includes(nucleo))) fallos.push(en + ': «' + es + '» no aparece en ' + piezas.join(' / '));
+  }
+  return fallos;
+}
+
+module.exports = { CONJUNTOS_ARMADURA, CONJUNTOS_CALAMITY, rotuloConjunto, armaduraEnTexto, verificarConjuntosCalamity };

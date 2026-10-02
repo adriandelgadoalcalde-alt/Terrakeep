@@ -8,7 +8,7 @@
 //   3. datos/escaleras_calamity_wiki.json - escaleras de equipo de las 5 clases (wiki oficial de
 //      Calamity, verificadas contra el decompilado 2.2.4).
 //   4. Nombres oficiales via nombres.js/fuentes.js (Terraria es-ES de tModLoader 1.4.4.9,
-//      CalamityModEsp para Calamity).
+//      CalamityKeep-Traduccion-ES para Calamity).
 //
 // Uso:  node construir-guia-calamity.js [--guia <carpeta Guia-Calamity>] [--salida <json>]
 // Despues: node generar-referencias.js (tabla de nombres/ids/obtencion de todo lo citado).
@@ -20,7 +20,7 @@ const { htmlABloques } = require('./html-a-bloques.js');
 const N = require('./nombres.js');
 const F = require('./fuentes.js');
 const A = require('./anotaciones-calamity.js');
-const { rotuloConjunto } = require('./conjuntos.js');
+const { rotuloConjunto, verificarConjuntosCalamity } = require('./conjuntos.js');
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -59,7 +59,7 @@ const REESCRITURAS = [
   ['articulo:inicio-guia', 'Para esta guía déjalo desactivado.', 'La ruta funciona con o sin Revengeance: si lo activas, la guía lo detecta en tu mundo y añade los avisos de ese modo en cada parada.'],
   ['articulo:inicio-guia', 'Qué quiere decir «melee» aquí', 'Si juegas cuerpo a cuerpo: qué quiere decir «melee»'],
   ['articulo:inicio-guia', 'Esta guía no lee tu instalación: en Mod Browser puedes comprobar tu número real.', 'Esta guía sí lee tu partida (personaje y mundo) para marcar sola lo que ya has hecho, pero no tu lista de mods: en el navegador de mods puedes comprobar tu versión real de Calamity.'],
-  ['articulo:inicio-guia', 'Los nombres ingleses se conservan para encontrarlos en tu juego. Las traducciones de títulos son explicativas, no prometen coincidir con una traducción instalada.', 'Los nombres de objetos, jefes y biomas salen de la traducción oficial al español de Terraria y de la traducción española de Calamity (CalamityModEsp); lo que no tiene traducción se queda con su nombre original.'],
+  ['articulo:inicio-guia', 'Los nombres ingleses se conservan para encontrarlos en tu juego. Las traducciones de títulos son explicativas, no prometen coincidir con una traducción instalada.', 'Los nombres de objetos, jefes y biomas salen de la traducción oficial al español de Terraria y de la traducción al español de Calamity de la familia Keep (CalamityKeep-Traduccion-ES); lo que no tiene traducción se queda con su nombre original.'],
   // El esquema dibujado de su HTML no existe aqui (el mapa es el del mundo real del jugador).
   ['articulo:mapa', 'Esquema orientativo, sin escala. ', ''],
   ['articulo:mapa', ' Los dos extremos de este dibujo se intercambian si tu mundo está invertido.', ''],
@@ -208,16 +208,22 @@ for (const c of chapters) {
 // ---- 5. zonas
 const ids = F.ids();
 const calNombres = F.nombresCalamity();
+{
+  // Rotulos de conjuntos de Calamity: tienen que salir de los nombres reales de sus piezas en la
+  // traduccion de la familia (CalamityKeep-Traduccion-ES). Si no, no se construye nada.
+  const fallos = verificarConjuntosCalamity(calNombres.planoEs);
+  if (fallos.length) throw new Error('Conjuntos de Calamity que no casan con la traduccion: ' + fallos.join('; '));
+}
 const bioEs = F.locTerraria('es_ES', 'Game').Bestiary_Biomes;
 function nombreZona(n) {
   const parte = x => x.terraria ? [bioEs[x.terraria], 'Terraria es-ES oficial (Bestiary_Biomes.' + x.terraria + ')']
-    : x.calamity ? [calNombres.es.Biomes[x.calamity] || null, 'CalamityModEsp (Biomes.' + x.calamity + ')']
+    : x.calamity ? [calNombres.es.Biomes[x.calamity] || null, 'CalamityKeep-Traduccion-ES (Biomes.' + x.calamity + ')']
       : x.objeto ? [null, 'objeto:' + x.objeto] : [x.texto, 'texto'];
   let [n1, f1] = parte(n);
   if (n.objeto) {
     const [mod, interno] = n.objeto.split('/');
     n1 = mod === 'Terraria' ? F.nombreObjetoVanilla(interno, 'es_ES') : calNombres.es.Items[interno];
-    f1 = (mod === 'Terraria' ? 'Terraria es-ES oficial' : 'CalamityModEsp') + ' (nombre del objeto)';
+    f1 = (mod === 'Terraria' ? 'Terraria es-ES oficial' : 'CalamityKeep-Traduccion-ES') + ' (nombre del objeto)';
   }
   if (!n1) throw new Error('Zona sin nombre oficial: ' + JSON.stringify(n));
   if (n.sufijo) {
