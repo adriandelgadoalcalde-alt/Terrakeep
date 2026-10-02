@@ -464,3 +464,42 @@ mejoras permanentes y 6 por estado de mundo (algunas condiciones compuestas suma
 - En el escritorio, los NPC de pueblo de Calamity (Sea King, Archmage, Brimstone Witch) no son evaluables.
 - Las escaleras vienen de una wiki que declara la 2.1.2, aunque cada objeto está verificado en la 2.2.4.
 - El grupo de receta `HardmodeForge` no tiene traducción en CalamityModEsp y queda en inglés.
+
+---
+
+## 12. Fase F1: guía vanilla (02-oct-2026)
+
+Contenido en `Datos/guia_v2_vanilla.json`, generado con `node scripts/guia-v2/construir-guia-vanilla.js` y después
+`node generar-referencias.js`. Fuentes del contenido: `scripts/guia-v2/vanilla/` (ruta, manual, fichas) y
+`anotaciones-vanilla.js` (capítulos, zonas, avisos por modo, objetos necesarios con su origen).
+
+| Cifra | Vanilla | Calamity |
+|---|---|---|
+| Capítulos de ruta + artículos | 5 + 16 | 4 + 10 |
+| Paradas | 49 (22 opcionales; 46 con `completadaCuando`) | 47 |
+| Tareas | 210 | 186 |
+| Tareas evaluables | 186 (88,6 %) | 120 (64,5 %) |
+| Fichas «Estoy perdido» / «He encontrado algo raro» | 45 / 16 | 48 / 12 |
+| Zonas | 24 | 31 |
+| Etapas de escalera | 40 (4 clases × 10, las que tiene la wiki vanilla) | 105 |
+| Palabras sin escaleras / con escaleras | ≈24.600 / ≈52.700 | ≈17.800 / ≈31.300 |
+
+**Marcado de autor.** El contenido vanilla se escribe con `[[Nombre inglés exacto]]` (o `[[o:..]]`/`[[n:..]]`), que
+`vanilla/resolver-nombres.js` convierte en `{o:Terraria/X}`/`{n:Terraria/X}` contra la localización en_US 1.4.4.9; un nombre
+inexistente o ambiguo para el build. Tras un determinante plural se usa el plural del mismo nombre oficial como texto propio.
+
+**Cambios aditivos en Core (con pruebas):**
+- `WldHeader`/`WldReader` capturan 12 banderas más del `.wld` que el lector ya atravesaba (orden de
+  `WorldFile.LoadHeaderFlags` real): `shadowOrbSmashed`, `downedHalloweenKing/Tree`,
+  `downedChristmasIceQueen/Santank/Tree`, `downedDD2InvasionT1/T2/T3`, `combatBookWasUsed`,
+  `combatBookVolumeTwoWasUsed`, `peddlersSatchelWasUsed`. `GuideFlags` las expone.
+- Punto `eter` en `GuiaV2Ubicaciones`: el Éter no deja firma de casillas; se calcula del paso «Shimmer» de `WorldGen.cs`
+  (lado opuesto a la Mazmorra, 11 % exterior) y se marca aproximado.
+- `RefObjeto.ObtencionPara(ambito)` y `Obtencion.EsDeCalamity`: la tabla de referencias es común y trae recetas y botín
+  que añade Calamity; **la UI de la guía vanilla tiene que pintar la obtención con `ObtencionPara("vanilla")`**.
+
+**Pendiente para F2/F3:**
+- TerrakeepMod (`BanderasGuia`): añadir `downedDD2InvasionT1/T2/T3` (`DD2Event.DownedInvasionT1..3`),
+  `combatBookWasUsed`, `combatBookVolumeTwoWasUsed` y `peddlersSatchelWasUsed` (`NPC.*`). Hasta entonces esas tareas
+  salen «no comprobable» en el mod. Las de lunas y `shadowOrbSmashed` ya existen allí con el mismo nombre.
+- Textos `Guia.Bandera.*` de esas seis banderas en `Assets/guia/textos.*.json`.
