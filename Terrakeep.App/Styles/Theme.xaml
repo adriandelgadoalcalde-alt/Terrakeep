@@ -77,6 +77,16 @@
     <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}" />
     <SolidColorBrush x:Key="EquippedGreenBrush" Color="{StaticResource EquippedGreenColor}" />
     <SolidColorBrush x:Key="MasterGoldBrush" Color="{StaticResource MasterGoldColor}" />
+    <!-- Guia v2 (F2, 02-oct-2026): enlaces del marcado de la guia (TextoGuia) y superficies de
+         sus secciones. A nivel de tema (no de la vista) porque TextoGuia los busca con
+         TryFindResource al construir sus Inlines, a veces antes de estar en el arbol visual. -->
+    <SolidColorBrush x:Key="GuiaEnlaceObjetoBrush" Color="#9FC7FF" />
+    <SolidColorBrush x:Key="GuiaEnlaceZonaBrush" Color="#4FE0C0" />
+    <SolidColorBrush x:Key="GuiaEnlaceBrush" Color="#B3ADFF" />
+    <SolidColorBrush x:Key="GuiaListoBrush" Color="#2B2615" />
+    <SolidColorBrush x:Key="GuiaListoBordeBrush" Color="#7A6420" />
+    <SolidColorBrush x:Key="GuiaInvocacionBrush" Color="#18263A" />
+    <SolidColorBrush x:Key="GuiaHechaBrush" Color="#16301F" />
 
     <!-- Degradados reales (135deg en el CSS original -> equivalente en WPF con StartPoint/
          EndPoint en esquinas opuestas) - los botones fuertes de Terrasavr real nunca son de
