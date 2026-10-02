@@ -34240,3 +34240,14 @@ de F4). Solo datos y scripts de la Guía y el catálogo; nada de UI.
   catálogo estático).
 - Pendiente, fuera de este encargo: `set_bonus_es.json` (traducción a mano de 6-sep) y
   `calamity_buff_descriptions.json` (solo inglés) podrían generarse también desde la traducción.
+
+### 3-oct-2026 (madrugada) - T6, segunda ronda (agente de la traducción de Calamity)
+- `2d8b3b3f`: `ContenidoBilingueRealTests` esperaba el nombre de CalamityModEsp («Traje de Buceo Abisal»); el
+  catálogo ya trae el de la traducción de la familia («Traje de buceo abisal»). Expectativa actualizada con su
+  motivo. **Error mío en b1447a79:** había pasado Core antes de sincronizar el catálogo y puse 839/839 en el mensaje;
+  la suite real tras el catálogo daba 838/839. Ahora 839/839 de verdad.
+- `cd172e70`: convención `conjunto_nombre_propio` (glosario de la traducción): Matadioses, Tarragon, Sangrellama con
+  mayúscula cuando se citan sueltos; «armadura de tarragon» con prenda. `nombres.js`: la capa final ya no
+  re-sustituye palabras en minúscula. Datos de la Guía regenerados (0 sin traducción).
+- **Para F4:** estos dos commits van DESPUÉS de d6580c38/a52ffeb1: si el instalador 3.4.0 se generó antes, no los
+  lleva (cambian `guia_v2_calamity.json`). Sin push por mi parte.
