@@ -34194,3 +34194,21 @@ detalle técnico: `docs/guia-v2-diseno.md` §13.
 - **Aislamiento:** una pasada de GUIAV2_SOLO (20:45-20:49) marcó `AISLAMIENTO-ESTADO`: session/settings/window.json
   reales escritos a las 20:48-20:49 por OTRO proceso (alguien abrió y cerró Terrakeep 3.4.0 instalado en ese
   intervalo; ningún Terrakeep abierto al comprobarlo). No es una fuga del arnés.
+
+## 2-oct-2026 (21:40) - PAUSA de F4 pedida por el usuario (va a usar el PC): punto exacto y siguiente paso
+
+- **Hecho y comiteado (sin push, sin release):** 3.4.0 completa en local (versión, changelog ES/EN, README y
+  capturas `README_SHOTS` rehechas tras los badges, instalador regenerado y reinstalado en silencio a las 21:24,
+  SHA256 `680a2619f9e27fb97f68040d83562e4d75d490d6f96cec796f638f16be7db9ff`).
+- **Badges de la Guía (decisión del usuario):** commit 357f6b44. Píldoras fuera: `GuiaChip` (999) eliminado,
+  todo a `SemanticStateChip` (8), `HeroKpiPill` a 8, número de parada y ✓ cuadrados, sin "Modo: carga un mundo",
+  clase como control (enlace a Equipo), hero sin repetir, tooltip con el significado de las marcas. Canario
+  `PILDORAS_SOLO` (por render, todas las pestañas): **245 badges-píldora antes → 0 después** (capturas en el
+  scratchpad `f4-pild\antes` y `f4-pild\despues`); `BadgesRectangularesTests` estático (rojo antes, verde
+  ahora); ViewModels.Tests 841/841; GUIAV2_SOLO 0 fallos. Regla en CLAUDE.md.
+- **Ojo:** los canarios PILDORAS/README_SHOTS de 20:45-21:22 abrieron ventanas con el usuario activo.
+- **Siguiente paso al reanudar:** verificación independiente ronda 4 (revisor-visual nuevo sobre `f4-pild\despues`
+  y capturas del README, comparando los badges de la Guía con los del resto de la app; verificador-qa nuevo con
+  GUIAV2_SOLO, PILDORAS_SOLO, RESTO_RESPONSIVE_SOLO y LAYOUT_REPOSO_SOLO sobre el HEAD final). Después Task
+  Context (798ecebe a DONE, evidencia fresca de 6b59710e y 0529c3e2) y, con la decisión del coordinador,
+  push + release v3.4.0.
