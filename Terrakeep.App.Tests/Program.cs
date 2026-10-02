@@ -2141,284 +2141,26 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
-        // IDEA7_SOLO=1 (20-sep-2026, catalogo de funciones, idea 7 "Capa Guia sobre el mapa" -
-        // version real, tercera ronda tras la correccion del coordinador: investigado a fondo que
-        // la Zona de un paso de la Guia NUNCA es una coordenada de punto (la Guia describe
-        // requisitos, no ubicaciones) - de las 10 Zonas reales del catalogo, 5 SI tienen una
-        // posicion real sin escanear tiles ("Mazmorra" = WldDungeonX/Y ya leido; las 4 capas de
-        // profundidad = los mismos umbrales reales que ya pinta el fondo del mapa,
-        // WldHeader.ZoneFor). Las 5 restantes (biomas reales) exigirian un detector de bioma
-        // nuevo con datos que hoy no existen en el proyecto - LIMITE real, documentado en el
-        // propio codigo de ExplorationViewModel.
-        //
-        // Verificacion con "aislar la variable": la verdad de referencia de los limites de banda
-        // se calcula AQUI con un WldReader.Read PROPIO (nunca el _world interno del ViewModel), y
-        // el paso "objetivo actual" se fuerza a mano sobre un paso REAL ya existente en el arbol
-        // de la Guia (nunca inventado - GuidePasoViewModel tiene constructor internal, no se
-        // puede fabricar uno sintetico desde este proyecto de pruebas) para comprobar la
-        // Visibility real en los dos sentidos (aparece Y desaparece).
+        // IDEA7_SOLO=1 (20-sep-2026, catalogo de funciones, idea 7 "Capa Guia sobre el mapa").
+        // F2b (02-oct-2026): el chip, las bandas y el marcador del mapa ya no salen de la guia v1 sino
+        // del marcador de la guia v2; el cuerpo vive en CanariosGuiaUnica.cs (EjecutarIdea7Solo) y
+        // comprueba lo mismo que antes (limites reales de las 4 bandas contra un WldReader propio;
+        // objetivo -> exactamente 1 banda, la de su capa; sin objetivo -> ninguna) mas que alfiler,
+        // banda y chip cuentan la misma parada en la misma capa.
         if (Environment.GetEnvironmentVariable("IDEA7_SOLO") == "1")
         {
-            try
-            {
-                string mundoPath = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
-                if (!File.Exists(mundoPath)) { Console.WriteLine("IDEA7_SOLO: AVISO - falta el mundo real de prueba, se omite"); }
-                else
-                {
-                    var personajeReal = vm.Home.Characters.FirstOrDefault();
-                    if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
-
-                    vm.SelectedTabIndex = 4; // Exploracion
-                    DoEvents();
-                    var taskCarga = vm.Exploration.LoadFromPathAsync(mundoPath);
-                    while (!taskCarga.IsCompleted) DoEvents();
-                    DoEvents(); DoEvents();
-
-                    // --- Verdad de referencia de las 4 bandas, WldReader propio ---
-                    var mundoVerdad = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(mundoPath));
-                    double groundLevel = mundoVerdad.Header.GroundLevel, rockLevel = mundoVerdad.Header.RockLevel;
-                    double infiernoTop = mundoVerdad.Header.TilesHigh - 192;
-                    Console.WriteLine($"IDEA7_SOLO: verdad de referencia -> GroundLevel={groundLevel}, RockLevel={rockLevel}, TilesHigh={mundoVerdad.Header.TilesHigh}, InfiernoTop={infiernoTop}");
-                    Console.WriteLine($"IDEA7_SOLO: bandas del ViewModel -> Superficie[{vm.Exploration.GuideBandSuperficieTop},{vm.Exploration.GuideBandSuperficieHeight}] Subterraneo[{vm.Exploration.GuideBandSubterraneoTop},{vm.Exploration.GuideBandSubterraneoHeight}] Cavernas[{vm.Exploration.GuideBandCavernasTop},{vm.Exploration.GuideBandCavernasHeight}] Infierno[{vm.Exploration.GuideBandInfiernoTop},{vm.Exploration.GuideBandInfiernoHeight}]");
-
-                    bool bandasOk = vm.Exploration.GuideBandSuperficieTop == 0.0 && vm.Exploration.GuideBandSuperficieHeight == groundLevel
-                        && vm.Exploration.GuideBandSubterraneoTop == groundLevel && vm.Exploration.GuideBandSubterraneoHeight == rockLevel - groundLevel
-                        && vm.Exploration.GuideBandCavernasTop == rockLevel && vm.Exploration.GuideBandCavernasHeight == infiernoTop - rockLevel
-                        && vm.Exploration.GuideBandInfiernoTop == infiernoTop && vm.Exploration.GuideBandInfiernoHeight == 192.0;
-                    if (!bandasOk) Console.WriteLine("FALLO: IDEA7_SOLO - las bandas de profundidad calculadas por el ViewModel no coinciden con la verdad de referencia real");
-                    else Console.WriteLine("IDEA7_SOLO: las 4 bandas coinciden EXACTAMENTE con la verdad de referencia real");
-
-                    // --- Navega a la Guia real para poblar vm.Guide.Tramos con pasos REALES ---
-                    vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
-                    DoEvents(); DoEvents();
-                    var pasoMazmorra = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona == "Mazmorra");
-                    var pasoCapa = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona is "Cavernas" or "Subterraneo" or "Superficie" or "Infierno");
-                    Console.WriteLine($"IDEA7_SOLO: paso real con Zona=Mazmorra encontrado={pasoMazmorra != null}, paso real con Zona de capa encontrado={pasoCapa != null} (Zona='{pasoCapa?.Zona}')");
-
-                    vm.SelectedTabIndex = 4; // vuelve a Exploracion para medir el mapa real
-                    DoEvents(); DoEvents();
-
-                    if (pasoMazmorra != null)
-                    {
-                        vm.Guide.ObjetivoPaso = pasoMazmorra;
-                        DoEvents(); DoEvents();
-                        var marcador = Descendientes<System.Windows.Controls.Grid>(window).FirstOrDefault(g => ReferenceEquals(g.ToolTip, null) == false && Equals(g.ToolTip, pasoMazmorra.Titulo));
-                        Console.WriteLine($"IDEA7_SOLO: marcador de objetivo (Mazmorra) encontrado={marcador != null}, visible={marcador?.IsVisible}");
-                        if (marcador == null || !marcador.IsVisible) Console.WriteLine("FALLO: IDEA7_SOLO - el marcador de objetivo de mazmorra no aparece con ObjetivoPaso real apuntando a Mazmorra");
-
-                        vm.Guide.ObjetivoPaso = null;
-                        DoEvents(); DoEvents();
-                        bool siguevisible = marcador != null && marcador.IsVisible;
-                        Console.WriteLine($"IDEA7_SOLO: tras quitar el objetivo, marcador sigue visible={siguevisible} (esperado False)");
-                        if (siguevisible) Console.WriteLine("FALLO: IDEA7_SOLO - el marcador de objetivo NO desaparece al quitar ObjetivoPaso (falso positivo permanente)");
-                    }
-                    else Console.WriteLine("IDEA7_SOLO: AVISO - ningun paso real del catalogo de Guia tiene Zona=Mazmorra, se omite esa comprobacion");
-
-                    if (pasoCapa != null)
-                    {
-                        vm.Guide.ObjetivoPaso = pasoCapa;
-                        DoEvents(); DoEvents();
-                        // La ventana entera tiene MUCHOS Rectangle visibles ajenos a esto
-                        // (bordes/decoracion de otros controles) - se aislan por las DOS señas
-                        // reales que solo llevan mis 4 bandas: IsHitTestVisible=False (puesto a
-                        // mano en el XAML, ningun otro Rectangle real de la app lo usa asi) Y el
-                        // mismo pincel real AccentMutedBrush.
-                        var accentMuted = System.Windows.Application.Current.TryFindResource("AccentMutedBrush");
-                        var rects = Descendientes<System.Windows.Shapes.Rectangle>(window)
-                            .Where(r => r.IsVisible && !r.IsHitTestVisible && Equals(r.Fill, accentMuted)).ToList();
-                        Console.WriteLine($"IDEA7_SOLO: rectangulos de banda VISIBLES tras fijar Zona='{pasoCapa.Zona}' -> {rects.Count} (esperado 1)");
-                        if (rects.Count != 1) Console.WriteLine($"FALLO: IDEA7_SOLO - se esperaba exactamente 1 banda visible para Zona='{pasoCapa.Zona}', hay {rects.Count}");
-                        else
-                        {
-                            double topReal = System.Windows.Controls.Canvas.GetTop(rects[0]);
-                            Console.WriteLine($"IDEA7_SOLO: Canvas.Top real de la banda visible = {topReal}");
-                        }
-
-                        vm.Guide.ObjetivoPaso = null;
-                        DoEvents(); DoEvents();
-                        int rectsDespues = Descendientes<System.Windows.Shapes.Rectangle>(window)
-                            .Count(r => r.IsVisible && !r.IsHitTestVisible && Equals(r.Fill, accentMuted));
-                        Console.WriteLine($"IDEA7_SOLO: bandas visibles tras quitar el objetivo = {rectsDespues} (esperado 0)");
-                        if (rectsDespues != 0) Console.WriteLine("FALLO: IDEA7_SOLO - una banda de profundidad sigue visible tras quitar ObjetivoPaso");
-                    }
-                    else Console.WriteLine("IDEA7_SOLO: AVISO - ningun paso real del catalogo de Guia tiene Zona de capa de profundidad, se omite esa comprobacion");
-
-                    if (pasoCapa != null)
-                    {
-                        vm.Guide.ObjetivoPaso = pasoCapa;
-                        DoEvents(); DoEvents(); DoEvents();
-                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                        rtb.Render(window);
-                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
-                        string shot = Path.Combine(AppContext.BaseDirectory, "idea7-capa-guia-mapa.png");
-                        using (var fs = File.Create(shot)) enc.Save(fs);
-                        Console.WriteLine($"IDEA7_SOLO: captura real -> {shot}");
-                        vm.Guide.ObjetivoPaso = null;
-                    }
-                }
-            }
-            catch (Exception ex) { Console.WriteLine("IDEA7_SOLO-EXCEPTION: " + ex); }
+            EjecutarIdea7Solo(window, vm);
             Console.WriteLine("DONE (IDEA7_SOLO)");
             Environment.Exit(0);
         }
 
-        // GUIACHIP_SOLO=1 (21-sep-2026, pedido explicito del coordinador tras el reporte del
-        // usuario de "niebla azul dividiendo la superficie" confundida con un bug): comprueba de
-        // verdad, con un personaje y un mundo sinteticos pero REALES (mismo mecanismo real de
-        // WldWriter.WriteWorld/PlrFile.Write que ya usan las pruebas xUnit de esta misma sesion,
-        // nunca datos inventados a mano en el XAML), que el chip real "Guía: Superficie" aparece
-        // en pantalla con el color correcto y se distingue del resto de marcadores del mapa.
-        //
-        // Personaje/mundo COMPLETAMENTE limpios (sin ningun jefe derrotado, sin refugio, sin
-        // NPCs mudados): segun guia_progresion.json real, el PRIMER tramo real no opcional es
-        // PreOjo (orden=10; ReySlime, orden=5, se salta por ser opcional) y su primer paso real
-        // es "Refugio", con zona="Superficie" - asi que el objetivo pendiente de la Guia con
-        // estos datos DEBE caer ahi, sin forzar nada a mano.
+        // GUIACHIP_SOLO=1 (21-sep-2026, tras el reporte del usuario de "niebla azul dividiendo la
+        // superficie"). F2b (02-oct-2026): sobre la guia v2, cuerpo en CanariosGuiaUnica.cs
+        // (EjecutarGuiaChipSolo): chip visible con la parada y su capa, color semantico de la capa en
+        // el borde y fondo neutro, y la banda real de esa capa pintada de verdad (render aislado).
         if (Environment.GetEnvironmentVariable("GUIACHIP_SOLO") == "1")
         {
-            try
-            {
-                string dirChip = Path.Combine(Path.GetTempPath(), $"terrakeep-guiachip-{Guid.NewGuid():N}");
-                Directory.CreateDirectory(dirChip);
-                string plrPath = Path.Combine(dirChip, "PersonajeLimpio.plr");
-                // Mundo real (roca_negra.wld, YA usado por decenas de pruebas reales de este mismo
-                // arnes - un mundo sintetico minimo de 60x80 se probo primero y renderizaba el mapa
-                // completamente negro, un caso limite propio del arnes de pruebas, no del producto
-                // real, ver bitacora.md) - solo hace falta que el PERSONAJE este limpio para que el
-                // objetivo pendiente de la Guia caiga en Superficie de verdad.
-                string wldPath = MundoAislado(RutasEntornoReal.Documentos(@"tModLoader\Worlds\roca_negra.wld"));
-
-                var personajeLimpio = new Terrakeep.Core.PlrFormat.PlrCharacter
-                {
-                    Name = "PersonajeLimpio",
-                    Version = 279,
-                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
-                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
-                };
-                File.WriteAllBytes(plrPath, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeLimpio));
-
-                vm.LoadFromPath(plrPath);
-                DoEvents(); DoEvents();
-                vm.SelectedTabIndex = 4; // Exploracion
-                DoEvents(); DoEvents();
-                var tareaChip = vm.Exploration.LoadFromPathAsync(wldPath);
-                while (!tareaChip.IsCompleted) DoEvents();
-                DoEvents(); DoEvents(); DoEvents();
-                System.Threading.Thread.Sleep(300); DoEvents(); DoEvents();
-
-                // roca_negra.wld es un mundo real con progreso real ya guardado (jefes derrotados
-                // reales en su cabecera) - a diferencia de un mundo sintetico en blanco, el objetivo
-                // pendiente real de la Guia puede caer en CUALQUIERA de las 4 zonas segun el progreso
-                // real de este mundo concreto, no siempre Superficie. Se comprueba dinamicamente
-                // contra la MISMA zona real que YA devuelve el ViewModel, nunca una zona fija.
-                string zonaReal = vm.Guide.ObjetivoPaso?.Zona ?? "(null)";
-                var colorPorZona = new Dictionary<string, string>
-                {
-                    ["Superficie"] = "#FFFFD24A",   // MasterGoldBrush
-                    ["Subterraneo"] = "#FF3DDC6E",  // EquippedGreenBrush
-                    ["Cavernas"] = "#FF9B59B6",      // DebuffBrush
-                    ["Infierno"] = "#FFC0392B",      // CalamityBrush
-                };
-                var claveChipPorZona = new Dictionary<string, string>
-                {
-                    ["Superficie"] = "guide_zone_chip_superficie",
-                    ["Subterraneo"] = "guide_zone_chip_subterraneo",
-                    ["Cavernas"] = "guide_zone_chip_cavernas",
-                    ["Infierno"] = "guide_zone_chip_infierno",
-                };
-                Console.WriteLine($"GUIACHIP_SOLO: personaje limpio + mundo real 'roca_negra.wld' -> Guide.ObjetivoPaso.Zona real = '{zonaReal}' (una de las 4 bandas de profundidad reales, segun el progreso real de este mundo)");
-                if (!colorPorZona.ContainsKey(zonaReal))
-                {
-                    Console.WriteLine($"GUIACHIP_SOLO: zona real '{zonaReal}' no es una de las 4 bandas de profundidad (es un bioma/punto de interes real, ej. Mazmorra/Jungla) - el chip de banda no aplica aqui, se omite el resto de la comprobacion");
-                }
-                else
-                {
-                    string claveChip = claveChipPorZona[zonaReal];
-                    var chipVisible = Descendientes<System.Windows.Controls.TextBlock>(window)
-                        .FirstOrDefault(t => t.Text == vm.Loc[claveChip] && t.IsVisible);
-                    Console.WriteLine($"GUIACHIP_SOLO: chip real '{vm.Loc[claveChip]}' visible en el arbol visual={chipVisible != null}");
-                    if (chipVisible == null) Console.WriteLine($"FALLO: GUIACHIP_SOLO - el chip real no esta visible en pantalla pese a Zona={zonaReal}");
-                    else
-                    {
-                        var borderPadre = System.Windows.Media.VisualTreeHelper.GetParent(System.Windows.Media.VisualTreeHelper.GetParent(chipVisible) as System.Windows.DependencyObject ?? chipVisible) as System.Windows.Controls.Border;
-                        string colorReal = (borderPadre?.Background as System.Windows.Media.SolidColorBrush)?.Color.ToString() ?? "(sin Border padre real)";
-                        string colorEsperado = colorPorZona[zonaReal];
-                        Console.WriteLine($"GUIACHIP_SOLO: color de fondo real del chip = {colorReal} (esperado {colorEsperado})");
-                        if (colorReal != colorEsperado) Console.WriteLine($"FALLO: GUIACHIP_SOLO - el color real del chip no coincide con el esperado para {zonaReal} ({colorReal} vs {colorEsperado})");
-                    }
-
-                    // Comprobacion real de la BANDA (no solo del chip): busca el Rectangle real
-                    // con el Fill de esta zona y confirma que existe, esta visible y tiene la
-                    // opacidad esperada (0.30, la misma que fija el XAML para las 4 bandas).
-                    var brushEsperado = colorPorZona[zonaReal];
-                    var bandaReal = Descendientes<System.Windows.Shapes.Rectangle>(window)
-                        .FirstOrDefault(r => (r.Fill as System.Windows.Media.SolidColorBrush)?.Color.ToString() == brushEsperado);
-                    if (bandaReal == null) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - no se encontro ningun Rectangle real con Fill={brushEsperado} para la zona {zonaReal}");
-                    else
-                    {
-                        Console.WriteLine($"GUIACHIP_SOLO-BANDA: Rectangle real encontrado para {zonaReal}, IsVisible={bandaReal.IsVisible}, Opacity real={bandaReal.Opacity}, Height real={bandaReal.ActualHeight:F1}, Width real={bandaReal.ActualWidth:F1}");
-                        if (!bandaReal.IsVisible) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - la banda real de {zonaReal} no esta visible");
-                        if (Math.Abs(bandaReal.Opacity - 0.30) > 0.01) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - opacidad real ({bandaReal.Opacity}) distinta de la esperada (0.30)");
-
-                        // Prueba DECISIVA del color/opacidad real que de verdad pinta el motor:
-                        // renderizado AISLADO del propio Rectangle vía VisualBrush en su propio
-                        // RenderTargetBitmap pequeño (200x200), sin pasar por la ventana entera.
-                        // Se probo antes con RenderTargetBitmap.Render(window) y ese camino da un
-                        // falso negativo (pixeles siempre transparentes) para este elemento
-                        // concreto de 8400 unidades de ancho real (=21000px a zoom 250%) - un
-                        // limite conocido y ya documentado de esa API de captura de ventana
-                        // completa con elementos extremadamente grandes, no del producto real (el
-                        // usuario ve composicion GPU real via DWM, nunca este pase software). Este
-                        // camino aislado SI es fiable: decodifica el pixel real, premultiplicado,
-                        // y lo compara con el color/opacidad esperados de verdad.
-                        var rtbBanda = new System.Windows.Media.Imaging.RenderTargetBitmap(200, 200, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                        var visualBanda = new System.Windows.Media.DrawingVisual();
-                        using (var dcBanda = visualBanda.RenderOpen())
-                        {
-                            var vb = new System.Windows.Media.VisualBrush(bandaReal) { Stretch = System.Windows.Media.Stretch.None, ViewboxUnits = System.Windows.Media.BrushMappingMode.Absolute, Viewbox = new System.Windows.Rect(0, 0, 200, 200) };
-                            dcBanda.DrawRectangle(vb, null, new System.Windows.Rect(0, 0, 200, 200));
-                        }
-                        rtbBanda.Render(visualBanda);
-                        var pixelesBanda = new byte[200 * 200 * 4];
-                        rtbBanda.CopyPixels(pixelesBanda, 200 * 4, 0);
-                        byte pb = pixelesBanda[0], pg = pixelesBanda[1], pr = pixelesBanda[2], pa = pixelesBanda[3];
-                        bool algoNoTransparente = pa != 0;
-                        Console.WriteLine($"GUIACHIP_SOLO-BANDA: render aislado real -> pixel premultiplicado (B={pb},G={pg},R={pr},A={pa})");
-                        if (!algoNoTransparente) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - el Rectangle real de {zonaReal} no pinta ningun pixel no-transparente en aislamiento (color/opacidad rotos de verdad)");
-                        else
-                        {
-                            // Despremultiplicar y comparar contra el color esperado (esperado con
-                            // Opacity=0.30 real, no el color solido puro de la marca).
-                            double alphaFrac = pa / 255.0;
-                            int rReal = (int)Math.Round(pr / alphaFrac), gReal = (int)Math.Round(pg / alphaFrac), bReal = (int)Math.Round(pb / alphaFrac);
-                            var colorEsperadoWpf = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(brushEsperado);
-                            int difR = Math.Abs(rReal - colorEsperadoWpf.R), difG = Math.Abs(gReal - colorEsperadoWpf.G), difB = Math.Abs(bReal - colorEsperadoWpf.B);
-                            Console.WriteLine($"GUIACHIP_SOLO-BANDA: color real despremultiplicado=({rReal},{gReal},{bReal}) alpha real={alphaFrac:F2} vs color de marca esperado ({colorEsperadoWpf.R},{colorEsperadoWpf.G},{colorEsperadoWpf.B}) opacidad esperada 0.30");
-                            if (difR > 6 || difG > 6 || difB > 6) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - color real de la banda de {zonaReal} no coincide con el color de marca esperado (dif R={difR} G={difG} B={difB})");
-                            var encBanda = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                            encBanda.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBanda));
-                            string shotBanda = Path.Combine(AppContext.BaseDirectory, $"guiabanda-{zonaReal}.png");
-                            using (var fsBanda = File.Create(shotBanda)) encBanda.Save(fsBanda);
-                            Console.WriteLine($"GUIACHIP_SOLO-BANDA: captura aislada real -> {shotBanda}");
-                        }
-                    }
-                }
-
-                DoEvents(); DoEvents();
-                var rtbChip = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                rtbChip.Render(window);
-                var encChip = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                encChip.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbChip));
-                string shotChip = Path.Combine(AppContext.BaseDirectory, "guiachip-superficie.png");
-                using (var fsChip = File.Create(shotChip)) encChip.Save(fsChip);
-                Console.WriteLine($"GUIACHIP_SOLO: captura real -> {shotChip}");
-
-                try { Directory.Delete(dirChip, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-            }
-            catch (Exception ex) { Console.WriteLine("GUIACHIP_SOLO-EXCEPTION: " + ex); }
+            EjecutarGuiaChipSolo(window, vm);
             Console.WriteLine("DONE (GUIACHIP_SOLO)");
             Environment.Exit(0);
         }
@@ -3333,7 +3075,7 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 string? kpi3Home = vm.Home.LastSessionGuideStage;
                 Console.WriteLine($"KPI3_SOLO: HomeViewModel.LastSessionGuideStage (personaje NO cargado como activo) = '{kpi3Home ?? "(null)"}'");
-                if (kpi3Home == null) Console.WriteLine("FALLO: KPI3_SOLO - LastSessionGuideStage es null para un personaje limpio real (deberia caer en el primer tramo obligatorio, PreOjo)");
+                if (kpi3Home == null) Console.WriteLine("FALLO: KPI3_SOLO - LastSessionGuideStage es null para un personaje limpio real (deberia caer en el capitulo de la primera parada de la guia v2)");
 
                 // Cruce real: cargar ESE MISMO personaje como activo y leer el tramo ya confirmado
                 // de la propia pestaña Guia, para comparar contra el valor anterior.
@@ -3341,13 +3083,15 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 vm.SelectedTabIndex = 3; // Guia
                 DoEvents();
-                vm.Guide.Refresh();
+                // F2b: la tarjeta lee la guia v2 (capitulo de la siguiente parada); el cruce es contra
+                // la propia pestaña Guia v2 con el personaje YA cargado.
+                vm.GuiaV2.Refresh();
                 DoEvents(); DoEvents();
-                string? kpi3Guia = vm.Guide.ObjetivoTramo?.Nombre;
-                Console.WriteLine($"KPI3_SOLO: GuideViewModel.ObjetivoTramo.Nombre (mismo personaje, cargado como activo) = '{kpi3Guia ?? "(null)"}'");
+                string? kpi3Guia = vm.GuiaV2.Siguiente?.CapituloTitulo;
+                Console.WriteLine($"KPI3_SOLO: GuiaV2.Siguiente.CapituloTitulo (mismo personaje, cargado como activo) = '{kpi3Guia ?? "(null)"}'");
                 bool coinciden = string.Equals(kpi3Home, kpi3Guia, StringComparison.Ordinal);
                 Console.WriteLine($"KPI3_SOLO: los dos caminos reales coinciden={coinciden} (esperado True - misma Guia, mismo personaje, dos caminos de codigo distintos)");
-                if (!coinciden) Console.WriteLine($"FALLO: KPI3_SOLO - LastSessionGuideStage ('{kpi3Home}') no coincide con ObjetivoTramo.Nombre real ('{kpi3Guia}') para el mismo personaje");
+                if (!coinciden) Console.WriteLine($"FALLO: KPI3_SOLO - LastSessionGuideStage ('{kpi3Home}') no coincide con GuiaV2.Siguiente.CapituloTitulo real ('{kpi3Guia}') para el mismo personaje");
 
                 // Captura real: Inicio con la tarjeta hero mostrando las 3 pastillas (Vida/Tiempo/Etapa).
                 vm.SelectedTabIndex = 0;
@@ -3439,12 +3183,19 @@ internal static partial class Program
                 // carga el personaje y aterriza en Guia con un objetivo evaluado.
                 if (btnGuia != null)
                 {
+                    // F2b: lo que dice la tarjeta ANTES del clic (evaluado sin el personaje cargado) tiene
+                    // que ser la siguiente parada que enseña la pestaña Guia v2 DESPUES (ya cargado).
+                    string? teTocaAntes = vm.Home.LastSessionGuideObjectiveTitle;
+                    string? capituloAntes = vm.Home.LastSessionGuideStage;
                     var peerGuia = new System.Windows.Automation.Peers.ButtonAutomationPeer(btnGuia);
                     ((System.Windows.Automation.Provider.IInvokeProvider)peerGuia.GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke)!).Invoke();
                     DoEvents(); DoEvents(); DoEvents();
-                    bool aterrizoEnGuia = vm.SelectedTabIndex == 3 && vm.IsCharacterLoaded && vm.CharacterName == "PersonajeHomeCards" && vm.Guide.ObjetivoPaso != null;
-                    Console.WriteLine($"HOMECARDS_SOLO: tras invocar 'Te toca' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 3, Guia), personaje cargado={vm.CharacterName}, Guide.ObjetivoPaso real={vm.Guide.ObjetivoPaso?.Titulo} -> {aterrizoEnGuia}");
+                    bool aterrizoEnGuia = vm.SelectedTabIndex == 3 && vm.IsCharacterLoaded && vm.CharacterName == "PersonajeHomeCards" && vm.GuiaV2.Siguiente != null;
+                    Console.WriteLine($"HOMECARDS_SOLO: tras invocar 'Te toca' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 3, Guia), personaje cargado={vm.CharacterName}, GuiaV2.Siguiente real='{vm.GuiaV2.Siguiente?.TituloPlano}' ({vm.GuiaV2.Siguiente?.CapituloTitulo}) -> {aterrizoEnGuia}");
                     if (!aterrizoEnGuia) Console.WriteLine("FALLO: HOMECARDS_SOLO - invocar la tarjeta 'Te toca' no cargo el personaje real ni aterrizo en Guia con un objetivo real evaluado");
+                    bool mismaParada = teTocaAntes == vm.GuiaV2.Siguiente?.TituloPlano && capituloAntes == vm.GuiaV2.Siguiente?.CapituloTitulo;
+                    Console.WriteLine($"HOMECARDS_SOLO: 'Te toca' antes del clic='{teTocaAntes}' ({capituloAntes}) vs pestaña Guia='{vm.GuiaV2.Siguiente?.TituloPlano}' ({vm.GuiaV2.Siguiente?.CapituloTitulo}) -> misma parada={mismaParada}");
+                    if (!mismaParada) Console.WriteLine("FALLO: HOMECARDS_SOLO - la tarjeta 'Te toca' de Inicio y la pestaña Guia proponen paradas distintas (dos guias)");
                 }
 
                 // Vuelta a Inicio para probar "Tu ultimo mundo" de forma aislada (el personaje ya
@@ -3463,6 +3214,30 @@ internal static partial class Program
                     bool aterrizoEnMundo = vm.SelectedTabIndex == 4 && vm.Exploration.IsWorldLoaded;
                     Console.WriteLine($"HOMECARDS_SOLO: tras invocar 'Tu ultimo mundo' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 4, Exploracion), IsWorldLoaded={vm.Exploration.IsWorldLoaded} -> {aterrizoEnMundo}");
                     if (!aterrizoEnMundo) Console.WriteLine("FALLO: HOMECARDS_SOLO - invocar la tarjeta 'Tu ultimo mundo' no cargo el mundo real ni aterrizo en Exploracion");
+
+                    // F2b: con el mundo ya cargado la guia se reevalua; la tarjeta, el marcador del mapa
+                    // y la pestaña Guia tienen que seguir contando la MISMA siguiente parada.
+                    EsperarGuiaV2(vm);
+                    string? teTocaConMundo = vm.Home.LastSessionGuideObjectiveTitle;
+                    string? siguienteConMundo = vm.GuiaV2.Siguiente?.TituloPlano;
+                    bool marcadorDeEsaParada = vm.GuiaV2.MarcadorVisible && vm.GuiaV2.MarcadorTitulo.Contains(siguienteConMundo ?? "\uFFFF", StringComparison.Ordinal);
+                    Console.WriteLine($"HOMECARDS_SOLO: con mundo -> 'Te toca'='{teTocaConMundo}', pestaña Guia='{siguienteConMundo}', marcador del mapa='{vm.GuiaV2.MarcadorTitulo}' (visible={vm.GuiaV2.MarcadorVisible}) chip='{vm.GuiaV2.ChipMapaTexto}'");
+                    if (teTocaConMundo != siguienteConMundo) Console.WriteLine("FALLO: HOMECARDS_SOLO - con el mundo cargado, 'Te toca' no se ha recalculado a la siguiente parada de la guia");
+                    if (!marcadorDeEsaParada) Console.WriteLine("FALLO: HOMECARDS_SOLO - el marcador del mapa no señala la siguiente parada que dice 'Te toca'");
+
+                    // Capturas de Inicio con la tarjeta "Te toca" ya sobre la guia v2, a los dos tamaños
+                    // de referencia (hay que abrirlas).
+                    vm.SelectedTabIndex = 0;
+                    foreach (var (ancho, alto) in new[] { (1080, 700), (2560, 1440) })
+                    {
+                        FijarTamaño(window, ancho, alto);
+                        DoEvents(); DoEvents(); WaitForDispatcher(200); DoEvents();
+                        bool tarjetaVisible = Descendientes<System.Windows.Controls.Button>(window)
+                            .Any(b => b.IsVisible && Descendientes<TextBlock>(b).Any(tb => tb.Text == vm.Home.GuideObjectiveCardTitle));
+                        Console.WriteLine($"HOMECARDS_SOLO: Inicio {ancho}x{alto} -> tarjeta '{vm.Home.GuideObjectiveCardTitle}' visible={tarjetaVisible}, KPI capitulo='{vm.Home.LastSessionGuideStage}'");
+                        if (!tarjetaVisible) Console.WriteLine($"FALLO: HOMECARDS_SOLO - la tarjeta 'Te toca' no se ve en Inicio a {ancho}x{alto}");
+                        GuardarCaptura(window, $"f2b-inicio-te-toca-{ancho}x{alto}.png", "HOMECARDS_SOLO");
+                    }
                 }
                 else Console.WriteLine("FALLO: HOMECARDS_SOLO - 'Tu ultimo mundo' no se encontro en la segunda vuelta a Inicio");
 
@@ -3759,7 +3534,7 @@ internal static partial class Program
                 DoEvents(); DoEvents();
 
                 Console.WriteLine($"BLANDO_RIO_SOLO: mundo cargado -> Npcs.Count={vm.Exploration.Npcs.Count}, WorldImage nulo={vm.Exploration.WorldImage == null}");
-                Console.WriteLine($"BLANDO_RIO_SOLO-GUIA: Guide.ObjetivoPaso={vm.Guide?.ObjetivoPaso}, Zona={vm.Guide?.ObjetivoPaso?.Zona}, GroundLevel={vm.Exploration.GuideBandSuperficieHeight}");
+                Console.WriteLine($"BLANDO_RIO_SOLO-GUIA: GuiaV2.Siguiente={vm.GuiaV2.Siguiente?.Id}, MarcadorCapa={vm.GuiaV2.MarcadorCapa}, GroundLevel={vm.Exploration.GuideBandSuperficieHeight}");
                 {
                     var bandaSuperficie = Descendientes<System.Windows.Shapes.Rectangle>(window)
                         .FirstOrDefault(r => Math.Abs(r.Opacity - 0.35) < 0.01);

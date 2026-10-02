@@ -181,9 +181,9 @@ internal static partial class Program
             }
             CapturarPngADisco(window, "badges-comparar.png");
 
-            // 2) "Solo lectura" (familia StateTagNeutral) + "Guia: <Zona>" (familia
-            // SemanticStateChip) - MISMO montaje real y determinista que ya usa GUIACHIP_SOLO mas
-            // arriba en este mismo fichero (personaje limpio sintetico + roca_negra.wld real).
+            // 2) "Solo lectura" (familia StateTagNeutral) + chip de la guia del mapa (familia
+            // SemanticStateChip) - MISMO montaje real y determinista que ya usa GUIACHIP_SOLO
+            // (personaje limpio sintetico + roca_negra.wld real).
             string plrLimpioPath = Path.Combine(dirBadges, "PersonajeLimpioBadges.plr");
             var personajeLimpio = new PlrCharacter
             {
@@ -215,48 +215,37 @@ internal static partial class Program
                 if (mSoloLectura == null) Console.WriteLine("FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el badge 'Solo lectura' con el mundo cargado");
                 else medidos.Add(mSoloLectura);
 
-                string zonaReal = vm.Guide.ObjetivoPaso?.Zona ?? "(null)";
-                var claveChipPorZona = new Dictionary<string, string>
+                // F2b (02-oct-2026): el chip "Guía: ..." sale de la guia v2 (capa real donde cae el
+                // marcador de la siguiente parada, GuiaV2.MarcadorCapa) y su texto es GuiaV2.ChipMapaTexto.
+                EsperarGuiaV2(vm);
+                string capaReal = vm.GuiaV2.MarcadorCapa ?? "(null)";
+                var bordeEsperadoPorCapa = ColorPorCapaGuia; // mismo mapeo que los MultiDataTrigger del Border.Style
+                if (vm.GuiaV2.MarcadorVisible && bordeEsperadoPorCapa.ContainsKey(capaReal))
                 {
-                    ["Superficie"] = "guide_zone_chip_superficie",
-                    ["Subterraneo"] = "guide_zone_chip_subterraneo",
-                    ["Cavernas"] = "guide_zone_chip_cavernas",
-                    ["Infierno"] = "guide_zone_chip_infierno",
-                };
-                // Color BorderBrush real esperado por zona (Theme.xaml: MasterGoldBrush/EquippedGreenBrush/
-                // DebuffBrush/CalamityBrush) - el mismo mapeo real que ya usan los 4 MultiDataTrigger del
-                // Border.Style en MainWindow.xaml, para verificar que el color semantico sigue distinguiendo
-                // cada zona (ahora en el borde, no en el fondo).
-                var bordeEsperadoPorZona = new Dictionary<string, string>
-                {
-                    ["Superficie"] = "#FFFFD24A",
-                    ["Subterraneo"] = "#FF3DDC6E",
-                    ["Cavernas"] = "#FF9B59B6",
-                    ["Infierno"] = "#FFC0392B",
-                };
-                if (claveChipPorZona.TryGetValue(zonaReal, out var claveChip))
-                {
-                    var mGuiaZona = MedirBadgePorTextoReal(window, $"Exploracion: chip \"Guia: {zonaReal}\" (familia SemanticStateChip)", vm.Loc[claveChip], nivelesHastaBorder: 2);
+                    string textoChip = vm.GuiaV2.ChipMapaTexto;
+                    var mGuiaZona = MedirBadgePorTextoReal(window, $"Exploracion: chip de la guia \"{textoChip}\" (familia SemanticStateChip)", textoChip, nivelesHastaBorder: 2);
                     if (mGuiaZona == null)
                     {
-                        Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el chip 'Guia: {zonaReal}' pese a Zona={zonaReal}");
+                        Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el chip de la guia '{textoChip}' pese a haber marcador en la capa {capaReal}");
                     }
                     else
                     {
                         medidos.Add(mGuiaZona);
                         const string fondoNeutroEsperado = "#FF1E2233"; // BgElevatedColor
-                        string bordeEsperado = bordeEsperadoPorZona[zonaReal];
+                        string bordeEsperado = bordeEsperadoPorCapa[capaReal];
                         bool fondoOk = mGuiaZona.FondoReal == fondoNeutroEsperado;
                         bool bordeOk = mGuiaZona.BordeReal == bordeEsperado;
                         if (fondoOk && bordeOk)
-                            Console.WriteLine($"BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip: 'Guia: {zonaReal}' Background real={mGuiaZona.FondoReal} (neutro, esperado {fondoNeutroEsperado} para CUALQUIER zona - correcto) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta zona - correcto).");
+                            Console.WriteLine($"BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip: chip de la guia (capa {capaReal}) Background real={mGuiaZona.FondoReal} (neutro, esperado {fondoNeutroEsperado} para CUALQUIER capa - correcto) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta capa - correcto).");
                         else
-                            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip - 'Guia: {zonaReal}' Background real={mGuiaZona.FondoReal} (esperado {fondoNeutroEsperado}, neutro) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta zona)");
+                            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip - chip de la guia (capa {capaReal}) Background real={mGuiaZona.FondoReal} (esperado {fondoNeutroEsperado}, neutro) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta capa)");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"BADGES_ESTADO_SOLO: Guide.ObjetivoPaso.Zona real ('{zonaReal}') no es una de las 4 bandas de profundidad en este mundo/progreso - se omite el chip de Guia (mismo caso real ya documentado en GUIACHIP_SOLO)");
+                    // Personaje limpio + roca_negra: la primera parada (punto de aparicion) siempre se
+                    // situa; sin marcador el chip no puede medirse y eso es un fallo, no un caso a omitir.
+                    Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - sin marcador de la guia v2 (visible={vm.GuiaV2.MarcadorVisible}, capa={capaReal}, siguiente={vm.GuiaV2.Siguiente?.Id}): no se puede medir el chip de la guia");
                 }
 
                 if (mSoloLectura != null)
