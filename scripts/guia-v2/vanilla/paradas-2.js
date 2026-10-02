@@ -20,11 +20,11 @@ const paradas = [
     ubicaciones: [Z('altares'), Z('cavernas')],
     vida: { min: 400, max: 400, texto: '400' },
     donde: 'Las Cavernas, donde están los altares demoníacos o carmesíes y los minerales nuevos.',
-    preparate: 'El [[Pwnhammer]] del Muro, la [[Molten Pickaxe]] y tu equipo previo: los enemigos de las cavernas son ahora mucho más duros, así que avanza con cuidado.',
+    preparate: 'El [[Pwnhammer]] del Muro, el [[Molten Pickaxe]] y tu equipo previo: los enemigos de las cavernas son ahora mucho más duros, así que avanza con cuidado.',
     porClase: {
       cuerpo_a_cuerpo: 'La [[Breaker Blade]] del Muro si te tocó; si no, el [[Night\'s Edge]] hasta tener armas de cobalto o paladio.',
-      distancia: 'La [[Clockwork Assault Rifle]] del Muro o la [[Phoenix Blaster]]; más adelante, el [[Daedalus Stormbow]].',
-      magia: 'El [[Laser Rifle]] del Muro, o el [[Crystal Storm]] / [[Cursed Flames]] / [[Golden Shower]] en cuanto tengas almas.',
+      distancia: 'La [[Clockwork Assault Rifle]] del Muro o el [[Phoenix Blaster]]; más adelante, el [[Daedalus Stormbow]].',
+      magia: 'El [[Laser Rifle]] del Muro, o la [[Crystal Storm]] / [[Cursed Flames]] / [[Golden Shower]] en cuanto tengas almas.',
       invocacion: 'El [[Firecracker]] del Muro y la armadura de araña ([[Spider Mask]], [[Spider Breastplate]], [[Spider Greaves]]) con [[Spider Fang]] de los nidos de araña.',
     },
     tareas: [
@@ -50,9 +50,9 @@ const paradas = [
     donde: 'Lo Sagrado y la maldad de tu mundo, sobre todo sus capas subterráneas.',
     preparate: 'Tu armadura de modo difícil y alas. Para frenar la expansión, compra [[Purification Powder]] a la [[n:Dryad]].',
     porClase: {
-      cuerpo_a_cuerpo: 'Con almas fabricas armas como la [[Light Disc]] o los mejores yoyós; el [[Cool Whip]] es de invocación.',
+      cuerpo_a_cuerpo: 'Con almas fabricas armas como el [[Light Disc]] o los mejores yoyós; el [[Cool Whip]] es de invocación.',
       distancia: 'Mata mímicos de Lo Sagrado para el [[Daedalus Stormbow]] (hace falta una [[Key of Light]]).',
-      magia: 'El [[Crystal Storm]] (fragmentos de cristal) o el [[Cursed Flames]] / [[Golden Shower]] (con un [[Spell Tome]] y 15 almas).',
+      magia: 'La [[Crystal Storm]] (fragmentos de cristal) o el [[Cursed Flames]] / [[Golden Shower]] (con un [[Spell Tome]] y 15 almas).',
       invocacion: 'La armadura de araña y el [[Spider Staff]]; con almas, el [[Cool Whip]].',
     },
     tareas: [
@@ -80,7 +80,7 @@ const paradas = [
     porClase: {
       cuerpo_a_cuerpo: 'Un yoyó de modo difícil o armas de cobalto/paladio con alcance.',
       distancia: 'El [[Daedalus Stormbow]] o la [[Clockwork Assault Rifle]].',
-      magia: 'El [[Crystal Storm]] o el [[Golden Shower]].',
+      magia: 'La [[Crystal Storm]] o la [[Golden Shower]].',
       invocacion: 'El [[Spider Staff]]; su arma, el [[Blade Staff]], es de invocación.',
     },
     tareas: [
@@ -122,11 +122,11 @@ const paradas = [
     ubicaciones: [PT('spawn')],
     vida: { min: 400, max: 440, texto: '400–440' },
     donde: 'Tu base, en la Superficie.',
-    invocacion: { objeto: 'Snow Globe', donde: 'En la Superficie.', notas: 'La [[Snow Globe]] sale de los [[Present]] en modo difícil (los regalos caen de cualquier enemigo durante Navidad).' },
+    invocacion: { objeto: 'Snow Globe', donde: 'En la Superficie.', notas: 'El [[Snow Globe]] sale de los [[Present]] en modo difícil (los regalos caen de cualquier enemigo durante Navidad).' },
     preparate: 'Arma de área y casas protegidas: los muñecos de nieve atacan en grupo.',
     porClase: {},
     tareas: [
-      { condicion: ALGUNA(P('Snow Globe'), B('downedFrost')), texto: 'Consigue una [[Snow Globe]].' },
+      { condicion: ALGUNA(P('Snow Globe'), B('downedFrost')), texto: 'Consigue un [[Snow Globe]].' },
       { condicion: B('downedFrost'), texto: 'Derrota a la Legión de escarcha.' },
       { condicion: NPC('Santa Claus'), texto: 'Recibe a [[Santa Claus]], que se muda en temporada de Navidad.' },
     ],
@@ -146,9 +146,9 @@ const paradas = [
     invocacion: { objeto: 'Mechanical Worm', donde: 'De noche.', notas: 'Se fabrica en el [[Mythril Anvil]] o [[Orichalcum Anvil]] con trozos o vértebras, barras de hierro y [[Soul of Night]]. También puede aparecer solo (1 de cada 10 noches mientras falte algún mecánico).' },
     preparate: 'Una plataforma muy larga a cierta altura, alas, armadura de mithril u oricalco o mejor y un arma que golpee a muchos segmentos.',
     porClase: {
-      cuerpo_a_cuerpo: 'Un yoyó o una espada que atraviese; la [[Light Disc]] rebota entre segmentos.',
+      cuerpo_a_cuerpo: 'Un yoyó o una espada que atraviese; el [[Light Disc]] rebota entre segmentos.',
       distancia: 'El [[Daedalus Stormbow]] con [[Holy Arrow]] o [[Unholy Arrow]] destroza al gusano.',
-      magia: 'El [[Crystal Storm]] o el [[Cursed Flames]]; los proyectiles que atraviesan rinden mucho.',
+      magia: 'La [[Crystal Storm]] o el [[Cursed Flames]]; los proyectiles que atraviesan rinden mucho.',
       invocacion: 'El [[Spider Staff]] y un látigo; los esbirros persiguen solos los segmentos.',
     },
     tareas: [
@@ -173,9 +173,9 @@ const paradas = [
     invocacion: { objeto: 'Mechanical Eye', donde: 'De noche.', notas: 'Se fabrica en el yunque de modo difícil con 3 [[Lens]], barras de hierro y [[Soul of Light]].' },
     preparate: 'Alas, botas y una arena abierta: los Gemelos te persiguen por el aire. Un arma que siga a su objetivo ayuda mucho.',
     porClase: {
-      cuerpo_a_cuerpo: 'Un yoyó o armas con proyectil; la [[Light Disc]] también va bien.',
+      cuerpo_a_cuerpo: 'Un yoyó o armas con proyectil; el [[Light Disc]] también va bien.',
       distancia: 'La [[Megashark]] o el [[Daedalus Stormbow]] con munición perforante.',
-      magia: 'El [[Crystal Storm]] o el [[Magical Harp]].',
+      magia: 'La [[Crystal Storm]] o el [[Magical Harp]].',
       invocacion: 'El [[Spider Staff]] o el [[Blade Staff]].',
     },
     tareas: [
@@ -201,7 +201,7 @@ const paradas = [
     porClase: {
       cuerpo_a_cuerpo: 'Armas con alcance; ataca la cabeza y no te quedes entre los brazos.',
       distancia: 'La [[Megashark]] o el [[Daedalus Stormbow]].',
-      magia: 'El [[Crystal Storm]] o el [[Rainbow Rod]].',
+      magia: 'La [[Crystal Storm]] o la [[Rainbow Rod]].',
       invocacion: 'El [[Optic Staff]] (si ya venciste a los Gemelos) y un látigo.',
     },
     tareas: [
@@ -214,7 +214,7 @@ const paradas = [
     desbloquea: 'Almas de terror, los bulbos de Plantera (con los tres mecánicos) y el [[Avenger Emblem]] con las tres almas.',
     listoCuando: 'Los tres jefes mecánicos están vencidos.',
     completadaCuando: B('downedMechBoss3'),
-    conserva: 'Las almas de poder, visión y terror: el [[True Night\'s Edge]], las herramientas sagradas y muchos accesorios las piden.',
+    conserva: 'Las almas de poder, visión y terror: la [[True Night\'s Edge]], las herramientas sagradas y muchos accesorios las piden.',
     avisos: [{ modos: ['experto', 'maestro'], texto: 'En Experto, su bolsa da la [[Mechanical Battery Piece]]: con las tres piezas fabricas el [[Minecart Upgrade Kit]] ({p:mejoras}).' }],
     fuentes: [W('Skeletron Prime'), W('Mechanical Skull')],
   },
@@ -225,14 +225,14 @@ const paradas = [
     donde: 'La jungla subterránea (frutas de vida) y tu base (forja).',
     preparate: 'Alas, armadura sagrada o de nivel similar y el pico de modo difícil más alto que tengas.',
     porClase: {
-      cuerpo_a_cuerpo: 'Armadura sagrada con el [[Hallowed Mask]] y la [[Excalibur]] o el [[True Night\'s Edge]].',
+      cuerpo_a_cuerpo: 'Armadura sagrada con la [[Hallowed Mask]] y la [[Excalibur]] o la [[True Night\'s Edge]].',
       distancia: 'Armadura sagrada con el [[Hallowed Helmet]] y la [[Megashark]].',
-      magia: 'Armadura sagrada con el [[Hallowed Headgear]] y el [[Rainbow Rod]] o el [[Magical Harp]].',
-      invocacion: 'Armadura sagrada con el [[Hallowed Hood]] y el [[Optic Staff]].',
+      magia: 'Armadura sagrada con el [[Hallowed Headgear]] y la [[Rainbow Rod]] o el [[Magical Harp]].',
+      invocacion: 'Armadura sagrada con la [[Hallowed Hood]] y el [[Optic Staff]].',
     },
     tareas: [
       { condicion: FRUTAS(20), texto: 'Usa 20 [[Life Fruit]] (bulbos amarillos de la jungla subterránea, tras el primer mecánico): llegas a 500 de vida.' },
-      { condicion: PA('Pickaxe Axe', 'Drax'), texto: 'Fabrica la [[Pickaxe Axe]] o el [[Drax]]: son los primeros picos que pican el [[Chlorophyte Ore]].' },
+      { condicion: PA('Pickaxe Axe', 'Drax'), texto: 'Fabrica el [[Pickaxe Axe]] o el [[Drax]]: son los primeros picos que pican el [[Chlorophyte Ore]].' },
       { condicion: PA('Hallowed Plate Mail', 'Hallowed Greaves', 'Ancient Hallowed Plate Mail'), texto: 'Fabrica la armadura sagrada (cuerpo y piernas valen para todas las clases; el casco, el de la tuya).' },
       { condicion: P('Avenger Emblem'), texto: 'Mejora el emblema del Muro al [[Avenger Emblem]].' },
       { condicion: NPC('Steampunker'), texto: 'Recibe al [[Steampunker]]: vende el [[Clentaminator]] y las soluciones para limpiar biomas.' },
@@ -297,7 +297,7 @@ const paradas = [
     porClase: {
       cuerpo_a_cuerpo: 'Armadura de clorofita (máscara) o sagrada y la [[True Excalibur]] o la [[Chlorophyte Partisan]].',
       distancia: 'La [[Megashark]] con [[Chlorophyte Bullet]] (que persiguen al blanco).',
-      magia: 'El [[Rainbow Rod]], el [[Magical Harp]] o el [[Crystal Storm]].',
+      magia: 'La [[Rainbow Rod]], el [[Magical Harp]] o la [[Crystal Storm]].',
       invocacion: 'El [[Optic Staff]] y la armadura de araña o sagrada.',
     },
     tareas: [
@@ -379,15 +379,15 @@ const paradas = [
     tareas: [
       { condicion: ALGUNA(P('Lihzahrd Power Cell'), B('downedGolemBoss')), texto: 'Lleva una [[Lihzahrd Power Cell]] al altar.' },
       { condicion: B('downedGolemBoss'), texto: 'Derrota a Gólem.' },
-      { condicion: P('Picksaw'), texto: 'Consigue la [[Picksaw]] (puede tardar varias peleas): pica los ladrillos del Templo.' },
+      { condicion: P('Picksaw'), texto: 'Consigue el [[Picksaw]] (puede tardar varias peleas): pica los ladrillos del Templo.' },
       { condicion: P('Beetle Husk'), clases: ['cuerpo_a_cuerpo'], texto: 'Recoge [[Beetle Husk]] para la armadura de escarabajo.' },
     ],
     combate: 'Primero destruye sus puños y luego la cabeza; en la segunda fase la cabeza se separa y dispara láseres. Mantente en plataformas sobre él.',
     desbloquea: 'El Sectario lunático en la entrada de la Mazmorra, la Locura marciana y el nivel 3 del Ejército del Antiguo.',
     listoCuando: 'Gólem está vencido.',
     completadaCuando: B('downedGolemBoss'),
-    conserva: 'Las [[Beetle Husk]] y la [[Picksaw]].',
-    avisos: [{ modos: ['experto', 'maestro'], texto: 'En Experto, su bolsa da el [[Shiny Stone]] (regeneración rápida estando quieto).' }],
+    conserva: 'Las [[Beetle Husk]] y el [[Picksaw]].',
+    avisos: [{ modos: ['experto', 'maestro'], texto: 'En Experto, su bolsa da la [[Shiny Stone]] (regeneración rápida estando quieto).' }],
     fuentes: [W('Golem'), W('Lihzahrd Altar'), W('Picksaw')],
   },
   {
@@ -531,8 +531,8 @@ const paradas = [
     porClase: {
       cuerpo_a_cuerpo: 'Armadura de escarabajo y un arma rápida como la [[Influx Waver]] o la [[The Horseman\'s Blade]].',
       distancia: 'Armadura de piñonita y la [[Chain Gun]] o el [[Tsunami]].',
-      magia: 'Armadura espectral y la [[Razorblade Typhoon]] o el [[Nebula Blaze]] tras las torres.',
-      invocacion: 'Armadura tétrica y el [[Raven Staff]] o la [[Tempest Staff]].',
+      magia: 'Armadura espectral y la [[Razorblade Typhoon]] o la [[Nebula Blaze]] tras las torres.',
+      invocacion: 'Armadura tétrica y el [[Raven Staff]] o el [[Tempest Staff]].',
     },
     tareas: [
       { condicion: B('downedGolemBoss'), texto: 'Vence a Gólem para que aparezcan los sectarios.' },
@@ -570,7 +570,7 @@ const paradas = [
     desbloquea: 'Fragmentos para las armas y armaduras lunares, y la llegada del Señor de la Luna.',
     listoCuando: 'Las cuatro torres están destruidas.',
     completadaCuando: B('downedTowers'),
-    conserva: 'Los fragmentos de las cuatro torres: la [[Celestial Sigil]] y las armaduras lunares los piden.',
+    conserva: 'Los fragmentos de las cuatro torres: el [[Celestial Sigil]] y las armaduras lunares los piden.',
     avisos: [],
     fuentes: [W('Celestial Pillars'), W('Lunar Events')],
   },
@@ -579,12 +579,12 @@ const paradas = [
     ubicaciones: [PT('spawn'), Z('superficie')],
     vida: { min: 500, max: 500, texto: '500' },
     donde: 'Aparece sobre ti, estés donde estés.',
-    invocacion: { objeto: 'Celestial Sigil', donde: 'En cualquier sitio.', notas: 'Llega solo un minuto después de caer la última torre. Para repetirlo, la [[Celestial Sigil]] se fabrica con 12 fragmentos de cada torre en el [[Ancient Manipulator]].' },
+    invocacion: { objeto: 'Celestial Sigil', donde: 'En cualquier sitio.', notas: 'Llega solo un minuto después de caer la última torre. Para repetirlo, el [[Celestial Sigil]] se fabrica con 12 fragmentos de cada torre en el [[Ancient Manipulator]].' },
     preparate: 'Una arena enorme con plataformas, hogueras, [[Heart Lantern]], estaciones de buff y tus mejores pociones. Las mejores armas de torre o de evento.',
     porClase: {
-      cuerpo_a_cuerpo: 'Armadura de escarabajo o solar y la [[Solar Eruption]] o la [[Daybreak]].',
+      cuerpo_a_cuerpo: 'Armadura de escarabajo o de fulguración solar y la [[Solar Eruption]] o la [[Daybreak]].',
       distancia: 'Armadura de piñonita o de vórtice y el [[Phantasm]] o el [[Vortex Beater]].',
-      magia: 'Armadura espectral o de nebulosa y el [[Nebula Blaze]] o el [[Nebula Arcanum]].',
+      magia: 'Armadura espectral o de nebulosa y la [[Nebula Blaze]] o el [[Nebula Arcanum]].',
       invocacion: 'Armadura tétrica o de polvo estelar y el [[Stardust Dragon Staff]] o el [[Stardust Cell Staff]].',
     },
     tareas: [
@@ -597,7 +597,7 @@ const paradas = [
     desbloquea: 'La [[Luminite]], las armaduras lunares y las mejores armas del juego.',
     listoCuando: 'El Señor de la Luna está vencido.',
     completadaCuando: B('downedMoonlord'),
-    conserva: 'El [[Meowmere]] y el [[Star Wrath]] si caen (piezas de la [[Zenith]]).',
+    conserva: 'El [[Meowmere]] y la [[Star Wrath]] si caen (piezas de la [[Zenith]]).',
     avisos: [{ modos: ['experto', 'maestro'], texto: 'En Experto, su bolsa da el [[Gravity Globe]] (invierte la gravedad a voluntad) y el [[Suspicious Looking Tentacle]].' }],
     fuentes: [W('Moon Lord'), W('Celestial Sigil'), W('Luminite')],
   },
@@ -608,7 +608,7 @@ const paradas = [
     donde: 'Tu base y el [[Ancient Manipulator]].',
     preparate: 'Fragmentos de las cuatro torres y [[Luminite Bar]].',
     porClase: {
-      cuerpo_a_cuerpo: 'Armadura solar: [[Solar Flare Helmet]], [[Solar Flare Breastplate]] y [[Solar Flare Leggings]].',
+      cuerpo_a_cuerpo: 'Armadura de fulguración solar: [[Solar Flare Helmet]], [[Solar Flare Breastplate]] y [[Solar Flare Leggings]].',
       distancia: 'Armadura de vórtice: [[Vortex Helmet]], [[Vortex Breastplate]] y [[Vortex Leggings]].',
       magia: 'Armadura de nebulosa: [[Nebula Helmet]], [[Nebula Breastplate]] y [[Nebula Leggings]].',
       invocacion: 'Armadura de polvo estelar: [[Stardust Helmet]], [[Stardust Plate]] y [[Stardust Leggings]].',
@@ -644,7 +644,7 @@ const paradas = [
       { condicion: MEJ('artisanBread'), texto: 'Cómete el [[Artisan Loaf]]: lo vende el [[Skeleton Merchant]] en las fases cercanas a la luna nueva.' },
       { condicion: B('combatBookWasUsed'), texto: 'Usa el [[Advanced Combat Techniques]] (se pesca en Luna de Sangre): tus vecinos se defienden mejor.' },
       { condicion: B('combatBookVolumeTwoWasUsed'), texto: 'Usa el [[Advanced Combat Techniques: Volume Two]] (un [[Spell Tome]] en el fulgor).' },
-      { condicion: B('peddlersSatchelWasUsed'), texto: 'Usa el [[Peddler\'s Satchel]] (un [[Peddler\'s Hat]] en el fulgor): el [[Traveling Merchant]] vende más.' },
+      { condicion: B('peddlersSatchelWasUsed'), texto: 'Usa la [[Peddler\'s Satchel]] (un [[Peddler\'s Hat]] en el fulgor): el [[Traveling Merchant]] vende más.' },
     ],
     combate: 'Sin combate.',
     desbloquea: 'Pequeñas mejoras permanentes de vida, defensa, maná, suerte, velocidad de cavado y de uso. Ver {a:vida}.',
@@ -668,7 +668,7 @@ const paradas = [
     },
     tareas: [
       { condicion: P('Terra Blade'), texto: 'Fabrica la [[Terra Blade]] ([[True Night\'s Edge]] + [[True Excalibur]] + [[Broken Hero Sword]]).' },
-      { condicion: TODAS(P('Meowmere'), P('Star Wrath')), texto: 'Consigue el [[Meowmere]] y el [[Star Wrath]] del Señor de la Luna.' },
+      { condicion: TODAS(P('Meowmere'), P('Star Wrath')), texto: 'Consigue el [[Meowmere]] y la [[Star Wrath]] del Señor de la Luna.' },
       { condicion: TODAS(P('Influx Waver'), P('The Horseman\'s Blade'), P('Seedler')), texto: 'Consigue la [[Influx Waver]] (marcianos), la [[The Horseman\'s Blade]] (Pumpking) y la [[Seedler]] (Plantera).' },
       { condicion: TODAS(P('Starfury'), P('Bee Keeper'), P('o:Enchanted Sword'), P('Copper Shortsword')), texto: 'Recupera las del principio: [[Starfury]], [[Bee Keeper]], [[o:Enchanted Sword]] y [[Copper Shortsword]].' },
       { condicion: P('Zenith'), texto: 'Fabrica la [[Zenith]].' },

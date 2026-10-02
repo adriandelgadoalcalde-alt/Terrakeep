@@ -91,7 +91,7 @@ module.exports = {
       ['eye', 'pueblo'], ['superficie'], ['Eye of Cthulhu']),
 
     P(13, 'No puedo picar la piedra del Inframundo, la corrupta ni el meteorito',
-      'Es cuestión de la potencia del pico. El objeto [[Meteorite]] necesita **50**; [[Demonite Ore]] y [[Crimtane Ore]], bajo la superficie, **55**; las piedras malignas y el [[Hellstone]], **65**. En modo difícil: cobalto y paladio, 100; mithril y oricalco, 110; adamantita y titanio, 150. Mejora el pico antes de perder tiempo.',
+      'Es cuestión de la potencia del pico. El objeto [[Meteorite]] necesita **50**; [[Demonite Ore]] y [[Crimtane Ore]], bajo la superficie, **55**; las piedras malignas y la [[Hellstone]], **65**. En modo difícil: cobalto y paladio, 100; mithril y oricalco, 110; adamantita y titanio, 150. Mejora el pico antes de perder tiempo.',
       ['evil', 'meteorito', 'inframundo'], ['meteorito', 'corrupcion', 'carmesi', 'inframundo'], ['Pickaxe power']),
 
     P(14, 'No cae ningún meteorito',

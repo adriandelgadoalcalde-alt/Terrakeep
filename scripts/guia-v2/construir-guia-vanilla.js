@@ -26,7 +26,29 @@ const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] :
 const SALIDA = arg('--salida', path.join(__dirname, '..', '..', 'Terrakeep.Core', 'Guia', 'V2', 'Datos', 'guia_v2_vanilla.json'));
 
 const errores = [];
-const T = (x, donde) => R.resolverProfundo(x, errores, donde);
+// Concordancia de numero: el token pinta el nombre oficial en singular; tras un determinante
+// plural ("las [[Soul of Might]]") se usa el plural del MISMO nombre oficial como texto propio
+// ({o:Terraria/SoulofMight|Almas de poder}): el sprite y el enlace no cambian (diseño §3).
+const PLURALES = {
+  'Medalla del Defensor': 'Medallas del Defensor', 'Duende etéreo': 'Duendes etéreos', 'Cristal de vida': 'Cristales de vida',
+  'Escama de las sombras': 'Escamas de las sombras', 'Regalo': 'Regalos', 'Duende arquero': 'Duendes arqueros',
+  'Bola con pinchos': 'Bolas con pinchos', 'Duende hechicero': 'Duendes hechiceros', 'Caparazón de escarabajo': 'Caparazones de escarabajo',
+  'Demonio vudú': 'Demonios vudú', 'Gel': 'Geles', 'Aguijón': 'Aguijones', 'Avispón del musgo': 'Avispones del musgo',
+  'Lingote sagrado': 'Lingotes sagrados', 'Fruta de la vida': 'Frutas de la vida', 'Alma de poder': 'Almas de poder',
+  'Alma de visión': 'Almas de visión', 'Alma de terror': 'Almas de terror', 'Alma de luz': 'Almas de luz', 'Alma de noche': 'Almas de noche',
+  'Alma de vuelo': 'Almas de vuelo', 'Cabeza meteorito': 'Cabezas meteorito', 'Bala de mosquete': 'Balas de mosquete',
+  'Estrella fugaz': 'Estrellas fugaces', 'Cuchillo arrojadizo': 'Cuchillos arrojadizos', 'Fragmento de tablilla solar': 'Fragmentos de tablilla solar',
+  'Serpiente voladora': 'Serpientes voladoras', 'Hilo blanco': 'Hilos blancos', 'Cofre de las sombras': 'Cofres de las sombras',
+  'Flecha de madera': 'Flechas de madera', 'Llave dorada': 'Llaves doradas', 'Mineral endemoniado': 'Minerales endemoniados',
+};
+const REFS_ES = (() => { return { o: n => F.nombreObjetoVanilla(n, 'es_ES'), n: n => F.nombreNpcVanilla(n, 'es_ES') }; })();
+const concordar = t => typeof t !== 'string' ? t : t.replace(/\b(los|las|sus|unos|unas|varios|varias|muchos|muchas|tus|estos|estas|Los|Las|Sus|Tus)(\s+)\{([on]):Terraria\/(\w+)\}/g, (all, det, sp, k, interno) => {
+  const es = REFS_ES[k](interno);
+  return PLURALES[es] ? `${det}${sp}{${k}:Terraria/${interno}|${PLURALES[es]}}` : all;
+});
+const concordarProfundo = x => typeof x === 'string' ? concordar(x) : Array.isArray(x) ? x.map(concordarProfundo)
+  : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, concordarProfundo(v)])) : x;
+const T = (x, donde) => concordarProfundo(R.resolverProfundo(x, errores, donde));
 const unicos = a => [...new Set(a)];
 const refsEn = (texto, tipo) => [...String(texto).matchAll(new RegExp(`\\{${tipo}:([^}|]+)`, 'g'))].map(m => m[1]);
 const refDe = (nombre, tipo) => {
@@ -151,6 +173,9 @@ const zonas = A.zonas.map(z => {
     const f = filas.find(r => new RegExp(`^\\{z:${z.id}[|}]`).test(r[0]));
     if (f) z.resumen = [f[1], f[2]].filter(Boolean).join(' ');
   }
+  // El oceano del lado de la Mazmorra es el mismo bioma: comparte la fila de «Océano».
+  const oceano = zonas.find(z => z.id === 'oceano'), lado = zonas.find(z => z.id === 'oceano_mazmorra');
+  if (oceano && lado && !lado.resumen) lado.resumen = oceano.resumen;
 }
 
 // ---- 4. escaleras (wiki oficial + verificacion contra ItemID 1.4.4.9)
@@ -174,13 +199,34 @@ const CONJUNTOS = {
   'Ninja armor': 'ninja', 'Monk armor': 'de monje', 'Huntress armor': 'de cazadora', 'Apprentice armor': 'de aprendiz',
   'Shinobi Infiltrator armor': 'de infiltrado shinobi', 'Red Riding armor': 'de Caperucita', 'Forbidden armor': 'prohibida',
 };
+// Las notas de la wiki describen ya 1.4.5: toda frase (o parentesis) que cite un objeto que NO
+// existe en 1.4.4.9 (lista noVerificados del propio archivo) se quita, para no recomendar nada
+// que el jugador no pueda conseguir. Las etiquetas de seccion de la wiki pasan a negrita.
+const SOLO_145 = [...new Set(ESC.noVerificados.filter(x => /^no existe en ItemID 1\.4\.4\.9|^ningún casco/.test(x.motivo))
+  .map(x => x.nombreIngles.replace(/ \(casco de la clase\)$/, '')).filter(n => n.length > 3))];
+const ETIQUETAS = { minions: 'Esbirros', armadura: 'Armadura', accesorios: 'Accesorios', 'pociones y mejoras': 'Pociones y mejoras',
+  'accesorios ofensivos': 'Accesorios ofensivos', 'látigos': 'Látigos', centinelas: 'Centinelas' };
+let frasesQuitadas = 0;
+function limpiarNota(t) {
+  if (!t) return '';
+  const cita145 = x => SOLO_145.some(n => x.includes(n));
+  const lineas = t.split('\n').map(l => {
+    l = l.replace(/\(([^()]*)\)/g, (all, dentro) => (cita145(dentro) ? (frasesQuitadas++, '') : all));
+    return l.split(/(?<=[.!?])\s+/).filter(f => (cita145(f) ? (frasesQuitadas++, false) : true)).join(' ');
+  });
+  return lineas.join('\n').replace(/\[([a-záéíóúñ ]+)\]\s*/g, (all, e) => (ETIQUETAS[e] ? `**${ETIQUETAS[e]}.** ` : all))
+    .replace(/ \((?:Pre-[^)]*|Gearing Up|Endgame)\)/g, '')
+    // Nombres de conjunto no oficiales de la traduccion de la wiki -> los de las piezas es-ES.
+    .replace(/armadura de necro\b/g, 'armadura de los muertos').replace(/(armadura|cascos?) de shroomita/g, '$1 de piñonita')
+    .replace(/armadura Red Riding/g, 'armadura de Caperuza roja').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
+}
 const opcion = o => {
   const marcas = (o.marcas || '').trim().split(/\s+/).filter(Boolean);
   for (const m of marcas) if (!ESC.leyendaMarcas[m]) throw new Error('Marca sin leyenda: ' + m);
   if (o.conjunto && !CONJUNTOS[o.conjunto]) throw new Error('Conjunto sin nombre en español: ' + o.conjunto);
   if (!/^Terraria\/\w+$/.test(o.ref) || !(o.ref.split('/')[1] in ids.item.porNombre)) throw new Error('Ref de escalera inexistente: ' + o.ref);
   return {
-    ref: o.ref, origen: '', nota: T(o.nota || '', o.ref), rol: o.tipo || '',
+    ref: o.ref, origen: '', nota: T(limpiarNota(o.nota || ''), o.ref), rol: o.tipo || '',
     conjunto: o.conjunto ? 'armadura ' + CONJUNTOS[o.conjunto] : '', marcas,
   };
 };
@@ -190,7 +236,7 @@ const escaleras = Object.entries(ESC.clases).map(([clase, etapas]) => ({
     id: et.id, desde: et.desde, momento: T(et.momento, et.id),
     armas: (et.armas || []).map(opcion), armadura: (et.armadura || []).map(opcion),
     accesorios: (et.accesorios || []).map(opcion), otros: (et.otros || []).map(opcion),
-    nota: T(et.nota || '', et.id), fuentes: (et.fuentes || []).map(fuenteWiki),
+    nota: T(limpiarNota(et.nota || ''), et.id), fuentes: (et.fuentes || []).map(fuenteWiki),
   })),
 }));
 if (JSON.stringify(escaleras.map(e => e.clase)) !== JSON.stringify(CLASES)) throw new Error('Clases de escalera inesperadas: ' + escaleras.map(e => e.clase));
@@ -253,4 +299,4 @@ console.log('Escrito', SALIDA);
 console.log('capitulos', doc.capitulos.length, 'paradas', paradas.length, `(opcionales ${paradas.filter(p => p.opcional).length}, con completadaCuando ${paradas.filter(p => p.completadaCuando).length})`,
   'tareas', tareas.length, `(evaluables ${evaluables} = ${(100 * evaluables / tareas.length).toFixed(1)} %)`,
   'articulos', articulos.length, 'problemas', problemas.length, 'hallazgos', hallazgos.length, 'zonas', zonas.length,
-  'etapas', escaleras.reduce((a, e) => a + e.etapas.length, 0), 'zonas sin resumen', zonas.filter(z => !z.resumen).map(z => z.id).join(','));
+  'etapas', escaleras.reduce((a, e) => a + e.etapas.length, 0), 'frases 1.4.5 quitadas de las notas', frasesQuitadas, 'zonas sin resumen', zonas.filter(z => !z.resumen).map(z => z.id).join(','));

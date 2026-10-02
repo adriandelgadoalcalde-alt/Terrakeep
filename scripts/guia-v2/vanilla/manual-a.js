@@ -60,7 +60,7 @@ module.exports = { articulos: [
   { tipo: 'titulo', texto: 'Las capas del mundo' },
   { tipo: 'parrafo', texto: 'Todos los mundos se dividen en capas horizontales, de arriba abajo. Ir más profundo suele significar mejor botín y más peligro. Si dudas de dónde estás, el medidor de profundidad te dice si vas por el subsuelo o más abajo.' },
   { tipo: 'tabla', cabeceras: ['Capa', 'Qué hay', 'Para qué te sirve'], filas: [
-    ['{z:cielo|Cielo}', 'Islas flotantes con cofres y casas de cielo, por encima de la superficie.', 'Botín de las islas flotantes, como el [[Starfury]] y el [[Shiny Red Balloon]].'],
+    ['{z:cielo|Cielo}', 'Islas flotantes con cofres y casas de cielo, por encima de la superficie.', 'Botín de las islas flotantes, como la [[Starfury]] y el [[Shiny Red Balloon]].'],
     ['{z:superficie|Superficie}', 'El terreno visible, donde nacen árboles y vecinos.', 'Tu base y todo lo del principio.'],
     ['{z:subsuelo|Subsuelo}', 'Tierra y piedra, minas y cuevas pequeñas.', 'Cristales de vida, los primeros minerales y el primer botín de cofres.'],
     ['{z:cavernas|Cavernas}', 'Cuevas grandes, lagos y más minerales.', 'Minerales avanzados, la mayoría de biomas subterráneos y santuarios.'],
@@ -124,7 +124,7 @@ module.exports = { articulos: [
   { tipo: 'titulo', texto: 'Objetos que se suman' },
   { tipo: 'lista', items: [
     'La [[Shadow Key]] sale en algunos cofres dorados cerrados, y siempre en el primero que genera el mundo. Abre los cofres de las sombras del Inframundo y no se gasta al usarla. Mira {a:inframundo}.',
-    'La [[Bone Welder]], de los mismos cofres, es una estación de fabricación.',
+    'El [[Bone Welder]], de los mismos cofres, es una estación de fabricación.',
     'Los objetos raros de la Mazmorra pueden formar parte de recetas más adelante: lee la sección «Conserva» de cada parada antes de vender.'
   ] },
   { tipo: 'aviso', estilo: 'suave', texto: 'El [[Clothier]] se muda a tu base cuando derrotas al [[n:Skeletron]], y la Mazmorra es el sitio donde empieza a ser útil: vende ropa de adorno. La guía te dice cuándo explorar la Mazmorra en {p:mazmorra}.' },
@@ -192,12 +192,12 @@ module.exports = { articulos: [
     'Coloca plataformas o cuerdas para poder volver a subir.',
     'Antes de abrir el último tramo, prepara la protección contra la lava (siguiente sección).'
   ] },
-  { tipo: 'aviso', estilo: 'destacado', texto: 'No caigas a ciegas. Llega con una [[Obsidian Skin Potion]] activa o con un accesorio que proteja de la lava, como el [[Lava Charm]] o el [[Obsidian Skull]].' },
+  { tipo: 'aviso', estilo: 'destacado', texto: 'No caigas a ciegas. Llega con una [[Obsidian Skin Potion]] activa o con un accesorio que proteja de la lava, como el [[Lava Charm]] o la [[Obsidian Skull]].' },
   { tipo: 'titulo', texto: 'Piedra infernal' },
   { tipo: 'parrafo', texto: 'La [[Hellstone]] hace falta para la armadura y las armas de la siguiente etapa. Quema si la tocas sin protección. Para picarla necesitas un pico de **65 % de potencia como mínimo**. Antes del modo difícil, los que llegan son el [[Nightmare Pickaxe]] (con demonita, de la Corrupción) y el [[Deathbringer Pickaxe]] (con carmesita, del Carmesí). El [[Molten Pickaxe]] se fabrica con la propia piedra infernal, así que no te sirve para la primera extracción.' },
-  { tipo: 'parrafo', texto: 'Para fundir la barra necesitas un [[Hellforge]] y obsidiana: la receta de [[Hellstone Bar]] lleva tres de piedra infernal y una de [[Obsidian]]. La obsidiana se forma al juntar agua y lava.' },
+  { tipo: 'parrafo', texto: 'Para fundir la barra necesitas una [[Hellforge]] y obsidiana: la receta de [[Hellstone Bar]] lleva tres de piedra infernal y una de [[Obsidian]]. La obsidiana se forma al juntar agua y lava.' },
   { tipo: 'titulo', texto: 'Casas en ruinas, cofres de las sombras' },
-  { tipo: 'parrafo', texto: 'Las **casas en ruinas** son torres sueltas de obsidiana y ladrillo infernal repartidas por el Inframundo. Dentro hay muebles propios, un [[Hellforge]] y, lo más importante, **cofres de las sombras**. Cada uno requiere una [[Shadow Key]], que no se gasta al usarla.' },
+  { tipo: 'parrafo', texto: 'Las **casas en ruinas** son torres sueltas de obsidiana y ladrillo infernal repartidas por el Inframundo. Dentro hay muebles propios, una [[Hellforge]] y, lo más importante, **cofres de las sombras**. Cada uno requiere una [[Shadow Key]], que no se gasta al usarla.' },
   { tipo: 'tabla', cabeceras: ['Qué necesitas', 'Qué te llevas'], filas: [
     ['[[Shadow Key]] (de los cofres dorados de la Mazmorra, mira {a:mazmorra})', 'Un arma principal de entre [[Sunfury]], [[Flamelash]], [[Dark Lance]], [[Flower of Fire]], [[Unholy Trident]] y [[Hellwing Bow]], más pociones, barras y monedas.']
   ] },
@@ -247,7 +247,7 @@ module.exports = { articulos: [
   { tipo: 'cajas', bloques: [
     { tipo: 'caja', titulo: 'Frutas de vida', bloques: [{ tipo: 'parrafo', texto: 'Aparecen en el césped de la jungla subterránea (o más abajo) en cuanto derrotas **un** jefe mecánico. Cada [[Life Fruit]] da 5 de vida máxima, y solo se pueden usar cuando ya tienes 400 de vida por los [[Life Crystal]]. Con 20 llegas a 500. No hace falta pico para cogerlas. Mira {p:frutas}.' }] },
     { tipo: 'caja', titulo: 'Bulbos de Plantera', bloques: [{ tipo: 'parrafo', texto: 'Tras derrotar a los **tres** jefes mecánicos empiezan a crecer bulbos en el césped de la jungla subterránea. Romper uno invoca a [[n:Plantera]], si estás cerca. Salen uno a uno y reaparecen. Tu parada es {p:plantera}.' }] },
-    { tipo: 'caja', titulo: 'Enemigos nuevos', bloques: [{ tipo: 'parrafo', texto: 'El [[n:Giant Tortoise]] y el [[n:Angry Trapper]] vuelven la jungla mucho más peligrosa. Lleva armadura del modo difícil.' }] }
+    { tipo: 'caja', titulo: 'Enemigos nuevos', bloques: [{ tipo: 'parrafo', texto: 'La [[n:Giant Tortoise]] y el [[n:Angry Trapper]] vuelven la jungla mucho más peligrosa. Lleva armadura del modo difícil.' }] }
   ] },
   { tipo: 'aviso', estilo: 'destacado', texto: 'Los bulbos solo valen para Plantera. El Templo, en cambio, necesita su [[Temple Key]]. Mira {z:templo} y {a:templo}.' },
   { tipo: 'titulo', texto: 'El Witch Doctor' },

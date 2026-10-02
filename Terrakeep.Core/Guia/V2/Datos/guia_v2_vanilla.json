@@ -74,9 +74,9 @@
    "preparate": "Las herramientas de cobre con las que empiezas, la madera que tales el primer día y antorchas. No hace falta nada más: esta parada es para montar la base antes de la primera noche.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Una espada de madera o de metal te basta para la primera noche; el {o:Terraria/WoodenBoomerang} de los cofres de superficie ayuda contra los ojos voladores.",
-    "distancia": "Fabrica un {o:Terraria/WoodenBow} en la {o:Terraria/WorkBench} y una pila de {o:Terraria/WoodenArrow}: dispara desde detrás de una puerta o de un muro de bloques.",
+    "distancia": "Fabrica un {o:Terraria/WoodenBow} en el {o:Terraria/WorkBench} y una pila de {o:Terraria/WoodenArrow}: dispara desde detrás de una puerta o de un muro de bloques.",
     "magia": "Busca un bastón de gema en cuanto encuentres amatistas o topacios: el {o:Terraria/AmethystStaff} se fabrica con barras de cobre en el yunque. Hasta entonces, defiéndete con la espada inicial.",
-    "invocacion": "La primera arma de invocación llega pronto (látigos y bastones), pero la primera noche juegas con la espada inicial. Guarda las {o:Terraria/Gel} que sueltan los slimes: hacen falta para antorchas y más adelante."
+    "invocacion": "La primera arma de invocación llega pronto (látigos y bastones), pero la primera noche juegas con la espada inicial. Guarda las {o:Terraria/Gel|Geles} que sueltan los slimes: hacen falta para antorchas y más adelante."
    },
    "necesitas": [
     {
@@ -101,7 +101,7 @@
    "tareas": [
     {
      "id": "inicio.1",
-     "texto": "Tala árboles hasta tener al menos 100 de {o:Terraria/Wood} y fabrica una {o:Terraria/WorkBench}, un {o:Terraria/Furnace} y un yunque ({o:Terraria/IronAnvil} o {o:Terraria/LeadAnvil}).",
+     "texto": "Tala árboles hasta tener al menos 100 de {o:Terraria/Wood} y fabrica un {o:Terraria/WorkBench}, una {o:Terraria/Furnace} y un yunque ({o:Terraria/IronAnvil} o {o:Terraria/LeadAnvil}).",
      "manual": true
     },
     {
@@ -109,7 +109,7 @@
      "texto": "Construye un par de casas válidas (paredes de fondo, puerta, luz, mesa y silla). La guía lo da por hecho cuando tienes al menos dos vecinos en el pueblo además del {n:Terraria/Guide}.",
      "condicion": {
       "tipo": "npcs_pueblo",
-      "valor": 2
+      "valor": 3
      }
     },
     {
@@ -188,7 +188,7 @@
      }
     ]
    },
-   "conserva": "Las {o:Terraria/Gel}, la {o:Terraria/Wood} y cualquier {o:Terraria/FallenStar} que recojas de noche.",
+   "conserva": "Las {o:Terraria/Gel|Geles}, la {o:Terraria/Wood} y cualquier {o:Terraria/FallenStar} que recojas de noche.",
    "conservaObjetos": [
     "Terraria/Gel",
     "Terraria/Wood",
@@ -247,7 +247,7 @@
    "preparate": "Armadura de metal, pico de hierro o mejor, muchas antorchas, cuerda o plataformas y unas cuantas {o:Terraria/LesserHealingPotion}. Lleva {o:Terraria/Bomb} si las encuentras para abrir paso.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Una espada ancha de metal o un yoyó de los cofres de las cavernas te dejan limpiar pasillos con seguridad.",
-    "distancia": "Un arco de metal con flechas de madera; en cuanto puedas, compra munición mejor. Las {o:Terraria/Shuriken} y los {o:Terraria/ThrowingKnife} también sirven en pasillos estrechos.",
+    "distancia": "Un arco de metal con flechas de madera; en cuanto puedas, compra munición mejor. Las {o:Terraria/Shuriken} y los {o:Terraria/ThrowingKnife|Cuchillos arrojadizos} también sirven en pasillos estrechos.",
     "magia": "El primer bastón de gema y algún {o:Terraria/ManaCrystal}: se fabrican con 5 {o:Terraria/FallenStar}, que caen del cielo de noche.",
     "invocacion": "Busca el {o:Terraria/BabyBirdStaff} en los árboles vivientes de la superficie o compra el {o:Terraria/BlandWhip} a la {n:Terraria/BestiaryGirl} cuando el bestiario esté al 10 %."
    },
@@ -320,7 +320,7 @@
     "tipo": "cristales_vida",
     "valor": 5
    },
-   "conserva": "Las gemas (sobre todo {o:Terraria/Ruby} y {o:Terraria/Diamond}), los {o:Terraria/LifeCrystal} que no puedas usar todavía y las {o:Terraria/FallenStar}.",
+   "conserva": "Las gemas (sobre todo {o:Terraria/Ruby} y {o:Terraria/Diamond}), los {o:Terraria/LifeCrystal|Cristales de vida} que no puedas usar todavía y las {o:Terraria/FallenStar|Estrellas fugaces}.",
    "conservaObjetos": [
     "Terraria/Ruby",
     "Terraria/Diamond",
@@ -376,7 +376,7 @@
    "preparate": "Material para tres o cuatro casas más y algo de dinero: el {n:Terraria/Merchant} llega cuando tienes al menos 50 monedas de plata entre tus cosas.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "El {n:Terraria/Merchant} vende el {o:Terraria/Shuriken} y las primeras pociones; guarda dinero para el {n:Terraria/ArmsDealer} solo si piensas combinar clases.",
-    "distancia": "El {n:Terraria/ArmsDealer} es tu vecino clave: llega cuando llevas un arma de fuego o munición y vende la {o:Terraria/Minishark}, el {o:Terraria/FlintlockPistol} y las {o:Terraria/MusketBall}.",
+    "distancia": "El {n:Terraria/ArmsDealer} es tu vecino clave: llega cuando llevas un arma de fuego o munición y vende la {o:Terraria/Minishark}, la {o:Terraria/FlintlockPistol} y las {o:Terraria/MusketBall|Balas de mosquete}.",
     "magia": "El {n:Terraria/Merchant} vende {o:Terraria/LesserManaPotion}. Más adelante, el {n:Terraria/Wizard} y la {n:Terraria/Dryad} amplían tu equipo de magia.",
     "invocacion": "La {n:Terraria/BestiaryGirl} llega cuando tienes un 10 % del bestiario y vende el {o:Terraria/BlandWhip} cuando el bestiario lo permite."
    },
@@ -417,7 +417,7 @@
     },
     {
      "id": "pueblo.4",
-     "texto": "Llega a cuatro vecinos en el pueblo: es una de las condiciones para que el {n:Terraria/EyeofCthulhu} aparezca solo.",
+     "texto": "Llega a cuatro vecinos en el pueblo (el {n:Terraria/Guide} cuenta): es una de las condiciones para que el {n:Terraria/EyeofCthulhu} aparezca solo.",
      "condicion": {
       "tipo": "npcs_pueblo",
       "valor": 4
@@ -763,7 +763,7 @@
    },
    "preparate": "Armadura de oro o platino, botas de velocidad, salto extra y una plataforma larga. Invoca al empezar la noche para tener tiempo.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Una espada ancha de oro o platino, o el {o:Terraria/EnchantedSword} si lo encontraste; un yoyó como el {o:Terraria/JungleYoyo} o el {o:Terraria/Rally} también rinde bien.",
+    "cuerpo_a_cuerpo": "Una espada ancha de oro o platino, o la {o:Terraria/EnchantedSword} si lo encontraste; un yoyó como el {o:Terraria/JungleYoyo} o el {o:Terraria/Rally} también rinde bien.",
     "distancia": "Arco de oro o de platino con {o:Terraria/FlamingArrow} o {o:Terraria/JestersArrow}; o la {o:Terraria/FlintlockPistol} del traficante de armas.",
     "magia": "El {o:Terraria/RubyStaff} o el {o:Terraria/DiamondStaff}, o la {o:Terraria/WandofSparking}; lleva pociones de maná.",
     "invocacion": "El {o:Terraria/BabyBirdStaff} o el {o:Terraria/FlinxStaff}, más un látigo para marcar al jefe."
@@ -837,7 +837,7 @@
     }
    ],
    "combate": "En la primera fase embiste y suelta siervos; en la segunda, sin pupila, embiste más rápido. Corre en horizontal y salta cuando venga hacia ti; ataca en las pausas entre embestidas.",
-   "desbloquea": "El primer mineral del mal de tu mundo; con él y el de los propios biomas haces la {o:Terraria/WormFood} o la {o:Terraria/BloodySpine}.",
+   "desbloquea": "El primer mineral del mal de tu mundo; con él y el de los propios biomas haces el {o:Terraria/WormFood} o la {o:Terraria/BloodySpine}.",
    "listoCuando": "El jefe está vencido y tienes el mineral del mal (y el escudo en Experto).",
    "completadaCuando": {
     "tipo": "bandera",
@@ -995,13 +995,13 @@
    "invocacion": {
     "objeto": null,
     "donde": "En el bioma del mal de tu mundo.",
-    "notas": "Rompe tres orbes sombríos o corazones carmesíes con un martillo, o usa la {o:Terraria/WormFood} (Corrupción) o la {o:Terraria/BloodySpine} (Carmesí) dentro del bioma."
+    "notas": "Rompe tres orbes sombríos o corazones carmesíes con un martillo, o usa el {o:Terraria/WormFood} (Corrupción) o la {o:Terraria/BloodySpine} (Carmesí) dentro del bioma."
    },
    "preparate": "Armadura de oro o platino (o meteorito), botas y salto. Contra el Devoramundos, un arma que atraviese o golpee en área; contra el Cerebro, una que apunte bien a un solo blanco.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Una lanza o un yoyó atraviesa los segmentos del gusano; contra el Cerebro, cualquier espada ancha de metal sirve.",
     "distancia": "Flechas perforantes ({o:Terraria/JestersArrow}) o la {o:Terraria/Minishark} con mucha munición.",
-    "magia": "El {o:Terraria/Vilethorn} (Corrupción) o el {o:Terraria/CrimsonRod} (Carmesí), y bastones de gema.",
+    "magia": "La {o:Terraria/Vilethorn} (Corrupción) o la {o:Terraria/CrimsonRod} (Carmesí), y bastones de gema.",
     "invocacion": "Varios esbirros persiguen solos a los segmentos y a los siervos; el látigo marca al blanco."
    },
    "necesitas": [
@@ -1029,7 +1029,7 @@
     },
     {
      "id": "evil.2",
-     "texto": "Fabrica la {o:Terraria/WormFood} o la {o:Terraria/BloodySpine} si prefieres invocar en lugar de romper el tercer orbe.",
+     "texto": "Fabrica el {o:Terraria/WormFood} o la {o:Terraria/BloodySpine} si prefieres invocar en lugar de romper el tercer orbe.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -1065,7 +1065,7 @@
     },
     {
      "id": "evil.5",
-     "texto": "Fabrica la {o:Terraria/NightmarePickaxe} o la {o:Terraria/DeathbringerPickaxe}: con ella podrás picar la {o:Terraria/Hellstone} y el {o:Terraria/Meteorite}.",
+     "texto": "Fabrica el {o:Terraria/NightmarePickaxe} o el {o:Terraria/DeathbringerPickaxe}: con ella podrás picar la {o:Terraria/Hellstone} y el {o:Terraria/Meteorite}.",
      "condicion": {
       "tipo": "objeto_poseido",
       "refs": [
@@ -1093,7 +1093,7 @@
     "tipo": "bandera",
     "bandera": "downedBoss2"
    },
-   "conserva": "Las {o:Terraria/ShadowScale} o {o:Terraria/TissueSample} que te sobren, y el accesorio de Experto.",
+   "conserva": "Las {o:Terraria/ShadowScale|Escamas de las sombras} o {o:Terraria/TissueSample} que te sobren, y el accesorio de Experto.",
    "conservaObjetos": [
     "Terraria/ShadowScale",
     "Terraria/TissueSample"
@@ -1153,7 +1153,7 @@
     }
    ],
    "invocacion": null,
-   "preparate": "La {o:Terraria/NightmarePickaxe} o la {o:Terraria/DeathbringerPickaxe} (el {o:Terraria/Meteorite} exige ese poder de pico) y algo de armadura: las cabezas de meteoro atacan mientras picas.",
+   "preparate": "El {o:Terraria/NightmarePickaxe} o el {o:Terraria/DeathbringerPickaxe} (el {o:Terraria/Meteorite} exige ese poder de pico) y algo de armadura: las cabezas de meteoro atacan mientras picas.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "El meteorito no da armas cuerpo a cuerpo destacadas: aprovecha para minar y seguir.",
     "distancia": "La {o:Terraria/StarCannon} (con la {o:Terraria/Minishark} y {o:Terraria/FallenStar}) o la armadura de meteorito si usas armas de fuego.",
@@ -1206,7 +1206,7 @@
      ]
     }
    ],
-   "combate": "Las {n:Terraria/MeteorHead} vuelan atravesando bloques. Pica rápido y retírate a curarte si se juntan muchas.",
+   "combate": "Las {n:Terraria/MeteorHead|Cabezas meteorito} vuelan atravesando bloques. Pica rápido y retírate a curarte si se juntan muchas.",
    "desbloquea": "Barras de meteorito para armadura y armas de magia y distancia.",
    "listoCuando": "Has fabricado lo que tu clase aprovecha del meteorito, o lo saltas (es opcional).",
    "completadaCuando": {
@@ -1275,7 +1275,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Armas de área o perforantes; la {o:Terraria/BladeofGrass} o un yoyó son ideales.",
     "distancia": "Flechas perforantes o la {o:Terraria/Minishark} desde un punto alto.",
-    "magia": "Bastones que atraviesen; cuidado con los {n:Terraria/GoblinSorcerer}, que se teletransportan.",
+    "magia": "Bastones que atraviesen; cuidado con los {n:Terraria/GoblinSorcerer|Duendes hechiceros}, que se teletransportan.",
     "invocacion": "Los esbirros defienden las casas mientras tú te centras en los hechiceros."
    },
    "necesitas": [
@@ -1329,14 +1329,14 @@
      }
     }
    ],
-   "combate": "Los duendes atraviesan puertas en grupo. Los {n:Terraria/GoblinArcher} y los hechiceros son los peligrosos: elimínalos primero.",
+   "combate": "Los duendes atraviesan puertas en grupo. Los {n:Terraria/GoblinArcher|Duendes arqueros} y los hechiceros son los peligrosos: elimínalos primero.",
    "desbloquea": "El {n:Terraria/GoblinTinkerer}, el {o:Terraria/TinkerersWorkshop} y los accesorios combinados; los {o:Terraria/RocketBoots} a la venta.",
    "listoCuando": "Tienes el taller de chapuzas y combinas tus primeros accesorios.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedGoblins"
    },
-   "conserva": "El {o:Terraria/TatteredCloth} (para volver a provocar la invasión) y los {o:Terraria/SpikyBall}.",
+   "conserva": "El {o:Terraria/TatteredCloth} (para volver a provocar la invasión) y los {o:Terraria/SpikyBall|Bolas con pinchos}.",
    "conservaObjetos": [
     "Terraria/TatteredCloth",
     "Terraria/SpikyBall"
@@ -1390,7 +1390,7 @@
    "preparate": "Arma que golpee en área y los primeros centinelas del tabernero. Defiende el cristal: si lo destruyen, el evento falla.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Una lanza o un yoyó y quedarte delante del cristal.",
-    "distancia": "Dispara desde lo alto del soporte; los {n:Terraria/DD2GoblinT3} llegan por el suelo.",
+    "distancia": "Dispara desde lo alto del soporte; los {n:Terraria/DD2GoblinT3|Duendes etéreos} llegan por el suelo.",
     "magia": "Bastones de área y pociones de maná; los centinelas de fuego encajan bien.",
     "invocacion": "Los centinelas del tabernero son de invocación: coloca varios a ambos lados."
    },
@@ -1464,7 +1464,7 @@
     "tipo": "bandera",
     "bandera": "downedDD2InvasionT1"
    },
-   "conserva": "Las {o:Terraria/DefenderMedal} que te sobren: el tabernero vende más cosas en los niveles siguientes.",
+   "conserva": "Las {o:Terraria/DefenderMedal|Medallas del Defensor} que te sobren: el tabernero vende más cosas en los niveles siguientes.",
    "conservaObjetos": [
     "Terraria/DefenderMedal"
    ],
@@ -1513,8 +1513,8 @@
    "preparate": "Armadura completa, antídoto contra el veneno si lo tienes, y muchas antorchas: la jungla subterránea es oscura y laberíntica.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Fabrica la {o:Terraria/BladeofGrass} con {o:Terraria/Stinger}, {o:Terraria/JungleSpores} y {o:Terraria/Vine}: es una pieza del {o:Terraria/NightsEdge}.",
-    "distancia": "La {o:Terraria/Boomstick} (cajas de pesca de la jungla) o la {o:Terraria/Minishark}; los {o:Terraria/Stinger} de los avispones vuelan rápido.",
-    "magia": "La armadura de la jungla ({o:Terraria/JungleHat}, {o:Terraria/JungleShirt} y {o:Terraria/JunglePants}) sube el maná y la probabilidad de crítico mágico.",
+    "distancia": "La {o:Terraria/Boomstick} (cajas de pesca de la jungla) o la {o:Terraria/Minishark}; los {o:Terraria/Stinger|Aguijones} de los avispones vuelan rápido.",
+    "magia": "La armadura para la selva ({o:Terraria/JungleHat}, {o:Terraria/JungleShirt} y {o:Terraria/JunglePants}) sube el maná y la probabilidad de crítico mágico.",
     "invocacion": "El {o:Terraria/ThornWhip} es un látigo de jungla; con la cera de la {p:bee|Abeja reina} harás la armadura de abeja."
    },
    "necesitas": [
@@ -1572,7 +1572,7 @@
     },
     {
      "id": "jungla.4",
-     "texto": "Fabrica la armadura de la jungla.",
+     "texto": "Fabrica la armadura para la selva.",
      "condicion": {
       "tipo": "objeto_poseido",
       "refs": [
@@ -1604,14 +1604,14 @@
     }
    ],
    "combate": "Los avispones disparan aguijones venenosos y los {n:Terraria/ManEater} salen de las paredes. Avanza despacio, ilumina y lleva pociones curativas.",
-   "desbloquea": "Materiales de la jungla para armas, accesorios y la armadura de la jungla; acceso a la {p:bee|Abeja reina}.",
+   "desbloquea": "Materiales de la jungla para armas, accesorios y la armadura para la selva; acceso a la {p:bee|Abeja reina}.",
    "listoCuando": "Tienes las esporas, el arma o armadura de jungla de tu clase y has localizado una colmena.",
    "completadaCuando": {
     "tipo": "objeto_poseido",
     "ref": "Terraria/JungleSpores",
     "cantidad": 15
    },
-   "conserva": "Los {o:Terraria/Stinger}, {o:Terraria/Vine} y {o:Terraria/JungleSpores} de sobra: hacen falta para el {o:Terraria/NightsEdge} y otros objetos.",
+   "conserva": "Los {o:Terraria/Stinger|Aguijones}, {o:Terraria/Vine} y {o:Terraria/JungleSpores} de sobra: hacen falta para el {o:Terraria/NightsEdge} y otros objetos.",
    "conservaObjetos": [
     "Terraria/Stinger",
     "Terraria/Vine",
@@ -1674,7 +1674,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Un yoyó, la {o:Terraria/BladeofGrass} o la lanza {o:Terraria/DarkLance}.",
     "distancia": "La {o:Terraria/Minishark} o el arco {o:Terraria/DemonBow} / {o:Terraria/TendonBow} con flechas de fuego.",
-    "magia": "El {o:Terraria/Vilethorn} o el {o:Terraria/CrimsonRod}, y la {o:Terraria/SpaceGun} si fuiste al meteorito.",
+    "magia": "La {o:Terraria/Vilethorn} o la {o:Terraria/CrimsonRod}, y la {o:Terraria/SpaceGun} si fuiste al meteorito.",
     "invocacion": "Varios esbirros y el látigo; las abejas pequeñas mueren solas contra ellos."
    },
    "necesitas": [
@@ -1767,7 +1767,7 @@
     }
    ],
    "combate": "Alterna embestidas horizontales con fases en las que dispara aguijones y suelta abejas. Corre en sentido contrario a sus embestidas y aprovecha cuando se queda quieta.",
-   "desbloquea": "Cera de abeja, el {n:Terraria/WitchDoctor}, la {o:Terraria/HiveWand} y, en Experto, el {o:Terraria/HiveBackpack}.",
+   "desbloquea": "Cera de abeja, el {n:Terraria/WitchDoctor}, la {o:Terraria/HiveWand} y, en Experto, la {o:Terraria/HiveBackpack}.",
    "listoCuando": "La Abeja reina está vencida y tienes su arma o la armadura de abeja.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -1834,14 +1834,14 @@
    "invocacion": {
     "objeto": "Terraria/DeerThing",
     "donde": "En el bioma de Nieve.",
-    "notas": "La {o:Terraria/DeerThing} se fabrica en un altar demoníaco o carmesí con {o:Terraria/FlinxFur}, mineral del mal y una {o:Terraria/Lens}."
+    "notas": "El {o:Terraria/DeerThing} se fabrica en un altar demoníaco o carmesí con {o:Terraria/FlinxFur}, mineral del mal y una {o:Terraria/Lens}."
    },
    "preparate": "Armadura completa, arena plana y ancha en la nieve y un arma que ataque a distancia: sus ataques cubren mucho terreno.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Un yoyó o un arma con proyectil; acercarse sin control es castigado.",
     "distancia": "Arco o arma de fuego con munición mejorada.",
-    "magia": "Bastones de gema altos o el {o:Terraria/Vilethorn} / {o:Terraria/CrimsonRod}.",
-    "invocacion": "El {o:Terraria/FlinxStaff} (con {o:Terraria/FlinxFur} de la nieve) y la {o:Terraria/FlinxFurCoat}."
+    "magia": "Bastones de gema altos o la {o:Terraria/Vilethorn} / {o:Terraria/CrimsonRod}.",
+    "invocacion": "El {o:Terraria/FlinxStaff} (con {o:Terraria/FlinxFur} de la nieve) y el {o:Terraria/FlinxFurCoat}."
    },
    "necesitas": [
     {
@@ -1866,7 +1866,7 @@
    "tareas": [
     {
      "id": "deerclops.1",
-     "texto": "Fabrica la {o:Terraria/DeerThing}.",
+     "texto": "Fabrica el {o:Terraria/DeerThing}.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -1984,7 +1984,7 @@
     },
     {
      "id": "pesca.2",
-     "texto": "Consigue una caña mejor: la {o:Terraria/FiberglassFishingPole} (cajas de la jungla), la {o:Terraria/FisherofSouls} o la {o:Terraria/Fleshcatcher} (del mal de tu mundo)…",
+     "texto": "Consigue una caña mejor: la {o:Terraria/FiberglassFishingPole} (cajas de la jungla), el {o:Terraria/FisherofSouls} o la {o:Terraria/Fleshcatcher} (del mal de tu mundo)…",
      "condicion": {
       "tipo": "objeto_poseido",
       "refs": [
@@ -2075,7 +2075,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Armadura de las sombras o carmesí y un yoyó o la {o:Terraria/DarkLance}; ataca a la cabeza, no a las manos.",
     "distancia": "La {o:Terraria/Minishark} o un arco con flechas de fuego; munición abundante.",
-    "magia": "Armadura de la jungla o de meteorito y la {o:Terraria/SpaceGun} o el {o:Terraria/Vilethorn}.",
+    "magia": "Armadura para la selva o de meteorito y la {o:Terraria/SpaceGun} o la {o:Terraria/Vilethorn}.",
     "invocacion": "Armadura de abeja, el {o:Terraria/HornetStaff} y un látigo: los avispones persiguen a la cabeza."
    },
    "necesitas": [
@@ -2192,7 +2192,7 @@
    "preparate": "Armadura completa, pociones curativas, muchas antorchas o una {o:Terraria/ShinePotion} y gancho: la Mazmorra tiene grandes huecos verticales.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Busca la {o:Terraria/Muramasa}: es una pieza del {o:Terraria/NightsEdge}.",
-    "distancia": "Con {o:Terraria/Bone} y {o:Terraria/Cobweb} fabricas la armadura de los muertos; la {o:Terraria/Handgun} de los cofres dorados es la base de la {o:Terraria/PhoenixBlaster}.",
+    "distancia": "Con {o:Terraria/Bone} y {o:Terraria/Cobweb} fabricas la armadura de los muertos; la {o:Terraria/Handgun} de los cofres dorados es la base del {o:Terraria/PhoenixBlaster}.",
     "magia": "El {o:Terraria/WaterBolt} está en las estanterías de la Mazmorra; el {o:Terraria/AquaScepter} y el {o:Terraria/MagicMissile}, en los cofres dorados.",
     "invocacion": "El látigo {o:Terraria/BoneWhip} se fabrica con {o:Terraria/Bone} y {o:Terraria/Cobweb}."
    },
@@ -2286,7 +2286,7 @@
     }
    ],
    "combate": "Los esqueletos furiosos y los lanzadores de hechizos aparecen en cuanto entras. Avanza por los pasillos, deja plataformas en los pozos y vuelve a casa a vaciar el inventario a menudo.",
-   "desbloquea": "El {n:Terraria/Mechanic} (cables y mecanismos), el {o:Terraria/CobaltShield} (inmunidad al empuje) y armas clave de las cuatro clases.",
+   "desbloquea": "La {n:Terraria/Mechanic} (cables y mecanismos), el {o:Terraria/CobaltShield} (inmunidad al empuje) y armas clave de las cuatro clases.",
    "listoCuando": "Tienes la llave de las sombras, el objeto de tu clase y el mecánico en el pueblo.",
    "completadaCuando": {
     "tipo": "todas",
@@ -2310,7 +2310,7 @@
      }
     ]
    },
-   "conserva": "La {o:Terraria/Muramasa} (para el {o:Terraria/NightsEdge}), el {o:Terraria/CobaltShield} (para el {o:Terraria/ObsidianShield}) y la {o:Terraria/Handgun} (para la {o:Terraria/PhoenixBlaster}).",
+   "conserva": "La {o:Terraria/Muramasa} (para el {o:Terraria/NightsEdge}), el {o:Terraria/CobaltShield} (para el {o:Terraria/ObsidianShield}) y la {o:Terraria/Handgun} (para el {o:Terraria/PhoenixBlaster}).",
    "conservaObjetos": [
     "Terraria/Muramasa",
     "Terraria/NightsEdge",
@@ -2499,7 +2499,7 @@
    "desbloquea": "Transmutaciones, deshacer recetas y mejoras permanentes. Ver {a:eter}.",
    "listoCuando": "Conoces dónde está y has usado al menos una mejora permanente, o lo dejas para más tarde.",
    "completadaCuando": null,
-   "conserva": "Los {o:Terraria/LifeCrystal} y {o:Terraria/ManaCrystal} de sobra: en el fulgor son mejoras permanentes.",
+   "conserva": "Los {o:Terraria/LifeCrystal|Cristales de vida} y {o:Terraria/ManaCrystal} de sobra: en el fulgor son mejoras permanentes.",
    "conservaObjetos": [
     "Terraria/LifeCrystal",
     "Terraria/ManaCrystal"
@@ -2542,10 +2542,10 @@
     }
    ],
    "invocacion": null,
-   "preparate": "La {o:Terraria/NightmarePickaxe} o la {o:Terraria/DeathbringerPickaxe}, {o:Terraria/ObsidianSkinPotion} y un pozo vertical para bajar y subir rápido (el «ascensor al infierno»).",
+   "preparate": "El {o:Terraria/NightmarePickaxe} o el {o:Terraria/DeathbringerPickaxe}, {o:Terraria/ObsidianSkinPotion} y un pozo vertical para bajar y subir rápido (el «ascensor al infierno»).",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Con {o:Terraria/HellstoneBar} fabricas la armadura fundida ({o:Terraria/MoltenHelmet}, {o:Terraria/MoltenBreastplate} y {o:Terraria/MoltenGreaves}) y el {o:Terraria/FieryGreatsword}.",
-    "distancia": "La {o:Terraria/PhoenixBlaster} ({o:Terraria/Handgun} + barras infernales) o el arco {o:Terraria/MoltenFury}.",
+    "distancia": "El {o:Terraria/PhoenixBlaster} ({o:Terraria/Handgun} + barras infernales) o el arco {o:Terraria/MoltenFury}.",
     "magia": "El {o:Terraria/FlowerofFire} sale de los cofres de las sombras; la {o:Terraria/DemonScythe} la sueltan los demonios.",
     "invocacion": "El {o:Terraria/ImpStaff} se fabrica con barras infernales: un esbirro que dispara fuego."
    },
@@ -2580,7 +2580,7 @@
     },
     {
      "id": "inframundo.2",
-     "texto": "Fabrica la {o:Terraria/MoltenPickaxe}: necesitarás un pico así para entrar con buen pie en el modo difícil.",
+     "texto": "Fabrica el {o:Terraria/MoltenPickaxe}: necesitarás un pico así para entrar con buen pie en el modo difícil.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/MoltenPickaxe",
@@ -2622,7 +2622,7 @@
    ],
    "combate": "Los demonios lanzan guadañas a través de los bloques y los murciélagos de lava queman. No piques sobre la lava sin la poción de piel obsidiana.",
    "desbloquea": "El equipo de la última etapa previa al modo difícil y la posibilidad de enfrentarte al {p:wall|Muro carnoso}.",
-   "listoCuando": "Tienes la {o:Terraria/MoltenPickaxe} y la armadura o el arma de tu clase hecha con piedra infernal.",
+   "listoCuando": "Tienes el {o:Terraria/MoltenPickaxe} y la armadura o el arma de tu clase hecha con piedra infernal.",
    "completadaCuando": {
     "tipo": "objeto_poseido",
     "ref": "Terraria/MoltenPickaxe",
@@ -2677,7 +2677,7 @@
    "preparate": "Los componentes de tu clase que has ido guardando y el {o:Terraria/TinkerersWorkshop} para los accesorios.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Combina {o:Terraria/LightsBane} o {o:Terraria/BloodButcherer}, {o:Terraria/Muramasa}, {o:Terraria/BladeofGrass} y {o:Terraria/FieryGreatsword} en el {o:Terraria/NightsEdge}.",
-    "distancia": "La {o:Terraria/PhoenixBlaster} o la {o:Terraria/Minishark} con munición mejorada, y la {o:Terraria/StarCannon} si tienes estrellas.",
+    "distancia": "El {o:Terraria/PhoenixBlaster} o la {o:Terraria/Minishark} con munición mejorada, y la {o:Terraria/StarCannon} si tienes estrellas.",
     "magia": "El {o:Terraria/WaterBolt}, la {o:Terraria/DemonScythe} o el {o:Terraria/FlowerofFire}, con 200 de maná.",
     "invocacion": "El {o:Terraria/ImpStaff} o el {o:Terraria/HornetStaff}, la armadura de abeja u obsidiana y un buen látigo."
    },
@@ -2725,7 +2725,7 @@
     {
      "ref": "Terraria/Handgun",
      "cantidad": 1,
-     "motivo": "Base de la {o:Terraria/PhoenixBlaster}: cofres dorados de la Mazmorra.",
+     "motivo": "Base del {o:Terraria/PhoenixBlaster}: cofres dorados de la Mazmorra.",
      "clases": [
       "distancia"
      ]
@@ -2840,7 +2840,7 @@
     "tipo": "vida_maxima",
     "valor": 400
    },
-   "conserva": "El {o:Terraria/NightsEdge} (se mejora en modo difícil al {o:Terraria/TrueNightsEdge} y forma parte de la {o:Terraria/TerraBlade}).",
+   "conserva": "El {o:Terraria/NightsEdge} (se mejora en modo difícil a la {o:Terraria/TrueNightsEdge} y forma parte de la {o:Terraria/TerraBlade}).",
    "conservaObjetos": [
     "Terraria/NightsEdge",
     "Terraria/TrueNightsEdge",
@@ -2892,9 +2892,9 @@
    },
    "preparate": "Un puente largo y recto de lado a lado del Inframundo (o al menos 600 casillas), 400 de vida, tu arma final de antes del modo difícil y pociones ({o:Terraria/IronskinPotion}, {o:Terraria/RegenerationPotion}, {o:Terraria/SwiftnessPotion}).",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "El {o:Terraria/NightsEdge} o un yoyó como el {o:Terraria/Cascade}; armadura fundida.",
-    "distancia": "La {o:Terraria/PhoenixBlaster} o la {o:Terraria/Minishark} con munición mejor, y la armadura de los muertos o de meteorito.",
-    "magia": "La {o:Terraria/DemonScythe} o el {o:Terraria/WaterBolt}, armadura de la jungla o de meteorito y pociones de maná.",
+    "cuerpo_a_cuerpo": "El {o:Terraria/NightsEdge} o un yoyó como la {o:Terraria/Cascade}; armadura fundida.",
+    "distancia": "El {o:Terraria/PhoenixBlaster} o la {o:Terraria/Minishark} con munición mejor, y la armadura de los muertos o de meteorito.",
+    "magia": "La {o:Terraria/DemonScythe} o el {o:Terraria/WaterBolt}, armadura para la selva o de meteorito y pociones de maná.",
     "invocacion": "El {o:Terraria/ImpStaff} y un látigo; corre sin parar y deja que los esbirros peguen."
    },
    "necesitas": [
@@ -2948,7 +2948,7 @@
     },
     {
      "id": "wall.3",
-     "texto": "Consigue la {o:Terraria/GuideVoodooDoll} matando {n:Terraria/VoodooDemon}.",
+     "texto": "Consigue el {o:Terraria/GuideVoodooDoll} matando {n:Terraria/VoodooDemon}.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -3051,11 +3051,11 @@
     }
    ],
    "invocacion": null,
-   "preparate": "El {o:Terraria/Pwnhammer} del Muro, la {o:Terraria/MoltenPickaxe} y tu equipo previo: los enemigos de las cavernas son ahora mucho más duros, así que avanza con cuidado.",
+   "preparate": "El {o:Terraria/Pwnhammer} del Muro, el {o:Terraria/MoltenPickaxe} y tu equipo previo: los enemigos de las cavernas son ahora mucho más duros, así que avanza con cuidado.",
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "La {o:Terraria/BreakerBlade} del Muro si te tocó; si no, el {o:Terraria/NightsEdge} hasta tener armas de cobalto o paladio.",
-    "distancia": "La {o:Terraria/ClockworkAssaultRifle} del Muro o la {o:Terraria/PhoenixBlaster}; más adelante, el {o:Terraria/DaedalusStormbow}.",
-    "magia": "El {o:Terraria/LaserRifle} del Muro, o el {o:Terraria/CrystalStorm} / {o:Terraria/CursedFlames} / {o:Terraria/GoldenShower} en cuanto tengas almas.",
+    "distancia": "La {o:Terraria/ClockworkAssaultRifle} del Muro o el {o:Terraria/PhoenixBlaster}; más adelante, el {o:Terraria/DaedalusStormbow}.",
+    "magia": "El {o:Terraria/LaserRifle} del Muro, o la {o:Terraria/CrystalStorm} / {o:Terraria/CursedFlames} / {o:Terraria/GoldenShower} en cuanto tengas almas.",
     "invocacion": "El {o:Terraria/FireWhip} del Muro y la armadura de araña ({o:Terraria/SpiderMask}, {o:Terraria/SpiderBreastplate}, {o:Terraria/SpiderGreaves}) con {o:Terraria/SpiderFang} de los nidos de araña."
    },
    "necesitas": [
@@ -3271,9 +3271,9 @@
    "invocacion": null,
    "preparate": "Tu armadura de modo difícil y alas. Para frenar la expansión, compra {o:Terraria/PurificationPowder} a la {n:Terraria/Dryad}.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Con almas fabricas armas como la {o:Terraria/LightDisc} o los mejores yoyós; el {o:Terraria/CoolWhip} es de invocación.",
+    "cuerpo_a_cuerpo": "Con almas fabricas armas como el {o:Terraria/LightDisc} o los mejores yoyós; el {o:Terraria/CoolWhip} es de invocación.",
     "distancia": "Mata mímicos de Lo Sagrado para el {o:Terraria/DaedalusStormbow} (hace falta una {o:Terraria/LightKey}).",
-    "magia": "El {o:Terraria/CrystalStorm} (fragmentos de cristal) o el {o:Terraria/CursedFlames} / {o:Terraria/GoldenShower} (con un {o:Terraria/SpellTome} y 15 almas).",
+    "magia": "La {o:Terraria/CrystalStorm} (fragmentos de cristal) o el {o:Terraria/CursedFlames} / {o:Terraria/GoldenShower} (con un {o:Terraria/SpellTome} y 15 almas).",
     "invocacion": "La armadura de araña y el {o:Terraria/SpiderStaff}; con almas, el {o:Terraria/CoolWhip}."
    },
    "necesitas": [
@@ -3416,7 +3416,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Un yoyó de modo difícil o armas de cobalto/paladio con alcance.",
     "distancia": "El {o:Terraria/DaedalusStormbow} o la {o:Terraria/ClockworkAssaultRifle}.",
-    "magia": "El {o:Terraria/CrystalStorm} o el {o:Terraria/GoldenShower}.",
+    "magia": "La {o:Terraria/CrystalStorm} o la {o:Terraria/GoldenShower}.",
     "invocacion": "El {o:Terraria/SpiderStaff}; su arma, el {o:Terraria/Smolstar}, es de invocación."
    },
    "necesitas": [
@@ -3624,7 +3624,7 @@
    "invocacion": {
     "objeto": "Terraria/SnowGlobe",
     "donde": "En la Superficie.",
-    "notas": "La {o:Terraria/SnowGlobe} sale de los {o:Terraria/Present} en modo difícil (los regalos caen de cualquier enemigo durante Navidad)."
+    "notas": "El {o:Terraria/SnowGlobe} sale de los {o:Terraria/Present|Regalos} en modo difícil (los regalos caen de cualquier enemigo durante Navidad)."
    },
    "preparate": "Arma de área y casas protegidas: los muñecos de nieve atacan en grupo.",
    "preparatePorClase": {},
@@ -3639,7 +3639,7 @@
    "tareas": [
     {
      "id": "frostlegion.1",
-     "texto": "Consigue una {o:Terraria/SnowGlobe}.",
+     "texto": "Consigue un {o:Terraria/SnowGlobe}.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -3727,9 +3727,9 @@
    },
    "preparate": "Una plataforma muy larga a cierta altura, alas, armadura de mithril u oricalco o mejor y un arma que golpee a muchos segmentos.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Un yoyó o una espada que atraviese; la {o:Terraria/LightDisc} rebota entre segmentos.",
+    "cuerpo_a_cuerpo": "Un yoyó o una espada que atraviese; el {o:Terraria/LightDisc} rebota entre segmentos.",
     "distancia": "El {o:Terraria/DaedalusStormbow} con {o:Terraria/HolyArrow} o {o:Terraria/UnholyArrow} destroza al gusano.",
-    "magia": "El {o:Terraria/CrystalStorm} o el {o:Terraria/CursedFlames}; los proyectiles que atraviesan rinden mucho.",
+    "magia": "La {o:Terraria/CrystalStorm} o el {o:Terraria/CursedFlames}; los proyectiles que atraviesan rinden mucho.",
     "invocacion": "El {o:Terraria/SpiderStaff} y un látigo; los esbirros persiguen solos los segmentos."
    },
    "necesitas": [
@@ -3786,7 +3786,7 @@
     },
     {
      "id": "mech1.4",
-     "texto": "Recoge las {o:Terraria/SoulofMight}.",
+     "texto": "Recoge las {o:Terraria/SoulofMight|Almas de poder}.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/SoulofMight",
@@ -3795,13 +3795,13 @@
     }
    ],
    "combate": "Sus segmentos disparan láseres y sueltan sondas. Vuela por encima y en círculos amplios; no te quedes en su trayectoria cuando sube desde el suelo.",
-   "desbloquea": "Almas de poder, barras sagradas, las {o:Terraria/LifeFruit} en la jungla subterránea, el {n:Terraria/Steampunker} y el nivel 2 del Ejército del Antiguo.",
+   "desbloquea": "Almas de poder, barras sagradas, las {o:Terraria/LifeFruit|Frutas de la vida} en la jungla subterránea, el {n:Terraria/Steampunker} y el nivel 2 del Ejército del Antiguo.",
    "listoCuando": "El Destructor está vencido.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedMechBoss1"
    },
-   "conserva": "Las {o:Terraria/HallowedBar} y las almas de poder.",
+   "conserva": "Las {o:Terraria/HallowedBar|Lingotes sagrados} y las almas de poder.",
    "conservaObjetos": [
     "Terraria/HallowedBar"
    ],
@@ -3857,9 +3857,9 @@
    },
    "preparate": "Alas, botas y una arena abierta: los Gemelos te persiguen por el aire. Un arma que siga a su objetivo ayuda mucho.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Un yoyó o armas con proyectil; la {o:Terraria/LightDisc} también va bien.",
+    "cuerpo_a_cuerpo": "Un yoyó o armas con proyectil; el {o:Terraria/LightDisc} también va bien.",
     "distancia": "La {o:Terraria/Megashark} o el {o:Terraria/DaedalusStormbow} con munición perforante.",
-    "magia": "El {o:Terraria/CrystalStorm} o el {o:Terraria/MagicalHarp}.",
+    "magia": "La {o:Terraria/CrystalStorm} o el {o:Terraria/MagicalHarp}.",
     "invocacion": "El {o:Terraria/SpiderStaff} o el {o:Terraria/Smolstar}."
    },
    "necesitas": [
@@ -3911,7 +3911,7 @@
     },
     {
      "id": "mech2.3",
-     "texto": "Recoge las {o:Terraria/SoulofSight}.",
+     "texto": "Recoge las {o:Terraria/SoulofSight|Almas de visión}.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/SoulofSight",
@@ -3984,7 +3984,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Armas con alcance; ataca la cabeza y no te quedes entre los brazos.",
     "distancia": "La {o:Terraria/Megashark} o el {o:Terraria/DaedalusStormbow}.",
-    "magia": "El {o:Terraria/CrystalStorm} o el {o:Terraria/RainbowRod}.",
+    "magia": "La {o:Terraria/CrystalStorm} o la {o:Terraria/RainbowRod}.",
     "invocacion": "El {o:Terraria/OpticStaff} (si ya venciste a los Gemelos) y un látigo."
    },
    "necesitas": [
@@ -4042,7 +4042,7 @@
     },
     {
      "id": "mech3.3",
-     "texto": "Recoge las {o:Terraria/SoulofFright}.",
+     "texto": "Recoge las {o:Terraria/SoulofFright|Almas de terror}.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/SoulofFright",
@@ -4065,7 +4065,7 @@
     "tipo": "bandera",
     "bandera": "downedMechBoss3"
    },
-   "conserva": "Las almas de poder, visión y terror: el {o:Terraria/TrueNightsEdge}, las herramientas sagradas y muchos accesorios las piden.",
+   "conserva": "Las almas de poder, visión y terror: la {o:Terraria/TrueNightsEdge}, las herramientas sagradas y muchos accesorios las piden.",
    "conservaObjetos": [
     "Terraria/TrueNightsEdge"
    ],
@@ -4114,10 +4114,10 @@
    "invocacion": null,
    "preparate": "Alas, armadura sagrada o de nivel similar y el pico de modo difícil más alto que tengas.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Armadura sagrada con el {o:Terraria/HallowedMask} y la {o:Terraria/Excalibur} o el {o:Terraria/TrueNightsEdge}.",
+    "cuerpo_a_cuerpo": "Armadura sagrada con la {o:Terraria/HallowedMask} y la {o:Terraria/Excalibur} o la {o:Terraria/TrueNightsEdge}.",
     "distancia": "Armadura sagrada con el {o:Terraria/HallowedHelmet} y la {o:Terraria/Megashark}.",
-    "magia": "Armadura sagrada con el {o:Terraria/HallowedHeadgear} y el {o:Terraria/RainbowRod} o el {o:Terraria/MagicalHarp}.",
-    "invocacion": "Armadura sagrada con el {o:Terraria/HallowedHood} y el {o:Terraria/OpticStaff}."
+    "magia": "Armadura sagrada con el {o:Terraria/HallowedHeadgear} y la {o:Terraria/RainbowRod} o el {o:Terraria/MagicalHarp}.",
+    "invocacion": "Armadura sagrada con la {o:Terraria/HallowedHood} y el {o:Terraria/OpticStaff}."
    },
    "necesitas": [
     {
@@ -4129,7 +4129,7 @@
     {
      "ref": "Terraria/HallowedBar",
      "cantidad": 18,
-     "motivo": "Para la {o:Terraria/PickaxeAxe} o el {o:Terraria/Drax}.",
+     "motivo": "Para el {o:Terraria/PickaxeAxe} o el {o:Terraria/Drax}.",
      "clases": []
     }
    ],
@@ -4144,7 +4144,7 @@
     },
     {
      "id": "frutas.2",
-     "texto": "Fabrica la {o:Terraria/PickaxeAxe} o el {o:Terraria/Drax}: son los primeros picos que pican el {o:Terraria/ChlorophyteOre}.",
+     "texto": "Fabrica el {o:Terraria/PickaxeAxe} o el {o:Terraria/Drax}: son los primeros picos que pican el {o:Terraria/ChlorophyteOre}.",
      "condicion": {
       "tipo": "objeto_poseido",
       "refs": [
@@ -4303,7 +4303,7 @@
     "tipo": "bandera",
     "bandera": "downedDD2InvasionT2"
    },
-   "conserva": "Las {o:Terraria/DefenderMedal}.",
+   "conserva": "Las {o:Terraria/DefenderMedal|Medallas del Defensor}.",
    "conservaObjetos": [
     "Terraria/DefenderMedal"
    ],
@@ -4451,7 +4451,7 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Armadura de clorofita (máscara) o sagrada y la {o:Terraria/TrueExcalibur} o la {o:Terraria/ChlorophytePartisan}.",
     "distancia": "La {o:Terraria/Megashark} con {o:Terraria/ChlorophyteBullet} (que persiguen al blanco).",
-    "magia": "El {o:Terraria/RainbowRod}, el {o:Terraria/MagicalHarp} o el {o:Terraria/CrystalStorm}.",
+    "magia": "La {o:Terraria/RainbowRod}, el {o:Terraria/MagicalHarp} o la {o:Terraria/CrystalStorm}.",
     "invocacion": "El {o:Terraria/OpticStaff} y la armadura de araña o sagrada."
    },
    "necesitas": [
@@ -4846,7 +4846,7 @@
     },
     {
      "id": "golem.3",
-     "texto": "Consigue la {o:Terraria/Picksaw} (puede tardar varias peleas): pica los ladrillos del Templo.",
+     "texto": "Consigue el {o:Terraria/Picksaw} (puede tardar varias peleas): pica los ladrillos del Templo.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/Picksaw",
@@ -4873,7 +4873,7 @@
     "tipo": "bandera",
     "bandera": "downedGolemBoss"
    },
-   "conserva": "Las {o:Terraria/BeetleHusk} y la {o:Terraria/Picksaw}.",
+   "conserva": "Las {o:Terraria/BeetleHusk|Caparazones de escarabajo} y el {o:Terraria/Picksaw}.",
    "conservaObjetos": [
     "Terraria/BeetleHusk",
     "Terraria/Picksaw"
@@ -4885,7 +4885,7 @@
       "experto",
       "maestro"
      ],
-     "texto": "En Experto, su bolsa da el {o:Terraria/ShinyStone} (regeneración rápida estando quieto)."
+     "texto": "En Experto, su bolsa da la {o:Terraria/ShinyStone} (regeneración rápida estando quieto)."
     }
    ],
    "fuentes": [
@@ -5477,7 +5477,7 @@
     "tipo": "bandera",
     "bandera": "downedDD2InvasionT3"
    },
-   "conserva": "Las {o:Terraria/DefenderMedal}.",
+   "conserva": "Las {o:Terraria/DefenderMedal|Medallas del Defensor}.",
    "conservaObjetos": [
     "Terraria/DefenderMedal"
    ],
@@ -5624,8 +5624,8 @@
    "preparatePorClase": {
     "cuerpo_a_cuerpo": "Armadura de escarabajo y un arma rápida como la {o:Terraria/InfluxWaver} o la {o:Terraria/TheHorsemansBlade}.",
     "distancia": "Armadura de piñonita y la {o:Terraria/ChainGun} o el {o:Terraria/Tsunami}.",
-    "magia": "Armadura espectral y la {o:Terraria/RazorbladeTyphoon} o el {o:Terraria/NebulaBlaze} tras las torres.",
-    "invocacion": "Armadura tétrica y el {o:Terraria/RavenStaff} o la {o:Terraria/TempestStaff}."
+    "magia": "Armadura espectral y la {o:Terraria/RazorbladeTyphoon} o la {o:Terraria/NebulaBlaze} tras las torres.",
+    "invocacion": "Armadura tétrica y el {o:Terraria/RavenStaff} o el {o:Terraria/TempestStaff}."
    },
    "necesitas": [],
    "tareas": [
@@ -5761,7 +5761,7 @@
     "tipo": "bandera",
     "bandera": "downedTowers"
    },
-   "conserva": "Los fragmentos de las cuatro torres: la {o:Terraria/CelestialSigil} y las armaduras lunares los piden.",
+   "conserva": "Los fragmentos de las cuatro torres: el {o:Terraria/CelestialSigil} y las armaduras lunares los piden.",
    "conservaObjetos": [
     "Terraria/CelestialSigil"
    ],
@@ -5807,13 +5807,13 @@
    "invocacion": {
     "objeto": "Terraria/CelestialSigil",
     "donde": "En cualquier sitio.",
-    "notas": "Llega solo un minuto después de caer la última torre. Para repetirlo, la {o:Terraria/CelestialSigil} se fabrica con 12 fragmentos de cada torre en el {o:Terraria/LunarCraftingStation}."
+    "notas": "Llega solo un minuto después de caer la última torre. Para repetirlo, el {o:Terraria/CelestialSigil} se fabrica con 12 fragmentos de cada torre en el {o:Terraria/LunarCraftingStation}."
    },
    "preparate": "Una arena enorme con plataformas, hogueras, {o:Terraria/HeartLantern}, estaciones de buff y tus mejores pociones. Las mejores armas de torre o de evento.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Armadura de escarabajo o solar y la {o:Terraria/SolarEruption} o la {o:Terraria/DayBreak}.",
+    "cuerpo_a_cuerpo": "Armadura de escarabajo o de fulguración solar y la {o:Terraria/SolarEruption} o la {o:Terraria/DayBreak}.",
     "distancia": "Armadura de piñonita o de vórtice y el {o:Terraria/Phantasm} o el {o:Terraria/VortexBeater}.",
-    "magia": "Armadura espectral o de nebulosa y el {o:Terraria/NebulaBlaze} o el {o:Terraria/NebulaArcanum}.",
+    "magia": "Armadura espectral o de nebulosa y la {o:Terraria/NebulaBlaze} o el {o:Terraria/NebulaArcanum}.",
     "invocacion": "Armadura tétrica o de polvo estelar y el {o:Terraria/StardustDragonStaff} o el {o:Terraria/StardustCellStaff}."
    },
    "necesitas": [
@@ -5886,7 +5886,7 @@
     "tipo": "bandera",
     "bandera": "downedMoonlord"
    },
-   "conserva": "El {o:Terraria/Meowmere} y el {o:Terraria/StarWrath} si caen (piezas de la {o:Terraria/Zenith}).",
+   "conserva": "El {o:Terraria/Meowmere} y la {o:Terraria/StarWrath} si caen (piezas de la {o:Terraria/Zenith}).",
    "conservaObjetos": [
     "Terraria/Meowmere",
     "Terraria/StarWrath",
@@ -5941,7 +5941,7 @@
    "invocacion": null,
    "preparate": "Fragmentos de las cuatro torres y {o:Terraria/LunarBar}.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Armadura solar: {o:Terraria/SolarFlareHelmet}, {o:Terraria/SolarFlareBreastplate} y {o:Terraria/SolarFlareLeggings}.",
+    "cuerpo_a_cuerpo": "Armadura de fulguración solar: {o:Terraria/SolarFlareHelmet}, {o:Terraria/SolarFlareBreastplate} y {o:Terraria/SolarFlareLeggings}.",
     "distancia": "Armadura de vórtice: {o:Terraria/VortexHelmet}, {o:Terraria/VortexBreastplate} y {o:Terraria/VortexLeggings}.",
     "magia": "Armadura de nebulosa: {o:Terraria/NebulaHelmet}, {o:Terraria/NebulaBreastplate} y {o:Terraria/NebulaLeggings}.",
     "invocacion": "Armadura de polvo estelar: {o:Terraria/StardustHelmet}, {o:Terraria/StardustBreastplate} y {o:Terraria/StardustLeggings}."
@@ -6182,7 +6182,7 @@
     },
     {
      "id": "mejoras.10",
-     "texto": "Usa el {o:Terraria/PeddlersSatchel} (un {o:Terraria/PeddlersHat} en el fulgor): el {n:Terraria/TravellingMerchant} vende más.",
+     "texto": "Usa la {o:Terraria/PeddlersSatchel} (un {o:Terraria/PeddlersHat} en el fulgor): el {n:Terraria/TravellingMerchant} vende más.",
      "condicion": {
       "tipo": "bandera",
       "bandera": "peddlersSatchelWasUsed"
@@ -6359,7 +6359,7 @@
     },
     {
      "id": "zenith.2",
-     "texto": "Consigue el {o:Terraria/Meowmere} y el {o:Terraria/StarWrath} del Señor de la Luna.",
+     "texto": "Consigue el {o:Terraria/Meowmere} y la {o:Terraria/StarWrath} del Señor de la Luna.",
      "condicion": {
       "tipo": "todas",
       "condiciones": [
@@ -6722,7 +6722,7 @@
       [
        "{z:cielo|Cielo}",
        "Islas flotantes con cofres y casas de cielo, por encima de la superficie.",
-       "Botín de las islas flotantes, como el {o:Terraria/Starfury} y el {o:Terraria/ShinyRedBalloon}."
+       "Botín de las islas flotantes, como la {o:Terraria/Starfury} y el {o:Terraria/ShinyRedBalloon}."
       ],
       [
        "{z:superficie|Superficie}",
@@ -7026,7 +7026,7 @@
      "tipo": "lista",
      "items": [
       "La {o:Terraria/ShadowKey} sale en algunos cofres dorados cerrados, y siempre en el primero que genera el mundo. Abre los cofres de las sombras del Inframundo y no se gasta al usarla. Mira {a:inframundo}.",
-      "La {o:Terraria/BoneWelder}, de los mismos cofres, es una estación de fabricación.",
+      "El {o:Terraria/BoneWelder}, de los mismos cofres, es una estación de fabricación.",
       "Los objetos raros de la Mazmorra pueden formar parte de recetas más adelante: lee la sección «Conserva» de cada parada antes de vender."
      ]
     },
@@ -7172,7 +7172,7 @@
      "tipo": "lista",
      "items": [
       "Las placas de presión lihzahrd solo se activan con el jugador, no con los enemigos. Salta o rodéalas.",
-      "Los {n:Terraria/Lihzahrd} y los {n:Terraria/FlyingSnake} aparecen en el interior y cada uno puede soltar una {o:Terraria/LihzahrdPowerCell}.",
+      "Los {n:Terraria/Lihzahrd} y los {n:Terraria/FlyingSnake|Serpientes voladoras} aparecen en el interior y cada uno puede soltar una {o:Terraria/LihzahrdPowerCell}.",
       "Sigue siempre el pasillo hacia abajo: acaba en la sala del altar. No hace falta explorar todo."
      ]
     },
@@ -7201,7 +7201,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Los {o:Terraria/LunarTabletFragment} se encuentran en los cofres del templo. Se combinan en una {o:Terraria/SolarTablet}, que sirve para empezar un Eclipse a propósito. El Eclipse también puede ocurrir solo en modo difícil, tras un jefe mecánico, con una probabilidad de una entre veinte cada amanecer."
+     "texto": "Los {o:Terraria/LunarTabletFragment|Fragmentos de tablilla solar} se encuentran en los cofres del templo. Se combinan en una {o:Terraria/SolarTablet}, que sirve para empezar un Eclipse a propósito. El Eclipse también puede ocurrir solo en modo difícil, tras un jefe mecánico, con una probabilidad de una entre veinte cada amanecer."
     },
     {
      "tipo": "lista",
@@ -7309,7 +7309,7 @@
     {
      "tipo": "aviso",
      "estilo": "destacado",
-     "texto": "No caigas a ciegas. Llega con una {o:Terraria/ObsidianSkinPotion} activa o con un accesorio que proteja de la lava, como el {o:Terraria/LavaCharm} o el {o:Terraria/ObsidianSkull}."
+     "texto": "No caigas a ciegas. Llega con una {o:Terraria/ObsidianSkinPotion} activa o con un accesorio que proteja de la lava, como el {o:Terraria/LavaCharm} o la {o:Terraria/ObsidianSkull}."
     },
     {
      "tipo": "titulo",
@@ -7321,7 +7321,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Para fundir la barra necesitas un {o:Terraria/Hellforge} y obsidiana: la receta de {o:Terraria/HellstoneBar} lleva tres de piedra infernal y una de {o:Terraria/Obsidian}. La obsidiana se forma al juntar agua y lava."
+     "texto": "Para fundir la barra necesitas una {o:Terraria/Hellforge} y obsidiana: la receta de {o:Terraria/HellstoneBar} lleva tres de piedra infernal y una de {o:Terraria/Obsidian}. La obsidiana se forma al juntar agua y lava."
     },
     {
      "tipo": "titulo",
@@ -7329,7 +7329,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Las **casas en ruinas** son torres sueltas de obsidiana y ladrillo infernal repartidas por el Inframundo. Dentro hay muebles propios, un {o:Terraria/Hellforge} y, lo más importante, **cofres de las sombras**. Cada uno requiere una {o:Terraria/ShadowKey}, que no se gasta al usarla."
+     "texto": "Las **casas en ruinas** son torres sueltas de obsidiana y ladrillo infernal repartidas por el Inframundo. Dentro hay muebles propios, una {o:Terraria/Hellforge} y, lo más importante, **cofres de las sombras**. Cada uno requiere una {o:Terraria/ShadowKey}, que no se gasta al usarla."
     },
     {
      "tipo": "tabla",
@@ -7355,7 +7355,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Para invocar al {n:Terraria/WallofFlesh} tira un {o:Terraria/GuideVoodooDoll} a la lava del Inframundo. Lo sueltan los {n:Terraria/VoodooDemon} y requiere que el {n:Terraria/Guide} esté vivo. Cuando el Guía muere en la lava, el jefe también aparece."
+     "texto": "Para invocar al {n:Terraria/WallofFlesh} tira un {o:Terraria/GuideVoodooDoll} a la lava del Inframundo. Lo sueltan los {n:Terraria/VoodooDemon|Demonios vudú} y requiere que el {n:Terraria/Guide} esté vivo. Cuando el Guía muere en la lava, el jefe también aparece."
     },
     {
      "tipo": "lista",
@@ -7436,7 +7436,7 @@
       [
        "Enemigos",
        "Enemigos con más vida y daño que los de otros biomas de superficie.",
-       "Más fuertes: los {n:Terraria/ManEater} cuelgan de las hiedras y los {n:Terraria/MossHornet} aparecen en las cuevas."
+       "Más fuertes: los {n:Terraria/ManEater} cuelgan de las hiedras y los {n:Terraria/MossHornet|Avispones del musgo} aparecen en las cuevas."
       ],
       [
        "Qué buscar",
@@ -7501,7 +7501,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "Aparecen en el césped de la jungla subterránea (o más abajo) en cuanto derrotas **un** jefe mecánico. Cada {o:Terraria/LifeFruit} da 5 de vida máxima, y solo se pueden usar cuando ya tienes 400 de vida por los {o:Terraria/LifeCrystal}. Con 20 llegas a 500. No hace falta pico para cogerlas. Mira {p:frutas}."
+         "texto": "Aparecen en el césped de la jungla subterránea (o más abajo) en cuanto derrotas **un** jefe mecánico. Cada {o:Terraria/LifeFruit} da 5 de vida máxima, y solo se pueden usar cuando ya tienes 400 de vida por los {o:Terraria/LifeCrystal|Cristales de vida}. Con 20 llegas a 500. No hace falta pico para cogerlas. Mira {p:frutas}."
         }
        ]
       },
@@ -7521,7 +7521,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "El {n:Terraria/GiantTortoise} y el {n:Terraria/AngryTrapper} vuelven la jungla mucho más peligrosa. Lleva armadura del modo difícil."
+         "texto": "La {n:Terraria/GiantTortoise} y el {n:Terraria/AngryTrapper} vuelven la jungla mucho más peligrosa. Lleva armadura del modo difícil."
         }
        ]
       }
@@ -7856,7 +7856,7 @@
        "Lluvia de slime",
        "De día, por la mañana, sin lluvia: con 3 {o:Terraria/LifeCrystal} usados y más de 8 de defensa, o en Experto y superior sin ese requisito.",
        "No se invoca.",
-       "A los 150 slimes muertos (75 si ya derrotaste al Rey slime) aparece {n:Terraria/KingSlime}. El {o:Terraria/SlimeCrown} es la forma manual de llamarlo."
+       "A los 150 slimes muertos (75 si ya derrotaste al Rey slime) aparece {n:Terraria/KingSlime}. La {o:Terraria/SlimeCrown} es la forma manual de llamarlo."
       ],
       [
        "Tormenta de arena",
@@ -8214,7 +8214,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "El Bestiario se rellena al ver, matar y sacar botín a los enemigos. Al llegar al 10 % se muda el {n:Terraria/BestiaryGirl}. Explorar zonas nuevas y matar de todo es la manera más rápida de llenarlo."
+     "texto": "El Bestiario se rellena al ver, matar y sacar botín a los enemigos. Al llegar al 10 % se muda la {n:Terraria/BestiaryGirl}. Explorar zonas nuevas y matar de todo es la manera más rápida de llenarlo."
     },
     {
      "tipo": "fuentes",
@@ -8266,7 +8266,7 @@
        "{o:Terraria/LifeCrystal}",
        "+20 de vida",
        "15 usados: de 100 a 400",
-       "Está bajo tierra, en las cavernas: se rompe y suelta el objeto. El {n:Terraria/Nurse} llega cuando ya has usado uno."
+       "Está bajo tierra, en las cavernas: se rompe y suelta el objeto. La {n:Terraria/Nurse} llega cuando ya has usado uno."
       ],
       [
        "{o:Terraria/LifeFruit}",
@@ -8326,7 +8326,7 @@
       [
        "{o:Terraria/AegisFruit}",
        "+4 de defensa.",
-       "Tirando un {o:Terraria/LifeFruit} al fulgor."
+       "Tirando una {o:Terraria/LifeFruit} al fulgor."
       ],
       [
        "{o:Terraria/ArcaneCrystal}",
@@ -8517,7 +8517,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "En lava solo pescas con una caña que lo permita (la {o:Terraria/HotlineFishingHook}), con un accesorio de pesca en lava o con un cebo preparado para ello. En miel pescas con cualquier caña. En ambos casos, el depósito tiene que ser grande."
+         "texto": "En lava solo pescas con una caña que lo permita (el {o:Terraria/HotlineFishingHook}), con un accesorio de pesca en lava o con un cebo preparado para ello. En miel pescas con cualquier caña. En ambos casos, el depósito tiene que ser grande."
         }
        ]
       },
@@ -8576,7 +8576,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "En el resto de misiones, el premio es al azar, y cuantas más hayas hecho, menos raro sale lo bueno. Entre lo posible: {o:Terraria/TackleBox}, {o:Terraria/AnglerEarring}, {o:Terraria/HighTestFishingLine}, {o:Terraria/FishermansGuide}, {o:Terraria/WeatherRadio}, {o:Terraria/Sextant}, {o:Terraria/FishingBobber}, {o:Terraria/GoldenBugNet}, {o:Terraria/SeashellHairpin}, {o:Terraria/FishHook} y el {o:Terraria/SuperAbsorbantSponge}. En modo difícil y pasadas 10 misiones, {o:Terraria/FinWings}; y pasadas 25, {o:Terraria/HotlineFishingHook}. Si el pez es el {o:Terraria/BumblebeeTuna}, puede tocarte {o:Terraria/BottomlessHoneyBucket} o {o:Terraria/HoneyAbsorbantSponge}."
+     "texto": "En el resto de misiones, el premio es al azar, y cuantas más hayas hecho, menos raro sale lo bueno. Entre lo posible: {o:Terraria/TackleBox}, {o:Terraria/AnglerEarring}, {o:Terraria/HighTestFishingLine}, {o:Terraria/FishermansGuide}, {o:Terraria/WeatherRadio}, {o:Terraria/Sextant}, {o:Terraria/FishingBobber}, {o:Terraria/GoldenBugNet}, {o:Terraria/SeashellHairpin}, {o:Terraria/FishHook} y la {o:Terraria/SuperAbsorbantSponge}. En modo difícil y pasadas 10 misiones, {o:Terraria/FinWings}; y pasadas 25, {o:Terraria/HotlineFishingHook}. Si el pez es el {o:Terraria/BumblebeeTuna}, puede tocarte {o:Terraria/BottomlessHoneyBucket} o {o:Terraria/HoneyAbsorbantSponge}."
     },
     {
      "tipo": "aviso",
@@ -9269,7 +9269,7 @@
        ]
       }
      ],
-     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n[accesorios] Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varias {o:Terraria/WhiteString} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n[minions] Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n[pociones y mejoras] Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
+     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n**Accesorios.** Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varios {o:Terraria/WhiteString|Hilos blancos} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n**Esbirros.** Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n**Pociones y mejoras.** Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -9794,7 +9794,7 @@
        ]
       }
      ],
-     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n[armadura] • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n[accesorios ofensivos] Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
+     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n**Armadura.** • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n**Accesorios ofensivos.** Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -11014,7 +11014,7 @@
        ]
       }
      ],
-     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de necro ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest}.",
+     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de los muertos ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest|Cofres de las sombras}.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -12392,7 +12392,7 @@
        ]
       }
      ],
-     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n[armadura] A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones. La Chlorophyte Mask ofrece más supervivencia, mientras que el Chlorophyte Visor ofrece más DPS en forma de minions.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
+     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n**Armadura.** A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -12635,7 +12635,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -13232,7 +13232,7 @@
       {
        "ref": "Terraria/SpookyBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, las {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
+       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, el {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
        "rol": "",
        "conjunto": "",
        "marcas": [
@@ -13300,7 +13300,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "(no hace falta si usas las {o:Terraria/BetsyWings}) Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -13659,7 +13659,7 @@
        ]
       }
      ],
-     "nota": "Ya está disponible el equipo del {n:Terraria/Golem}, de la Locura marciana y del último nivel del Ejército del Antiguo. También es ya factible enfrentarse al {n:Terraria/DukeFishron}, a la {n:Terraria/HallowBoss}, a la Luna calabaza y a la Luna Gélida. Esta etapa marca la disponibilidad de las primeras armas mágicas del modo difícil que destacan de verdad contra un solo objetivo.\n\n[armadura] Los dos conjuntos de armadura de escarabajo son viables en situaciones distintas. Aun así, la variante ofensiva no es óptima con armas cuyo DPS no depende de la velocidad de cuerpo a cuerpo, como los {o:Terraria/VampireKnives}.",
+     "nota": "Ya está disponible el equipo del {n:Terraria/Golem}, de la Locura marciana y del último nivel del Ejército del Antiguo. También es ya factible enfrentarse al {n:Terraria/DukeFishron}, a la {n:Terraria/HallowBoss}, a la Luna calabaza y a la Luna Gélida. Esta etapa marca la disponibilidad de las primeras armas mágicas del modo difícil que destacan de verdad contra un solo objetivo.\n\n**Armadura.** Los dos conjuntos de armadura de escarabajo son viables en situaciones distintas. Aun así, la variante ofensiva no es óptima con armas cuyo DPS no depende de la velocidad de cuerpo a cuerpo, como los {o:Terraria/VampireKnives}.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -13753,7 +13753,7 @@
        ]
       }
      ],
-     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior (Pre-Lunatic Cultist) deben usarse junto con estos.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
+     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior deben usarse junto con estos.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -13962,7 +13962,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -14517,7 +14517,7 @@
       {
        "ref": "Terraria/FrostburnArrow",
        "origen": "",
-       "nota": "Mejorable a partir de las {o:Terraria/WoodenArrow}",
+       "nota": "Mejorable a partir de las {o:Terraria/WoodenArrow|Flechas de madera}",
        "rol": "munición",
        "conjunto": "",
        "marcas": []
@@ -14525,7 +14525,7 @@
       {
        "ref": "Terraria/FlamingArrow",
        "origen": "",
-       "nota": "Mejorable a partir de las {o:Terraria/WoodenArrow}",
+       "nota": "Mejorable a partir de las {o:Terraria/WoodenArrow|Flechas de madera}",
        "rol": "munición",
        "conjunto": "",
        "marcas": []
@@ -14569,7 +14569,7 @@
        ]
       }
      ],
-     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n[accesorios] Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varias {o:Terraria/WhiteString} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n[minions] Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n[pociones y mejoras] Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
+     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n**Accesorios.** Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varios {o:Terraria/WhiteString|Hilos blancos} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n**Esbirros.** Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n**Pociones y mejoras.** Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -15165,7 +15165,7 @@
        ]
       }
      ],
-     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n[armadura] Un {o:Terraria/Gi} puede usarse en lugar de la {o:Terraria/FossilShirt}, ya que ofrece mayores bonificaciones ofensivas. La armadura de fósil completa solo es superior si el jugador quiere usar sus efectos de ahorro de munición.\n\n[armadura] • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n[accesorios ofensivos] Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
+     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n**Armadura.** Un {o:Terraria/Gi} puede usarse en lugar de la {o:Terraria/FossilShirt}, ya que ofrece mayores bonificaciones ofensivas. La armadura de fósil completa solo es superior si el jugador quiere usar sus efectos de ahorro de munición.\n\n**Armadura.** • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n**Accesorios ofensivos.** Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -16357,7 +16357,7 @@
        ]
       }
      ],
-     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de necro ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest}.",
+     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de los muertos ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest|Cofres de las sombras}.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -17073,7 +17073,7 @@
       {
        "ref": "Terraria/ChlorophyteShotbow",
        "origen": "",
-       "nota": "({o:Terraria/HolyArrow} / Chaos Cylinder con {o:Terraria/HolyArrow}, {o:Terraria/IchorArrow} y {o:Terraria/CursedArrow} en rotación) ({o:Terraria/ChlorophyteArrow})",
+       "nota": "({o:Terraria/ChlorophyteArrow})",
        "rol": "arma (un solo objetivo) / arma (control de masas)",
        "conjunto": "",
        "marcas": [
@@ -17705,7 +17705,7 @@
        ]
       }
      ],
-     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n[armadura] A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones. La Chlorophyte Mask ofrece más supervivencia, mientras que el Chlorophyte Visor ofrece más DPS en forma de minions.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
+     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n**Armadura.** A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -17907,7 +17907,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -18572,7 +18572,7 @@
       {
        "ref": "Terraria/SpookyBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, las {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
+       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, el {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
        "rol": "",
        "conjunto": "",
        "marcas": [
@@ -18664,7 +18664,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "(no hace falta si usas las {o:Terraria/BetsyWings}) Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -19121,7 +19121,7 @@
       {
        "ref": "Terraria/Phantasm",
        "origen": "",
-       "nota": "Se recomiendan {o:Terraria/IchorArrow} combinadas con {o:Terraria/VenomArrow} para daño contra un solo objetivo al usar el Chaos Cylinder.",
+       "nota": "",
        "rol": "arma (un solo objetivo)",
        "conjunto": "",
        "marcas": [
@@ -19257,7 +19257,7 @@
        ]
       }
      ],
-     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior (Pre-Lunatic Cultist) deben usarse junto con estos.\n\n[armadura] La armadura Red Riding (sin usar la capucha) ahora puede superar con bastante facilidad el daño de la armadura de shroomita en builds híbridas de tirador e invocador, gracias a la nueva disponibilidad de la {o:Terraria/StardustCellStaff} y de los bastones del Dragón de polvo estelar. Como la {o:Terraria/HuntressAltHead} no es óptima, pueden usarse otros cascos en su lugar. Técnicamente ya ocurría con la {o:Terraria/EmpressBlade}, que está disponible antes de esta sección pero es mucho más difícil de conseguir. Si el jugador no depende de grandes aumentos de daño (por ejemplo, acumulando daño de miras o una build Amenazante) o es flexible con el tipo de armas a distancia que usa, debe usarse la {o:Terraria/AdamantiteMask}; si no, deben sustituirse por cascos de shroomita, por sus mayores aumentos de daño en conjunto.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
+     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior deben usarse junto con estos.\n\n**Armadura.** La armadura de Caperuza roja (sin usar la capucha) ahora puede superar con bastante facilidad el daño de la armadura de piñonita en builds híbridas de tirador e invocador, gracias a la nueva disponibilidad de la {o:Terraria/StardustCellStaff} y de los bastones del Dragón de polvo estelar. Como la {o:Terraria/HuntressAltHead} no es óptima, pueden usarse otros cascos en su lugar. Técnicamente ya ocurría con la {o:Terraria/EmpressBlade}, que está disponible antes de esta sección pero es mucho más difícil de conseguir. Si el jugador no depende de grandes aumentos de daño (por ejemplo, acumulando daño de miras o una build Amenazante) o es flexible con el tipo de armas a distancia que usa, debe usarse la {o:Terraria/AdamantiteMask}; si no, deben sustituirse por cascos de piñonita, por sus mayores aumentos de daño en conjunto.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -19283,7 +19283,7 @@
       {
        "ref": "Terraria/Phantasm",
        "origen": "",
-       "nota": "({o:Terraria/IchorArrow} + {o:Terraria/VenomArrow}) Se recomiendan {o:Terraria/IchorArrow} + {o:Terraria/VenomArrow} para daño contra un solo objetivo, usando el Chaos Cylinder. ({o:Terraria/LunarOre}/{o:Terraria/ChlorophyteArrow}) Es más eficaz en una build de tanque.",
+       "nota": "({o:Terraria/LunarOre}/{o:Terraria/ChlorophyteArrow}) Es más eficaz en una build de tanque.",
        "rol": "arma (un solo objetivo) / arma (control de masas)",
        "conjunto": "",
        "marcas": [
@@ -19453,7 +19453,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -20112,7 +20112,7 @@
        ]
       }
      ],
-     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\nLos magos pueden aumentar su capacidad de maná con {o:Terraria/ManaCrystal}, con la modificación Arcano y con piezas de armadura tempranas como las túnicas de gema.\n\n[accesorios] Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varias {o:Terraria/WhiteString} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n[minions] Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n[pociones y mejoras] Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
+     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\nLos magos pueden aumentar su capacidad de maná con {o:Terraria/ManaCrystal}, con la modificación Arcano y con piezas de armadura tempranas como las túnicas de gema.\n\n**Accesorios.** Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varios {o:Terraria/WhiteString|Hilos blancos} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n**Esbirros.** Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n**Pociones y mejoras.** Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -20781,7 +20781,7 @@
        ]
       }
      ],
-     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n[armadura] • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n[accesorios ofensivos] Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
+     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n**Armadura.** • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n**Accesorios ofensivos.** Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -22037,7 +22037,7 @@
        ]
       }
      ],
-     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de necro ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest}.",
+     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de los muertos ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest|Cofres de las sombras}.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -23259,7 +23259,7 @@
        ]
       }
      ],
-     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n[armadura] A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones. La Chlorophyte Mask ofrece más supervivencia, mientras que el Chlorophyte Visor ofrece más DPS en forma de minions.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
+     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n**Armadura.** A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -23480,7 +23480,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -24025,7 +24025,7 @@
       {
        "ref": "Terraria/SpookyBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, las {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
+       "nota": "Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, el {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
        "rol": "",
        "conjunto": "",
        "marcas": [
@@ -24123,7 +24123,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "(no hace falta si usas las {o:Terraria/BetsyWings}) Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -24472,7 +24472,7 @@
        ]
       }
      ],
-     "nota": "Ya está disponible el equipo del {n:Terraria/Golem}, de la Locura marciana y del último nivel del Ejército del Antiguo. También es ya factible enfrentarse al {n:Terraria/DukeFishron}, a la {n:Terraria/HallowBoss}, a la Luna calabaza y a la Luna Gélida. Esta etapa marca la disponibilidad de las primeras armas mágicas del modo difícil que destacan de verdad contra un solo objetivo.\n\n[armadura] Tanto la {o:Terraria/SpectreMask} como la {o:Terraria/SpectreHood} son útiles, para ataque y defensa respectivamente. Un conjunto completo de armadura espectral con la máscara se sinergiza mejor con las bonificaciones de golpe crítico, porque los críticos convierten los 400 DPS de la bonificación de conjunto en 800 DPS.",
+     "nota": "Ya está disponible el equipo del {n:Terraria/Golem}, de la Locura marciana y del último nivel del Ejército del Antiguo. También es ya factible enfrentarse al {n:Terraria/DukeFishron}, a la {n:Terraria/HallowBoss}, a la Luna calabaza y a la Luna Gélida. Esta etapa marca la disponibilidad de las primeras armas mágicas del modo difícil que destacan de verdad contra un solo objetivo.\n\n**Armadura.** Tanto la {o:Terraria/SpectreMask} como la {o:Terraria/SpectreHood} son útiles, para ataque y defensa respectivamente. Un conjunto completo de armadura espectral con la máscara se sinergiza mejor con las bonificaciones de golpe crítico, porque los críticos convierten los 400 DPS de la bonificación de conjunto en 800 DPS.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -24615,7 +24615,7 @@
        ]
       }
      ],
-     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior (Pre-Lunatic Cultist) deben usarse junto con estos.\n\n[armadura] • Contra el {n:Terraria/MoonLordCore}, la armadura de Artista Oscuro en conjunto puede superar ya el DPS de la armadura espectral si se usan accesorios de hueco de minion extra con el {o:Terraria/StardustDragonStaff}. • El jugador no pierde tanto daño si decide ir a lo seguro usando la {o:Terraria/SquireAltShirt} por sus bonificaciones de supervivencia, aunque, al igual que la armadura de Artista Oscuro, también tiene enormes bonificaciones de daño de invocación. La {o:Terraria/SpectreMask} tiene más defensa (11 más) que el {o:Terraria/ApprenticeAltHead}, pero no tiene las bonificaciones de daño de invocación de este. Estas consideraciones se hacen porque el robo de vida de la armadura espectral no funciona contra el {n:Terraria/MoonLordCore} hasta que se mata el ojo superior. Técnicamente ya ocurría con la {o:Terraria/EmpressBlade}, que está disponible antes de esta sección pero es mucho más difícil de conseguir.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
+     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior deben usarse junto con estos.\n\n**Armadura.** • Contra el {n:Terraria/MoonLordCore}, la armadura de Artista Oscuro en conjunto puede superar ya el DPS de la armadura espectral si se usan accesorios de hueco de minion extra con el {o:Terraria/StardustDragonStaff}. • El jugador no pierde tanto daño si decide ir a lo seguro usando la {o:Terraria/SquireAltShirt} por sus bonificaciones de supervivencia, aunque, al igual que la armadura de Artista Oscuro, también tiene enormes bonificaciones de daño de invocación. La {o:Terraria/SpectreMask} tiene más defensa (11 más) que el {o:Terraria/ApprenticeAltHead}, pero no tiene las bonificaciones de daño de invocación de este. Estas consideraciones se hacen porque el robo de vida de la armadura espectral no funciona contra el {n:Terraria/MoonLordCore} hasta que se mata el ojo superior. Técnicamente ya ocurría con la {o:Terraria/EmpressBlade}, que está disponible antes de esta sección pero es mucho más difícil de conseguir.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -24857,7 +24857,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -25386,7 +25386,7 @@
        ]
       }
      ],
-     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n[minions] En esta etapa no hay ningún minion estrictamente mejor o peor, aunque el Clay Bud Staff es el más fácil de conseguir al principio.\n\n[accesorios] Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varias {o:Terraria/WhiteString} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n[minions] Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n[pociones y mejoras] Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
+     "nota": "Al entrar por primera vez en un mundo, cualquier arma y accesorio es mejor que nada. En esta etapa conviene usar armas de cualquier categoría, así que se recomienda olvidarse por ahora de los tipos de daño. Esta sección recoge objetos disponibles en los biomas de superficie que no son malignos y en la capa subterránea pura.\n\n**Accesorios.** Cualquier accesorio es útil al principio, sobre todo teniendo en cuenta las modificaciones para aumentar estadísticas. Esto incluye accesorios informativos como el {o:Terraria/Radar} o accesorios de novedad como el {o:Terraria/PortableStool}, que se pueden encontrar al saquear cofres de la superficie. Así se pueden fabricar varios {o:Terraria/WhiteString|Hilos blancos} de forma repetida hasta que salga con la modificación Protector, ya que solo requiere 30 {o:Terraria/Cobweb}.\n\n**Esbirros.** Ten en cuenta que en esta etapa los minions sirven más para mantener alejados a los enemigos que por su daño.\n\n**Pociones y mejoras.** Sacudir los árboles mientras exploras el mundo es una gran forma de conseguir una fuente de la mejora Bien alimentado: la fruta.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -25822,7 +25822,7 @@
        ]
       }
      ],
-     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n[minions] Si el jugador no tiene a Cattiva ni a Foxparks, dos ranas vampiro y un Flinx son la siguiente mejor opción.\n\n[minions] • El ataque especial «Huggy Fire» (lanzallamas) de Foxparks es casi siempre superior a cualquier látigo que use el jugador, al menos hasta conseguir el {o:Terraria/ThornWhip}. • Ambas armas deben usarse junto con el {o:Terraria/VampireFrogStaff} y el {o:Terraria/FlinxStaff}.\n\n[látigos] El Soulscourge o el Vasculash pueden usarlos los invocadores del principio para ir tirando hasta conseguir los ingredientes de fabricación del {o:Terraria/ThornWhip}.\n\n[armadura] Cualquier casco El {o:Terraria/AncientShadowHelmet} da la mayor defensa de cualquier casco previo a los jefes. El {o:Terraria/JungleHat} y el {o:Terraria/PlatinumHelmet} dan 5 de defensa y son alternativas.\n\n[armadura] Cualquier pieza de piernas Los {o:Terraria/JunglePants} y las {o:Terraria/AncientShadowGreaves} dan la mayor defensa de cualquier pieza de piernas previa a los jefes, con 6 de defensa.\n\n[armadura] • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n[accesorios ofensivos] Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
+     "nota": "En esta etapa centrarse en una clase puede ser más beneficioso, porque los conjuntos de armadura tienen bonificaciones de clase. Muchos accesorios siguen mejorando al jugador en general y no a una clase, así que usar el arma más potente que encuentres, sea de la clase que sea, sigue siendo muy ventajoso. Una vez roto un {o:Terraria/ShadowOrb} o un {o:Terraria/CrimsonHeart} y con más de 200 de vida, cada nuevo día (a las 4:30) hay una probabilidad de que invada el Invasión duende, que acaba desbloqueando el {o:Terraria/TinkerersWorkshop} gracias al {n:Terraria/GoblinTinkerer}, que sirve para mejorar y combinar tus accesorios. También puedes invocar al ejército con un {o:Terraria/GoblinBattleStandard} al llegar a 200 de vida (se puede usar sin haber destruido ningún {o:Terraria/ShadowOrb} ni {o:Terraria/CrimsonHeart}).\n\n• Ambas armas deben usarse junto con el {o:Terraria/VampireFrogStaff} y el {o:Terraria/FlinxStaff}.\n\n**Armadura.** Cualquier casco El {o:Terraria/AncientShadowHelmet} da la mayor defensa de cualquier casco previo a los jefes. El {o:Terraria/JungleHat} y el {o:Terraria/PlatinumHelmet} dan 5 de defensa y son alternativas.\n\n**Armadura.** Cualquier pieza de piernas Los {o:Terraria/JunglePants} y las {o:Terraria/AncientShadowGreaves} dan la mayor defensa de cualquier pieza de piernas previa a los jefes, con 6 de defensa.\n\n**Armadura.** • En el caso del {o:Terraria/FlinxFurCoat}, cualquier jugador puede beneficiarse de él en forma de daño, aunque a costa de defensa. También pueden usarse a la vez otras piezas de armadura (consulta Invocación § Armadura de esta parte de la progresión para más información). • Con el Shimmer, los jugadores pueden transmutar {o:Terraria/Cactus} en {o:Terraria/Pumpkin} para fabricar la armadura de calabaza, que da un 10% más de daño de todos los tipos.\n\n**Accesorios ofensivos.** Especialmente valiosa para invocadores, sobre todo con minions de poco daño base.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -26323,7 +26323,7 @@
        ]
       }
      ],
-     "nota": "Tras derrotar a los primeros jefes, tienes acceso a más accesorios y armaduras específicos de cada clase.\n\n[látigos] El Starcrash es especialmente eficaz en equipos de minion-mixing, ya que sus meteoritos infligen 1,33× el daño del ataque que los invocó. Es especialmente eficaz con minions y centinelas de mucho daño, como el {o:Terraria/ImpStaff} y la {o:Terraria/DD2BallistraTowerT1Popper}.",
+     "nota": "Tras derrotar a los primeros jefes, tienes acceso a más accesorios y armaduras específicos de cada clase.\n\nEs especialmente eficaz con minions y centinelas de mucho daño, como el {o:Terraria/ImpStaff} y la {o:Terraria/DD2BallistraTowerT1Popper}.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -26339,7 +26339,7 @@
       {
        "ref": "Terraria/VampireFrogStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Minion-mixing. (1x) Conviene siempre tener al menos una rana vampiro activa apuntando al ojo superior del {n:Terraria/WallofFlesh} para cualquier invocador que luche contra él. Grupo en la wiki: A tope / Con Starcrash. Grupo en la wiki: A tope / Con Spinal Tap. (1-2x)",
+       "nota": "Grupo en la wiki: Minion-mixing. (1x) Conviene siempre tener al menos una rana vampiro activa apuntando al ojo superior del {n:Terraria/WallofFlesh} para cualquier invocador que luche contra él. Grupo en la wiki: A tope / Con Spinal Tap. (1-2x)",
        "rol": "minion",
        "conjunto": "",
        "marcas": [
@@ -26349,7 +26349,7 @@
       {
        "ref": "Terraria/HornetStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Minion-mixing. (1x) Grupo en la wiki: A tope / Con Starcrash. Tiene un daño base decente (aunque menor) combinado con el Starcrash, y puede servir para infligir envenenamiento a los Hambrientos.",
+       "nota": "Grupo en la wiki: Minion-mixing.",
        "rol": "minion",
        "conjunto": "",
        "marcas": []
@@ -26357,7 +26357,7 @@
       {
        "ref": "Terraria/ImpStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Minion-mixing. (1x) Grupo en la wiki: A tope / Con Starcrash. (a tope, la mayoría de huecos)",
+       "nota": "Grupo en la wiki: Minion-mixing. (a tope, la mayoría de huecos)",
        "rol": "minion",
        "conjunto": "",
        "marcas": []
@@ -26904,7 +26904,7 @@
        ]
       }
      ],
-     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de necro ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest}.\n\n[minions] El Starcrash requiere corta distancia e inflige mucho DPS usado a tope con el {o:Terraria/ImpStaff}, sin rival para despejar rápido a los Hambrientos. • Esta combinación solo debería usarse sobre todo contra el {n:Terraria/WallofFlesh}; fuera de ese combate se queda por detrás de otras opciones de esta sección. • Si el jugador no tiene arena y usa una {o:Terraria/WaterWalkingPotion} o las {o:Terraria/WaterWalkingBoots} (o su mejora), esta pasa a ser la mejor opción contra el {n:Terraria/WallofFlesh}. Los siguientes minions pueden sustituir a un diablillo:\n\n[minions] El Spinal Tap tiene algo más de alcance (y da un DPS similar pero más consistente que la build a tope con Starcrash) y puede conseguir un DPS especialmente alto con una build a tope con el Mushroom Staff. • Ten en cuenta que, para aprovechar al máximo las invocaciones del Mushroom Staff, hace falta una arena eficaz; como mínimo, construir antes una plataforma. Los siguientes minions pueden sustituir a un hongo:\n\n[látigos] Si el jugador apila látigos, aquí se prefiere claramente la armadura de obsidiana.\n\n[centinelas] El máximo de centinelas que puede tener un jugador en modo normal es de tres, que se consigue con la {o:Terraria/ApprenticeScarf} o el {o:Terraria/SquireShield} y el efecto indefinido de la {o:Terraria/WarTable}.\n\n[armadura] La armadura de abeja es preferible si piensas usar más a tus minions y adoptar un papel más pasivo, centrado en esquivar más que en atacar tú mismo; en cambio, la armadura de obsidiana cambia 1 de tus minions por +7% de daño de invocación adicional, +30% de alcance de látigo y +15% de velocidad.",
+     "nota": "Derrotar a {n:Terraria/SkeletronHead} da acceso a La Mazmorra, y con ella a la armadura de los muertos ({o:Terraria/NecroHelmet}, {o:Terraria/NecroBreastplate}, {o:Terraria/NecroGreaves}) y a armas nuevas de la Mazmorra y de los {o:Terraria/ShadowChest|Cofres de las sombras}.\n\n• Esta combinación solo debería usarse sobre todo contra el {n:Terraria/WallofFlesh}; fuera de ese combate se queda por detrás de otras opciones de esta sección. • Si el jugador no tiene arena y usa una {o:Terraria/WaterWalkingPotion} o las {o:Terraria/WaterWalkingBoots} (o su mejora), esta pasa a ser la mejor opción contra el {n:Terraria/WallofFlesh}. Los siguientes minions pueden sustituir a un diablillo:\n\nLos siguientes minions pueden sustituir a un hongo:\n\n**Látigos.** Si el jugador apila látigos, aquí se prefiere claramente la armadura de obsidiana.\n\n**Centinelas.** El máximo de centinelas que puede tener un jugador en modo normal es de tres, que se consigue con la {o:Terraria/ApprenticeScarf} o el {o:Terraria/SquireShield} y el efecto indefinido de la {o:Terraria/WarTable}.\n\n**Armadura.** La armadura de abeja es preferible si piensas usar más a tus minions y adoptar un papel más pasivo, centrado en esquivar más que en atacar tú mismo; en cambio, la armadura de obsidiana cambia 1 de tus minions por +7% de daño de invocación adicional, +30% de alcance de látigo y +15% de velocidad.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -27469,7 +27469,7 @@
        ]
       }
      ],
-     "nota": "En este punto del juego las bonificaciones de daño de armaduras y accesorios cobran más importancia, así que se anima a elegir una clase en la que especializarse. En general se coincide en que el tirador tiene las mejores armas en esta etapa. Aun así, el cuerpo a cuerpo mejora mucho también, porque sus armaduras tienen bastante más defensa que las de cualquier otra clase. La magia sigue centrada en el control de masas, lo que la hace eficaz para quien quiera acabar primero con {n:Terraria/TheDestroyer}. Los invocadores tienen sus mejores armas tras el {n:Terraria/BloodNautilus} y la {n:Terraria/QueenSlimeBoss}, y como ambos jefes pueden ser un reto con un equipo de invocador, puede merecer la pena cambiar temporalmente a otro equipo para enfrentarse a ellos. Si se superan ambos obstáculos, también se recomienda mezclar tu clase elegida con invocador en esta etapa, si llevas un equipo principalmente ofensivo. Este es también el punto en que una build totalmente defensiva empieza a diverger de las builds de daño, gracias a la disponibilidad de los {o:Terraria/FleshKnuckles} y el {o:Terraria/StarVeil} junto con mayor acceso a accesorios de daño, por lo que es buen momento para decidir si quieres un equipo principalmente ofensivo o defensivo y reforjar tus accesorios en consecuencia.\n\n[minions] • Es una opción bastante potente y a la vez consistente de conseguir para los invocadores al principio del modo difícil. Las dagas encantadas son eficaces tanto contra grupos como contra jefes, así que normalmente no hay problema en dedicarles todos los huecos. • Ten en cuenta que conseguir el {o:Terraria/Smolstar} obliga a enfrentarse a la {n:Terraria/QueenSlimeBoss}, lo que puede ser un problema si el jugador no tiene movilidad suficiente para esquivar la gran cantidad de proyectiles que produce.\n\n[minions] • Tanto el {o:Terraria/SanguineStaff} como el Ruinous Staff son en general mejores que el {o:Terraria/Smolstar} (el Ruinous Staff suele ser el mejor minion en conjunto) y valen a tope contra jefes, aunque ambos pueden ser aún más difíciles de conseguir que el {o:Terraria/Smolstar}. • Aunque el {o:Terraria/SanguineStaff} tiene capacidad más que adecuada contra grupos y vale a tope, el Ruinous Staff puede fallar en eso, así que al menos 3 huecos de minion deben dedicarse a las arañas ({o:Terraria/SpiderStaff}) cuando no se lucha contra jefes.\n\n[minions] Usar a Abigail también entra en la definición de «build de daño base», aunque es mucho más débil que las opciones anteriores y solo es superior si el jugador no tiene nada mejor.\n\n[látigos] No apiles un látigo primario con el otro. El copo de nieve creado por el {o:Terraria/CoolWhip} tiene poco daño base y puede interferir con el {o:Terraria/FireWhip}.\n\n[centinelas] Las fortalezas de ambos centinelas difieren según el contexto en que se usen: • El {o:Terraria/QueenSpiderStaff} rinde mejor contra enemigos terrestres y, al tener una cadencia alta, se beneficia más de integrarse en builds de daño de etiqueta (es decir, úsalo con el {o:Terraria/CoolWhip}). • El Barnacle Staff es superior contra objetivos aéreos y su gran daño base lo hace bueno en builds centradas en esa estadística (es decir, úsalo con el {o:Terraria/FireWhip}).\n\n[accesorios] Para las hondas, los invocadores tienen dos opciones: • Pueden conseguir inmunidad al retroceso y usar el Royal Guard's Harness, que ayuda a que los centinelas llevados mantengan un DPS constante. • Esto es especialmente relevante en equipos defensivos y se beneficia de usar centinelas de Explosive Trap. • O pueden ganar algo de daño (y perder aggro) con la Scout's Sling.",
+     "nota": "En este punto del juego las bonificaciones de daño de armaduras y accesorios cobran más importancia, así que se anima a elegir una clase en la que especializarse. En general se coincide en que el tirador tiene las mejores armas en esta etapa. Aun así, el cuerpo a cuerpo mejora mucho también, porque sus armaduras tienen bastante más defensa que las de cualquier otra clase. La magia sigue centrada en el control de masas, lo que la hace eficaz para quien quiera acabar primero con {n:Terraria/TheDestroyer}. Los invocadores tienen sus mejores armas tras el {n:Terraria/BloodNautilus} y la {n:Terraria/QueenSlimeBoss}, y como ambos jefes pueden ser un reto con un equipo de invocador, puede merecer la pena cambiar temporalmente a otro equipo para enfrentarse a ellos. Si se superan ambos obstáculos, también se recomienda mezclar tu clase elegida con invocador en esta etapa, si llevas un equipo principalmente ofensivo. Este es también el punto en que una build totalmente defensiva empieza a diverger de las builds de daño, gracias a la disponibilidad de los {o:Terraria/FleshKnuckles} y el {o:Terraria/StarVeil} junto con mayor acceso a accesorios de daño, por lo que es buen momento para decidir si quieres un equipo principalmente ofensivo o defensivo y reforjar tus accesorios en consecuencia.\n\n**Esbirros.** • Es una opción bastante potente y a la vez consistente de conseguir para los invocadores al principio del modo difícil. Las dagas encantadas son eficaces tanto contra grupos como contra jefes, así que normalmente no hay problema en dedicarles todos los huecos. • Ten en cuenta que conseguir el {o:Terraria/Smolstar} obliga a enfrentarse a la {n:Terraria/QueenSlimeBoss}, lo que puede ser un problema si el jugador no tiene movilidad suficiente para esquivar la gran cantidad de proyectiles que produce.\n\n**Esbirros.** Usar a Abigail también entra en la definición de «build de daño base», aunque es mucho más débil que las opciones anteriores y solo es superior si el jugador no tiene nada mejor.\n\n**Látigos.** No apiles un látigo primario con el otro. El copo de nieve creado por el {o:Terraria/CoolWhip} tiene poco daño base y puede interferir con el {o:Terraria/FireWhip}.\n\n**Centinelas.** Las fortalezas de ambos centinelas difieren según el contexto en que se usen: • El {o:Terraria/QueenSpiderStaff} rinde mejor contra enemigos terrestres y, al tener una cadencia alta, se beneficia más de integrarse en builds de daño de etiqueta (es decir, úsalo con el {o:Terraria/CoolWhip}).\n\n**Accesorios.** Para las hondas, los invocadores tienen dos opciones: • Pueden conseguir inmunidad al retroceso y usar el Royal Guard's Harness, que ayuda a que los centinelas llevados mantengan un DPS constante. • Esto es especialmente relevante en equipos defensivos y se beneficia de usar centinelas de Explosive Trap. • O pueden ganar algo de daño (y perder aggro) con la Scout's Sling.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -28061,7 +28061,7 @@
        ]
       }
      ],
-     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\n[minions] Usa un Trusty Foxparks junto con el Ruinous Staff para aprovechar sus ataques rápidos y los disparos adicionales del {o:Terraria/FireWhip}.\n\nPara {n:Terraria/Plantera} siguen valiendo las mismas combinaciones de látigo e invocación, pero la mayoría de invocadores sustituyen el {o:Terraria/SanguineStaff} por el {o:Terraria/OpticStaff} tras derrotar a los Gemelos. En esta etapa, la combinación de minion-mixing, que puede usar tanto la {o:Terraria/SwordWhip} como el {o:Terraria/FireWhip}, suele ser la mejor combinación para los invocadores en conjunto.\n\n[armadura] • En concreto, usar el {o:Terraria/MonkBrows} en lugar del Chlorophyte Visor cambia un 16% de daño de invocación y 1 hueco de minion por un 20% de velocidad de cuerpo a cuerpo y un centinela adicional. Puede ser una alternativa viable si el jugador usa el {o:Terraria/Smolstar} (que no se beneficia mucho de los aumentos porcentuales de daño), más aún si además usa un látigo potente (por ejemplo, el Electric Eel) conseguido pronto. • Si se usa el {o:Terraria/MonkBrows}, ten en cuenta que también es fácil cambiar temporalmente a un {o:Terraria/SquireGreatHelm} (que da notablemente 2 PV/s de regeneración), ya que ambos dan un centinela adicional.\n\n[armadura] Las armaduras del {n:Terraria/DD2Bartender} dan bonificaciones de minions y centinelas, además de bonificaciones importantes de cuerpo a cuerpo, a distancia y magia. Hace falta hibridar para sacarles todo el partido.\n\n[armadura] A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones. La Chlorophyte Mask ofrece más supervivencia, mientras que el Chlorophyte Visor ofrece más DPS en forma de minions.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
+     "nota": "En este punto se espera que los jugadores hayan elegido entre cuerpo a cuerpo, a distancia, magia, invocación o un híbrido de invocación y otra clase. Es también donde empieza a aparecer una variedad notable de armaduras dentro de la misma clase, con jugadores que eligen entre la armadura sagrada, la de clorofita y la armadura del Ejército del Antiguo de nivel 2. Para magia y distancia, la elección está entre la armadura sagrada (para equipos ofensivos que necesitan un efecto defensivo) o la de clorofita (para ofensiva total). Los usuarios de cuerpo a cuerpo deben usar la armadura de tortuga para defensa pura, o alguna combinación de {o:Terraria/HallowedMask} o {o:Terraria/ChlorophyteMask}, {o:Terraria/MonkShirt} o {o:Terraria/SquirePlating} y {o:Terraria/SquireGreaves} para las mayores estadísticas totales. Si no se dispone de una fuente fiable de {o:Terraria/DefenderMedal}, la armadura de clorofita completa con la {o:Terraria/ChlorophyteMask} también funciona para equipos ofensivos de cuerpo a cuerpo y para equipos defensivos de distancia y magia. Como en etapas anteriores, la distancia ofrece el mayor DPS a larga distancia, el cuerpo a cuerpo la mejor capacidad de aguante, la magia los efectos de arma más versátiles y la invocación la limpieza de grupos más cómoda.\n\nPara {n:Terraria/Plantera} siguen valiendo las mismas combinaciones de látigo e invocación, pero la mayoría de invocadores sustituyen el {o:Terraria/SanguineStaff} por el {o:Terraria/OpticStaff} tras derrotar a los Gemelos. En esta etapa, la combinación de minion-mixing, que puede usar tanto la {o:Terraria/SwordWhip} como el {o:Terraria/FireWhip}, suele ser la mejor combinación para los invocadores en conjunto.\n\nPuede ser una alternativa viable si el jugador usa el {o:Terraria/Smolstar} (que no se beneficia mucho de los aumentos porcentuales de daño), más aún si además usa un látigo potente conseguido pronto. • Si se usa el {o:Terraria/MonkBrows}, ten en cuenta que también es fácil cambiar temporalmente a un {o:Terraria/SquireGreatHelm} (que da notablemente 2 PV/s de regeneración), ya que ambos dan un centinela adicional.\n\n**Armadura.** Las armaduras del {n:Terraria/DD2Bartender} dan bonificaciones de minions y centinelas, además de bonificaciones importantes de cuerpo a cuerpo, a distancia y magia. Hace falta hibridar para sacarles todo el partido.\n\n**Armadura.** A los jugadores de clase mixta se les anima a usar un conjunto completo de armadura de clorofita en esta etapa por sus bonificaciones de daño generalizadas, aunque sea solo por eso; el DPS extra de la bonificación de conjunto del cristal de hoja también puede resultar útil en muchas situaciones.\n\nEl {o:Terraria/EoCShield} sigue siendo viable bien entrado el modo difícil por su útil habilidad de embestida.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -28103,7 +28103,7 @@
       {
        "ref": "Terraria/FireWhip",
        "origen": "",
-       "nota": "Grupo en la wiki: Build con {o:Terraria/FireWhip}. Se usa mejor junto con el Vulgar Display of Flower y la {o:Terraria/SwordWhip} para aprovechar sus efectos a la vez.",
+       "nota": "Grupo en la wiki: Build con {o:Terraria/FireWhip}.",
        "rol": "arma de invocación en mano",
        "conjunto": "",
        "marcas": []
@@ -28111,7 +28111,7 @@
       {
        "ref": "Terraria/SwordWhip",
        "origen": "",
-       "nota": "Grupo en la wiki: Build con {o:Terraria/FireWhip}. Úsalo junto con el Vulgar Display of Flower y el {o:Terraria/FireWhip} como látigo de apoyo, junto con accesorios de látigo. Grupo en la wiki: Mixta.",
+       "nota": "Grupo en la wiki: Build con {o:Terraria/FireWhip}. Grupo en la wiki: Mixta.",
        "rol": "arma de invocación en mano",
        "conjunto": "",
        "marcas": []
@@ -28289,7 +28289,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -28708,7 +28708,7 @@
       {
        "ref": "Terraria/ScytheWhip",
        "origen": "",
-       "nota": "Grupo en la wiki: Mejor (build con {o:Terraria/RainbowWhip}). Úsalo con accesorios de látigo. Grupo en la wiki: Mejor (build con Vulgar Display of Flower).",
+       "nota": "Grupo en la wiki: Mejor (build con {o:Terraria/RainbowWhip}). Úsalo con accesorios de látigo. Grupo en la wiki: Mejor .",
        "rol": "arma de invocación en mano",
        "conjunto": "",
        "marcas": [
@@ -28718,7 +28718,7 @@
       {
        "ref": "Terraria/FireWhip",
        "origen": "",
-       "nota": "Grupo en la wiki: Mejor (build con Vulgar Display of Flower). Úsalo con accesorios de látigo.",
+       "nota": "Grupo en la wiki: Mejor . Úsalo con accesorios de látigo.",
        "rol": "arma de invocación en mano",
        "conjunto": "",
        "marcas": [
@@ -28834,7 +28834,7 @@
       {
        "ref": "Terraria/SpookyBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, las {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
+       "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, el {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
        "rol": "",
        "conjunto": "armadura tétrica",
        "marcas": [
@@ -28987,7 +28987,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "(no hace falta si usas las {o:Terraria/BetsyWings}) Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -29442,7 +29442,7 @@
        ]
       }
      ],
-     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior (Pre-Lunatic Cultist) deben usarse junto con estos.\n\nLa opción de más daño para los invocadores en esta etapa es el Dragón de polvo estelar. Contra el {n:Terraria/MoonLordCore}, los invocadores deben dedicarle todos o casi todos sus huecos de minion, ya que no tiene problemas para apuntarle. Sin embargo, es menos consistente contra enemigos móviles o múltiples; en ese caso pueden usarse las {o:Terraria/EmpressBlade} o las células de polvo estelar. Aun así, reservar uno de los huecos de minion para un Dragón de polvo estelar seguirá siendo más eficaz. En cuanto a los látigos, aquí el mejor es la {o:Terraria/Constellation}, no solo por su excelente alcance y su daño muy consistente, sino porque además puede matar rápido a las sanguijuelas del {n:Terraria/MoonLordCore}.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
+     "nota": "La armadura, los accesorios y las pociones/mejoras de la sección anterior deben usarse junto con estos.\n\nLa opción de más daño para los invocadores en esta etapa es el Dragón de polvo estelar. Contra el {n:Terraria/MoonLordCore}, los invocadores deben dedicarle todos o casi todos sus huecos de minion, ya que no tiene problemas para apuntarle. Sin embargo, es menos consistente contra enemigos móviles o múltiples; en ese caso puede usarse la {o:Terraria/EmpressBlade} o las células de polvo estelar. Aun así, reservar uno de los huecos de minion para un Dragón de polvo estelar seguirá siendo más eficaz. En cuanto a los látigos, aquí el mejor es la {o:Terraria/Constellation}, no solo por su excelente alcance y su daño muy consistente, sino porque además puede matar rápido a las sanguijuelas del {n:Terraria/MoonLordCore}.\n\nSi el jugador mezcla bonificaciones de daño (por ejemplo, armas a distancia con apoyo de minions) y tiene ≤4 huecos de minion disponibles, la mejor configuración contra el {n:Terraria/MoonLordCore} es usar un Dragón de polvo estelar y dedicar el resto de huecos de minion a células de polvo estelar o Terraprismas.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -29681,7 +29681,7 @@
       {
        "ref": "Terraria/MasterNinjaGear",
        "origen": "",
-       "nota": "Los efectos de esquiva del {o:Terraria/MasterNinjaGear} y de la Mystic Arts Sash pueden acumularse.",
+       "nota": "",
        "rol": "movilidad / defensivo",
        "conjunto": "",
        "marcas": [
@@ -30049,7 +30049,7 @@
        ]
       }
      ],
-     "nota": "En este punto eres libre de usar lo que quieras, ya que la {o:Terraria/Zenith} mata todo con facilidad sea cual sea el equipo que lleves, y la mayoría de los demás botines del {n:Terraria/MoonLordCore} no se quedan atrás. Como ya no queda contenido relacionado con el combate, la naturaleza cómoda de la invocación resulta práctica para quienes quieren pasar del combate a construir, terraformar u otras actividades.\n\nEn el final del juego vuelve a haber dos combinaciones de látigo e invocación. El {o:Terraria/StardustDragonStaff} funciona de maravilla con la {o:Terraria/Constellation} si se busca un daño consistente por su alcance y sus proyectiles teledirigidos. Otra opción con el {o:Terraria/StardustDragonStaff} es usar el {o:Terraria/FireWhip}, por su gran daño base y porque el efecto del {o:Terraria/FireWhip} multiplica el daño del Dragón; pero, por el corto alcance del {o:Terraria/FireWhip}, obliga a acercarse a enemigos y jefes, aunque la armadura tiki puede ayudar con eso. La {o:Terraria/EmpressBlade} se beneficia de la Possession porque su rápida cadencia de ataque aprovecha el gran daño de etiqueta de la Possession. Sin embargo, para conseguirla hay que luchar contra la {n:Terraria/HallowBoss} de día, una tarea increíblemente difícil porque cada ataque del jefe mata de un golpe al jugador durante el día.",
+     "nota": "En este punto eres libre de usar lo que quieras, ya que la {o:Terraria/Zenith} mata todo con facilidad sea cual sea el equipo que lleves, y la mayoría de los demás botines del {n:Terraria/MoonLordCore} no se quedan atrás. Como ya no queda contenido relacionado con el combate, la naturaleza cómoda de la invocación resulta práctica para quienes quieren pasar del combate a construir, terraformar u otras actividades.\n\nEn el final del juego vuelve a haber dos combinaciones de látigo e invocación. El {o:Terraria/StardustDragonStaff} funciona de maravilla con la {o:Terraria/Constellation} si se busca un daño consistente por su alcance y sus proyectiles teledirigidos. Otra opción con el {o:Terraria/StardustDragonStaff} es usar el {o:Terraria/FireWhip}, por su gran daño base y porque el efecto del {o:Terraria/FireWhip} multiplica el daño del Dragón; pero, por el corto alcance del {o:Terraria/FireWhip}, obliga a acercarse a enemigos y jefes, aunque la armadura tiki puede ayudar con eso. Sin embargo, para conseguirla hay que luchar contra la {n:Terraria/HallowBoss} de día, una tarea increíblemente difícil porque cada ataque del jefe mata de un golpe al jugador durante el día.",
      "fuentes": [
       {
        "wiki": "terraria",
@@ -30128,7 +30128,7 @@
     "tilesMod": [],
     "minimo": 20
    },
-   "resumen": "Islas flotantes con cofres y casas de cielo, por encima de la superficie. Botín de las islas flotantes, como el {o:Terraria/Starfury} y el {o:Terraria/ShinyRedBalloon}.",
+   "resumen": "Islas flotantes con cofres y casas de cielo, por encima de la superficie. Botín de las islas flotantes, como la {o:Terraria/Starfury} y el {o:Terraria/ShinyRedBalloon}.",
    "bloques": [],
    "fuentes": []
   },
@@ -30391,7 +30391,7 @@
     "minimo": 40
    },
    "punto": "oceano_lado_mazmorra",
-   "resumen": "",
+   "resumen": "Arena, agua y playa. Hay uno a cada lado del mundo. Para pesca y para el Duque Fishron. Un lado queda junto a la Mazmorra.",
    "bloques": [],
    "fuentes": []
   },
@@ -30801,7 +30801,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "Es cuestión de la potencia del pico. El objeto {o:Terraria/Meteorite} necesita **50**; {o:Terraria/DemoniteOre} y {o:Terraria/CrimtaneOre}, bajo la superficie, **55**; las piedras malignas y el {o:Terraria/Hellstone}, **65**. En modo difícil: cobalto y paladio, 100; mithril y oricalco, 110; adamantita y titanio, 150. Mejora el pico antes de perder tiempo."
+     "texto": "Es cuestión de la potencia del pico. El objeto {o:Terraria/Meteorite} necesita **50**; {o:Terraria/DemoniteOre} y {o:Terraria/CrimtaneOre}, bajo la superficie, **55**; las piedras malignas y la {o:Terraria/Hellstone}, **65**. En modo difícil: cobalto y paladio, 100; mithril y oricalco, 110; adamantita y titanio, 150. Mejora el pico antes de perder tiempo."
     }
    ],
    "paradas": [

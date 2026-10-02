@@ -74,7 +74,7 @@ module.exports = { articulos: [
     { tipo: 'parrafo', texto: 'Un evento es algo que pasa en el mundo durante un rato: unos llegan solos y otros se provocan con un objeto. Casi todos sirven para algo concreto, ya sea un vecino, un material o una moneda propia. Los que no necesites puedes saltártelos: la ruta marca cuáles son opcionales.' },
     { tipo: 'tabla', cabeceras: ['Evento', 'Cuándo', 'Cómo provocarlo', 'Qué deja'], filas: [
       ['Luna de Sangre', 'Al anochecer, 1 vez de cada 9 (nunca con luna nueva), si algún jugador tiene 2 [[Life Crystal]] usados (120 de vida).', '[[Bloody Tear]].', 'Enemigos propios. Pescando con la captura más rara, 1 posibilidad entre 3 de [[Advanced Combat Techniques]] (si aún no lo usaste). En modo difícil, el [[Skeleton Merchant]] vende [[Slap Hand]]. Ver {p:lunasangre}.'],
-      ['Lluvia de slime', 'De día, por la mañana, sin lluvia: con 3 [[Life Crystal]] usados y más de 8 de defensa, o en Experto y superior sin ese requisito.', 'No se invoca.', 'A los 150 slimes muertos (75 si ya derrotaste al Rey slime) aparece [[King Slime]]. El [[Slime Crown]] es la forma manual de llamarlo.'],
+      ['Lluvia de slime', 'De día, por la mañana, sin lluvia: con 3 [[Life Crystal]] usados y más de 8 de defensa, o en Experto y superior sin ese requisito.', 'No se invoca.', 'A los 150 slimes muertos (75 si ya derrotaste al Rey slime) aparece [[King Slime]]. La [[Slime Crown]] es la forma manual de llamarlo.'],
       ['Tormenta de arena', 'En {z:desierto}, sola, cuando sopla viento fuerte.', 'No se invoca.', 'Enemigos propios del desierto.'],
       ['Ventisca', 'En {z:nieve}, sola, durante la lluvia (según la wiki).', 'No se invoca.', 'Enemigos propios de la nieve.'],
       ['Fiesta', 'De día, si vive en el pueblo la [[Party Girl]]: 1 posibilidad entre 10 al día (tras 5 a 10 días de espera) y con al menos 5 vecinos que puedan celebrar.', '[[Party Center]].', 'Tarta gratis y vecinos de fiesta.'],
@@ -167,7 +167,7 @@ module.exports = { articulos: [
     { tipo: 'titulo', texto: 'Pilones' },
     { tipo: 'parrafo', texto: 'Un pilón te lleva de un pilón a otro, y cada bioma tiene el suyo. Para comprar uno, el vecino tiene que estar contento (su precio, al 90 % o menos), tienes que estar en el bioma que toca, con al menos 2 vecinos cerca, y fuera de la Corrupción y del Carmesí. Para usarlo hay que estar junto a otro pilón; el destino necesita al menos 2 vecinos cerca (menos el pilón universal) y estar en su bioma; no puede haber un jefe ni un evento activos; y los pilones del {z:templo} no funcionan hasta derrotar a [[Plantera]].' },
     { tipo: 'titulo', texto: 'El Zoologist y el Bestiario' },
-    { tipo: 'parrafo', texto: 'El Bestiario se rellena al ver, matar y sacar botín a los enemigos. Al llegar al 10 % se muda el [[Zoologist]]. Explorar zonas nuevas y matar de todo es la manera más rápida de llenarlo.' },
+    { tipo: 'parrafo', texto: 'El Bestiario se rellena al ver, matar y sacar botín a los enemigos. Al llegar al 10 % se muda la [[Zoologist]]. Explorar zonas nuevas y matar de todo es la manera más rápida de llenarlo.' },
     { tipo: 'fuentes', fuentes: [{ wiki: 'terraria', pagina: 'Housing' }, { wiki: 'terraria', pagina: 'NPCs' }, { wiki: 'terraria', pagina: 'Happiness' }, { wiki: 'terraria', pagina: 'Pylons' }, { wiki: 'terraria', pagina: 'Bestiary' }] }
   ] },
 
@@ -175,7 +175,7 @@ module.exports = { articulos: [
   { id: 'vida', titulo: 'Vida, maná y mejoras permanentes', subtitulo: 'Todo lo que sube tu personaje para siempre', icono: 'vida', bloques: [
     { tipo: 'parrafo', texto: 'Hay dos familias de mejoras. Las de vida y maná, que sirven a todas las clases, y las permanentes de la versión 1.4.4, que se usan una sola vez y duran siempre. Tu progreso en ellas se ve en {p:mejoras}.' },
     { tipo: 'tabla', cabeceras: ['Objeto', 'Efecto', 'Máximo', 'Cómo se consigue'], filas: [
-      ['[[Life Crystal]]', '+20 de vida', '15 usados: de 100 a 400', 'Está bajo tierra, en las cavernas: se rompe y suelta el objeto. El [[Nurse]] llega cuando ya has usado uno.'],
+      ['[[Life Crystal]]', '+20 de vida', '15 usados: de 100 a 400', 'Está bajo tierra, en las cavernas: se rompe y suelta el objeto. La [[Nurse]] llega cuando ya has usado uno.'],
       ['[[Life Fruit]]', '+5 de vida', '20 usados: de 400 a 500', 'Solo se puede usar con los 15 cristales ya usados. Crece en la hierba de {z:jungla_subterranea} en modo difícil, cuando ya has derrotado a un jefe mecánico. Ver {p:frutas}.'],
       ['[[Mana Crystal]]', '+20 de maná', '9 usados: de 20 a 200', 'Se fabrica con 5 [[Fallen Star]], sin estación.']
     ] },
@@ -187,7 +187,7 @@ module.exports = { articulos: [
       ['[[Torch God\'s Favor]]', 'Permite que las antorchas que colocas tomen el tipo del bioma en el que estás.', 'Con más de 100 antorchas cerca bajo tierra y sin llevar ya el objeto, puede empezar el evento del Dios de las antorchas. Si aguantas sus ataques casi hasta el final, lo suelta. Ver {p:antorchas}.'],
       ['[[Artisan Loaf]]', 'Alcanzas las estaciones de fabricación desde más lejos: +4 casillas en horizontal y en vertical.', 'Lo vende el [[Skeleton Merchant]] en las tres fases de luna alrededor de la luna nueva, mientras no lo hayas comido.'],
       ['[[Vital Crystal]]', 'Tu vida se regenera más rápido.', 'Tirando un [[Life Crystal]] al fulgor.'],
-      ['[[Aegis Fruit]]', '+4 de defensa.', 'Tirando un [[Life Fruit]] al fulgor.'],
+      ['[[Aegis Fruit]]', '+4 de defensa.', 'Tirando una [[Life Fruit]] al fulgor.'],
       ['[[Arcane Crystal]]', 'Tu maná se regenera más rápido.', 'Tirando un [[Mana Crystal]] al fulgor.'],
       ['[[Galaxy Pearl]]', '+0,03 de suerte.', 'Tirando una [[Pink Pearl]] al fulgor.'],
       ['[[Gummy Worm]]', '+3 de poder de pesca.', 'Tirando un [[o:Gold Worm]] al fulgor. El gusano sale, 1 de cada 20 veces, de un [[Can Of Worms]], o se caza con red.'],
@@ -233,7 +233,7 @@ module.exports = { articulos: [
         ] }
       ] },
       { tipo: 'caja', titulo: 'Lava y miel', bloques: [
-        { tipo: 'parrafo', texto: 'En lava solo pescas con una caña que lo permita (la [[Hotline Fishing Hook]]), con un accesorio de pesca en lava o con un cebo preparado para ello. En miel pescas con cualquier caña. En ambos casos, el depósito tiene que ser grande.' }
+        { tipo: 'parrafo', texto: 'En lava solo pescas con una caña que lo permita (el [[Hotline Fishing Hook]]), con un accesorio de pesca en lava o con un cebo preparado para ello. En miel pescas con cualquier caña. En ambos casos, el depósito tiene que ser grande.' }
       ] },
       { tipo: 'caja', titulo: 'Cajas', bloques: [
         { tipo: 'parrafo', texto: 'Las cajas salen aparte, con su propia probabilidad, y su tipo depende del bioma y del poder. Ábrelas siempre: son una de las fuentes de dinero y de objetos más estables.' }
@@ -249,7 +249,7 @@ module.exports = { articulos: [
       ['25', '[[Bottomless Water Bucket]]'],
       ['30', '[[Golden Fishing Rod]]']
     ] },
-    { tipo: 'parrafo', texto: 'En el resto de misiones, el premio es al azar, y cuantas más hayas hecho, menos raro sale lo bueno. Entre lo posible: [[Tackle Box]], [[Angler Earring]], [[High Test Fishing Line]], [[Fisherman\'s Pocket Guide]], [[Weather Radio]], [[Sextant]], [[Fishing Bobber]], [[Golden Bug Net]], [[Seashell Hairpin]], [[Fish Hook]] y el [[Super Absorbant Sponge]]. En modo difícil y pasadas 10 misiones, [[Fin Wings]]; y pasadas 25, [[Hotline Fishing Hook]]. Si el pez es el [[Bumblebee Tuna]], puede tocarte [[Bottomless Honey Bucket]] o [[Honey Absorbant Sponge]].' },
+    { tipo: 'parrafo', texto: 'En el resto de misiones, el premio es al azar, y cuantas más hayas hecho, menos raro sale lo bueno. Entre lo posible: [[Tackle Box]], [[Angler Earring]], [[High Test Fishing Line]], [[Fisherman\'s Pocket Guide]], [[Weather Radio]], [[Sextant]], [[Fishing Bobber]], [[Golden Bug Net]], [[Seashell Hairpin]], [[Fish Hook]] y la [[Super Absorbant Sponge]]. En modo difícil y pasadas 10 misiones, [[Fin Wings]]; y pasadas 25, [[Hotline Fishing Hook]]. Si el pez es el [[Bumblebee Tuna]], puede tocarte [[Bottomless Honey Bucket]] o [[Honey Absorbant Sponge]].' },
     { tipo: 'aviso', estilo: 'nota', texto: 'No hace falta hacer cada misión el mismo día: si el pez cae lejos, déjala. Pero no acumules: la misión nueva te llega igual al amanecer, y las cuentas de arriba solo suben cuando entregas.' },
     { tipo: 'fuentes', fuentes: [{ wiki: 'terraria', pagina: 'Fishing' }, { wiki: 'terraria', pagina: 'Angler' }, { wiki: 'terraria', pagina: 'Fishing quests' }, { wiki: 'terraria', pagina: 'Fishing poles' }, { wiki: 'terraria', pagina: 'Bait' }] }
   ] },
