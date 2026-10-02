@@ -34037,3 +34037,46 @@ barra 520).
    el arnés (Debug + DoEvents) por el re-maquetado de la barra de estado dentro de su `Viewbox`. No
    bloquea ni se acumula; si algún día se quiere aligerar, el candidato es no re-maquetar la barra de
    estado en cada píxel.
+
+## 2-oct-2026 - `CHESTER_GEOMETRIA_SOLO` arreglado: INCONCLUSIVE sistemático + carrera contra el hover (commit `c6845482`)
+
+Encargo: el canario `CHESTER_GEOMETRIA_SOLO` (`CanarioGeometriaChesterEvidencia.cs`) salía siempre
+INCONCLUSIVE y una captura (`A_jugador_solo_hover.png`) mostraba a Chester pese al Collapse manual -
+dos fallos reales del arnés, ninguno de producción.
+
+1. **Causa 1 (INCONCLUSIVE sistemático)**: el canario buscaba `vm.Home.Characters` comparando
+   `FilePath` contra la ruta REAL de `Documents\My Games\Terraria\Players\Terrariano.plr`, pero
+   `PrepararAislamientoPartidasReales` (`AislamientoPartidasReales.cs`) ya sustituye
+   `CharacterFileService.CarpetasPersonajesDePrueba` por una copia temporal ANTES de construir la
+   `MainWindow` (regla del propio `CLAUDE.md`, nunca tocar partidas reales) - el `.plr` real SÍ se
+   copia con el mismo nombre, pero su `FilePath` pasa a ser la copia, nunca la ruta de `Documents`.
+   La comparación no encontraba nunca ninguna entrada, en ninguna máquina.
+2. **Causa 2 (carrera real, `A_jugador_solo_hover.png`)**: confirmada por un revisor visual que el
+   código de producción (`PlayerPetPreviewControl.RecomputeLayout()`) está bien. `CharacterListEntryViewModel`
+   arranca un `DispatcherTimer` propio (`_hoverWalkTimer`, 70ms) mientras `SetHovering(true)` está
+   activo; cada Tick cambia `PreviewSource`/`PetImageSource`/`PetOffsetX`/`Y` (bindings reales) y eso
+   dispara `RecomputeLayout()`, que siempre deja `_petImage.Visibility=Visible` mientras `hasPet` sea
+   true - deshaciendo el `Collapse` manual de la capa "jugador solo" si el Tick caía durante los 60ms
+   de espera de `Capturar()` antes de renderizar.
+3. **Arreglo (solo arnés, `CanarioGeometriaChesterEvidencia.cs:24-233`)**:
+   - Fixture sintético `PersonajeChesterGeometria` (ítem 5098 = "Eye Bone" vanilla real, confirmado
+     animado y no-mascota-de-luz en `Assets\pet_animations.json`) construido con `PlrCharacter`/
+     `PlrFile.Write`, mismo mecanismo que `PruebasCapturasReadme.cs` con "Aventurero" - carpeta propia
+     aislada, `CarpetasPersonajesDePrueba` sustituida solo durante el bloque y restaurada en el
+     `finally`, disparando un refresco real (`vm.Home.RefreshCommand`) para que la entrada sea la
+     misma `CharacterListEntryViewModel` que construiría el escaneo real de Inicio.
+   - Antes de capturar las 3 capas en estado hover: se para DE VERDAD el `DispatcherTimer` privado
+     (vía reflexión sobre `_hoverWalkTimer`, no hay API pública para pausarlo sin también reiniciar
+     el ciclo) - el frame de hover ya se fija con ~500ms reales antes de pararlo, así que la captura
+     sigue mostrando una pose de "andar" real, solo que congelada para fotografiarla sin que se mueva
+     sola a mitad de captura.
+4. **Verificación real**: `CHESTER_GEOMETRIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Debug`
+   -> fixture localizado, `PetImage` real resuelto, 6 capturas (estático/hover × A/B/C) todas con
+   contenido (`CAPTURAS-VALIDACION: 10 captura(s)... 0 INCONCLUSIVE`), sin ningún `FALLO`/`EXCEPTION`
+   de `CHESTER_GEOMETRIA_SOLO`. Las 6 PNG abiertas a mano: A solo jugador (en hover, Chester YA NO
+   reaparece), B solo Chester (el frame de hover tiene la boca distinta del estático, confirma
+   animación real avanzando), C composición con las dos capas en su sitio. `Core.Tests` 789/789,
+   `Terrakeep.App.ViewModels.Tests` 825/825. SHA256 de los 12 `.plr`/`.tplr` reales (`Documents\My
+   Games\Terraria\Players` + `tModLoader\Players`) idénticos antes y después. `PANTALLA.lock` tomado
+   y liberado. Solo cambia código de test (`CanarioGeometriaChesterEvidencia.cs`), sin tocar
+   producción.
