@@ -368,7 +368,7 @@
     },
     {
      "id": "desert.4",
-     "texto": "Tras ganar, revisa los {o:CalamityMod/PearlShard} y la receta de la armadura Victida (tiene casco para cada clase).",
+     "texto": "Tras ganar, revisa los {o:CalamityMod/PearlShard} y la receta de la armadura de victide (tiene casco para cada clase).",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "CalamityMod/PearlShard",
@@ -428,9 +428,9 @@
     }
    ],
    "invocacion": null,
-   "preparate": "Victida es una opción cómoda para el agua (tiene casco para cada clase); no es obligatorio reemplazar una armadura que te funciona.",
+   "preparate": "Victide es una opción cómoda para el agua (tiene casco para cada clase); no es obligatorio reemplazar una armadura que te funciona.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Victida es una opción cómoda para el agua; no es obligatorio reemplazar una armadura que te funciona."
+    "cuerpo_a_cuerpo": "Victide es una opción cómoda para el agua; no es obligatorio reemplazar una armadura que te funciona."
    },
    "necesitas": [],
    "tareas": [
@@ -540,9 +540,9 @@
     "donde": "De noche.",
     "notas": "Puedes obtenerlo en cofres o fabricarlo; invoca al comienzo de la noche."
    },
-   "preparate": "Un arma con proyectil de tu clase; oro, platino o Victida. Lleva velocidad y salto adicional.",
+   "preparate": "Un arma con proyectil de tu clase; oro, platino o victide. Lleva velocidad y salto adicional.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Arma melee con proyectil; oro/platino o Victida. Lleva velocidad y salto adicional."
+    "cuerpo_a_cuerpo": "Arma melee con proyectil; oro/platino o victide. Lleva velocidad y salto adicional."
    },
    "necesitas": [
     {
@@ -588,7 +588,7 @@
     }
    ],
    "combate": "En la fase final, mira sus embestidas antes de atacar. Cambiar de altura suele darte una salida mejor que girarte demasiado pronto.",
-   "desbloquea": "Un dash temprano; Lluvia Ácida de nivel 1 puede comenzar de forma natural.",
+   "desbloquea": "Un dash temprano; Lluvia ácida de nivel 1 puede comenzar de forma natural.",
    "listoCuando": "{o:Terraria/EoCShield} equipado o un dash equivalente disponible.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -622,7 +622,7 @@
   {
    "id": "acid1",
    "capitulo": "prehardmode",
-   "titulo": "Lluvia Ácida (nivel 1)",
+   "titulo": "Lluvia ácida (nivel 1)",
    "tipo": "evento",
    "opcional": true,
    "etiqueta": "Evento opcional recomendado",
@@ -686,7 +686,7 @@
     }
    ],
    "combate": "El agua y las burbujas son peligros distintos. Sal del agua para vaciar el medidor; combate con margen respecto a las burbujas que suben del fondo.",
-   "desbloquea": "Recursos del evento; armadura sulfúrica es sobre todo una opción rogue, no una armadura obligatoria para las demás clases.",
+   "desbloquea": "Recursos del evento; armadura sulfurosa es sobre todo una opción rogue, no una armadura obligatoria para las demás clases.",
    "listoCuando": "Has entendido el agua tóxica y tienes una ruta de vuelta. No necesitas completar el evento para avanzar.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -785,7 +785,7 @@
     }
    ],
    "combate": "Cambia de plataforma cuando salte y evita permanecer bajo su cuerpo. Un circuito sencillo resulta más fácil de controlar que saltos improvisados en una cueva estrecha.",
-   "desbloquea": "Armas y recursos de esta etapa. Su mejora de Ira solo te corresponde si activas Revengeance.",
+   "desbloquea": "Armas y recursos de esta etapa. Su mejora de Rabia solo te corresponde si activas Revengeance.",
    "listoCuando": "Jefe marcado y 400 de vida como siguiente objetivo de exploración.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -802,7 +802,7 @@
       "revengeance",
       "death"
      ],
-     "texto": "En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Ira."
+     "texto": "En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Rabia."
     }
    ],
    "fuentes": [
@@ -1435,7 +1435,7 @@
     },
     {
      "id": "slimegod.3",
-     "texto": "Tras vencer, crea Estatigel si te interesa su movilidad. No necesitas fabricar cada armadura para progresar.",
+     "texto": "Tras vencer, crea statigel si te interesa su movilidad. No necesitas fabricar cada armadura para progresar.",
      "manual": true
     },
     {
@@ -1452,7 +1452,7 @@
     }
    ],
    "combate": "No persigas a las masas a ras del suelo. Alterna alturas, deja que se acerquen a tu ataque y evita quedarte atrapado entre ambas.",
-   "desbloquea": "{o:CalamityMod/PurifiedGel}, Estatigel y {o:CalamityMod/FracturedArk} para preparar {n:Terraria/WallofFlesh}.",
+   "desbloquea": "{o:CalamityMod/PurifiedGel}, statigel y {o:CalamityMod/FracturedArk} para preparar {n:Terraria/WallofFlesh}.",
    "listoCuando": "Equipo listo para el infierno y un arma que funcione mientras corres.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -1512,9 +1512,9 @@
     }
    ],
    "invocacion": null,
-   "preparate": "Fundida o Estatigel con el casco de tu clase y un arma que dispare mientras corres.",
+   "preparate": "Fundida o statigel con el casco de tu clase y un arma que dispare mientras corres.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Fundida o Estatigel melee; {o:Terraria/NightsEdge}, {o:CalamityMod/FracturedArk} si dominas el parry o una alternativa con proyectil."
+    "cuerpo_a_cuerpo": "Fundida o statigel melee; {o:Terraria/NightsEdge}, {o:CalamityMod/FracturedArk} si dominas el parry o una alternativa con proyectil."
    },
    "necesitas": [],
    "tareas": [
@@ -1628,7 +1628,7 @@
    "tareas": [
     {
      "id": "hardstart.1",
-     "texto": "Comprueba «Rework de Progresión del Hardmode Temprano» en la configuración de Calamity. Esta ruta presupone que está activada.",
+     "texto": "Comprueba «Rediseño del inicio del modo Difícil» en la configuración de Calamity. Esta ruta presupone que está activada.",
      "manual": true
     },
     {
@@ -1660,7 +1660,7 @@
     },
     {
      "id": "hardstart.5",
-     "texto": "Localiza el meteorito Astral y su {o:CalamityMod/AstralBeaconItem}, pero no te obsesiones con extraer {o:CalamityMod/AstralOre} todavía.",
+     "texto": "Localiza el meteorito astral y su {o:CalamityMod/AstralBeaconItem}, pero no te obsesiones con extraer {o:CalamityMod/AstralOre} todavía.",
      "manual": true
     }
    ],
@@ -1993,7 +1993,7 @@
       "clasico",
       "viaje"
      ],
-     "texto": "Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 20 % menos de vida y daño, y el segundo un 10 % menos."
+     "texto": "Con el «Rediseño del inicio del modo Difícil» activado, el primer jefe mecánico que luches tiene un 20 % menos de vida y daño, y el segundo un 10 % menos."
     },
     {
      "id": "mech1.aviso2",
@@ -2001,7 +2001,7 @@
       "experto",
       "maestro"
      ],
-     "texto": "Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 10 % menos de vida y daño (en Clásico sería un 20 %), y el segundo un 5 % menos."
+     "texto": "Con el «Rediseño del inicio del modo Difícil» activado, el primer jefe mecánico que luches tiene un 10 % menos de vida y daño (en Clásico sería un 20 %), y el segundo un 5 % menos."
     }
    ],
    "fuentes": [
@@ -2022,7 +2022,7 @@
   {
    "id": "aquatic",
    "capitulo": "hardmode",
-   "titulo": "{n:CalamityMod/AquaticScourgeHead} y Lluvia Ácida (nivel 2)",
+   "titulo": "{n:CalamityMod/AquaticScourgeHead} y Lluvia ácida (nivel 2)",
    "tipo": "jefe",
    "opcional": false,
    "etiqueta": "Calamity + evento recomendado",
@@ -2081,7 +2081,7 @@
     },
     {
      "id": "aquatic.3",
-     "texto": "Tras derrotarlo se desbloquea Lluvia Ácida de nivel 2. Completa este nivel si quieres sus materiales y botín.",
+     "texto": "Tras derrotarlo se desbloquea Lluvia ácida de nivel 2. Completa este nivel si quieres sus materiales y botín.",
      "condicion": {
       "tipo": "bandera",
       "bandera": "downedAquaticScourgeAcidRain"
@@ -2089,7 +2089,7 @@
     }
    ],
    "combate": "Mira la trayectoria de la cabeza y aléjate del área que llena de proyectiles. Sigue combatiendo sobre el agua; el medidor tóxico no desaparece porque estés enfrentando un jefe.",
-   "desbloquea": "Segundo nivel de Lluvia Ácida y equipo de esa etapa.",
+   "desbloquea": "Segundo nivel de Lluvia ácida y equipo de esa etapa.",
    "listoCuando": "{n:CalamityMod/AquaticScourgeHead} marcado; recoge recursos sin intentar {n:CalamityMod/OldDuke} todavía.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -2198,7 +2198,7 @@
     "tipo": "bandera",
     "bandera": "downedMechBoss2"
    },
-   "conserva": "{o:Terraria/SoulofSight}, barras de Criónico y {o:CalamityMod/FlarefrostBlade} para futuras recetas.",
+   "conserva": "{o:Terraria/SoulofSight}, barras de criónico y {o:CalamityMod/FlarefrostBlade} para futuras recetas.",
    "conservaObjetos": [
     "Terraria/SoulofSight",
     "CalamityMod/FlarefrostBlade"
@@ -2578,7 +2578,7 @@
     }
    ],
    "combate": "Mantén una vuelta amplia alrededor del jefe. En la segunda fase, despeja el camino y evita corredores donde las extensiones te acorralen.",
-   "desbloquea": "Templo, mazmorra mejorada, Perenne y enemigos nuevos.",
+   "desbloquea": "Templo, mazmorra mejorada, perenne y enemigos nuevos.",
    "listoCuando": "{o:Terraria/TempleKey} guardada; primero haz los desvíos de {n:CalamityMod/Anahita} y {n:CalamityMod/AstrumAureus}.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -2753,7 +2753,7 @@
    "tareas": [
     {
      "id": "aureus.1",
-     "texto": "Fabrica {o:CalamityMod/AstralChunk}: su receta requiere tener descifrado el esquema Planetoid. Úsalo en la superficie Astral.",
+     "texto": "Fabrica {o:CalamityMod/AstralChunk}: su receta requiere tener descifrado el esquema Planetoid. Úsalo en la superficie astral.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -2789,13 +2789,13 @@
     }
    ],
    "combate": "Lee sus saltos y cambia de altura cuando caiga hacia ti. Evita quedarte justo donde va a aterrizar para completar un combo.",
-   "desbloquea": "Más botín de enemigos astrales y acceso al cofre Astral; no minería del meteorito.",
+   "desbloquea": "Más botín de enemigos astrales y acceso al cofre astral; no minería del meteorito.",
    "listoCuando": "Aureus marcado; ve al templo para {n:Terraria/Golem}.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedAstrumAureus"
    },
-   "conserva": "{o:CalamityMod/StarblightSoot} y botín Astral; {o:CalamityMod/StarlightFuelCell} solo si juegas Revengeance.",
+   "conserva": "{o:CalamityMod/StarblightSoot} y botín astral; {o:CalamityMod/StarlightFuelCell} solo si juegas Revengeance.",
    "conservaObjetos": [
     "CalamityMod/StarblightSoot",
     "CalamityMod/StarlightFuelCell"
@@ -2876,7 +2876,7 @@
     },
     {
      "id": "golem.3",
-     "texto": "Obtén {o:Terraria/Picksaw} o un pico de al menos 210% para Escoria; repite si no consigues la herramienta necesaria.",
+     "texto": "Obtén {o:Terraria/Picksaw} o un pico de al menos 210% para escoria; repite si no consigues la herramienta necesaria.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/Picksaw",
@@ -2885,7 +2885,7 @@
     },
     {
      "id": "golem.4",
-     "texto": "Busca Escoria en {z:abismo} o sus enemigos post-{n:Terraria/Golem}. Funde barras y crea {o:CalamityMod/LifeAlloy} con Criónico + Perenne + Escoria.",
+     "texto": "Busca escoria en {z:abismo} o sus enemigos post-{n:Terraria/Golem}. Funde barras y crea {o:CalamityMod/LifeAlloy} con criónico + perenne + escoria.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -2921,13 +2921,13 @@
     }
    ],
    "combate": "Usa el espacio de la cámara, mantén un recorrido limpio y cambia de altura para no quedarte encerrado por las manos y la cabeza.",
-   "desbloquea": "Escoria accesible por una ruta normal, {o:CalamityMod/LifeAlloy}, Hidrotérmica y segunda fruta permanente.",
+   "desbloquea": "Escoria accesible por una ruta normal, {o:CalamityMod/LifeAlloy}, hidrotermal y segunda fruta permanente.",
    "listoCuando": "Escoria obtenida, 550 de vida y esquema {z:inframundo|Inframundo} descifrado.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedGolemBoss"
    },
-   "conserva": "{o:CalamityMod/LifeAlloy}, {o:CalamityMod/LivingShard} y Escoria. Guarda la herramienta de minería.",
+   "conserva": "{o:CalamityMod/LifeAlloy}, {o:CalamityMod/LivingShard} y escoria. Guarda la herramienta de minería.",
    "conservaObjetos": [
     "CalamityMod/LifeAlloy",
     "CalamityMod/LivingShard"
@@ -2984,9 +2984,9 @@
     "donde": "Jungla; cualquier hora.",
     "notas": "Sus materiales de plaga se consiguen en la jungla post-{n:Terraria/Golem}."
    },
-   "preparate": "Escarabajo, Hidrotérmica o la armadura de tu clase en esta etapa, y un arma de alcance equivalente.",
+   "preparate": "Escarabajo, hidrotermal o la armadura de tu clase en esta etapa, y un arma de alcance equivalente.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo o Hidrotérmica melee; {o:Terraria/TerraBlade}, {o:CalamityMod/FallenPaladinsHammer} o arma de alcance equivalente."
+    "cuerpo_a_cuerpo": "Escarabajo o hidrotermal melee; {o:Terraria/TerraBlade}, {o:CalamityMod/FallenPaladinsHammer} o arma de alcance equivalente."
    },
    "necesitas": [
     {
@@ -3078,7 +3078,7 @@
    },
    "preparate": "La armadura de tu clase de esta etapa y ataques a distancia para golpear sus partes sin acercarte demasiado.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/Hidrotérmica melee; ataques a distancia melee para golpear partes sin acercarte demasiado."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal melee; ataques a distancia melee para golpear partes sin acercarte demasiado."
    },
    "necesitas": [
     {
@@ -3143,7 +3143,7 @@
       "revengeance",
       "death"
      ],
-     "texto": "En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Ira."
+     "texto": "En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Rabia."
     }
    ],
    "fuentes": [
@@ -3188,7 +3188,7 @@
    "invocacion": null,
    "preparate": "La armadura de tu clase de esta etapa. Busca opciones que aporten alcance, vuelo o comodidad.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/Hidrotérmica melee. Busca opciones que aporten alcance, vuelo o comodidad."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal melee. Busca opciones que aporten alcance, vuelo o comodidad."
    },
    "necesitas": [],
    "tareas": [
@@ -3310,7 +3310,7 @@
    },
    "preparate": "La armadura de tu clase de esta etapa y un arma de alcance; después, el arma con fragmentos de tu clase.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/Hidrotérmica melee y arma de alcance; después fabrica {o:Terraria/SolarEruption} o {o:Terraria/DayBreak}."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal melee y arma de alcance; después fabrica {o:Terraria/SolarEruption} o {o:Terraria/DayBreak}."
    },
    "necesitas": [
     {
@@ -3359,7 +3359,7 @@
     },
     {
      "id": "cultist.5",
-     "texto": "Antes del último pilar, intercala {n:CalamityMod/AstrumDeusHead} para desbloquear el mineral Astral.",
+     "texto": "Antes del último pilar, intercala {n:CalamityMod/AstrumDeusHead} para desbloquear el mineral astral.",
      "condicion": {
       "tipo": "bandera",
       "bandera": "downedAstrumDeus"
@@ -3428,7 +3428,7 @@
    },
    "preparate": "La armadura de tu clase de esta etapa y tu arma con mejor rendimiento real.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/Hidrotérmica melee; {o:Terraria/SolarEruption}, {o:Terraria/DayBreak} o tu arma con mejor rendimiento real."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal melee; {o:Terraria/SolarEruption}, {o:Terraria/DayBreak} o tu arma con mejor rendimiento real."
    },
    "necesitas": [
     {
@@ -3544,7 +3544,7 @@
    },
    "preparate": "La armadura de tu clase de esta etapa, el arma con fragmentos y equipo de movilidad fiable.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/Hidrotérmica melee; {o:Terraria/DayBreak} / {o:Terraria/SolarEruption} y equipo de movilidad fiable."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal melee; {o:Terraria/DayBreak} / {o:Terraria/SolarEruption} y equipo de movilidad fiable."
    },
    "necesitas": [
     {
@@ -3837,7 +3837,7 @@
       "revengeance",
       "death"
      ],
-     "texto": "En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Ira."
+     "texto": "En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Rabia."
     }
    ],
    "fuentes": [
@@ -3910,7 +3910,7 @@
     },
     {
      "id": "providence.3",
-     "texto": "Tras ganar, busca uelibloom en el barro con un pico adecuado y fabrica la armadura Estragón con el casco de tu clase.",
+     "texto": "Tras ganar, busca uelibloom en el barro con un pico adecuado y fabrica la armadura tarragon con el casco de tu clase.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "CalamityMod/UelibloomOre",
@@ -3941,8 +3941,8 @@
     }
    ],
    "combate": "Sus fases de capullo requieren leer huecos entre estrellas o lanzas. No huyas indefinidamente: alejarte del área segura te castiga. La pelea nocturna es un desafío adicional.",
-   "desbloquea": "Uelibloom, {o:CalamityMod/DivineGeode}, Estragón y {o:CalamityMod/MarkofProvidence}.",
-   "listoCuando": "575 de vida, Estragón melee, esquema Ice descifrado y la Mark conservada.",
+   "desbloquea": "Uelibloom, {o:CalamityMod/DivineGeode}, tarragon y {o:CalamityMod/MarkofProvidence}.",
+   "listoCuando": "575 de vida, tarragon melee, esquema Ice descifrado y la Mark conservada.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedProvidence"
@@ -4016,9 +4016,9 @@
     "donde": "{z:cielo|cielo}: Weaver · {z:mazmorra|mazmorra}: Void · {z:inframundo|Inframundo}: {n:CalamityMod/Signus}.",
     "notas": "Lo deja {n:CalamityMod/Providence}; el mismo invocador sirve para los tres encuentros según el bioma."
    },
-   "preparate": "Estragón con el casco de tu clase, el arma post-{n:CalamityMod/Providence} de tu escalera y movilidad.",
+   "preparate": "Tarragon con el casco de tu clase, el arma post-{n:CalamityMod/Providence} de tu escalera y movilidad.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Estragón melee; {o:CalamityMod/Terratomere} / {o:CalamityMod/ArkoftheElements} y movilidad post-{n:CalamityMod/Providence}."
+    "cuerpo_a_cuerpo": "Tarragon melee; {o:CalamityMod/Terratomere} / {o:CalamityMod/ArkoftheElements} y movilidad post-{n:CalamityMod/Providence}."
    },
    "necesitas": [
     {
@@ -4151,9 +4151,9 @@
     "donde": "{z:mazmorra|mazmorra}.",
     "notas": "La primera vez también puede aparecer al matar 30 {n:CalamityMod/PhantomSpirit}; hay avisos en 10 y 20."
    },
-   "preparate": "Estragón con el casco de tu clase y el arma post-{n:CalamityMod/Providence} de tu escalera.",
+   "preparate": "Tarragon con el casco de tu clase y el arma post-{n:CalamityMod/Providence} de tu escalera.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Estragón melee; {o:CalamityMod/Terratomere} / otra arma post-{n:CalamityMod/Providence} con alcance."
+    "cuerpo_a_cuerpo": "Tarragon melee; {o:CalamityMod/Terratomere} / otra arma post-{n:CalamityMod/Providence} con alcance."
    },
    "necesitas": [
     {
@@ -4196,13 +4196,13 @@
     },
     {
      "id": "polter.4",
-     "texto": "Tras vencer, fabrica la armadura Llamarada de Sangre con el casco de tu clase y explora las nuevas recompensas abisales con el equipo apropiado.",
+     "texto": "Tras vencer, fabrica la armadura sangrellama con el casco de tu clase y explora las nuevas recompensas abisales con el equipo apropiado.",
      "manual": true
     }
    ],
    "combate": "El combate tiene formas y un clon. Mantén un recorrido claro y no te encierres entre cuerpos. Si aparece antes de tiempo mientras farmeas, vuelve cuando estés preparado.",
-   "desbloquea": "{o:CalamityMod/RuinousSoul}, Llamarada de Sangre, nuevas armas abisales y Lluvia Ácida III.",
-   "listoCuando": "Llamarada de Sangre con casco melee preparada; arma de esta etapa, como {o:CalamityMod/TerrorBlade} si la obtienes.",
+   "desbloquea": "{o:CalamityMod/RuinousSoul}, sangrellama, nuevas armas abisales y Lluvia ácida III.",
+   "listoCuando": "Sangrellama con casco melee preparada; arma de esta etapa, como {o:CalamityMod/TerrorBlade} si la obtienes.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedPolterghast"
@@ -4238,7 +4238,7 @@
   {
    "id": "oldduke",
    "capitulo": "postluna",
-   "titulo": "Lluvia Ácida (nivel 3) y {n:CalamityMod/OldDuke}",
+   "titulo": "Lluvia ácida (nivel 3) y {n:CalamityMod/OldDuke}",
    "tipo": "jefe",
    "opcional": true,
    "etiqueta": "Opcional recomendado",
@@ -4264,12 +4264,12 @@
    ],
    "invocacion": {
     "objeto": "CalamityMod/BloodwormItem",
-    "donde": "Pesca en {z:mar_sulfuroso}, o termina Lluvia Ácida III.",
+    "donde": "Pesca en {z:mar_sulfuroso}, o termina Lluvia ácida III.",
     "notas": "No es {o:Terraria/TruffleWorm}: ese cebo es para {n:Terraria/DukeFishron}."
    },
-   "preparate": "Llamarada de Sangre con el casco de tu clase, el arma de la etapa de {n:CalamityMod/Polterghast}, dash y buenas alas.",
+   "preparate": "Sangrellama con el casco de tu clase, el arma de la etapa de {n:CalamityMod/Polterghast}, dash y buenas alas.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Llamarada de Sangre melee; {o:CalamityMod/TerrorBlade} u otra arma de la etapa {n:CalamityMod/Polterghast}; dash y buenas alas."
+    "cuerpo_a_cuerpo": "Sangrellama melee; {o:CalamityMod/TerrorBlade} u otra arma de la etapa {n:CalamityMod/Polterghast}; dash y buenas alas."
    },
    "necesitas": [
     {
@@ -4281,7 +4281,7 @@
    "tareas": [
     {
      "id": "oldduke.1",
-     "texto": "Después de {n:CalamityMod/Polterghast}, completa el tercer nivel de Lluvia Ácida.",
+     "texto": "Después de {n:CalamityMod/Polterghast}, completa el tercer nivel de Lluvia ácida.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -4368,9 +4368,9 @@
     "donde": "Cualquier lugar/hora; utiliza una arena amplia.",
     "notas": "Comprueba sus alternativas de receta. Nuestra ruta recoge primero los materiales de los tres jefes de {o:CalamityMod/MarkofProvidence}."
    },
-   "preparate": "Llamarada de Sangre con el casco de tu clase, el arma de esta etapa de tu escalera y un dash fiable.",
+   "preparate": "Sangrellama con el casco de tu clase, el arma de esta etapa de tu escalera y un dash fiable.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Llamarada de Sangre melee; {o:CalamityMod/TerrorBlade} / otra opción de esta etapa. {o:CalamityMod/ElysianAegis} u otro dash fiable."
+    "cuerpo_a_cuerpo": "Sangrellama melee; {o:CalamityMod/TerrorBlade} / otra opción de esta etapa. {o:CalamityMod/ElysianAegis} u otro dash fiable."
    },
    "necesitas": [
     {
@@ -4423,7 +4423,7 @@
    ],
    "combate": "Concentra daño en cabeza o cola: el cuerpo tiene una enorme reducción de daño. Cuando se formen paredes de láser, busca el hueco y corrige con movimientos pequeños. Evita la cabeza y no confundas sus transiciones con la victoria.",
    "desbloquea": "Cosmilite, {o:CalamityMod/CosmicAnvilItem}, {o:CalamityMod/Murasama} utilizable y eventos reforzados.",
-   "listoCuando": "{o:CalamityMod/CosmicAnvilItem} instalado. Todavía falta farmear los eventos para Asesino de Dioses y accesorios nuevos.",
+   "listoCuando": "{o:CalamityMod/CosmicAnvilItem} instalado. Todavía falta farmear los eventos para matadioses y accesorios nuevos.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedDoG"
@@ -4474,9 +4474,9 @@
     }
    ],
    "invocacion": null,
-   "preparate": "Llamarada de Sangre camino de Asesino de Dioses con el casco de tu clase.",
+   "preparate": "Sangrellama camino de matadioses con el casco de tu clase.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Llamarada de Sangre → Asesino de Dioses melee; {o:CalamityMod/Murasama} es potente pero exige cercanía."
+    "cuerpo_a_cuerpo": "Sangrellama → matadioses melee; {o:CalamityMod/Murasama} es potente pero exige cercanía."
    },
    "necesitas": [],
    "tareas": [
@@ -4518,13 +4518,13 @@
     },
     {
      "id": "eventsdog.5",
-     "texto": "Fabrica la armadura Asesino de Dioses con el casco de tu clase, el accesorio de daño de tu escalera, la {o:CalamityMod/AsgardianAegis} y la mejora de arma que te interese.",
+     "texto": "Fabrica la armadura matadioses con el casco de tu clase, el accesorio de daño de tu escalera, la {o:CalamityMod/AsgardianAegis} y la mejora de arma que te interese.",
      "manual": true
     }
    ],
    "combate": "Los eventos se han reforzado. Empieza por el que te resulte más llevadero y usa su nueva mejora para abordar el siguiente. No fuerces los tres con el equipo anterior.",
    "desbloquea": "Equipo para {n:CalamityMod/Yharon}; estos eventos ahora son una parada de progreso, no una repetición inútil.",
-   "listoCuando": "Asesino de Dioses melee, dash mejorado y al menos un arma de la etapa post-{n:CalamityMod/DevourerofGodsHead}.",
+   "listoCuando": "Matadioses melee, dash mejorado y al menos un arma de la etapa post-{n:CalamityMod/DevourerofGodsHead}.",
    "completadaCuando": {
     "tipo": "objeto_poseido",
     "ref": "CalamityMod/AscendantSpiritEssence",
@@ -4589,9 +4589,9 @@
     "donde": "Cualquier lugar y hora en la referencia actual.",
     "notas": "Dragon Egg es el nombre antiguo; no te obliga a usar la jungla."
    },
-   "preparate": "Asesino de Dioses con el casco de tu clase y el arma post-{n:CalamityMod/DevourerofGodsHead} de tu escalera.",
+   "preparate": "Matadioses con el casco de tu clase y el arma post-{n:CalamityMod/DevourerofGodsHead} de tu escalera.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Asesino de Dioses melee; {o:CalamityMod/FourSeasonsGalaxia} o arma post-{n:CalamityMod/DevourerofGodsHead} con alcance. {o:CalamityMod/Murasama} si dominas el cuerpo a cuerpo."
+    "cuerpo_a_cuerpo": "Matadioses melee; {o:CalamityMod/FourSeasonsGalaxia} o arma post-{n:CalamityMod/DevourerofGodsHead} con alcance. {o:CalamityMod/Murasama} si dominas el cuerpo a cuerpo."
    },
    "necesitas": [
     {
@@ -4638,7 +4638,7 @@
     },
     {
      "id": "yharon.4",
-     "texto": "Consume la {o:CalamityMod/SacredStrawberry}, fabrica la armadura Tesla Áurica de tu clase y completa la {o:CalamityMod/AuricQuantumCoolingCell}.",
+     "texto": "Consume la {o:CalamityMod/SacredStrawberry}, fabrica la armadura Tesla áurica de tu clase y completa la {o:CalamityMod/AuricQuantumCoolingCell}.",
      "condicion": {
       "tipo": "todas",
       "condiciones": [
@@ -4656,13 +4656,13 @@
     },
     {
      "id": "yharon.5",
-     "texto": "Para Tesla Áurica conserva Estragón, Llamarada de Sangre y Asesino de Dioses de tu clase: cada casco Auric exige los de su clase.",
+     "texto": "Para Tesla áurica conserva tarragon, sangrellama y matadioses de tu clase: cada casco Auric exige los de su clase.",
      "manual": true
     }
    ],
    "combate": "Esquiva las cargas cruzando su dirección con un movimiento lateral o vertical bien elegido. Permanece entre los pilares y aparta los tornados de tu recorrido principal. Sus cambios de fase no terminan el combate.",
    "desbloquea": "Auric, equipo final de progresión y contacto con {n:CalamityMod/Draedon}.",
-   "listoCuando": "600 de vida base, Tesla Áurica melee, arma post-{n:CalamityMod/Yharon} y {o:CalamityMod/CodebreakerBase} completo.",
+   "listoCuando": "600 de vida base, Tesla áurica melee, arma post-{n:CalamityMod/Yharon} y {o:CalamityMod/CodebreakerBase} completo.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedYharon"
@@ -4704,7 +4704,7 @@
   {
    "id": "exo",
    "capitulo": "finales",
-   "titulo": "Exo Mecas",
+   "titulo": "Exomecas",
    "tipo": "jefe",
    "opcional": false,
    "etiqueta": "Jefe final · orden intercambiable con {n:CalamityMod/SupremeCalamitas}",
@@ -4732,9 +4732,9 @@
     "donde": "Completo, con {o:CalamityMod/AuricQuantumCoolingCell}: botón de contacto.",
     "notas": "La construcción y los cinco esquemas se explican en Laboratorios."
    },
-   "preparate": "Tesla Áurica de tu clase, el arma post-{n:CalamityMod/Yharon} de tu escalera, alas tardías y la {o:CalamityMod/AsgardianAegis}.",
+   "preparate": "Tesla áurica de tu clase, el arma post-{n:CalamityMod/Yharon} de tu escalera, alas tardías y la {o:CalamityMod/AsgardianAegis}.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Tesla Áurica melee; {o:CalamityMod/ArkoftheCosmos} u {o:CalamityMod/Orderbringer}; {o:CalamityMod/SeraphTracers} y {o:CalamityMod/AsgardianAegis}."
+    "cuerpo_a_cuerpo": "Tesla áurica melee; {o:CalamityMod/ArkoftheCosmos} u {o:CalamityMod/Orderbringer}; {o:CalamityMod/SeraphTracers} y {o:CalamityMod/AsgardianAegis}."
    },
    "necesitas": [
     {
@@ -4783,7 +4783,7 @@
    ],
    "combate": "Aprende a reconocer cada grupo y sus rayos antes de apurar el daño. Prioriza una trayectoria despejada y un objetivo; no ataques sin mirar durante los cambios de combinación.",
    "desbloquea": "{o:CalamityMod/ExoPrism}, forja y armamento exo. Si aún falta {n:CalamityMod/SupremeCalamitas}, {o:CalamityMod/Exoblade} es una mejora para ella.",
-   "listoCuando": "Exo Mecas marcados, forja instalada y material final conservado.",
+   "listoCuando": "Exomecas marcados, forja instalada y material final conservado.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedExoMechs"
@@ -4822,7 +4822,7 @@
    "titulo": "{n:CalamityMod/SupremeCalamitas}",
    "tipo": "jefe",
    "opcional": false,
-   "etiqueta": "Jefa final · independiente de Exo Mecas",
+   "etiqueta": "Jefa final · independiente de Exomecas",
    "jefes": [
     "CalamityMod/SupremeCalamitas"
    ],
@@ -4844,9 +4844,9 @@
     "donde": "Clic derecho en {o:CalamityMod/AltarOfTheAccursedItem} con la ofrenda en inventario.",
     "notas": "El altar se fabrica con 30 {o:CalamityMod/BrimstoneSlag} + 5 {o:CalamityMod/AuricBar} + 1 {o:CalamityMod/CoreofCalamity} en yunque de modo difícil. {o:CalamityMod/CeremonialUrn} se fabrica después de ganar."
    },
-   "preparate": "Tesla Áurica de tu clase y tu mejor arma final.",
+   "preparate": "Tesla áurica de tu clase y tu mejor arma final.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Tesla Áurica melee; {o:CalamityMod/Exoblade} si hiciste Exo primero, o {o:CalamityMod/ArkoftheCosmos} / {o:CalamityMod/Orderbringer}."
+    "cuerpo_a_cuerpo": "Tesla áurica melee; {o:CalamityMod/Exoblade} si hiciste Exo primero, o {o:CalamityMod/ArkoftheCosmos} / {o:CalamityMod/Orderbringer}."
    },
    "necesitas": [
     {
@@ -4899,7 +4899,7 @@
    ],
    "combate": "Durante bullet hell, se vuelve invulnerable: esquiva con correcciones pequeñas. Destruye corazones y auxiliares cuando la protejan. No salgas del límite. Al final espera el diálogo y la aparición del botín.",
    "desbloquea": "{o:CalamityMod/AshesofAnnihilation}, {n:CalamityMod/BrimstoneWitch} y encantamientos. Con ambos finales podrás crear Shadowspec.",
-   "listoCuando": "{n:CalamityMod/SupremeCalamitas} y Exo Mecas derrotados; mira el apartado de equipo definitivo.",
+   "listoCuando": "{n:CalamityMod/SupremeCalamitas} y Exomecas derrotados; mira el apartado de equipo definitivo.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedCalamitas"
@@ -4951,9 +4951,9 @@
     }
    ],
    "invocacion": null,
-   "preparate": "Sombra Demoníaca o Tesla Áurica de tu clase y una o dos armas finales cómodas.",
+   "preparate": "Sombra demoníaca o Tesla áurica de tu clase y una o dos armas finales cómodas.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Sombra Demoníaca o Tesla Áurica según tu estilo; {o:CalamityMod/Exoblade}, {o:CalamityMod/DraconicDestruction}, {o:CalamityMod/Earth} u {o:CalamityMod/Ozzathoth}."
+    "cuerpo_a_cuerpo": "Sombra demoníaca o Tesla áurica según tu estilo; {o:CalamityMod/Exoblade}, {o:CalamityMod/DraconicDestruction}, {o:CalamityMod/Earth} u {o:CalamityMod/Ozzathoth}."
    },
    "necesitas": [],
    "tareas": [
@@ -4973,7 +4973,7 @@
     },
     {
      "id": "shadowspec.3",
-     "texto": "Valora Sombra Demoníaca y prueba sus habilidades antes de un desafío largo.",
+     "texto": "Valora sombra demoníaca y prueba sus habilidades antes de un desafío largo.",
      "manual": true
     },
     {
@@ -4983,7 +4983,7 @@
     }
    ],
    "combate": "El arma con más daño escrito no siempre es la más fácil ni la más efectiva contra tu objetivo. Prueba alcance, seguimiento y continuidad de ataque.",
-   "desbloquea": "Armas finales, Sombra Demoníaca y preparativos para Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+   "desbloquea": "Armas finales, sombra demoníaca y preparativos para Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
    "listoCuando": "Equipo final completo y exploración abisal preparada.",
    "completadaCuando": {
     "tipo": "objeto_poseido",
@@ -5042,9 +5042,9 @@
     "donde": "Mantén pulsado el uso desde una arena preparada.",
     "notas": "El mismo objeto permite cancelar el evento."
    },
-   "preparate": "Tu combinación final preferida (Shadowspec/Sombra Demoníaca o Auric) y preparación completa.",
+   "preparate": "Tu combinación final preferida (Shadowspec/sombra demoníaca o Auric) y preparación completa.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Equipo Shadowspec/Sombra Demoníaca o tu combinación final preferida; preparación completa."
+    "cuerpo_a_cuerpo": "Equipo Shadowspec/sombra demoníaca o tu combinación final preferida; preparación completa."
    },
    "necesitas": [
     {
@@ -5272,7 +5272,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "**Tu mundo Experto ya es una dificultad completa.** Revengeance es una capa adicional de Calamity: cambia patrones, añade Ira y Adrenalina y habilita algunas recompensas. No hace falta activarla para llegar a los dos finales principales."
+     "texto": "**Tu mundo Experto ya es una dificultad completa.** Revengeance es una capa adicional de Calamity: cambia patrones, añade Rabia y Adrenalina y habilita algunas recompensas. No hace falta activarla para llegar a los dos finales principales."
     },
     {
      "tipo": "parrafo",
@@ -5340,7 +5340,7 @@
      "items": [
       "Usa un personaje normal, no hardcore, para una primera partida de aprendizaje.",
       "Para un mundo nuevo, activa Calamity antes de generarlo y elige mediano o grande: el mod no admite oficialmente mundos pequeños. Un mundo antiguo de Terraria no recibe automáticamente todos los laboratorios y biomas.",
-      "Abre los controles y asigna cómodamente las habilidades de armadura/accesorios. Si algún día activas Revengeance, asigna también Ira y Adrenalina.",
+      "Abre los controles y asigna cómodamente las habilidades de armadura/accesorios. Si algún día activas Revengeance, asigna también Rabia y Adrenalina.",
       "Comprueba la opción de reestructuración del inicio del modo difícil: la guía usa su valor habitual activado. Hay una ficha específica para el caso contrario.",
       "Opcionales útiles: Boss Checklist para registrar jefes, Recipe Browser para buscar recetas y Magic Storage para organizar materiales. No necesitas estos mods para seguir la guía; el Guía del juego consulta materiales de fabricación."
      ]
@@ -5374,7 +5374,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Los nombres de objetos, jefes y biomas salen de la traducción oficial al español de Terraria y de la traducción española de Calamity (CalamityModEsp); lo que no tiene traducción se queda con su nombre original."
+     "texto": "Los nombres de objetos, jefes y biomas salen de la traducción oficial al español de Terraria y de la traducción al español de Calamity de la familia Keep (CalamityKeep-Traduccion-ES); lo que no tiene traducción se queda con su nombre original."
     },
     {
      "tipo": "fuentes",
@@ -5408,7 +5408,7 @@
     {
      "tipo": "aviso",
      "estilo": "suave",
-     "texto": "El cierre de la progresión disponible es derrotar a **Exo Mecas y {n:CalamityMod/SupremeCalamitas}**. Después: Shadowspec, Boss Rush, {n:CalamityMod/PrimordialWyrmHead} y colecciones. Yharim, Xeroc o Noxus que veas en vídeos no son objetivos normales jugables de esta ruta del mod base."
+     "texto": "El cierre de la progresión disponible es derrotar a **Exomecas y {n:CalamityMod/SupremeCalamitas}**. Después: Shadowspec, Boss Rush, {n:CalamityMod/PrimordialWyrmHead} y colecciones. Yharim, Xeroc o Noxus que veas en vídeos no son objetivos normales jugables de esta ruta del mod base."
     },
     {
      "tipo": "titulo",
@@ -5419,7 +5419,7 @@
      "bloques": [
       {
        "tipo": "caja",
-       "titulo": "Ira · presión de combate",
+       "titulo": "Rabia · presión de combate",
        "estilo": "",
        "bloques": [
         {
@@ -5574,7 +5574,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "**Cuándo:** visita breve al principio; Lluvia Ácida I tras el Ojo, II tras {n:CalamityMod/AquaticScourgeHead}, III tras {n:CalamityMod/Polterghast}. **Para qué:** evento, materiales y entrada al {z:abismo}."
+         "texto": "**Cuándo:** visita breve al principio; Lluvia ácida I tras el Ojo, II tras {n:CalamityMod/AquaticScourgeHead}, III tras {n:CalamityMod/Polterghast}. **Para qué:** evento, materiales y entrada al {z:abismo}."
         },
         {
          "tipo": "parrafo",
@@ -5608,7 +5608,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Escoria, recursos abisales y {o:CalamityMod/Terminus}."
+         "texto": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, escoria, recursos abisales y {o:CalamityMod/Terminus}."
         },
         {
          "tipo": "parrafo",
@@ -5666,11 +5666,11 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "**Cuándo:** aparece tras {n:Terraria/WallofFlesh}. **Para qué:** Aureus, Deus, {o:CalamityMod/AstralBeaconItem}, mineral y equipo Astral."
+         "texto": "**Cuándo:** aparece tras {n:Terraria/WallofFlesh}. **Para qué:** Aureus, Deus, {o:CalamityMod/AstralBeaconItem}, mineral y equipo astral."
         },
         {
          "tipo": "parrafo",
-         "texto": "La conversión del impacto no se propaga como Corrupción/Carmesí. Aureus habilita botín y el cofre Astral; **Deus** habilita extraer {o:CalamityMod/AstralOre}."
+         "texto": "La conversión del impacto no se propaga como Corrupción/Carmesí. Aureus habilita botín y el cofre astral; **Deus** habilita extraer {o:CalamityMod/AstralOre}."
         },
         {
          "tipo": "parrafo",
@@ -5774,7 +5774,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Al permanecer dentro del agua sulfúrica, el medidor tarda alrededor de 12 segundos en llenarse sin protección. Al llegar al máximo causa un daño fuerte. Salir del agua lo vacía rápidamente. {o:CalamityMod/SulphurskinPotion} ralentiza la acumulación; armadura sulfúrica también, pero es una armadura rogue. {o:CalamityMod/AbyssalDivingSuit} evita este mecanismo, aunque es una mejora avanzada. No confundas protección frente al agua con inmunidad a los ataques."
+     "texto": "Al permanecer dentro del agua sulfúrica, el medidor tarda alrededor de 12 segundos en llenarse sin protección. Al llegar al máximo causa un daño fuerte. Salir del agua lo vacía rápidamente. {o:CalamityMod/SulphurskinPotion} ralentiza la acumulación; armadura sulfurosa también, pero es una armadura rogue. {o:CalamityMod/AbyssalDivingSuit} evita este mecanismo, aunque es una mejora avanzada. No confundas protección frente al agua con inmunidad a los ataques."
     },
     {
      "tipo": "fuentes",
@@ -5819,7 +5819,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "La capa 3 es la referencia para Escoria y ventilaciones térmicas; la capa 4 es el vacío más oscuro y el santuario de {o:CalamityMod/Terminus}. Las fronteras no son pisos planos idénticos a este dibujo."
+     "texto": "La capa 3 es la referencia para escoria y ventilaciones térmicas; la capa 4 es el vacío más oscuro y el santuario de {o:CalamityMod/Terminus}. Las fronteras no son pisos planos idénticos a este dibujo."
     },
     {
      "tipo": "fuentes",
@@ -5946,7 +5946,7 @@
       ],
       [
        "{n:CalamityMod/DesertScourgeHead} / primeras cuevas",
-       "{o:CalamityMod/SaharaSlicers} si cae del jefe; las armas melee de Victida son alternativas acuáticas.",
+       "{o:CalamityMod/SaharaSlicers} si cae del jefe; las armas melee de victide son alternativas acuáticas.",
        "Busca alcance y no persigas al gusano bajo tierra."
       ],
       [
@@ -5961,7 +5961,7 @@
       ],
       [
        "Tras dos mecánicos + {n:CalamityMod/Cryogen}",
-       "**{o:CalamityMod/FlarefrostBlade}**, fabricada con Criónico, {o:Terraria/Hellstone} y {o:Terraria/SoulofLight}.",
+       "**{o:CalamityMod/FlarefrostBlade}**, fabricada con criónico, {o:Terraria/Hellstone} y {o:Terraria/SoulofLight}.",
        "Alcance y seguimiento cómodos. Guárdala para {o:CalamityMod/Exoblade}."
       ],
       [
@@ -5971,7 +5971,7 @@
       ],
       [
        "{n:Terraria/Golem} → {n:Terraria/MoonLordHead}",
-       "{o:Terraria/TerraBlade} / {o:CalamityMod/TrueArkoftheAncients}; armas de la etapa Escoria, y {o:Terraria/SolarEruption} o {o:Terraria/DayBreak} tras el pilar Solar.",
+       "{o:Terraria/TerraBlade} / {o:CalamityMod/TrueArkoftheAncients}; armas de la etapa escoria, y {o:Terraria/SolarEruption} o {o:Terraria/DayBreak} tras el pilar Solar.",
        "Elige según el jefe: alcance continuo para blancos móviles, penetración para blancos apropiados."
       ],
       [
@@ -5987,7 +5987,7 @@
       [
        "Después de {n:CalamityMod/Polterghast}",
        "**{o:CalamityMod/TerrorBlade}** si cae del jefe; {o:CalamityMod/Terratomere} sigue siendo una opción.",
-       "Prepara Llamarada de Sangre y el dash para {n:CalamityMod/DevourerofGodsHead}."
+       "Prepara sangrellama y el dash para {n:CalamityMod/DevourerofGodsHead}."
       ],
       [
        "Después de {n:CalamityMod/DevourerofGodsHead}",
@@ -6000,7 +6000,7 @@
        "Equipo para cualquiera de los dos finales."
       ],
       [
-       "Después de Exo Mecas",
+       "Después de Exomecas",
        "**{o:CalamityMod/Exoblade}**; {o:CalamityMod/PhotonRipper} si {n:CalamityMod/AresBody} fue el último; {o:CalamityMod/SpineOfThanatos} si {n:CalamityMod/ThanatosHead} fue el último.",
        "{o:CalamityMod/Exoblade} es una elección cómoda para terminar {n:CalamityMod/SupremeCalamitas}."
       ],
@@ -6113,7 +6113,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "{o:CalamityMod/Exoblade} se fabrica en **{o:CalamityMod/DraedonsForge}**. Su receta actual usa {o:CalamityMod/Lightspeed}; algunas guías antiguas muestran {o:CalamityMod/AnarchyBlade}. {o:CalamityMod/MiracleMatter} exige materiales exo: no intentes fabricar {o:CalamityMod/Exoblade} antes de derrotar Exo Mecas."
+     "texto": "{o:CalamityMod/Exoblade} se fabrica en **{o:CalamityMod/DraedonsForge}**. Su receta actual usa {o:CalamityMod/Lightspeed}; algunas guías antiguas muestran {o:CalamityMod/AnarchyBlade}. {o:CalamityMod/MiracleMatter} exige materiales exo: no intentes fabricar {o:CalamityMod/Exoblade} antes de derrotar Exomecas."
     },
     {
      "tipo": "fuentes",
@@ -6144,7 +6144,7 @@
      "filas": [
       [
        "Prehardmode temprano",
-       "Oro / platino → Victida opcional",
+       "Oro / platino → victide opcional",
        "No es necesario fabricar cada set."
       ],
       [
@@ -6154,8 +6154,8 @@
       ],
       [
        "Final prehardmode",
-       "Fundida o Estatigel melee",
-       "Estatigel necesita {o:CalamityMod/PurifiedGel}; {n:CalamityMod/SlimeGodCore}."
+       "Fundida o statigel melee",
+       "Statigel necesita {o:CalamityMod/PurifiedGel}; {n:CalamityMod/SlimeGodCore}."
       ],
       [
        "Modo difícil temprano",
@@ -6174,7 +6174,7 @@
       ],
       [
        "{n:Terraria/Golem} → {n:Terraria/MoonLordHead}",
-       "Escarabajo / Hidrotérmica melee",
+       "Escarabajo / hidrotermal melee",
        "{o:Terraria/BeetleShell} favorece resistencia; {o:Terraria/BeetleScaleMail} favorece daño."
       ],
       [
@@ -6184,27 +6184,27 @@
       ],
       [
        "Post-{n:CalamityMod/Providence}",
-       "Estragón melee",
+       "Tarragon melee",
        "Consérvala para Auric."
       ],
       [
        "Post-{n:CalamityMod/Polterghast}",
-       "Llamarada de Sangre melee · {o:CalamityMod/BloodflareHeadMelee}",
+       "Sangrellama melee · {o:CalamityMod/BloodflareHeadMelee}",
        "Consérvala para Auric."
       ],
       [
        "Post-{n:CalamityMod/DevourerofGodsHead} + eventos",
-       "Asesino de Dioses melee · {o:CalamityMod/GodSlayerHeadMelee}",
+       "Matadioses melee · {o:CalamityMod/GodSlayerHeadMelee}",
        "Consérvala para Auric."
       ],
       [
        "Post-{n:CalamityMod/Yharon}",
-       "Tesla Áurica melee · {o:CalamityMod/AuricTeslaHeadMelee}",
+       "Tesla áurica melee · {o:CalamityMod/AuricTeslaHeadMelee}",
        "Combina tus tres armaduras anteriores y otros componentes."
       ],
       [
        "Ambos finales",
-       "Sombra Demoníaca como alternativa final",
+       "Sombra demoníaca como alternativa final",
        "Prueba sus habilidades; Auric también permite terminar los desafíos."
       ]
      ]
@@ -6491,7 +6491,7 @@
       [
        "{o:CalamityMod/Exoblade}",
        "Espada con ataques de alcance y seguimiento; excelente candidata a principal cómoda.",
-       "Exo Mecas + cadena de espadas y {o:CalamityMod/MiracleMatter}."
+       "Exomecas + cadena de espadas y {o:CalamityMod/MiracleMatter}."
       ],
       [
        "{o:CalamityMod/ArkoftheCosmos}",
@@ -6516,12 +6516,12 @@
       [
        "{o:CalamityMod/PhotonRipper}",
        "Arma exo de proximidad con comportamiento propio.",
-       "{n:CalamityMod/AresBody} último en Exo Mecas."
+       "{n:CalamityMod/AresBody} último en Exomecas."
       ],
       [
        "{o:CalamityMod/SpineOfThanatos}",
        "Arma exo con alcance y segmentos.",
-       "{n:CalamityMod/ThanatosHead} último en Exo Mecas."
+       "{n:CalamityMod/ThanatosHead} último en Exomecas."
       ],
       [
        "{o:CalamityMod/DraconicDestruction}",
@@ -6649,11 +6649,11 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Abre los controles de Calamity y revisa las habilidades de tu set cada vez que cambies de armadura. Asesino de Dioses tiene una herramienta de desplazamiento que exige familiarizarte con su dirección y recuperación; Auric hereda mecánicas de sus armaduras componentes. Practica en la base cómo se activa y cuánto debes esperar antes de contar con ella de nuevo."
+     "texto": "Abre los controles de Calamity y revisa las habilidades de tu set cada vez que cambies de armadura. matadioses tiene una herramienta de desplazamiento que exige familiarizarte con su dirección y recuperación; Auric hereda mecánicas de sus armaduras componentes. Practica en la base cómo se activa y cuánto debes esperar antes de contar con ella de nuevo."
     },
     {
      "tipo": "parrafo",
-     "texto": "Con Sombra Demoníaca, revisa también la activación de su efecto ofensivo y su contrapartida antes de Boss Rush. No actives una habilidad nueva por primera vez dentro de una fase de proyectiles. El icono de cooldown y el tooltip del set son tu referencia de la instalación actual."
+     "texto": "Con sombra demoníaca, revisa también la activación de su efecto ofensivo y su contrapartida antes de Boss Rush. No actives una habilidad nueva por primera vez dentro de una fase de proyectiles. El icono de cooldown y el tooltip del set son tu referencia de la instalación actual."
     },
     {
      "tipo": "fuentes",
@@ -6728,8 +6728,8 @@
       ],
       [
        "{o:CalamityMod/MiracleFruit}",
-       "Ruta normal tras {n:Terraria/Golem} y Escoria",
-       "1 {o:Terraria/LifeFruit} + 5 {o:CalamityMod/LifeAlloy} + 12 {o:CalamityMod/LivingShard} → 550. No la sitúes automáticamente justo tras {n:Terraria/Plantera}: la aleación incluye Escoria."
+       "Ruta normal tras {n:Terraria/Golem} y escoria",
+       "1 {o:Terraria/LifeFruit} + 5 {o:CalamityMod/LifeAlloy} + 12 {o:CalamityMod/LivingShard} → 550. No la sitúes automáticamente justo tras {n:Terraria/Plantera}: la aleación incluye escoria."
       ],
       [
        "{o:CalamityMod/TaintedCloudberry}",
@@ -6889,7 +6889,7 @@
          "numerada": false,
          "items": [
           "{o:Terraria/EndurancePotion} y {o:Terraria/LifeforcePotion} cuando puedas obtenerlas.",
-          "{o:Terraria/WrathPotion}/Ira según disponibilidad; otras pociones ofensivas compatibles.",
+          "{o:Terraria/WrathPotion}/Rabia según disponibilidad; otras pociones ofensivas compatibles.",
           "{o:Terraria/InfernoPotion} si ayuda contra enemigos cercanos.",
           "{o:Terraria/ObsidianSkinPotion} en lava; {o:Terraria/GillsPotion}/{o:Terraria/FlipperPotion} para exploración normal, sin confundirlas con protección completa del {z:abismo}.",
           "{o:CalamityMod/ZenPotion} reduce presión de exploración; {o:CalamityMod/ZergPotion} sirve para farmear, no para una primera expedición tranquila."
@@ -7036,7 +7036,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "Clic derecho: ranura de objeto y ranura de células. En el sistema de carga actual, la referencia es recargar Mecanismos de Búsqueda. Los tutoriales que presentan todas las armas del arsenal como armas de batería describen versiones antiguas."
+         "texto": "Clic derecho: ranura de objeto y ranura de células. En el sistema de carga actual, la referencia es recargar mecanismos rastreadores. Los tutoriales que presentan todas las armas del arsenal como armas de batería describen versiones antiguas."
         },
         {
          "tipo": "fuentes",
@@ -7062,7 +7062,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "Es la estación progresiva de descifrado. Instala componentes y coloca el esquema correspondiente con las células necesarias. Cuando esté completo con {o:CalamityMod/AuricQuantumCoolingCell} permite contactar con {n:CalamityMod/Draedon} para Exo Mecas."
+         "texto": "Es la estación progresiva de descifrado. Instala componentes y coloca el esquema correspondiente con las células necesarias. Cuando esté completo con {o:CalamityMod/AuricQuantumCoolingCell} permite contactar con {n:CalamityMod/Draedon} para Exomecas."
         },
         {
          "tipo": "fuentes",
@@ -7331,7 +7331,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Hay una estructura secundaria de cavernas con la excavadora de ónice. No contiene un sexto esquema necesario para Exo Mecas. Romper la máquina permite obtener {o:CalamityMod/OnyxExcavatorKey}, una montura útil de excavación."
+     "texto": "Hay una estructura secundaria de cavernas con el excavador de ónice. No contiene un sexto esquema necesario para Exomecas. Romper la máquina permite obtener {o:CalamityMod/OnyxExcavatorKey}, una montura útil de excavación."
     },
     {
      "tipo": "fuentes",
@@ -7377,11 +7377,11 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Después de Exo Mecas, crea **{o:CalamityMod/DraedonsForge}**: {o:CalamityMod/CosmicAnvilItem} + una forja de adamantita/titanio + {o:Terraria/TinkerersWorkshop} + {o:Terraria/LunarCraftingStation} + 15 {o:CalamityMod/AuricBar} + 12 {o:CalamityMod/ExoPrism} + 15 {o:CalamityMod/AscendantSpiritEssence}, mediante fabricación a mano. Es el centro para {o:CalamityMod/MiracleMatter}, {o:CalamityMod/Exoblade} y Shadowspec."
+     "texto": "Después de Exomecas, crea **{o:CalamityMod/DraedonsForge}**: {o:CalamityMod/CosmicAnvilItem} + una forja de adamantita/titanio + {o:Terraria/TinkerersWorkshop} + {o:Terraria/LunarCraftingStation} + 15 {o:CalamityMod/AuricBar} + 12 {o:CalamityMod/ExoPrism} + 15 {o:CalamityMod/AscendantSpiritEssence}, mediante fabricación a mano. Es el centro para {o:CalamityMod/MiracleMatter}, {o:CalamityMod/Exoblade} y Shadowspec."
     },
     {
      "tipo": "parrafo",
-     "texto": "Shadowspec necesita **1 {o:CalamityMod/AuricBar} + 1 {o:CalamityMod/ExoPrism} + 1 {o:CalamityMod/AshesofAnnihilation}**. Por eso para el equipo Shadowspec hacen falta Exo Mecas y {n:CalamityMod/SupremeCalamitas}, aunque los puedas derrotar en cualquiera de los dos órdenes."
+     "texto": "Shadowspec necesita **1 {o:CalamityMod/AuricBar} + 1 {o:CalamityMod/ExoPrism} + 1 {o:CalamityMod/AshesofAnnihilation}**. Por eso para el equipo Shadowspec hacen falta Exomecas y {n:CalamityMod/SupremeCalamitas}, aunque los puedas derrotar en cualquiera de los dos órdenes."
     },
     {
      "tipo": "fuentes",
@@ -7453,7 +7453,7 @@
       [
        "{o:CalamityMod/PearlShard} / recursos marinos",
        "{n:CalamityMod/DesertScourgeHead} y exploración acuática",
-       "Victida y armas iniciales."
+       "Victide y armas iniciales."
       ],
       [
        "Aerialite",
@@ -7463,7 +7463,7 @@
       [
        "{o:CalamityMod/PurifiedGel}",
        "{n:CalamityMod/SlimeGodCore}",
-       "Estatigel y {o:CalamityMod/FracturedArk}. No es {o:CalamityMod/BlightedGel}."
+       "Statigel y {o:CalamityMod/FracturedArk}. No es {o:CalamityMod/BlightedGel}."
       ],
       [
        "Criónico",
@@ -7487,7 +7487,7 @@
       ],
       [
        "{o:CalamityMod/LifeAlloy}",
-       "Combina barras de Criónico, Perenne y Escoria",
+       "Combina barras de criónico, perenne y escoria",
        "Equipo, {o:CalamityMod/MiracleFruit} y componentes del {o:CalamityMod/CodebreakerBase}. {n:CalamityMod/RavagerBody} también es una fuente de materiales."
       ],
       [
@@ -7508,7 +7508,7 @@
       [
        "Uelibloom / {o:CalamityMod/DivineGeode}",
        "Después de {n:CalamityMod/Providence} / botín de {n:CalamityMod/Providence}",
-       "Estragón, {o:CalamityMod/Terratomere}, {o:CalamityMod/TaintedCloudberry} y {o:CalamityMod/VoltageRegulationSystem}."
+       "Tarragon, {o:CalamityMod/Terratomere}, {o:CalamityMod/TaintedCloudberry} y {o:CalamityMod/VoltageRegulationSystem}."
       ],
       [
        "{o:CalamityMod/Bloodstone}",
@@ -7523,7 +7523,7 @@
       [
        "{o:CalamityMod/RuinousSoul} / {o:CalamityMod/Necroplasm}",
        "{n:CalamityMod/Polterghast} / fuentes de la mazmorra de su etapa",
-       "Llamarada de Sangre y {o:CalamityMod/AscendantSpiritEssence}."
+       "Sangrellama y {o:CalamityMod/AscendantSpiritEssence}."
       ],
       [
        "Cosmilite",
@@ -7533,16 +7533,16 @@
       [
        "{o:CalamityMod/NightmareFuel} / {o:CalamityMod/EndothermicEnergy} / {o:CalamityMod/DarksunFragment}",
        "Luna calabaza / Luna Gélida / Eclipse después de {n:CalamityMod/DevourerofGodsHead}",
-       "{o:CalamityMod/AscendantSpiritEssence}, Asesino de Dioses y armas."
+       "{o:CalamityMod/AscendantSpiritEssence}, matadioses y armas."
       ],
       [
        "{o:CalamityMod/AuricOre} / {o:CalamityMod/YharonSoulFragment}",
        "Después de {n:CalamityMod/Yharon} / botín de {n:CalamityMod/Yharon}",
-       "Tesla Áurica, {o:CalamityMod/SacredStrawberry} y último componente del {o:CalamityMod/CodebreakerBase}."
+       "Tesla áurica, {o:CalamityMod/SacredStrawberry} y último componente del {o:CalamityMod/CodebreakerBase}."
       ],
       [
        "{o:CalamityMod/ExoPrism} / {o:CalamityMod/AshesofAnnihilation}",
-       "Exo Mecas / {n:CalamityMod/SupremeCalamitas}",
+       "Exomecas / {n:CalamityMod/SupremeCalamitas}",
        "Shadowspec y fabricación final."
       ]
      ]
@@ -7798,8 +7798,8 @@
      "numerada": false,
      "items": [
       "Todos los jefes de la ruta, incluidos los desvíos que dejaste pendientes.",
-      "Los tres niveles de Lluvia Ácida y {n:CalamityMod/OldDuke}.",
-      "Exo Mecas repetidos con cada grupo final si quieres su botín completo.",
+      "Los tres niveles de Lluvia ácida y {n:CalamityMod/OldDuke}.",
+      "Exomecas repetidos con cada grupo final si quieres su botín completo.",
       "{n:CalamityMod/Providence} en {z:sagrado|Sagrado} y {z:inframundo|Inframundo} para sus recompensas; desafío nocturno al final si te interesa.",
       "Boss Rush con {o:CalamityMod/Terminus}, y Rock como recompensa.",
       "{n:CalamityMod/PrimordialWyrmHead} en el fondo del {z:abismo} y {o:CalamityMod/HalibutCannon}.",
@@ -8184,17 +8184,17 @@
       ],
       [
        "{n:CalamityMod/CragmawMire}",
-       "Lluvia Ácida II y III; revisa bajo el agua si no encuentras apariciones.",
+       "Lluvia ácida II y III; revisa bajo el agua si no encuentras apariciones.",
        "{o:CalamityMod/NuclearFuelRod} y botín del evento. La varilla protege de Irradiated, pero no sustituye todas las protecciones acuáticas."
       ],
       [
        "{n:CalamityMod/Mauler}",
-       "Lluvia Ácida III, tras {n:CalamityMod/Polterghast}.",
+       "Lluvia ácida III, tras {n:CalamityMod/Polterghast}.",
        "Botín del último nivel del evento."
       ],
       [
        "{n:CalamityMod/NuclearTerror}",
-       "Lluvia Ácida III.",
+       "Lluvia ácida III.",
        "{o:CalamityMod/PhosphorescentGauntlet} o {o:CalamityMod/GammaHeart}; deja peligro al morir, no corras al botín sin mirar."
       ],
       [
@@ -8298,7 +8298,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "{o:CalamityMod/CausticTear} inicia Lluvia Ácida. {o:CalamityMod/TorrentialTear} alterna lluvia y también permite terminar Lluvia Ácida. {o:CalamityMod/AridArtifact} alterna Tormenta de arena cuando se cumplen sus condiciones. {o:CalamityMod/BrokenWaterFilter} permite evitar la aparición natural de Lluvia Ácida; no tienes que soportar el evento cada vez que visitas la costa. {o:CalamityMod/AntiTumorOintment} y {o:CalamityMod/AntiCystOintment} evitan los enemigos que activan {n:CalamityMod/HiveMind} y {n:CalamityMod/PerforatorHive} cerca de ti. {o:CalamityMod/Cosmolight} es una utilidad de control de tiempo; revisa su receta actual y no pauses el tiempo mientras esperas producción de células."
+     "texto": "{o:CalamityMod/CausticTear} inicia Lluvia ácida. {o:CalamityMod/TorrentialTear} alterna lluvia y también permite terminar Lluvia ácida. {o:CalamityMod/AridArtifact} alterna Tormenta de arena cuando se cumplen sus condiciones. {o:CalamityMod/BrokenWaterFilter} permite evitar la aparición natural de Lluvia ácida; no tienes que soportar el evento cada vez que visitas la costa. {o:CalamityMod/AntiTumorOintment} y {o:CalamityMod/AntiCystOintment} evitan los enemigos que activan {n:CalamityMod/HiveMind} y {n:CalamityMod/PerforatorHive} cerca de ti. {o:CalamityMod/Cosmolight} es una utilidad de control de tiempo; revisa su receta actual y no pauses el tiempo mientras esperas producción de células."
     },
     {
      "tipo": "fuentes",
@@ -9182,7 +9182,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -9190,7 +9190,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -9198,7 +9198,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -9998,7 +9998,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -10006,7 +10006,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -10014,7 +10014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -10432,7 +10432,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -10440,7 +10440,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -10448,7 +10448,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       }
      ],
@@ -13015,7 +13015,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -13023,7 +13023,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -13031,7 +13031,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -13503,7 +13503,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -13511,7 +13511,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -13519,7 +13519,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -14008,7 +14008,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -14016,7 +14016,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -14024,7 +14024,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -14932,7 +14932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -14940,7 +14940,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -14948,7 +14948,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       }
      ],
@@ -15184,7 +15184,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura Estragón y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -15288,7 +15288,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -15298,7 +15298,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -15308,7 +15308,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -15318,7 +15318,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -15328,7 +15328,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -15338,7 +15338,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -15496,7 +15496,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -15506,7 +15506,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -15620,7 +15620,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura Llamarada de Sangre) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -15727,7 +15727,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -15735,7 +15735,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -15743,7 +15743,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -15751,7 +15751,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -15761,7 +15761,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -15771,7 +15771,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -16078,7 +16078,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exomecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16145,7 +16145,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16153,7 +16153,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16161,7 +16161,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -16419,7 +16419,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -16434,7 +16434,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exomecas",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16509,7 +16509,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16517,7 +16517,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16525,7 +16525,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -16799,7 +16799,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exomecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -16814,7 +16814,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exomecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16897,7 +16897,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16905,7 +16905,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16913,7 +16913,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -16921,7 +16921,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -16929,7 +16929,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -16937,7 +16937,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -17203,7 +17203,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exomecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exomecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -17218,7 +17218,7 @@
     {
      "id": "cuerpo_a_cuerpo.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exomecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Earth",
@@ -17285,7 +17285,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -17293,7 +17293,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -17301,7 +17301,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -17309,7 +17309,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -17317,7 +17317,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -17325,7 +17325,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -17333,7 +17333,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -17341,7 +17341,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -17349,7 +17349,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -17615,7 +17615,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -17724,7 +17724,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -17732,7 +17732,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -17740,7 +17740,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -18217,7 +18217,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -18225,7 +18225,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -18233,7 +18233,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de rufián de la nieve",
+       "conjunto": "Armadura del rufián de las nieves",
        "marcas": []
       },
       {
@@ -18241,7 +18241,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -18249,7 +18249,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -18257,7 +18257,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -18707,7 +18707,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -18715,7 +18715,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -18723,7 +18723,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -19135,7 +19135,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -19143,7 +19143,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -19151,7 +19151,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -19571,7 +19571,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -19579,7 +19579,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -19587,7 +19587,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       }
      ],
@@ -22376,7 +22376,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22384,7 +22384,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22392,7 +22392,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22400,7 +22400,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -22408,7 +22408,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -22416,7 +22416,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -22926,7 +22926,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22934,7 +22934,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22942,7 +22942,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -22950,7 +22950,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -22958,7 +22958,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -22966,7 +22966,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": []
       },
       {
@@ -23468,7 +23468,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -23476,7 +23476,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -23484,7 +23484,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -23492,7 +23492,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -23500,7 +23500,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -23508,7 +23508,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -23516,7 +23516,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": [
         "†"
        ]
@@ -23526,7 +23526,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": [
         "†"
        ]
@@ -23536,7 +23536,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura de segador de la plaga",
+       "conjunto": "Armadura del segador de la Plaga",
        "marcas": [
         "†"
        ]
@@ -24026,7 +24026,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -24034,7 +24034,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -24042,7 +24042,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del cuerpo lúnico",
+       "conjunto": "Armadura del Cuerpo Lúnico",
        "marcas": []
       },
       {
@@ -24518,7 +24518,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -24526,7 +24526,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -24534,7 +24534,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       }
      ],
@@ -24812,7 +24812,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura Estragón y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -24918,7 +24918,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -24928,7 +24928,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -24938,7 +24938,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -24948,7 +24948,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -24958,7 +24958,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -24968,7 +24968,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -25137,7 +25137,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -25147,7 +25147,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -25313,7 +25313,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura Llamarada de Sangre) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -25417,7 +25417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -25425,7 +25425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -25433,7 +25433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       }
      ],
@@ -25780,7 +25780,7 @@
     {
      "id": "distancia.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exomecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -25851,7 +25851,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -25859,7 +25859,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -25867,7 +25867,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -26169,7 +26169,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -26184,7 +26184,7 @@
     {
      "id": "distancia.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exomecas",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -26255,7 +26255,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -26263,7 +26263,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -26271,7 +26271,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -26589,7 +26589,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exomecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -26604,7 +26604,7 @@
     {
      "id": "distancia.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exomecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -26691,7 +26691,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -26699,7 +26699,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -26707,7 +26707,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -26715,7 +26715,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -26723,7 +26723,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -26731,7 +26731,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -27041,7 +27041,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exomecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exomecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -27056,7 +27056,7 @@
     {
      "id": "distancia.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exomecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Contagion",
@@ -27121,7 +27121,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -27129,7 +27129,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -27137,7 +27137,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -27145,7 +27145,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -27153,7 +27153,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -27161,7 +27161,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -27169,7 +27169,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -27177,7 +27177,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -27185,7 +27185,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -27485,7 +27485,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -28022,7 +28022,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -28030,7 +28030,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -28038,7 +28038,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -28902,7 +28902,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -28910,7 +28910,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -28918,7 +28918,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -29340,7 +29340,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -29348,7 +29348,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -29356,7 +29356,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -29388,7 +29388,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -29396,7 +29396,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -29404,7 +29404,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       }
      ],
@@ -32155,7 +32155,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -32163,7 +32163,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -32171,7 +32171,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -32645,7 +32645,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -32653,7 +32653,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -32661,7 +32661,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -33125,7 +33125,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -33133,7 +33133,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -33141,7 +33141,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -34060,7 +34060,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34068,7 +34068,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34076,7 +34076,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34084,7 +34084,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -34092,7 +34092,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -34100,7 +34100,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       }
      ],
@@ -34350,7 +34350,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura Estragón y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -34452,7 +34452,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -34462,7 +34462,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -34472,7 +34472,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -34482,7 +34482,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34490,7 +34490,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34498,7 +34498,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Prismática",
+       "conjunto": "Armadura prismática",
        "marcas": []
       },
       {
@@ -34506,7 +34506,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -34516,7 +34516,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -34526,7 +34526,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -34682,7 +34682,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -34692,7 +34692,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -34814,7 +34814,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura Llamarada de Sangre) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -34916,7 +34916,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       },
       {
@@ -34924,7 +34924,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       },
       {
@@ -34932,7 +34932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       }
      ],
@@ -35233,7 +35233,7 @@
     {
      "id": "magia.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exomecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -35306,7 +35306,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -35314,7 +35314,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -35322,7 +35322,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -35598,7 +35598,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -35613,7 +35613,7 @@
     {
      "id": "magia.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exomecas",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -35694,7 +35694,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -35702,7 +35702,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -35710,7 +35710,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -36002,7 +36002,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exomecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36017,7 +36017,7 @@
     {
      "id": "magia.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exomecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -36090,7 +36090,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36098,7 +36098,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36106,7 +36106,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36114,7 +36114,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -36122,7 +36122,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -36130,7 +36130,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -36414,7 +36414,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exomecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exomecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36429,7 +36429,7 @@
     {
      "id": "magia.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exomecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Apotheosis",
@@ -36502,7 +36502,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36510,7 +36510,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36518,7 +36518,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -36526,7 +36526,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -36534,7 +36534,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -36542,7 +36542,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -36550,7 +36550,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -36558,7 +36558,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -36566,7 +36566,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -36848,7 +36848,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -37334,7 +37334,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -37342,7 +37342,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -37350,7 +37350,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -38156,7 +38156,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -38164,7 +38164,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -38172,7 +38172,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -38666,7 +38666,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -38674,7 +38674,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -38682,7 +38682,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       }
      ],
@@ -40861,7 +40861,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de enjambrador de las profundidades",
+       "conjunto": "Armadura del enjambre abisal",
        "marcas": []
       },
       {
@@ -40869,7 +40869,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de enjambrador de las profundidades",
+       "conjunto": "Armadura del enjambre abisal",
        "marcas": []
       },
       {
@@ -40877,7 +40877,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de enjambrador de las profundidades",
+       "conjunto": "Armadura del enjambre abisal",
        "marcas": []
       },
       {
@@ -41381,7 +41381,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41389,7 +41389,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41397,7 +41397,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41885,7 +41885,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41893,7 +41893,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41901,7 +41901,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -41909,7 +41909,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -41917,7 +41917,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -41925,7 +41925,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -42401,7 +42401,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -42409,7 +42409,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -42417,7 +42417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -42425,7 +42425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -42433,7 +42433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -42441,7 +42441,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de portadora de la plaga",
+       "conjunto": "Armadura portaplagas",
        "marcas": []
       },
       {
@@ -43447,7 +43447,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -43455,7 +43455,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -43463,7 +43463,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -43753,7 +43753,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura Estragón y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -43889,7 +43889,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -43899,7 +43899,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -43909,7 +43909,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -43952,7 +43952,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -43962,7 +43962,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -43972,7 +43972,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -44122,7 +44122,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -44132,7 +44132,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -44254,7 +44254,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura Llamarada de Sangre) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -44380,7 +44380,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del Intimidador",
+       "conjunto": "Armadura del sembrador de terror",
        "marcas": []
       },
       {
@@ -44388,7 +44388,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del Intimidador",
+       "conjunto": "Armadura del sembrador de terror",
        "marcas": []
       },
       {
@@ -44396,7 +44396,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura del Intimidador",
+       "conjunto": "Armadura del sembrador de terror",
        "marcas": []
       },
       {
@@ -44404,7 +44404,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       },
       {
@@ -44412,7 +44412,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       },
       {
@@ -44420,7 +44420,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Silva",
+       "conjunto": "Armadura de silva",
        "marcas": []
       }
      ],
@@ -44697,7 +44697,7 @@
     {
      "id": "invocacion.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exomecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -44782,7 +44782,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -44790,7 +44790,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -44798,7 +44798,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -45048,7 +45048,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45063,7 +45063,7 @@
     {
      "id": "invocacion.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exomecas",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -45174,7 +45174,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45182,7 +45182,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45190,7 +45190,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -45456,7 +45456,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exomecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45471,7 +45471,7 @@
     {
      "id": "invocacion.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exomecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -45572,7 +45572,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45580,7 +45580,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45588,7 +45588,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45596,7 +45596,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -45604,7 +45604,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -45612,7 +45612,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -45870,7 +45870,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exomecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exomecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45885,7 +45885,7 @@
     {
      "id": "invocacion.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exomecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Endogenesis",
@@ -45974,7 +45974,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45982,7 +45982,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45990,7 +45990,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -45998,7 +45998,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -46006,7 +46006,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -46014,7 +46014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -46022,7 +46022,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -46030,7 +46030,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -46038,7 +46038,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -46314,7 +46314,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -46417,7 +46417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de merodeador del desierto",
+       "conjunto": "Armadura del acechador del desierto",
        "marcas": []
       },
       {
@@ -46425,7 +46425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de merodeador del desierto",
+       "conjunto": "Armadura del acechador del desierto",
        "marcas": []
       },
       {
@@ -46433,7 +46433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de merodeador del desierto",
+       "conjunto": "Armadura del acechador del desierto",
        "marcas": []
       },
       {
@@ -46879,7 +46879,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -46887,7 +46887,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -46895,7 +46895,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -46903,7 +46903,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -46911,7 +46911,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -46919,7 +46919,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de victida",
+       "conjunto": "Armadura de victide",
        "marcas": []
       },
       {
@@ -47313,7 +47313,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -47321,7 +47321,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -47329,7 +47329,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura sulfúrica",
+       "conjunto": "Armadura sulfurosa",
        "marcas": []
       },
       {
@@ -47739,7 +47739,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -47747,7 +47747,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -47755,7 +47755,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Aerospec",
+       "conjunto": "Armadura de aerospec",
        "marcas": []
       },
       {
@@ -48163,7 +48163,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -48171,7 +48171,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       },
       {
@@ -48179,7 +48179,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de estatigel",
+       "conjunto": "Armadura de statigel",
        "marcas": []
       }
      ],
@@ -50868,7 +50868,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -50876,7 +50876,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -50884,7 +50884,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51386,7 +51386,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51394,7 +51394,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51402,7 +51402,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51916,7 +51916,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51924,7 +51924,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -51932,7 +51932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura hidrotérmica",
+       "conjunto": "Armadura hidrotermal",
        "marcas": []
       },
       {
@@ -52444,7 +52444,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:CalamityMod/ExodusWings}.",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": [
         "Ω1"
        ]
@@ -52454,7 +52454,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:CalamityMod/ExodusWings}.",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": [
         "Ω1"
        ]
@@ -52464,7 +52464,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:CalamityMod/ExodusWings}.",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": [
         "Ω1"
        ]
@@ -52498,7 +52498,7 @@
       {
        "ref": "CalamityMod/ExodusWings",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Empírea.",
+       "nota": "Se recomienda usarlo junto con armadura empírea.",
        "rol": "movilidad primaria",
        "conjunto": "",
        "marcas": [
@@ -52904,7 +52904,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": []
       },
       {
@@ -52912,7 +52912,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": []
       },
       {
@@ -52920,7 +52920,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Empírea",
+       "conjunto": "Armadura empírea",
        "marcas": []
       },
       {
@@ -52928,7 +52928,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -52936,7 +52936,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -52944,7 +52944,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       }
      ],
@@ -53212,7 +53212,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura Estragón y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -53340,7 +53340,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -53350,7 +53350,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -53360,7 +53360,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura de Llamarada de Sangre",
+       "conjunto": "Armadura de sangrellama",
        "marcas": [
         "Ω1"
        ]
@@ -53370,7 +53370,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -53378,7 +53378,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -53386,7 +53386,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Estragón",
+       "conjunto": "Armadura de tarragon",
        "marcas": []
       },
       {
@@ -53394,7 +53394,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -53404,7 +53404,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -53414,7 +53414,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Azul Omega",
+       "conjunto": "Armadura azul omega",
        "marcas": [
         "†"
        ]
@@ -53596,7 +53596,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -53606,7 +53606,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de sangrellama.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -53720,7 +53720,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura Llamarada de Sangre) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -53820,7 +53820,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -53828,7 +53828,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       },
       {
@@ -53836,7 +53836,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Asesino de Dioses",
+       "conjunto": "Armadura matadioses",
        "marcas": []
       }
      ],
@@ -54139,7 +54139,7 @@
     {
      "id": "picaro.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exomecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -54206,7 +54206,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -54214,7 +54214,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -54222,7 +54222,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -54498,7 +54498,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -54513,7 +54513,7 @@
     {
      "id": "picaro.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exomecas",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -54588,7 +54588,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -54596,7 +54596,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -54604,7 +54604,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       }
      ],
@@ -54896,7 +54896,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exomecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -54911,7 +54911,7 @@
     {
      "id": "picaro.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exomecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -55004,7 +55004,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55012,7 +55012,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55020,7 +55020,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55028,7 +55028,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -55036,7 +55036,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -55044,7 +55044,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -55328,7 +55328,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exomecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exomecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -55343,7 +55343,7 @@
     {
      "id": "picaro.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exomecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Celestus",
@@ -55394,7 +55394,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55402,7 +55402,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55410,7 +55410,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Tesla Áurica",
+       "conjunto": "Armadura de Tesla áurica",
        "marcas": []
       },
       {
@@ -55418,7 +55418,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -55426,7 +55426,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -55434,7 +55434,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura de Sombra Demoníaca",
+       "conjunto": "Armadura de sombra demoníaca",
        "marcas": []
       },
       {
@@ -55442,7 +55442,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -55450,7 +55450,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       },
       {
@@ -55458,7 +55458,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tecnogema",
+       "conjunto": "Armadura tecnogema",
        "marcas": []
       }
      ],
@@ -55742,7 +55742,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -56076,8 +56076,8 @@
   },
   {
    "id": "mar_sulfuroso",
-   "nombre": "Mar Sulfúrico",
-   "fuenteNombre": "CalamityModEsp (Biomes.SulphurousSea)",
+   "nombre": "Mar sulfuroso",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.SulphurousSea)",
    "ambito": "calamity",
    "capa": "superficie",
    "firma": {
@@ -56089,14 +56089,14 @@
     ],
     "minimo": 40
    },
-   "resumen": "**Cuándo:** visita breve al principio; Lluvia Ácida I tras el Ojo, II tras {n:CalamityMod/AquaticScourgeHead}, III tras {n:CalamityMod/Polterghast}. **Para qué:** evento, materiales y entrada al {z:abismo}. Se encuentra en el extremo del lado {z:mazmorra|mazmorra}. Construye una pasarela por encima del agua y aprende sus peligros antes de sumergirte. {p:acid1}",
+   "resumen": "**Cuándo:** visita breve al principio; Lluvia ácida I tras el Ojo, II tras {n:CalamityMod/AquaticScourgeHead}, III tras {n:CalamityMod/Polterghast}. **Para qué:** evento, materiales y entrada al {z:abismo}. Se encuentra en el extremo del lado {z:mazmorra|mazmorra}. Construye una pasarela por encima del agua y aprende sus peligros antes de sumergirte. {p:acid1}",
    "bloques": [],
    "fuentes": []
   },
   {
    "id": "abismo",
    "nombre": "Abismo",
-   "fuenteNombre": "CalamityModEsp (Biomes.Abyss)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.Abyss)",
    "ambito": "calamity",
    "capa": "cavernas",
    "firma": {
@@ -56108,14 +56108,14 @@
     ],
     "minimo": 40
    },
-   "resumen": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Escoria, recursos abisales y {o:CalamityMod/Terminus}. Cuanto más profundo, peor respiración, visión y defensa. La expedición temprana es una visita corta a los cofres accesibles, no una bajada hasta el fondo. {p:abyss1}",
+   "resumen": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, escoria, recursos abisales y {o:CalamityMod/Terminus}. Cuanto más profundo, peor respiración, visión y defensa. La expedición temprana es una visita corta a los cofres accesibles, no una bajada hasta el fondo. {p:abyss1}",
    "bloques": [],
    "fuentes": []
   },
   {
    "id": "abismo_capa4",
    "nombre": "El Vacío",
-   "fuenteNombre": "CalamityModEsp (Biomes.AbyssLayer4Biome)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.AbyssLayer4Biome)",
    "ambito": "calamity",
    "capa": "cavernas",
    "firma": {
@@ -56131,8 +56131,8 @@
   },
   {
    "id": "mar_hundido",
-   "nombre": "Mar Hundido",
-   "fuenteNombre": "CalamityModEsp (Biomes.SunkenSea)",
+   "nombre": "Mar hundido",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.SunkenSea)",
    "ambito": "calamity",
    "capa": "subterraneo",
    "firma": {
@@ -56150,8 +56150,8 @@
   },
   {
    "id": "penascos_azufre",
-   "nombre": "Peñascos de Azufre",
-   "fuenteNombre": "CalamityModEsp (Biomes.BrimstoneCrags)",
+   "nombre": "Riscos de azufre",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.BrimstoneCrags)",
    "ambito": "calamity",
    "capa": "infierno",
    "firma": {
@@ -56168,8 +56168,8 @@
   },
   {
    "id": "infeccion_astral",
-   "nombre": "Infección Astral",
-   "fuenteNombre": "CalamityModEsp (Biomes.AstralInfection)",
+   "nombre": "Infección astral",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.AstralInfection)",
    "ambito": "calamity",
    "capa": "superficie",
    "firma": {
@@ -56181,14 +56181,14 @@
     ],
     "minimo": 40
    },
-   "resumen": "**Cuándo:** aparece tras {n:Terraria/WallofFlesh}. **Para qué:** Aureus, Deus, {o:CalamityMod/AstralBeaconItem}, mineral y equipo Astral. La conversión del impacto no se propaga como Corrupción/Carmesí. Aureus habilita botín y el cofre Astral; **Deus** habilita extraer {o:CalamityMod/AstralOre}. {p:deus}",
+   "resumen": "**Cuándo:** aparece tras {n:Terraria/WallofFlesh}. **Para qué:** Aureus, Deus, {o:CalamityMod/AstralBeaconItem}, mineral y equipo astral. La conversión del impacto no se propaga como Corrupción/Carmesí. Aureus habilita botín y el cofre astral; **Deus** habilita extraer {o:CalamityMod/AstralOre}. {p:deus}",
    "bloques": [],
    "fuentes": []
   },
   {
    "id": "faro_astral",
-   "nombre": "Baliza Astral",
-   "fuenteNombre": "CalamityModEsp (nombre del objeto)",
+   "nombre": "Faro astral",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (nombre del objeto)",
    "ambito": "calamity",
    "capa": "superficie",
    "firma": {
@@ -56205,7 +56205,7 @@
   {
    "id": "lab_mar_hundido",
    "nombre": "Laboratorio del Arsenal (mar hundido)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + CalamityModEsp (Biomes.SunkenSea)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + CalamityKeep-Traduccion-ES (Biomes.SunkenSea)",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56221,7 +56221,7 @@
   {
    "id": "lab_planetoide",
    "nombre": "Laboratorio del Arsenal (planetoide)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + texto",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + texto",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56237,7 +56237,7 @@
   {
    "id": "lab_jungla",
    "nombre": "Laboratorio del Arsenal (jungla)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Jungle)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Jungle)",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56253,7 +56253,7 @@
   {
    "id": "lab_infierno",
    "nombre": "Laboratorio del Arsenal (inframundo)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.TheUnderworld)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.TheUnderworld)",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56269,7 +56269,7 @@
   {
    "id": "lab_hielo",
    "nombre": "Laboratorio del Arsenal (nieve)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Snow)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Snow)",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56285,7 +56285,7 @@
   {
    "id": "lab_cavernas",
    "nombre": "Laboratorio del Arsenal (cavernas)",
-   "fuenteNombre": "CalamityModEsp (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Caverns)",
+   "fuenteNombre": "CalamityKeep-Traduccion-ES (Biomes.ArsenalLabBiome) + Terraria es-ES oficial (Bestiary_Biomes.Caverns)",
    "ambito": "calamity",
    "capa": "cualquiera",
    "firma": {
@@ -56327,7 +56327,7 @@
    "modos": [
     "revengeance"
    ],
-   "texto": "Revengeance: aparecen los medidores de Ira y Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles."
+   "texto": "Revengeance: aparecen las barras de Rabia y Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles."
   },
   {
    "id": "death",
@@ -56340,7 +56340,7 @@
  "problemas": [
   {
    "id": "problema1",
-   "titulo": "No veo Ira ni Adrenalina",
+   "titulo": "No veo Rabia ni Adrenalina",
    "bloques": [
     {
      "tipo": "parrafo",
@@ -56370,7 +56370,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "Revisa jefe de desbloqueo + potencia del pico. Aerialite necesita {o:Terraria/Hive}/{n:CalamityMod/PerforatorHive}; Astral necesita Deus; Criónico necesita un pico adecuado."
+     "texto": "Revisa jefe de desbloqueo + potencia del pico. Aerialite necesita {o:Terraria/Hive}/{n:CalamityMod/PerforatorHive}; astral necesita Deus; criónico necesita un pico adecuado."
     }
    ],
    "paradas": [],
@@ -56405,7 +56405,7 @@
   },
   {
    "id": "problema6",
-   "titulo": "No aparece la receta del invocador Astral",
+   "titulo": "No aparece la receta del invocador astral",
    "bloques": [
     {
      "tipo": "parrafo",
@@ -56636,7 +56636,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "Es el tercer nivel de Lluvia Ácida y {n:CalamityMod/OldDuke}. Puedes aplazarlo para más adelante."
+     "texto": "Es el tercer nivel de Lluvia ácida y {n:CalamityMod/OldDuke}. Puedes aplazarlo para más adelante."
     }
    ],
    "paradas": [],
@@ -56645,7 +56645,7 @@
   },
   {
    "id": "problema24",
-   "titulo": "Exo Mecas no dio {o:CalamityMod/PhotonRipper}",
+   "titulo": "Exomecas no dio {o:CalamityMod/PhotonRipper}",
    "bloques": [
     {
      "tipo": "parrafo",
@@ -56997,7 +56997,7 @@
   },
   {
    "id": "hallazgo2",
-   "titulo": "Un altar encima de un árbol Astral",
+   "titulo": "Un altar encima de un árbol astral",
    "bloques": [
     {
      "tipo": "parrafo",
@@ -57145,7 +57145,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "**excavadora de ónice.** Su laboratorio es secundario. Romper la máquina permite recuperar su llave de montura. No busques un sexto esquema aquí."
+     "texto": "**excavador de ónice.** Su laboratorio es secundario. Romper la máquina permite recuperar su llave de montura. No busques un sexto esquema aquí."
     }
    ],
    "paradas": [],
@@ -57250,11 +57250,11 @@
   },
   {
    "id": "hallazgo12",
-   "titulo": "Un cofre Astral bloqueado en {z:mazmorra|mazmorra}",
+   "titulo": "Un cofre astral bloqueado en {z:mazmorra|mazmorra}",
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "**{o:CalamityMod/AstralChest}.** Se abre tras {n:CalamityMod/AstrumAureus} y no necesita llave Astral. Los demás cofres de bioma de Terraria tienen sus propias llaves y condiciones."
+     "texto": "**{o:CalamityMod/AstralChest}.** Se abre tras {n:CalamityMod/AstrumAureus} y no necesita llave astral. Los demás cofres de bioma de Terraria tienen sus propias llaves y condiciones."
     },
     {
      "tipo": "parrafo",
