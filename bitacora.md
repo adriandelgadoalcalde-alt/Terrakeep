@@ -34080,3 +34080,40 @@ dos fallos reales del arnés, ninguno de producción.
    Games\Terraria\Players` + `tModLoader\Players`) idénticos antes y después. `PANTALLA.lock` tomado
    y liberado. Solo cambia código de test (`CanarioGeometriaChesterEvidencia.cs`), sin tocar
    producción.
+
+## 2-oct-2026 - Guía v2, Fase F0: modelo compartido en Core + evaluador + port completo de Calamity (requirement 798ecebe)
+
+Encargo del usuario (literal en `docs/guia-v2-diseno.md`): rehacer la Guía de Terrakeep y TerrakeepMod,
+vanilla y Calamity, "así de curradas" como su guía HTML (`Downloads\Guia-Calamity\`), y en el mod marcador
+permanente en el mapa y objetos clicables que expliquen cómo conseguirlos. F0 = diseño + modelo + evaluador
++ contenido Calamity. Diseño completo, vocabulario y reparto F1/F2/F3 en **`docs/guia-v2-diseno.md`**.
+
+- **Modelo nuevo al lado de la v1** (`Terrakeep.Core/Guia/V2/`), con datos INCRUSTADOS en Terrakeep.Core.dll
+  (`Guia/V2/Datos/*.json`), así el mod lee los mismos bytes sin script de sincronización. Capítulos de ruta,
+  paradas (prepárate / tareas / combate / desbloquea / listo cuando / conserva / invocación / fuentes /
+  ubicación objetivo / necesitas / avisos por modo), artículos en bloques, escaleras por clase, zonas con
+  firma de tiles, fichas "Estoy perdido" y "He encontrado algo raro", marcado en línea `{o:}/{n:}/{z:}/{p:}/{a:}`.
+- **Evaluador** reutiliza `GuideEvaluationEngine` por hoja; tipos nuevos al FINAL del enum
+  (`objeto_poseido`, `equipado`, `mejora_permanente`, `estado_mundo`, `frutas_vida`, `mana_maxima`) y
+  capacidades nuevas en `IGuideStateProviderV2` aparte: el `ProveedorEstadoGuiaMod` actual sigue
+  compilando (sus tipos nuevos salen `NoEvaluable` con motivo, nunca "cumplidos").
+- **Lectores nuevos** (`Calamity/CalamityEstadoGuardado.cs`): `MiscWorldStateSystem` del `.twld`
+  (revenge/death, esquemas de laboratorio, centros de los laboratorios en casillas) y `CalamityPlayer.boost`
+  del `.tplr` (frutas de vida de Calamity, mejoras de Ira/Adrenalina, Cebolla Celestial). `TwldReader` lee 6
+  banderas más (Leviathan, Lluvia Ácida 1/2, Almeja HM, Terror Nuclear, Boss Rush) en una tabla aparte, sin
+  tocar el contrato de 31 banderas de la v1 ni sus pruebas.
+- **Contenido Calamity**: 47 paradas, 186 tareas (120 = 64,5 % con condición automática, 66 manuales
+  persistidas), 10 artículos + 4 capítulos de ruta, 48 + 12 fichas, 31 zonas, 105 etapas de escalera
+  (5 clases × 21, wiki oficial verificada contra el decompilado 2.2.4), ~17.800 palabras sin escaleras.
+  Nombres: Terraria es-ES oficial (tModLoader 1.4.4.9) y CalamityModEsp 2.2.0.1 (Calamity 2.2.4 no trae
+  es-ES - comprobado listando su `.tmod`); 186 objetos sin traducción se quedan en inglés, marcados.
+  Obtención (recetas/botín/bolsas/tiendas) del código decompilado con archivo:línea.
+- **Obstáculo resuelto con autonomía técnica**: la carpeta de Calamity decompilada era 2.2.2 y la guía
+  del usuario es de 2.2.4 → se decompiló el `CalamityMod.dll` del `.tmod` instalado (2.2.4) con
+  `ilspycmd -p` a `Downloads\Keep\tModLoader-Decompiled\CalamityMod-2.2.4\` (fuera del repo, con
+  `LEEME-VERSION.txt`). Rutas personales de los scripts saneadas antes de seguir (repo público).
+- **Pruebas**: `GuiaV2Tests` (27, modelo/evaluador/progreso/validador/ubicaciones/lectores) y
+  `GuiaV2ContenidoTests` (gate: toda referencia resuelve a id real + nombre, toda tarea evaluable o
+  manual, profundidad >= la del usuario). `Core.Tests` 823/823; `ViewModels.Tests` de guía/idioma 85/85.
+  Sin UI nueva (F2/F3): solo se añadieron las claves de texto de los resultados nuevos.
+- Commits: `4f25659e`, `571eb5d1`, `5766531f`, `20512c36`, `521dcf0c`, `8fd013d6` y el de este documento.
