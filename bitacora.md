@@ -34117,3 +34117,33 @@ permanente en el mapa y objetos clicables que expliquen cómo conseguirlos. F0 =
   manual, profundidad >= la del usuario). `Core.Tests` 823/823; `ViewModels.Tests` de guía/idioma 85/85.
   Sin UI nueva (F2/F3): solo se añadieron las claves de texto de los resultados nuevos.
 - Commits: `4f25659e`, `571eb5d1`, `5766531f`, `20512c36`, `521dcf0c`, `8fd013d6` y el de este documento.
+
+## 2-oct-2026 - Guía v2, Fase F2: la pestaña Guía nueva de Terrakeep (vanilla y Calamity)
+
+Encargo literal: «que estén así de curradas» (guía HTML del usuario, `Downloads\Guia-Calamity\`). Diseño y
+detalle técnico: `docs/guia-v2-diseno.md` §13.
+
+- **Qué hay**: `Views/GuiaV2View.xaml` sustituye a la vista de tramos v1. Mi guía (portada, cifras, siguiente
+  parada con su ubicación real, avisos del modo, brújula), Ruta paso a paso (capítulos, lista con estado y la
+  parada completa: cómo empezar, prepárate con tenencia real y la etapa de la escalera de tu clase, tareas
+  automáticas o casillas persistidas, combate, desbloquea, listo cuando, conserva, fuentes, hecha/aplazar),
+  Equipo (escalera por clase, clase detectada y modificable), Mapa y biomas (cada zona situada en el mundo
+  real), Manual, Estoy perdido, He encontrado algo raro, Buscar y la ficha «cómo conseguirlo» con atajo a la
+  Librería. Marcador de la siguiente parada en el mapa de Exploración (círculo si es aproximada).
+- **Arreglo de paso**: `WorldMapView.NavigateToTile` centraba sobre el viewport entero y a 1080 px dejaba el
+  destino debajo del panel lateral flotante (pin en x=475 de 945, panel desde ~440; medido por el canario
+  nuevo). Ahora centra en el ancho no tapado.
+- **Pruebas**: `GUIAV2_SOLO` (personaje y mundo de PRUEBA sintéticos, vanilla y Calamity con `.tplr`/`.twld`
+  de prueba): evaluación, progreso persistido fuera de la partida, ficha sin recetas de Calamity en vanilla,
+  ubicaciones exacta/aproximada, pin dentro de la zona visible y geometría de 9 pantallas a 1080x700 y
+  2560x1440 (es) y 1080x700 (en): 0 fallos. `GuiaV2ViewModelTests` 9/9; `Core.Tests` 835/835;
+  `ViewModels.Tests` 834/834; AR-LAY con las 8 secciones nuevas: 208 combinaciones, 0 hallazgos;
+  `RESTO_RESPONSIVE_SOLO` 0 fallos (uso de ancho 98 % a 1920 y 72 % a 2560); `LAYOUT_REPOSO_SOLO` 539 medidas,
+  0 fallos. Hashes de las 23 partidas reales idénticos antes/después.
+- **GUIA_SOLO**: sus comprobaciones visuales del árbol v1 salen ahora como OMITIDO (vista retirada); el resto
+  sigue igual. El `FALLO: A9-13-IDIOMA` del arranque del arnés es previo a F2 (busca «Aplicación nativa de
+  Windows» con mayúscula en Inicio; la cadena no ha cambiado).
+- **KeepQA**: `handoffGate.js` apuntaba a `GuideView.xaml` (check12/check14 lo saltaban en silencio al no
+  existir); ahora a `GuiaV2View.xaml`, los dos en PASS (commit `006bef2` de KeepQA).
+- **Pendiente** (ver §13 del diseño): «Te toca» de Inicio y el chip/bandas del mapa siguen en la guía v1;
+  el contenido solo existe en español.

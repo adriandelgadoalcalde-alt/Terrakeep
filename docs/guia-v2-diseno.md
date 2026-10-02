@@ -503,3 +503,39 @@ inexistente o ambiguo para el build. Tras un determinante plural se usa el plura
   `combatBookWasUsed`, `combatBookVolumeTwoWasUsed` y `peddlersSatchelWasUsed` (`NPC.*`). Hasta entonces esas tareas
   salen «no comprobable» en el mod. Las de lunas y `shadowOrbSmashed` ya existen allí con el mismo nombre.
 - Textos `Guia.Bandera.*` de esas seis banderas en `Assets/guia/textos.*.json`.
+
+---
+
+## 13. Fase F2: UI de Terrakeep (02-oct-2026)
+
+**Archivos.** `Terrakeep.App/Views/GuiaV2View.xaml(.cs)` (sustituye a la vista de tramos v1, `GuideView.xaml`,
+retirada), `ViewModels/GuiaV2ViewModel.cs` + `GuiaV2ItemViewModels.cs`, `Services/GuiaV2Recursos.cs`
+(documentos incrustados, nombres en el idioma activo, sprites, resolutor y `MundoGuiaEscritorio : IMundoGuia`),
+`Controls/TextoGuia.cs` (marcado §3 con sprites y enlaces) y `Controls/BloquesGuia.cs` (bloques §2).
+
+**Cómo se rellena (§10, F2).** `GuideContext` completo: `CalamityPlayerBoosts` del `.tplr` cargado,
+`CalamityWorldState` y los puntos de laboratorio del `.twld` hermano. Guía elegida sola: Calamity si hay
+`.tplr` o `.twld`; si no, vanilla. La ficha usa `ObtencionPara(GuiaId)`. Progreso manual en
+`%LOCALAPPDATA%\Terrakeep\GuiaProgreso\guia-<id>-<personaje>.json` (carpeta de estado, redirigida por el arnés).
+Clase propuesta por el arma de más daño (Calamity: `damageType`; vanilla: categoría de la Librería y reglas de
+prefijo); la elegida a mano manda y se guarda.
+
+**Pantallas.** Cabecera fija (ámbito, modo real, clase, 8 secciones, buscador) y un único scroll de página
+(`GuideContentScroll`): Mi guía, Ruta paso a paso, Equipo, Mapa y biomas, Manual, Estoy perdido, He encontrado
+algo raro y Buscar; ficha de objeto como capa modal (receta/botín/bolsa/tienda con ingredientes clicables,
+«Volver» por la cadena y «Coger en la Librería» → `#id`).
+
+**Mapa.** Marcador de la siguiente parada en Exploración (`GuiaV2.Marcador*`); aproximada = círculo de 180
+casillas que escala con el mapa, y «Ver en el mapa» usa zoom 100 % para que se vea entero. `WorldMapView.
+NavigateToTile` centra ahora en el ancho NO tapado por el panel lateral flotante.
+
+**Verificación.** `GUIAV2_SOLO` (canario nuevo, `CanarioGuiaV2.cs`), `GuiaV2ViewModelTests` (9), AR-LAY con las
+8 secciones, `RESTO_RESPONSIVE_SOLO`, `LAYOUT_REPOSO_SOLO`. Detalle en `bitacora.md` (2-oct-2026, F2).
+
+**Pendiente (fuera del alcance de F2, decisión del coordinador):**
+- La tarjeta «Te toca» de Inicio y el chip/bandas «Guía: <capa>» del mapa siguen leyendo la guía v1
+  (`GuideViewModel`), con tramos distintos de la v2. Migrarlos exige rehacer IDEA7_SOLO, GUIACHIP_SOLO,
+  BADGES_ESTADO y HOMECARDS_SOLO.
+- El contenido de la guía (títulos, párrafos y tareas) solo existe en español: en inglés cambian la interfaz
+  y los nombres de objetos/NPC (`en` de la tabla de referencias), no los textos del contenido.
+- TerrakeepMod (F3) necesita las mismas seis claves `Guia.Bandera.*` nuevas en sus `textos.*.json`.
