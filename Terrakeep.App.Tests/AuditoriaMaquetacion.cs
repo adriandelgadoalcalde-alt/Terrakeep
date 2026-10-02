@@ -628,7 +628,17 @@ internal static partial class Program
             ("Builds/Calamity", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 1); }),
             ("Novedades/Terraria", () => { vm.SelectedTabIndex = 6; DoEvents(); HojaAnidada(window, 0); }), // AppTab.Novedades, reordenado T1 21-sep-2026
             ("Novedades/tModLoader", () => { vm.SelectedTabIndex = 6; DoEvents(); HojaAnidada(window, 1); }), // AppTab.Novedades, reordenado T1 21-sep-2026
-            ("Exploracion", () => { vm.SelectedTabIndex = 4; }),
+            // Guia v2 (F2, 02-oct-2026): la pestaña Guia nueva tiene 8 secciones con contenido
+            // propio (cabecera fija + un unico scroll) - se auditan todas, no solo la primera.
+            ("Guia/MiGuia", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.MiGuia; }),
+            ("Guia/Ruta", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Ruta; }),
+            ("Guia/Equipo", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Equipo; }),
+            ("Guia/Biomas", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Biomas; }),
+            ("Guia/Manual", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Manual; }),
+            ("Guia/Perdido", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Perdido; }),
+            ("Guia/Raro", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.Raro; }),
+            ("Guia/Buscar", () => { vm.SelectedTabIndex = 3; vm.GuiaV2.TextoBusqueda = "slime"; }),
+            ("Exploracion", () => { vm.GuiaV2.TextoBusqueda = ""; vm.GuiaV2.Seccion = Terrakeep.App.ViewModels.SeccionGuiaV2.MiGuia; vm.SelectedTabIndex = 4; }),
             ("AcercaDe+Ajustes", () => { vm.SelectedTabIndex = 7; }), // AppTab.AcercaDe, reordenado T1 21-sep-2026
         };
     }

@@ -20,6 +20,13 @@ internal static partial class Program
     // el arbol carga tramos reales, el aviso de Calamity se enciende porque el personaje SI tiene
     // datos de Calamity, y los textos sincronizados desde TerrakeepMod se resuelven (nunca una
     // clave cruda entre corchetes, que seria la señal de que textos.es.json no se cargo).
+    // Guia v2 (F2, 02-oct-2026): la pestaña Guia ya no pinta el arbol de tramos v1 (Views/GuideView.xaml
+    // retirada; la sustituye Views/GuiaV2View.xaml, verificada por GUIAV2_SOLO en CanarioGuiaV2.cs). El
+    // GuideViewModel v1 sigue vivo (tarjeta "Te toca" de Inicio, bandas del mapa) y lo que aqui se
+    // comprueba de el (avisos, iconos resueltos, motivos) sigue en pie; solo las comprobaciones VISUALES
+    // del arbol v1 (Expander por tramo) dejan de aplicar y se informan como OMITIDO, nunca como verde.
+    private static bool ArbolGuiaV1Retirado => true;
+
     private static void EjecutarGuiaReal(MainWindow window, MainViewModel vm)
     {
         string origenPlr = RutasEntornoReal.Documentos(@"tModLoader\Players\adrian.plr");
@@ -295,7 +302,9 @@ internal static partial class Program
                 var expander = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoVm));
                 if (expander == null)
                 {
-                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - no se encontro el Expander real del tramo '{nombreTramo}' en el arbol visual.");
+                    Console.WriteLine(ArbolGuiaV1Retirado
+                        ? $"GUIA_SOLO ICONOS: OMITIDO (vista de tramos v1 retirada) - comprobacion visual de '{nombreTramo}' no aplica; el icono real ya se valido arriba (IconPath + fichero)."
+                        : $"FALLO: GUIA_SOLO ICONOS - no se encontro el Expander real del tramo '{nombreTramo}' en el arbol visual.");
                     continue;
                 }
                 expander.IsExpanded = true;
@@ -394,7 +403,9 @@ internal static partial class Program
                     var expanderMotivo = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoDeFilaConMotivo));
                     if (expanderMotivo == null)
                     {
-                        Console.WriteLine("FALLO: GUIA_SOLO MOTIVO-ARBOL - no se encontro el Expander real del tramo con la fila elegida.");
+                        Console.WriteLine(ArbolGuiaV1Retirado
+                            ? "GUIA_SOLO MOTIVO-ARBOL: OMITIDO (vista de tramos v1 retirada; el motivo de las tareas no comprobables lo cubre GUIAV2_SOLO)."
+                            : "FALLO: GUIA_SOLO MOTIVO-ARBOL - no se encontro el Expander real del tramo con la fila elegida.");
                     }
                     else
                     {
@@ -473,7 +484,9 @@ internal static partial class Program
                 var expanderSint = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoVmSintetico));
                 if (expanderSint == null)
                 {
-                    Console.WriteLine("FALLO: GUIA_SOLO ESLIMITE - no se encontro el Expander real del tramo sintetico tras Tramos.Add().");
+                    Console.WriteLine(ArbolGuiaV1Retirado
+                        ? "GUIA_SOLO ESLIMITE: OMITIDO (vista de tramos v1 retirada; el ViewModel v1 sigue probado en GuiaFaseAReabiertaViewModelTests)."
+                        : "FALLO: GUIA_SOLO ESLIMITE - no se encontro el Expander real del tramo sintetico tras Tramos.Add().");
                 }
                 else
                 {
