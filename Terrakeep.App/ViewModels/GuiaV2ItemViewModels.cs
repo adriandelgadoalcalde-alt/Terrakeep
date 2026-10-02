@@ -355,7 +355,7 @@ public sealed partial class ZonaV2ViewModel(GuiaV2ViewModel guia, Zona z) : Obse
     [ObservableProperty] private string _ubicacionTexto = "";
     [ObservableProperty] private bool _tieneUbicacion;
     [ObservableProperty] private bool _resaltada;
-    internal UbicacionResuelta? Ubicacion { get; set; }
+    public UbicacionResuelta? Ubicacion { get; internal set; }
     [RelayCommand] private void VerEnMapa() => guia.VerZonaEnMapa(this);
 }
 

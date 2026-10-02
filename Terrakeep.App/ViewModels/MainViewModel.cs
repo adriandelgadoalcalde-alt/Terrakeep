@@ -1386,8 +1386,15 @@ public partial class MainViewModel : ObservableObject
             SelectedTabIndex = (int)AppTab.Exploracion;
             // Diferido: el mapa acaba de hacerse visible y su ScrollViewer aun no tiene viewport
             // medido; centrar ahora usaria ViewportWidth=0 y dejaria la casilla fuera de la vista.
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
-                () => Exploration.NavigateToTile(x, y, autoZoom: true), System.Windows.Threading.DispatcherPriority.Loaded);
+            // Ubicacion aproximada: zoom 100 % para que el circulo de zona (180 casillas de diametro)
+            // se vea entero; con el acercamiento automatico (400 %) llenaba toda la vista y no se
+            // distinguia (visto en la captura 10b de GUIAV2_SOLO).
+            bool aproximada = GuiaV2.MarcadorAproximado;
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(() =>
+            {
+                if (aproximada) Exploration.Zoom = 1.0;
+                Exploration.NavigateToTile(x, y, autoZoom: !aproximada);
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
         };
         // Un mundo nuevo cambia banderas, NPC, modo y la ubicacion del marcador de la guia: se
         // re-evalua cuando la carga termina (WorldImage es lo ultimo que cambia en cada carga real).

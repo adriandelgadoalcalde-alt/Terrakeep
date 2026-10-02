@@ -141,8 +141,21 @@ public partial class WorldMapView : UserControl
             ViewModel.Exploration.Zoom = 4.0;
             WorldMapScroll.UpdateLayout();
         }
+        else
+        {
+            // Guia v2 (F2): el zoom puede haberse fijado justo antes (ubicacion aproximada -> 100 %);
+            // sin medir de nuevo, el ScrollViewer recortaria los offsets al extent del zoom anterior.
+            WorldMapScroll.UpdateLayout();
+        }
         double zoom = ViewModel.Exploration.Zoom;
-        WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - WorldMapScroll.ViewportWidth / 2);
+        // Guia v2 (F2, 02-oct-2026), hallazgo del canario GUIAV2_SOLO: el panel lateral FLOTA encima
+        // del mapa (el mapa ocupa las 3 columnas, ver MainWindow.xaml), asi que centrar sobre el
+        // ViewportWidth completo dejaba la casilla pedida DEBAJO del panel a 1080 px (pin en x=475 de
+        // un viewport de 945 con el panel tapando desde ~440). Mismo criterio que el aviso "Sin mundo
+        // cargado" (SidebarWidthToRightMarginConverter): se centra en el ancho REALMENTE visible.
+        double tapado = ViewModel.Settings.ExplorationSidebarWidth > 0 ? ViewModel.Settings.ExplorationSidebarWidth + 9 : 0;
+        double anchoVisible = Math.Max(WorldMapScroll.ViewportWidth * 0.35, WorldMapScroll.ViewportWidth - tapado);
+        WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - anchoVisible / 2);
         WorldMapScroll.ScrollToVerticalOffset(tileY * zoom - WorldMapScroll.ViewportHeight / 2);
         UpdateMinimapViewport();
     }

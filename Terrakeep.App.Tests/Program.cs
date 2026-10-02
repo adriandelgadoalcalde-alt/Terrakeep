@@ -2682,6 +2682,15 @@ internal static partial class Program
             Console.WriteLine("DONE (RESTO_RESPONSIVE_SOLO)");
             Environment.Exit(0);
         }
+        // GUIAV2_SOLO=1 (02-oct-2026, Guia v2 F2): pestaña Guia nueva sobre un personaje y un mundo de
+        // PRUEBA sinteticos - evaluacion, progreso manual, ficha, mapa y geometria de cada pantalla a
+        // 1080x700/2560x1440 en es/en. Ver CanarioGuiaV2.cs.
+        if (Environment.GetEnvironmentVariable("GUIAV2_SOLO") == "1")
+        {
+            int fallosGuia = EjecutarGuiaV2Solo(window, vm);
+            Console.WriteLine("DONE (GUIAV2_SOLO)");
+            Environment.Exit(fallosGuia == 0 ? 0 : 1);
+        }
         // LAYOUT_REPOSO_SOLO=1 (29-sep-2026): pasadas de layout en REPOSO en todas las vistas y
         // tamaños (incl. fronteras de SizeClass) - regresion real "Terrakeep congelado", ver
         // CanarioBucleLayoutReposo.cs.
