@@ -196,10 +196,15 @@ citan las guías:
 - **Nombre en español**:
   - Vanilla: `Terraria.Localization.Content.es-ES.*`, la localización oficial incrustada en tModLoader.
   - Calamity: Calamity 2.2.4 **no trae es-ES** (comprobado listando su `.tmod`, solo trae en-US), así que
-    se usa la traducción española que existe para el mod, **CalamityModEsp 2.2.0.1** (workshop 2829795471,
-    la que tiene instalada el usuario).
+    se usa la traducción propia de la familia Keep, **CalamityKeep-Traduccion-ES** (repo hermano
+    `Downloads\Keep\CalamityKeep-Traduccion-ES`, carpeta `CalamityKeepTraduccionES/Localization/es-ES`,
+    9 793/9 793 claves verificadas 1 a 1). Hasta el 2-oct-2026 se usaba CalamityModEsp 2.2.0.1, que dejaba
+    186 objetos y 21 NPC sin traducir. Las clases que toman el nombre de otra en el código
+    (`AstralachneaWall`, `PhantomSpiritL/M/S`, `PlagueChargerLarge`) se resuelven leyendo su `DisplayName =>`.
   - Sin traducción, se queda el nombre inglés con `fuenteEs: "sin traduccion"`. Nunca se inventa.
-  - Hoy hay 186 objetos así, entre ellos Sanguine Tangerine, Tainted Cloudberry y Sea King.
+  - Hoy no hay ninguno (0 objetos, 0 NPC, 0 estaciones, 0 grupos).
+  - Los rótulos de conjuntos de armadura de Calamity (`conjuntos.js`) se comprueban al construir contra los
+    nombres reales de sus piezas en esa traducción (`verificarConjuntosCalamity`).
 - **Obtención** (`RefObjeto.obtencion`): recetas (ingredientes, grupos, estaciones y condiciones), botín
   de NPC o jefe (con probabilidad), bolsas del tesoro y tiendas (vendedor y condición). Se extraen con
   `scripts/guia-v2/extraer-obtencion.js` del código decompilado real. Cada dato lleva `fuente` con
@@ -458,12 +463,12 @@ mejoras permanentes y 6 por estado de mundo (algunas condiciones compuestas suma
 
 ### Límites conocidos (documentados, no disimulados)
 
-- Calamity no tiene es-ES propia. Se usa CalamityModEsp y hay 186 objetos sin traducir.
+- Calamity no tiene es-ES propia. Se usa la traducción de la familia (CalamityKeep-Traduccion-ES): 0 nombres sin traducir.
 - Hay 66 objetos citados sin obtención en el código, porque se consiguen en el mundo (cofres, minería,
   pesca).
 - En el escritorio, los NPC de pueblo de Calamity (Sea King, Archmage, Brimstone Witch) no son evaluables.
 - Las escaleras vienen de una wiki que declara la 2.1.2, aunque cada objeto está verificado en la 2.2.4.
-- El grupo de receta `HardmodeForge` no tiene traducción en CalamityModEsp y queda en inglés.
+- Los grupos de receta se nombran como los compone el juego (`Lang.misc[37]` + nombre): «Cualquiera Forja del modo Difícil».
 
 ---
 
