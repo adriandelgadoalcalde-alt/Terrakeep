@@ -20,6 +20,7 @@ const F = require('./fuentes.js');
 const R = require('./vanilla/resolver-nombres.js');
 const AY = require('./vanilla/ayudas.js');
 const A = require('./anotaciones-vanilla.js');
+const { rotuloConjunto } = require('./conjuntos.js');
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -180,25 +181,7 @@ const zonas = A.zonas.map(z => {
 
 // ---- 4. escaleras (wiki oficial + verificacion contra ItemID 1.4.4.9)
 const ESC = JSON.parse(fs.readFileSync(path.join(__dirname, 'datos', 'escaleras_vanilla_wiki.json'), 'utf8'));
-// Conjunto (nombre ingles de la wiki) -> nombre en español sacado de los nombres OFICIALES es-ES de
-// sus piezas (p. ej. MoltenHelmet «Casco fundido» -> «armadura fundida»; JungleHat «Casco para la
-// selva» -> «armadura para la selva»).
-const CONJUNTOS = {
-  'Cactus armor': 'de cactus', 'Wooden armor': 'de madera', 'Platinum armor': 'de platino', 'Gladiator armor': 'de gladiador',
-  'Gold armor': 'de oro', 'Pumpkin armor': 'de calabaza', 'Molten armor': 'fundida', 'Shadow armor': 'de las sombras',
-  'Crimson armor': 'carmesí', 'Bee armor': 'de abeja', 'Adamantite armor': 'de adamantita', 'Titanium armor': 'de titanio',
-  'Palladium armor': 'de paladio', 'Crystal Assassin armor': 'de asesino de cristal', 'Hallowed armor': 'sagrada',
-  'Turtle armor': 'de tortuga', 'Chlorophyte armor': 'de clorofita', 'Beetle armor': 'de escarabajo',
-  'Solar Flare armor': 'de fulguración solar', 'Fossil armor': 'de fósil', 'Necro armor': 'de los muertos', 'Frost armor': 'helada',
-  'Shroomite armor': 'de piñonita', 'Vortex armor': 'del vórtice', 'Jungle armor': 'para la selva', 'Meteor armor': 'de meteorito',
-  'Spectre armor': 'espectral', 'Dark Artist armor': 'de Artista Oscuro', 'Nebula armor': 'de nebulosa', 'Obsidian armor': 'de obsidiana',
-  'Spider armor': 'de araña', 'Squire armor': 'de escudero', 'Tiki armor': 'tiki', 'Spooky armor': 'tétrica',
-  'Valhalla Knight armor': 'de Caballero del Valhalla', 'Stardust armor': 'de polvo estelar',
-  'Cobalt armor': 'de cobalto', 'Mythril armor': 'de mithril', 'Orichalcum armor': 'de oricalco', 'Silver armor': 'de plata',
-  'Tungsten armor': 'de tungsteno', 'Iron armor': 'de hierro', 'Lead armor': 'de plomo', 'Copper armor': 'de cobre', 'Tin armor': 'de estaño',
-  'Ninja armor': 'ninja', 'Monk armor': 'de monje', 'Huntress armor': 'de cazadora', 'Apprentice armor': 'de aprendiz',
-  'Shinobi Infiltrator armor': 'de infiltrado shinobi', 'Red Riding armor': 'de Caperucita', 'Forbidden armor': 'prohibida',
-};
+// Conjunto (nombre ingles de la wiki) -> rotulo en español comun a las dos guias: scripts/guia-v2/conjuntos.js.
 // Las notas de la wiki describen ya 1.4.5: toda frase (o parentesis) que cite un objeto que NO
 // existe en 1.4.4.9 (lista noVerificados del propio archivo) se quita, para no recomendar nada
 // que el jugador no pueda conseguir. Las etiquetas de seccion de la wiki pasan a negrita.
@@ -206,6 +189,11 @@ const SOLO_145 = [...new Set(ESC.noVerificados.filter(x => /^no existe en ItemID
   .map(x => x.nombreIngles.replace(/ \(casco de la clase\)$/, '')).filter(n => n.length > 3))];
 const ETIQUETAS = { minions: 'Esbirros', armadura: 'Armadura', accesorios: 'Accesorios', 'pociones y mejoras': 'Pociones y mejoras',
   'accesorios ofensivos': 'Accesorios ofensivos', 'látigos': 'Látigos', centinelas: 'Centinelas' };
+// «(casco Mask)» de la wiki = que variante de casco del conjunto; el sustantivo sale de los nombres
+// oficiales es-ES de esas piezas (TitaniumMask «Máscara de titanio», HallowedHeadgear «Tocado sagrado»,
+// BeetleShell «Coraza de escarabajo»...).
+const PIEZA_CASCO = { Mask: 'la máscara', Helmet: 'el casco', Headgear: 'el tocado', Hood: 'la capucha', Visor: 'el visor', Shell: 'la coraza' };
+const NOMBRES_EN_NOTAS = ['Spinal Tap', 'Cool Whip', 'Firecracker', 'Titanium Mask'];
 let frasesQuitadas = 0;
 function limpiarNota(t) {
   if (!t) return '';
@@ -218,16 +206,20 @@ function limpiarNota(t) {
     .replace(/ \((?:Pre-[^)]*|Gearing Up|Endgame)\)/g, '')
     // Nombres de conjunto no oficiales de la traduccion de la wiki -> los de las piezas es-ES.
     .replace(/armadura de necro\b/g, 'armadura de los muertos').replace(/(armadura|cascos?) de shroomita/g, '$1 de piñonita')
-    .replace(/armadura Red Riding/g, 'armadura de Caperuza roja').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
+    .replace(/armadura Red Riding/g, 'armadura de Caperuza roja')
+    // Nombres de objeto que la traduccion de la wiki dejo en ingles pese a tener nombre oficial
+    // es-ES (F2b): se enlazan con el marcado de autor para que salga el nombre oficial y su ficha.
+    .replace(/los Antlion Egg\b/g, 'los [[Antlion Eggs]]').replace(/\(casco (Mask|Helmet|Headgear|Hood|Visor|Shell)\)/g, (all, p) => '(con ' + PIEZA_CASCO[p] + ')')
+    .replace(new RegExp('(?<![\\[\\w|:])(' + NOMBRES_EN_NOTAS.join('|') + ')(?![\\w\\]])', 'g'), '[[$1]]')
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
 }
 const opcion = o => {
   const marcas = (o.marcas || '').trim().split(/\s+/).filter(Boolean);
   for (const m of marcas) if (!ESC.leyendaMarcas[m]) throw new Error('Marca sin leyenda: ' + m);
-  if (o.conjunto && !CONJUNTOS[o.conjunto]) throw new Error('Conjunto sin nombre en español: ' + o.conjunto);
   if (!/^Terraria\/\w+$/.test(o.ref) || !(o.ref.split('/')[1] in ids.item.porNombre)) throw new Error('Ref de escalera inexistente: ' + o.ref);
   return {
     ref: o.ref, origen: '', nota: T(limpiarNota(o.nota || ''), o.ref), rol: o.tipo || '',
-    conjunto: o.conjunto ? 'armadura ' + CONJUNTOS[o.conjunto] : '', marcas,
+    conjunto: o.conjunto ? rotuloConjunto(o.conjunto) : '', marcas,
   };
 };
 const escaleras = Object.entries(ESC.clases).map(([clase, etapas]) => ({

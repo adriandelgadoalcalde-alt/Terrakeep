@@ -669,7 +669,7 @@ const paradas = [
     tareas: [
       { condicion: P('Terra Blade'), texto: 'Fabrica la [[Terra Blade]] ([[True Night\'s Edge]] + [[True Excalibur]] + [[Broken Hero Sword]]).' },
       { condicion: TODAS(P('Meowmere'), P('Star Wrath')), texto: 'Consigue el [[Meowmere]] y la [[Star Wrath]] del Señor de la Luna.' },
-      { condicion: TODAS(P('Influx Waver'), P('The Horseman\'s Blade'), P('Seedler')), texto: 'Consigue la [[Influx Waver]] (marcianos), la [[The Horseman\'s Blade]] (Pumpking) y la [[Seedler]] (Plantera).' },
+      { condicion: TODAS(P('Influx Waver'), P('The Horseman\'s Blade'), P('Seedler')), texto: 'Consigue la [[Influx Waver]] (marcianos), la [[The Horseman\'s Blade]] ([[n:Pumpking]]) y la [[Seedler]] (Plantera).' },
       { condicion: TODAS(P('Starfury'), P('Bee Keeper'), P('o:Enchanted Sword'), P('Copper Shortsword')), texto: 'Recupera las del principio: [[Starfury]], [[Bee Keeper]], [[o:Enchanted Sword]] y [[Copper Shortsword]].' },
       { condicion: P('Zenith'), texto: 'Fabrica la [[Zenith]].' },
     ],

@@ -14,6 +14,7 @@
 // decompilado: una ref inexistente rompe el validador, nunca se cuela.
 'use strict';
 
+const { CONJUNTOS_ARMADURA, armaduraEnTexto } = require('./conjuntos.js');
 const B = bandera => ({ tipo: 'bandera', bandera });
 const P = (ref, cantidad = 1) => ({ tipo: 'objeto_poseido', ref, cantidad });
 const PA = (...refs) => ({ tipo: 'objeto_poseido', refs });
@@ -85,16 +86,28 @@ const glosario = {
   'Pirate Invasion': 'Invasión pirata', 'Goblin Army': 'Invasión duende',
   // Tiles sin nombre oficial en nuestras fuentes (no son objetos): se protegen tal cual para que
   // no se conviertan en el objeto homonimo ("Heart" = el corazon de vida que se recoge).
-  'Crimson Heart': 'Crimson Heart', 'Crimson Hearts': 'Crimson Hearts',
+  // F2b: el tile si tiene nombre oficial, el de su objeto homonimo (CrimsonHeart «Corazón carmesí»,
+  // Terraria es-ES Items.json); se deja como texto para no enlazar a la mascota.
+  'Crimson Heart': 'Corazón carmesí', 'Crimson Hearts': 'Corazones carmesí',
   // Nombre antiguo del invocador de Yharon (hoy YharonEgg): no es el Huevo de dragon de Terraria.
   'Dragon Egg': 'Dragon Egg',
   // "Solar Flare" en la guia es la armadura lunar, no el enemigo homonimo (NPCID.SolarFlare).
   'Solar Flare': 'armadura de fulguración solar',
   // Exo Mechs es el grupo, no Ares; Apollo es su propio NPC (la ficha del usuario los junta).
-  'Exo Mechs': 'Exo Mechs', 'Apollo': '{n:CalamityMod/Apollo}', 'Artemis': '{n:CalamityMod/Artemis}',
+  // F2b: nombre oficial del grupo en CalamityModEsp (DraedonBag «Caja del Tesoro (Exo Mecas)»).
+  'Exo Mechs': 'Exo Mecas', 'Apollo': '{n:CalamityMod/Apollo}', 'Artemis': '{n:CalamityMod/Artemis}',
   'The Codebreaker': 'el {o:CalamityMod/CodebreakerBase}',
   // Mecanicas de Revengeance: termino de CalamityModEsp (Configs: «Medidor de Ira», «Medidor de
   // Adrenalina»), no la Pocion de furia homonima.
+  // F2b: nombres que la guia del usuario deja en ingles y SI tienen nombre oficial: estado de
+  // Terraria es-ES (Game.json BuffName.ChaosState), minerales de CalamityModEsp (ScoriaOre «Mineral de
+  // Escoria», CryonicOre «Mineral Criónico», PerennialOre «Mineral Perenne»), la familia de
+  // mecanismos de Draedon (CyanSeekingMechanism «Mecanismo de Búsqueda cian»...), la llave
+  // OnyxExcavatorKey «Llave de excavadora de ónice» y piezas sueltas de su conjunto.
+  'Chaos State': 'Estado de caos', 'Scoria': 'Escoria', 'Cryonic': 'Criónico', 'Perennial': 'Perenne',
+  'Seeking Mechanisms': 'Mecanismos de Búsqueda', 'con el Onyx Excavator': 'con la excavadora de ónice', 'Onyx Excavator': 'excavadora de ónice',
+  'Scale Mail': '{o:Terraria/BeetleScaleMail}', 'Ram Mask': '{o:CalamityMod/BloodflareHeadMelee}',
+  'Horned Greathelm': '{o:CalamityMod/GodSlayerHeadMelee}', 'Royal Helm': '{o:CalamityMod/AuricTeslaHeadMelee}',
   'Rage': 'Ira', 'Adrenaline': 'Adrenalina', 'Adrenaline Meter': 'medidor de Adrenalina',
   // El texto español del usuario ya nombra estos biomas: se enlazan a su zona.
   'mar sulfuroso': '{z:mar_sulfuroso}', 'mar hundido': '{z:mar_hundido}',
@@ -142,6 +155,12 @@ for (const [en, es] of Object.entries(CONJUNTOS)) {
   glosario[en + ' armor'] = 'armadura ' + es;
   glosario[en + ' armour'] = 'armadura ' + es;
   glosarioFinal[en] = es;
+}
+// F2b: el nombre del conjunto en el texto corrido sale de la MISMA tabla que los rotulos de la
+// escalera (scripts/guia-v2/conjuntos.js), derivada de los nombres oficiales de sus piezas.
+for (const k of Object.keys(CONJUNTOS_ARMADURA)) {
+  glosario[k + ' armor'] = armaduraEnTexto(k);
+  glosario[k + ' armour'] = armaduraEnTexto(k);
 }
 
 // Clases: el texto melee original de "Preparate" se conserva como matiz de cuerpo a cuerpo.
@@ -708,7 +727,7 @@ const paradas = {
     completadaCuando: B('downedYharon'),
   },
   exo: {
-    titulo: 'Exo Mechs', tipo: 'jefe', jefes: ['CalamityMod/AresBody', 'CalamityMod/ThanatosHead', 'CalamityMod/Artemis', 'CalamityMod/Apollo'],
+    titulo: 'Exo Mecas', tipo: 'jefe', jefes: ['CalamityMod/AresBody', 'CalamityMod/ThanatosHead', 'CalamityMod/Artemis', 'CalamityMod/Apollo'],
     ubicaciones: [Z('superficie')],
     preparate: 'Auric Tesla de tu clase, el arma post-Yharon de tu escalera, alas tardías y la {o:CalamityMod/AsgardianAegis}.',
     vida: { min: 600, max: 600 },

@@ -107,7 +107,7 @@ module.exports = {
       ['mazmorra', 'skeletron'], ['mazmorra'], ['Dungeon']),
 
     P(17, 'El Guardián de la Mazmorra me mata',
-      'El jefe [[Dungeon Guardian]] aparece de forma natural dentro de la Mazmorra **mientras no hayas derrotado a [[Skeletron]]**. No está pensado para vencerlo: sal y vuelve cuando Skeletron haya caído. Si ya estás dentro, huye por donde entraste.',
+      'El jefe [[Dungeon Guardian]] aparece de forma natural dentro de la Mazmorra **mientras no hayas derrotado a [[Skeletron]]**. No está pensado para vencerlo: sal y vuelve cuando [[n:Skeletron]] haya caído. Si ya estás dentro, huye por donde entraste.',
       ['skeletron', 'mazmorra'], ['mazmorra'], ['Dungeon Guardian']),
 
     P(18, 'Esqueletrón no aparece',
@@ -154,7 +154,7 @@ module.exports = {
       'Solo puede ocurrir en modo difícil y con **al menos un jefe mecánico** derrotado. Al empezar cada día hay 1 probabilidad entre 20. Para forzarlo existe el objeto [[Solar Tablet]], que se crea con fragmentos de tablilla. Mientras tanto, sigue con otras paradas.',
       ['eclipse', 'mech1'], [], ['Solar Eclipse']),
 
-    P(29, 'No consigo activar a Golem',
+    P(29, 'No consigo activar al Gólem',
       'El jefe [[Golem]] se invoca en el altar lihzahrd, dentro del Templo, con el objeto [[Lihzahrd Power Cell]]. La célula no se fabrica: la suelta con poca probabilidad (1 entre 50) cada enemigo lagarto del Templo. Prepara la arena antes de usarla.',
       ['golem', 'templo'], ['templo'], ['Golem', 'Lihzahrd Power Cell']),
 

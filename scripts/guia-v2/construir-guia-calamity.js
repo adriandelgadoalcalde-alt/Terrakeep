@@ -20,6 +20,7 @@ const { htmlABloques } = require('./html-a-bloques.js');
 const N = require('./nombres.js');
 const F = require('./fuentes.js');
 const A = require('./anotaciones-calamity.js');
+const { rotuloConjunto } = require('./conjuntos.js');
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -290,7 +291,7 @@ const opcion = o => {
   if (esNota && !NOTAS_WIKI[crudo]) throw new Error('Marca de la wiki sin traducir: ' + crudo);
   return {
     ref: o.ref, origen: '', nota: S([o.nota, esNota ? NOTAS_WIKI[crudo] : ''].filter(Boolean).join(' ')),
-    rol: o.tipo || '', conjunto: o.conjunto ? S(o.conjunto) : '',
+    rol: o.tipo || '', conjunto: o.conjunto ? rotuloConjunto(o.conjunto) : '',
     marcas: esNota ? [] : crudo.split(/\s+/).filter(Boolean),
   };
 };

@@ -686,7 +686,7 @@
     }
    ],
    "combate": "El agua y las burbujas son peligros distintos. Sal del agua para vaciar el medidor; combate con margen respecto a las burbujas que suben del fondo.",
-   "desbloquea": "Recursos del evento; armadura Sulfúrica es sobre todo una opción rogue, no una armadura obligatoria para las demás clases.",
+   "desbloquea": "Recursos del evento; armadura sulfúrica es sobre todo una opción rogue, no una armadura obligatoria para las demás clases.",
    "listoCuando": "Has entendido el agua tóxica y tienes una ruta de vuelta. No necesitas completar el evento para avanzar.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -855,7 +855,7 @@
    "tareas": [
     {
      "id": "evil.1",
-     "texto": "En Corrupción, rompe tres {o:Terraria/ShadowOrb} o usa {o:Terraria/WormFood}. En Carmesí, rompe tres Crimson Hearts o usa {o:Terraria/BloodySpine}.",
+     "texto": "En Corrupción, rompe tres {o:Terraria/ShadowOrb} o usa {o:Terraria/WormFood}. En Carmesí, rompe tres Corazones carmesí o usa {o:Terraria/BloodySpine}.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -2198,7 +2198,7 @@
     "tipo": "bandera",
     "bandera": "downedMechBoss2"
    },
-   "conserva": "{o:Terraria/SoulofSight}, barras de Cryonic y {o:CalamityMod/FlarefrostBlade} para futuras recetas.",
+   "conserva": "{o:Terraria/SoulofSight}, barras de Criónico y {o:CalamityMod/FlarefrostBlade} para futuras recetas.",
    "conservaObjetos": [
     "Terraria/SoulofSight",
     "CalamityMod/FlarefrostBlade"
@@ -2578,7 +2578,7 @@
     }
    ],
    "combate": "Mantén una vuelta amplia alrededor del jefe. En la segunda fase, despeja el camino y evita corredores donde las extensiones te acorralen.",
-   "desbloquea": "Templo, mazmorra mejorada, Perennial y enemigos nuevos.",
+   "desbloquea": "Templo, mazmorra mejorada, Perenne y enemigos nuevos.",
    "listoCuando": "{o:Terraria/TempleKey} guardada; primero haz los desvíos de {n:CalamityMod/Anahita} y {n:CalamityMod/AstrumAureus}.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -2876,7 +2876,7 @@
     },
     {
      "id": "golem.3",
-     "texto": "Obtén {o:Terraria/Picksaw} o un pico de al menos 210% para Scoria; repite si no consigues la herramienta necesaria.",
+     "texto": "Obtén {o:Terraria/Picksaw} o un pico de al menos 210% para Escoria; repite si no consigues la herramienta necesaria.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "Terraria/Picksaw",
@@ -2885,7 +2885,7 @@
     },
     {
      "id": "golem.4",
-     "texto": "Busca Scoria en {z:abismo} o sus enemigos post-{n:Terraria/Golem}. Funde barras y crea {o:CalamityMod/LifeAlloy} con Cryonic + Perennial + Scoria.",
+     "texto": "Busca Escoria en {z:abismo} o sus enemigos post-{n:Terraria/Golem}. Funde barras y crea {o:CalamityMod/LifeAlloy} con Criónico + Perenne + Escoria.",
      "condicion": {
       "tipo": "alguna",
       "condiciones": [
@@ -2921,13 +2921,13 @@
     }
    ],
    "combate": "Usa el espacio de la cámara, mantén un recorrido limpio y cambia de altura para no quedarte encerrado por las manos y la cabeza.",
-   "desbloquea": "Scoria accesible por una ruta normal, {o:CalamityMod/LifeAlloy}, Hidrotérmica y segunda fruta permanente.",
-   "listoCuando": "Scoria obtenida, 550 de vida y esquema {z:inframundo|Inframundo} descifrado.",
+   "desbloquea": "Escoria accesible por una ruta normal, {o:CalamityMod/LifeAlloy}, Hidrotérmica y segunda fruta permanente.",
+   "listoCuando": "Escoria obtenida, 550 de vida y esquema {z:inframundo|Inframundo} descifrado.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedGolemBoss"
    },
-   "conserva": "{o:CalamityMod/LifeAlloy}, {o:CalamityMod/LivingShard} y Scoria. Guarda la herramienta de minería.",
+   "conserva": "{o:CalamityMod/LifeAlloy}, {o:CalamityMod/LivingShard} y Escoria. Guarda la herramienta de minería.",
    "conservaObjetos": [
     "CalamityMod/LifeAlloy",
     "CalamityMod/LivingShard"
@@ -4704,7 +4704,7 @@
   {
    "id": "exo",
    "capitulo": "finales",
-   "titulo": "Exo Mechs",
+   "titulo": "Exo Mecas",
    "tipo": "jefe",
    "opcional": false,
    "etiqueta": "Jefe final · orden intercambiable con {n:CalamityMod/SupremeCalamitas}",
@@ -4783,7 +4783,7 @@
    ],
    "combate": "Aprende a reconocer cada grupo y sus rayos antes de apurar el daño. Prioriza una trayectoria despejada y un objetivo; no ataques sin mirar durante los cambios de combinación.",
    "desbloquea": "{o:CalamityMod/ExoPrism}, forja y armamento exo. Si aún falta {n:CalamityMod/SupremeCalamitas}, {o:CalamityMod/Exoblade} es una mejora para ella.",
-   "listoCuando": "Exo Mechs marcados, forja instalada y material final conservado.",
+   "listoCuando": "Exo Mecas marcados, forja instalada y material final conservado.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedExoMechs"
@@ -4822,7 +4822,7 @@
    "titulo": "{n:CalamityMod/SupremeCalamitas}",
    "tipo": "jefe",
    "opcional": false,
-   "etiqueta": "Jefa final · independiente de Exo Mechs",
+   "etiqueta": "Jefa final · independiente de Exo Mecas",
    "jefes": [
     "CalamityMod/SupremeCalamitas"
    ],
@@ -4899,7 +4899,7 @@
    ],
    "combate": "Durante bullet hell, se vuelve invulnerable: esquiva con correcciones pequeñas. Destruye corazones y auxiliares cuando la protejan. No salgas del límite. Al final espera el diálogo y la aparición del botín.",
    "desbloquea": "{o:CalamityMod/AshesofAnnihilation}, {n:CalamityMod/BrimstoneWitch} y encantamientos. Con ambos finales podrás crear Shadowspec.",
-   "listoCuando": "{n:CalamityMod/SupremeCalamitas} y Exo Mechs derrotados; mira el apartado de equipo definitivo.",
+   "listoCuando": "{n:CalamityMod/SupremeCalamitas} y Exo Mecas derrotados; mira el apartado de equipo definitivo.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedCalamitas"
@@ -5167,7 +5167,7 @@
     },
     {
      "id": "wyrm.2",
-     "texto": "Solo cuando estés listo, provoca Chaos State dentro del {z:abismo}, por ejemplo con {o:Terraria/RodofDiscord}, para activar este peligro oculto.",
+     "texto": "Solo cuando estés listo, provoca Estado de caos dentro del {z:abismo}, por ejemplo con {o:Terraria/RodofDiscord}, para activar este peligro oculto.",
      "manual": true
     },
     {
@@ -5408,7 +5408,7 @@
     {
      "tipo": "aviso",
      "estilo": "suave",
-     "texto": "El cierre de la progresión disponible es derrotar a **Exo Mechs y {n:CalamityMod/SupremeCalamitas}**. Después: Shadowspec, Boss Rush, {n:CalamityMod/PrimordialWyrmHead} y colecciones. Yharim, Xeroc o Noxus que veas en vídeos no son objetivos normales jugables de esta ruta del mod base."
+     "texto": "El cierre de la progresión disponible es derrotar a **Exo Mecas y {n:CalamityMod/SupremeCalamitas}**. Después: Shadowspec, Boss Rush, {n:CalamityMod/PrimordialWyrmHead} y colecciones. Yharim, Xeroc o Noxus que veas en vídeos no son objetivos normales jugables de esta ruta del mod base."
     },
     {
      "tipo": "titulo",
@@ -5608,7 +5608,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Scoria, recursos abisales y {o:CalamityMod/Terminus}."
+         "texto": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Escoria, recursos abisales y {o:CalamityMod/Terminus}."
         },
         {
          "tipo": "parrafo",
@@ -5774,7 +5774,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Al permanecer dentro del agua sulfúrica, el medidor tarda alrededor de 12 segundos en llenarse sin protección. Al llegar al máximo causa un daño fuerte. Salir del agua lo vacía rápidamente. {o:CalamityMod/SulphurskinPotion} ralentiza la acumulación; armadura Sulfúrica también, pero es una armadura rogue. {o:CalamityMod/AbyssalDivingSuit} evita este mecanismo, aunque es una mejora avanzada. No confundas protección frente al agua con inmunidad a los ataques."
+     "texto": "Al permanecer dentro del agua sulfúrica, el medidor tarda alrededor de 12 segundos en llenarse sin protección. Al llegar al máximo causa un daño fuerte. Salir del agua lo vacía rápidamente. {o:CalamityMod/SulphurskinPotion} ralentiza la acumulación; armadura sulfúrica también, pero es una armadura rogue. {o:CalamityMod/AbyssalDivingSuit} evita este mecanismo, aunque es una mejora avanzada. No confundas protección frente al agua con inmunidad a los ataques."
     },
     {
      "tipo": "fuentes",
@@ -5813,13 +5813,13 @@
       "Habla con {n:CalamityMod/SeaKing} y elige **Help**: Amidias’ Blessing permite respirar durante diez minutos, pero un golpe fuerte la puede quitar. No te vuelve inmune al mar tóxico.",
       "Tras {n:Terraria/SkeletronHead}, abre {o:CalamityMod/AbyssTreasureChest} accesibles: actualmente no necesitan {o:Terraria/ShadowKey}.",
       "En capas profundas no intentes construir una burbuja de aire para salvarte: fuera del agua también puedes recibir daño. Sal de la expedición con regreso normal.",
-      "Evita {o:Terraria/RodofDiscord}, {o:CalamityMod/NormalityRelocator} y efectos de **Chaos State** dentro del {z:abismo} hasta el desafío final. Reentrar con {o:Terraria/PotionOfReturn} también puede activar ese peligro.",
+      "Evita {o:Terraria/RodofDiscord}, {o:CalamityMod/NormalityRelocator} y efectos de **Estado de caos** dentro del {z:abismo} hasta el desafío final. Reentrar con {o:Terraria/PotionOfReturn} también puede activar ese peligro.",
       "Si empieza a caer tu vida o pierdes la bendición, regresa. Lleva equipo abisal avanzado para las visitas posteriores."
      ]
     },
     {
      "tipo": "parrafo",
-     "texto": "La capa 3 es la referencia para Scoria y ventilaciones térmicas; la capa 4 es el vacío más oscuro y el santuario de {o:CalamityMod/Terminus}. Las fronteras no son pisos planos idénticos a este dibujo."
+     "texto": "La capa 3 es la referencia para Escoria y ventilaciones térmicas; la capa 4 es el vacío más oscuro y el santuario de {o:CalamityMod/Terminus}. Las fronteras no son pisos planos idénticos a este dibujo."
     },
     {
      "tipo": "fuentes",
@@ -5961,7 +5961,7 @@
       ],
       [
        "Tras dos mecánicos + {n:CalamityMod/Cryogen}",
-       "**{o:CalamityMod/FlarefrostBlade}**, fabricada con Cryonic, {o:Terraria/Hellstone} y {o:Terraria/SoulofLight}.",
+       "**{o:CalamityMod/FlarefrostBlade}**, fabricada con Criónico, {o:Terraria/Hellstone} y {o:Terraria/SoulofLight}.",
        "Alcance y seguimiento cómodos. Guárdala para {o:CalamityMod/Exoblade}."
       ],
       [
@@ -5971,7 +5971,7 @@
       ],
       [
        "{n:Terraria/Golem} → {n:Terraria/MoonLordHead}",
-       "{o:Terraria/TerraBlade} / {o:CalamityMod/TrueArkoftheAncients}; armas de la etapa Scoria, y {o:Terraria/SolarEruption} o {o:Terraria/DayBreak} tras el pilar Solar.",
+       "{o:Terraria/TerraBlade} / {o:CalamityMod/TrueArkoftheAncients}; armas de la etapa Escoria, y {o:Terraria/SolarEruption} o {o:Terraria/DayBreak} tras el pilar Solar.",
        "Elige según el jefe: alcance continuo para blancos móviles, penetración para blancos apropiados."
       ],
       [
@@ -6000,7 +6000,7 @@
        "Equipo para cualquiera de los dos finales."
       ],
       [
-       "Después de Exo Mechs",
+       "Después de Exo Mecas",
        "**{o:CalamityMod/Exoblade}**; {o:CalamityMod/PhotonRipper} si {n:CalamityMod/AresBody} fue el último; {o:CalamityMod/SpineOfThanatos} si {n:CalamityMod/ThanatosHead} fue el último.",
        "{o:CalamityMod/Exoblade} es una elección cómoda para terminar {n:CalamityMod/SupremeCalamitas}."
       ],
@@ -6113,7 +6113,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "{o:CalamityMod/Exoblade} se fabrica en **{o:CalamityMod/DraedonsForge}**. Su receta actual usa {o:CalamityMod/Lightspeed}; algunas guías antiguas muestran {o:CalamityMod/AnarchyBlade}. {o:CalamityMod/MiracleMatter} exige materiales exo: no intentes fabricar {o:CalamityMod/Exoblade} antes de derrotar Exo Mechs."
+     "texto": "{o:CalamityMod/Exoblade} se fabrica en **{o:CalamityMod/DraedonsForge}**. Su receta actual usa {o:CalamityMod/Lightspeed}; algunas guías antiguas muestran {o:CalamityMod/AnarchyBlade}. {o:CalamityMod/MiracleMatter} exige materiales exo: no intentes fabricar {o:CalamityMod/Exoblade} antes de derrotar Exo Mecas."
     },
     {
      "tipo": "fuentes",
@@ -6165,7 +6165,7 @@
       [
        "Tras dos mecánicos y {n:CalamityMod/Cryogen}",
        "Adamantita / titanio o Dédalo melee",
-       "Cryonic no se extrae con un pico temprano."
+       "Criónico no se extrae con un pico temprano."
       ],
       [
        "Tres mecánicos → {n:Terraria/Plantera}",
@@ -6175,7 +6175,7 @@
       [
        "{n:Terraria/Golem} → {n:Terraria/MoonLordHead}",
        "Escarabajo / Hidrotérmica melee",
-       "{o:Terraria/BeetleShell} favorece resistencia; Scale Mail favorece daño."
+       "{o:Terraria/BeetleShell} favorece resistencia; {o:Terraria/BeetleScaleMail} favorece daño."
       ],
       [
        "Post-{n:Terraria/MoonLordHead}",
@@ -6189,17 +6189,17 @@
       ],
       [
        "Post-{n:CalamityMod/Polterghast}",
-       "Llamarada de Sangre melee · Ram Mask",
+       "Llamarada de Sangre melee · {o:CalamityMod/BloodflareHeadMelee}",
        "Consérvala para Auric."
       ],
       [
        "Post-{n:CalamityMod/DevourerofGodsHead} + eventos",
-       "Asesino de Dioses melee · Horned Greathelm",
+       "Asesino de Dioses melee · {o:CalamityMod/GodSlayerHeadMelee}",
        "Consérvala para Auric."
       ],
       [
        "Post-{n:CalamityMod/Yharon}",
-       "Tesla Áurica melee · Royal Helm",
+       "Tesla Áurica melee · {o:CalamityMod/AuricTeslaHeadMelee}",
        "Combina tus tres armaduras anteriores y otros componentes."
       ],
       [
@@ -6491,7 +6491,7 @@
       [
        "{o:CalamityMod/Exoblade}",
        "Espada con ataques de alcance y seguimiento; excelente candidata a principal cómoda.",
-       "Exo Mechs + cadena de espadas y {o:CalamityMod/MiracleMatter}."
+       "Exo Mecas + cadena de espadas y {o:CalamityMod/MiracleMatter}."
       ],
       [
        "{o:CalamityMod/ArkoftheCosmos}",
@@ -6516,12 +6516,12 @@
       [
        "{o:CalamityMod/PhotonRipper}",
        "Arma exo de proximidad con comportamiento propio.",
-       "{n:CalamityMod/AresBody} último en Exo Mechs."
+       "{n:CalamityMod/AresBody} último en Exo Mecas."
       ],
       [
        "{o:CalamityMod/SpineOfThanatos}",
        "Arma exo con alcance y segmentos.",
-       "{n:CalamityMod/ThanatosHead} último en Exo Mechs."
+       "{n:CalamityMod/ThanatosHead} último en Exo Mecas."
       ],
       [
        "{o:CalamityMod/DraconicDestruction}",
@@ -6728,8 +6728,8 @@
       ],
       [
        "{o:CalamityMod/MiracleFruit}",
-       "Ruta normal tras {n:Terraria/Golem} y Scoria",
-       "1 {o:Terraria/LifeFruit} + 5 {o:CalamityMod/LifeAlloy} + 12 {o:CalamityMod/LivingShard} → 550. No la sitúes automáticamente justo tras {n:Terraria/Plantera}: la aleación incluye Scoria."
+       "Ruta normal tras {n:Terraria/Golem} y Escoria",
+       "1 {o:Terraria/LifeFruit} + 5 {o:CalamityMod/LifeAlloy} + 12 {o:CalamityMod/LivingShard} → 550. No la sitúes automáticamente justo tras {n:Terraria/Plantera}: la aleación incluye Escoria."
       ],
       [
        "{o:CalamityMod/TaintedCloudberry}",
@@ -7036,7 +7036,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "Clic derecho: ranura de objeto y ranura de células. En el sistema de carga actual, la referencia es recargar Seeking Mechanisms. Los tutoriales que presentan todas las armas del arsenal como armas de batería describen versiones antiguas."
+         "texto": "Clic derecho: ranura de objeto y ranura de células. En el sistema de carga actual, la referencia es recargar Mecanismos de Búsqueda. Los tutoriales que presentan todas las armas del arsenal como armas de batería describen versiones antiguas."
         },
         {
          "tipo": "fuentes",
@@ -7062,7 +7062,7 @@
        "bloques": [
         {
          "tipo": "parrafo",
-         "texto": "Es la estación progresiva de descifrado. Instala componentes y coloca el esquema correspondiente con las células necesarias. Cuando esté completo con {o:CalamityMod/AuricQuantumCoolingCell} permite contactar con {n:CalamityMod/Draedon} para Exo Mechs."
+         "texto": "Es la estación progresiva de descifrado. Instala componentes y coloca el esquema correspondiente con las células necesarias. Cuando esté completo con {o:CalamityMod/AuricQuantumCoolingCell} permite contactar con {n:CalamityMod/Draedon} para Exo Mecas."
         },
         {
          "tipo": "fuentes",
@@ -7331,7 +7331,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Hay una estructura secundaria de cavernas con el Onyx Excavator. No contiene un sexto esquema necesario para Exo Mechs. Romper la máquina permite obtener {o:CalamityMod/OnyxExcavatorKey}, una montura útil de excavación."
+     "texto": "Hay una estructura secundaria de cavernas con la excavadora de ónice. No contiene un sexto esquema necesario para Exo Mecas. Romper la máquina permite obtener {o:CalamityMod/OnyxExcavatorKey}, una montura útil de excavación."
     },
     {
      "tipo": "fuentes",
@@ -7377,11 +7377,11 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Después de Exo Mechs, crea **{o:CalamityMod/DraedonsForge}**: {o:CalamityMod/CosmicAnvilItem} + una forja de adamantita/titanio + {o:Terraria/TinkerersWorkshop} + {o:Terraria/LunarCraftingStation} + 15 {o:CalamityMod/AuricBar} + 12 {o:CalamityMod/ExoPrism} + 15 {o:CalamityMod/AscendantSpiritEssence}, mediante fabricación a mano. Es el centro para {o:CalamityMod/MiracleMatter}, {o:CalamityMod/Exoblade} y Shadowspec."
+     "texto": "Después de Exo Mecas, crea **{o:CalamityMod/DraedonsForge}**: {o:CalamityMod/CosmicAnvilItem} + una forja de adamantita/titanio + {o:Terraria/TinkerersWorkshop} + {o:Terraria/LunarCraftingStation} + 15 {o:CalamityMod/AuricBar} + 12 {o:CalamityMod/ExoPrism} + 15 {o:CalamityMod/AscendantSpiritEssence}, mediante fabricación a mano. Es el centro para {o:CalamityMod/MiracleMatter}, {o:CalamityMod/Exoblade} y Shadowspec."
     },
     {
      "tipo": "parrafo",
-     "texto": "Shadowspec necesita **1 {o:CalamityMod/AuricBar} + 1 {o:CalamityMod/ExoPrism} + 1 {o:CalamityMod/AshesofAnnihilation}**. Por eso para el equipo Shadowspec hacen falta Exo Mechs y {n:CalamityMod/SupremeCalamitas}, aunque los puedas derrotar en cualquiera de los dos órdenes."
+     "texto": "Shadowspec necesita **1 {o:CalamityMod/AuricBar} + 1 {o:CalamityMod/ExoPrism} + 1 {o:CalamityMod/AshesofAnnihilation}**. Por eso para el equipo Shadowspec hacen falta Exo Mecas y {n:CalamityMod/SupremeCalamitas}, aunque los puedas derrotar en cualquiera de los dos órdenes."
     },
     {
      "tipo": "fuentes",
@@ -7466,7 +7466,7 @@
        "Estatigel y {o:CalamityMod/FracturedArk}. No es {o:CalamityMod/BlightedGel}."
       ],
       [
-       "Cryonic",
+       "Criónico",
        "Se genera tras {n:CalamityMod/Cryogen} en hielo",
        "Dédalo y Flarefrost; requiere un pico de adamantita/titanio en la ruta normal."
       ],
@@ -7476,18 +7476,18 @@
        "Esencias para núcleos y recetas. Comprueba la fuente de cada enemigo."
       ],
       [
-       "Perennial / {o:CalamityMod/LivingShard}",
+       "Perenne / {o:CalamityMod/LivingShard}",
        "Después de {n:Terraria/Plantera}",
-       "Perennial en tierra; {o:CalamityMod/LivingShard} de {n:Terraria/Plantera} y fuentes indicadas en su ficha."
+       "Perenne en tierra; {o:CalamityMod/LivingShard} de {n:Terraria/Plantera} y fuentes indicadas en su ficha."
       ],
       [
-       "Scoria",
+       "Escoria",
        "Mineral del {z:abismo}, capa térmica; extraíble con {o:Terraria/Picksaw} (210 %) / fuentes tras {n:Terraria/Golem}",
        "Barras y {o:CalamityMod/LifeAlloy}. Puede quemarte y desprender lava."
       ],
       [
        "{o:CalamityMod/LifeAlloy}",
-       "Combina barras de Cryonic, Perennial y Scoria",
+       "Combina barras de Criónico, Perenne y Escoria",
        "Equipo, {o:CalamityMod/MiracleFruit} y componentes del {o:CalamityMod/CodebreakerBase}. {n:CalamityMod/RavagerBody} también es una fuente de materiales."
       ],
       [
@@ -7542,7 +7542,7 @@
       ],
       [
        "{o:CalamityMod/ExoPrism} / {o:CalamityMod/AshesofAnnihilation}",
-       "Exo Mechs / {n:CalamityMod/SupremeCalamitas}",
+       "Exo Mecas / {n:CalamityMod/SupremeCalamitas}",
        "Shadowspec y fabricación final."
       ]
      ]
@@ -7799,7 +7799,7 @@
      "items": [
       "Todos los jefes de la ruta, incluidos los desvíos que dejaste pendientes.",
       "Los tres niveles de Lluvia Ácida y {n:CalamityMod/OldDuke}.",
-      "Exo Mechs repetidos con cada grupo final si quieres su botín completo.",
+      "Exo Mecas repetidos con cada grupo final si quieres su botín completo.",
       "{n:CalamityMod/Providence} en {z:sagrado|Sagrado} y {z:inframundo|Inframundo} para sus recompensas; desafío nocturno al final si te interesa.",
       "Boss Rush con {o:CalamityMod/Terminus}, y Rock como recompensa.",
       "{n:CalamityMod/PrimordialWyrmHead} en el fondo del {z:abismo} y {o:CalamityMod/HalibutCannon}.",
@@ -8867,7 +8867,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -8878,7 +8878,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -8889,7 +8889,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -9182,7 +9182,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -9190,7 +9190,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -9198,7 +9198,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -9998,7 +9998,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -10006,7 +10006,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -10014,7 +10014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -10432,7 +10432,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -10440,7 +10440,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -10448,7 +10448,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       }
      ],
@@ -10869,7 +10869,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -10879,7 +10879,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -10889,7 +10889,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11346,7 +11346,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11356,7 +11356,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11366,7 +11366,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11795,7 +11795,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11805,7 +11805,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -11815,7 +11815,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -12615,7 +12615,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -12623,7 +12623,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -12631,7 +12631,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -12639,7 +12639,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -12647,7 +12647,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -13015,7 +13015,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13023,7 +13023,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13031,7 +13031,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13039,7 +13039,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13047,7 +13047,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13055,7 +13055,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13063,7 +13063,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13071,7 +13071,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13079,7 +13079,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13087,7 +13087,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13095,7 +13095,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -13503,7 +13503,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13511,7 +13511,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13519,7 +13519,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -13527,7 +13527,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13535,7 +13535,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13543,7 +13543,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -13551,7 +13551,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13559,7 +13559,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13567,7 +13567,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13575,7 +13575,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -13583,7 +13583,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -14008,7 +14008,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -14016,7 +14016,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -14024,7 +14024,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -14032,7 +14032,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -14040,7 +14040,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -14048,7 +14048,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -14056,7 +14056,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -14064,7 +14064,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -14072,7 +14072,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -14080,7 +14080,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -14088,7 +14088,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -14096,7 +14096,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -14104,7 +14104,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -14112,7 +14112,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -14540,7 +14540,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -14548,7 +14548,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -14556,7 +14556,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       }
      ],
@@ -14932,7 +14932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -14940,7 +14940,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -14948,7 +14948,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       }
      ],
@@ -15288,7 +15288,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -15298,7 +15298,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -15308,7 +15308,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -15496,7 +15496,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -15506,7 +15506,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -15727,7 +15727,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -15735,7 +15735,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -15743,7 +15743,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -16078,7 +16078,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mechs y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16145,7 +16145,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16153,7 +16153,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16161,7 +16161,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -16419,7 +16419,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mechs y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -16434,7 +16434,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mechs",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16509,7 +16509,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16517,7 +16517,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16525,7 +16525,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -16799,7 +16799,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mechs (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -16814,7 +16814,7 @@
     {
      "id": "cuerpo_a_cuerpo.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mechs, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/ArkoftheCosmos",
@@ -16897,7 +16897,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16905,7 +16905,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16913,7 +16913,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -16921,7 +16921,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -16929,7 +16929,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -16937,7 +16937,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -17203,7 +17203,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mechs y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mechs» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -17218,7 +17218,7 @@
     {
      "id": "cuerpo_a_cuerpo.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mechs y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Earth",
@@ -17285,7 +17285,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -17293,7 +17293,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -17301,7 +17301,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -17309,7 +17309,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -17317,7 +17317,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -17325,7 +17325,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -17333,7 +17333,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -17341,7 +17341,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -17349,7 +17349,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -17615,7 +17615,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mechs y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -17724,7 +17724,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -17732,7 +17732,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -17740,7 +17740,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -17818,7 +17818,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -17829,7 +17829,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -17840,7 +17840,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -18217,7 +18217,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -18225,7 +18225,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -18233,7 +18233,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Rufián de la nieve",
+       "conjunto": "Armadura de rufián de la nieve",
        "marcas": []
       },
       {
@@ -18241,7 +18241,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -18249,7 +18249,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -18257,7 +18257,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -18707,7 +18707,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -18715,7 +18715,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -18723,7 +18723,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -19135,7 +19135,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -19143,7 +19143,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -19151,7 +19151,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -19571,7 +19571,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -19579,7 +19579,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -19587,7 +19587,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       }
      ],
@@ -20037,7 +20037,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -20047,7 +20047,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -20057,7 +20057,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -20593,7 +20593,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -20603,7 +20603,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -20613,7 +20613,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -21091,7 +21091,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -21101,7 +21101,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -21111,7 +21111,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -21983,7 +21983,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -21991,7 +21991,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -21999,7 +21999,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22007,7 +22007,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22015,7 +22015,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -22376,7 +22376,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22384,7 +22384,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22392,7 +22392,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22400,7 +22400,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -22408,7 +22408,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -22416,7 +22416,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -22464,7 +22464,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22472,7 +22472,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22480,7 +22480,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22488,7 +22488,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -22496,7 +22496,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -22926,7 +22926,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22934,7 +22934,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22942,7 +22942,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -22950,7 +22950,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -22958,7 +22958,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -22966,7 +22966,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": []
       },
       {
@@ -23014,7 +23014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23022,7 +23022,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23030,7 +23030,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23038,7 +23038,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23046,7 +23046,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -23468,7 +23468,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -23476,7 +23476,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -23484,7 +23484,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -23492,7 +23492,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -23500,7 +23500,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -23508,7 +23508,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -23516,7 +23516,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": [
         "†"
        ]
@@ -23526,7 +23526,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": [
         "†"
        ]
@@ -23536,7 +23536,7 @@
        "origen": "",
        "nota": "Es difícil y arriesgado de usar.",
        "rol": "",
-       "conjunto": "Armadura Segador de la plaga",
+       "conjunto": "Armadura de segador de la plaga",
        "marcas": [
         "†"
        ]
@@ -23546,7 +23546,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -23554,7 +23554,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -23562,7 +23562,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -23570,7 +23570,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23578,7 +23578,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23586,7 +23586,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23594,7 +23594,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -23602,7 +23602,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -24026,7 +24026,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -24034,7 +24034,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -24042,7 +24042,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Lunic Corps armor",
+       "conjunto": "Armadura del cuerpo lúnico",
        "marcas": []
       },
       {
@@ -24083,7 +24083,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -24091,7 +24091,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -24099,7 +24099,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       }
      ],
@@ -24518,7 +24518,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -24526,7 +24526,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -24534,7 +24534,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       }
      ],
@@ -24918,7 +24918,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -24928,7 +24928,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -24938,7 +24938,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -25137,7 +25137,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -25147,7 +25147,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -25417,7 +25417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -25425,7 +25425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -25433,7 +25433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       }
      ],
@@ -25780,7 +25780,7 @@
     {
      "id": "distancia.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mechs y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -25851,7 +25851,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -25859,7 +25859,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -25867,7 +25867,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -26169,7 +26169,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mechs y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -26184,7 +26184,7 @@
     {
      "id": "distancia.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mechs",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -26255,7 +26255,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -26263,7 +26263,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -26271,7 +26271,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -26589,7 +26589,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mechs (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -26604,7 +26604,7 @@
     {
      "id": "distancia.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mechs, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AcesHigh",
@@ -26691,7 +26691,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -26699,7 +26699,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -26707,7 +26707,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -26715,7 +26715,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -26723,7 +26723,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -26731,7 +26731,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -27041,7 +27041,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mechs y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mechs» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -27056,7 +27056,7 @@
     {
      "id": "distancia.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mechs y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Contagion",
@@ -27121,7 +27121,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -27129,7 +27129,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -27137,7 +27137,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -27145,7 +27145,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -27153,7 +27153,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -27161,7 +27161,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -27169,7 +27169,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -27177,7 +27177,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -27185,7 +27185,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -27485,7 +27485,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mechs y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -27679,7 +27679,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -27690,7 +27690,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -27701,7 +27701,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -28022,7 +28022,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -28030,7 +28030,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -28038,7 +28038,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -28902,7 +28902,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -28910,7 +28910,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -28918,7 +28918,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -29340,7 +29340,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -29348,7 +29348,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -29356,7 +29356,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -29388,7 +29388,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -29396,7 +29396,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -29404,7 +29404,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       }
      ],
@@ -29841,7 +29841,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -29851,7 +29851,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -29861,7 +29861,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30289,7 +30289,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Apprentice armor",
+       "conjunto": "Armadura de aprendiz",
        "marcas": []
       },
       {
@@ -30297,7 +30297,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Apprentice armor",
+       "conjunto": "Armadura de aprendiz",
        "marcas": []
       },
       {
@@ -30305,7 +30305,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Apprentice armor",
+       "conjunto": "Armadura de aprendiz",
        "marcas": []
       },
       {
@@ -30367,7 +30367,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30377,7 +30377,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30387,7 +30387,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30827,7 +30827,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30837,7 +30837,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -30847,7 +30847,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -31241,7 +31241,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31249,7 +31249,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31257,7 +31257,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31643,7 +31643,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31651,7 +31651,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31659,7 +31659,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -31723,7 +31723,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -31731,7 +31731,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -31739,7 +31739,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -31747,7 +31747,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -31755,7 +31755,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -32131,7 +32131,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32139,7 +32139,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32147,7 +32147,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32155,7 +32155,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32163,7 +32163,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32171,7 +32171,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32179,7 +32179,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32187,7 +32187,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32195,7 +32195,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32203,7 +32203,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32211,7 +32211,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -32621,7 +32621,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32629,7 +32629,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32637,7 +32637,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Brimflame armor",
+       "conjunto": "Armadura de llama de azufre",
        "marcas": []
       },
       {
@@ -32645,7 +32645,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32653,7 +32653,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32661,7 +32661,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -32669,7 +32669,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32677,7 +32677,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32685,7 +32685,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32693,7 +32693,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -32701,7 +32701,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -33125,7 +33125,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -33133,7 +33133,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -33141,7 +33141,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -33149,7 +33149,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -33157,7 +33157,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -33165,7 +33165,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -33173,7 +33173,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -33181,7 +33181,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -33189,7 +33189,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -33197,7 +33197,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -33205,7 +33205,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -33655,7 +33655,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -33663,7 +33663,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -33671,7 +33671,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       }
      ],
@@ -34084,7 +34084,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -34092,7 +34092,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -34100,7 +34100,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       }
      ],
@@ -34452,7 +34452,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -34462,7 +34462,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -34472,7 +34472,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -34682,7 +34682,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -34692,7 +34692,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -34916,7 +34916,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       },
       {
@@ -34924,7 +34924,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       },
       {
@@ -34932,7 +34932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       }
      ],
@@ -35233,7 +35233,7 @@
     {
      "id": "magia.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mechs y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -35306,7 +35306,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -35314,7 +35314,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -35322,7 +35322,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -35598,7 +35598,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mechs y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -35613,7 +35613,7 @@
     {
      "id": "magia.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mechs",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -35694,7 +35694,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -35702,7 +35702,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -35710,7 +35710,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -36002,7 +36002,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mechs (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36017,7 +36017,7 @@
     {
      "id": "magia.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mechs, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/AetherfluxCannon",
@@ -36090,7 +36090,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36098,7 +36098,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36106,7 +36106,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36114,7 +36114,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -36122,7 +36122,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -36130,7 +36130,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -36414,7 +36414,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mechs y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mechs» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36429,7 +36429,7 @@
     {
      "id": "magia.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mechs y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Apotheosis",
@@ -36502,7 +36502,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36510,7 +36510,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36518,7 +36518,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -36526,7 +36526,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -36534,7 +36534,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -36542,7 +36542,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -36550,7 +36550,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -36558,7 +36558,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -36566,7 +36566,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -36848,7 +36848,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mechs y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36939,7 +36939,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -36947,7 +36947,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -36955,7 +36955,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -37033,7 +37033,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -37044,7 +37044,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -37055,7 +37055,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -37334,7 +37334,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -37342,7 +37342,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -37350,7 +37350,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -37358,7 +37358,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -37366,7 +37366,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -37374,7 +37374,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Wulfrum armor",
+       "conjunto": "Armadura de wulfrum",
        "marcas": []
       },
       {
@@ -37760,7 +37760,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -37768,7 +37768,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -37776,7 +37776,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38156,7 +38156,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -38164,7 +38164,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -38172,7 +38172,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -38204,7 +38204,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38212,7 +38212,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38220,7 +38220,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38642,7 +38642,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38650,7 +38650,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38658,7 +38658,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:Terraria/Obsidian} armor",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -38666,7 +38666,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -38674,7 +38674,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -38682,7 +38682,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       }
      ],
@@ -39080,7 +39080,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39090,7 +39090,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39100,7 +39100,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39541,7 +39541,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -39549,7 +39549,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -39557,7 +39557,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -39565,7 +39565,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39575,7 +39575,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39585,7 +39585,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -39969,7 +39969,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -39977,7 +39977,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -39985,7 +39985,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -39993,7 +39993,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40001,7 +40001,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40009,7 +40009,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40017,7 +40017,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -40027,7 +40027,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -40037,7 +40037,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -40421,7 +40421,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -40429,7 +40429,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -40437,7 +40437,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -40469,7 +40469,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40477,7 +40477,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40485,7 +40485,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       }
      ],
@@ -40861,7 +40861,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Enjambrador de las profundidades",
+       "conjunto": "Armadura de enjambrador de las profundidades",
        "marcas": []
       },
       {
@@ -40869,7 +40869,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Enjambrador de las profundidades",
+       "conjunto": "Armadura de enjambrador de las profundidades",
        "marcas": []
       },
       {
@@ -40877,7 +40877,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Enjambrador de las profundidades",
+       "conjunto": "Armadura de enjambrador de las profundidades",
        "marcas": []
       },
       {
@@ -40885,7 +40885,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40893,7 +40893,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40901,7 +40901,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Squire armor",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -40909,7 +40909,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Tiki armor",
+       "conjunto": "Armadura tiki",
        "marcas": []
       },
       {
@@ -40917,7 +40917,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Tiki armor",
+       "conjunto": "Armadura tiki",
        "marcas": []
       },
       {
@@ -40925,7 +40925,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Tiki armor",
+       "conjunto": "Armadura tiki",
        "marcas": []
       },
       {
@@ -40933,7 +40933,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -40941,7 +40941,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -40949,7 +40949,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -40957,7 +40957,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -40965,7 +40965,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -41381,7 +41381,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41389,7 +41389,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41397,7 +41397,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41405,7 +41405,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41413,7 +41413,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41421,7 +41421,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41429,7 +41429,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41437,7 +41437,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41445,7 +41445,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41453,7 +41453,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41461,7 +41461,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -41885,7 +41885,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41893,7 +41893,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41901,7 +41901,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -41909,7 +41909,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -41917,7 +41917,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -41925,7 +41925,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -41933,7 +41933,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41941,7 +41941,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41949,7 +41949,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -41957,7 +41957,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41965,7 +41965,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41973,7 +41973,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41981,7 +41981,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -41989,7 +41989,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -42401,7 +42401,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -42409,7 +42409,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -42417,7 +42417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -42425,7 +42425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -42433,7 +42433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -42441,7 +42441,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{n:CalamityMod/PlaguebringerMiniboss} armor",
+       "conjunto": "Armadura de portadora de la plaga",
        "marcas": []
       },
       {
@@ -42449,7 +42449,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -42457,7 +42457,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -42465,7 +42465,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -42473,7 +42473,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -42481,7 +42481,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -42489,7 +42489,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -42497,7 +42497,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -42505,7 +42505,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -42513,7 +42513,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -42521,7 +42521,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -42529,7 +42529,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -42991,7 +42991,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -42999,7 +42999,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -43007,7 +43007,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -43015,7 +43015,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -43023,7 +43023,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -43031,7 +43031,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       }
      ],
@@ -43447,7 +43447,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -43455,7 +43455,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -43463,7 +43463,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -43501,7 +43501,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -43509,7 +43509,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       },
       {
@@ -43517,7 +43517,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Valhalla Knight armor",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": []
       }
      ],
@@ -43889,7 +43889,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -43899,7 +43899,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -43909,7 +43909,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -44122,7 +44122,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -44132,7 +44132,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -44380,7 +44380,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Fearmonger armor",
+       "conjunto": "Armadura del Intimidador",
        "marcas": []
       },
       {
@@ -44388,7 +44388,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Fearmonger armor",
+       "conjunto": "Armadura del Intimidador",
        "marcas": []
       },
       {
@@ -44396,7 +44396,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Fearmonger armor",
+       "conjunto": "Armadura del Intimidador",
        "marcas": []
       },
       {
@@ -44404,7 +44404,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       },
       {
@@ -44412,7 +44412,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       },
       {
@@ -44420,7 +44420,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/SilvaArmor}",
+       "conjunto": "Armadura de Silva",
        "marcas": []
       }
      ],
@@ -44697,7 +44697,7 @@
     {
      "id": "invocacion.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mechs y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -44782,7 +44782,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -44790,7 +44790,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -44798,7 +44798,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -45048,7 +45048,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mechs y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45063,7 +45063,7 @@
     {
      "id": "invocacion.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mechs",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -45174,7 +45174,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45182,7 +45182,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45190,7 +45190,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -45456,7 +45456,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mechs (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45471,7 +45471,7 @@
     {
      "id": "invocacion.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mechs, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/LiliesOfFinality",
@@ -45572,7 +45572,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45580,7 +45580,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45588,7 +45588,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45596,7 +45596,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -45604,7 +45604,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -45612,7 +45612,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -45870,7 +45870,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mechs y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mechs» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45885,7 +45885,7 @@
     {
      "id": "invocacion.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mechs y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Endogenesis",
@@ -45974,7 +45974,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45982,7 +45982,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45990,7 +45990,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -45998,7 +45998,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -46006,7 +46006,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -46014,7 +46014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -46022,7 +46022,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -46030,7 +46030,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -46038,7 +46038,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -46314,7 +46314,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mechs y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -46417,7 +46417,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Merodeador del desierto",
+       "conjunto": "Armadura de merodeador del desierto",
        "marcas": []
       },
       {
@@ -46425,7 +46425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Merodeador del desierto",
+       "conjunto": "Armadura de merodeador del desierto",
        "marcas": []
       },
       {
@@ -46433,7 +46433,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Merodeador del desierto",
+       "conjunto": "Armadura de merodeador del desierto",
        "marcas": []
       },
       {
@@ -46441,7 +46441,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro y cuesta conseguirla.",
        "rol": "",
-       "conjunto": "Gladiator armor",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "Δ",
         "*"
@@ -46452,7 +46452,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro y cuesta conseguirla.",
        "rol": "",
-       "conjunto": "Gladiator armor",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "Δ",
         "*"
@@ -46463,7 +46463,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro y cuesta conseguirla.",
        "rol": "",
-       "conjunto": "Gladiator armor",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "Δ",
         "*"
@@ -46544,7 +46544,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -46555,7 +46555,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -46566,7 +46566,7 @@
        "origen": "",
        "nota": "Tiene un bonus de conjunto nuevo y cuesta conseguirla si tu mundo no generó plata.",
        "rol": "",
-       "conjunto": "Silver armor",
+       "conjunto": "Armadura de plata",
        "marcas": [
         "Δ",
         "*"
@@ -46879,7 +46879,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -46887,7 +46887,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -46895,7 +46895,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -46903,7 +46903,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -46911,7 +46911,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -46919,7 +46919,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Victida",
+       "conjunto": "Armadura de victida",
        "marcas": []
       },
       {
@@ -47313,7 +47313,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -47321,7 +47321,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -47329,7 +47329,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sulfúrica",
+       "conjunto": "Armadura sulfúrica",
        "marcas": []
       },
       {
@@ -47739,7 +47739,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -47747,7 +47747,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -47755,7 +47755,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Aerospec armor",
+       "conjunto": "Armadura de Aerospec",
        "marcas": []
       },
       {
@@ -48163,7 +48163,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -48171,7 +48171,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       },
       {
@@ -48179,7 +48179,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estatigel",
+       "conjunto": "Armadura de estatigel",
        "marcas": []
       }
      ],
@@ -48592,7 +48592,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -48600,7 +48600,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -48608,7 +48608,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -48616,7 +48616,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -48626,7 +48626,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -48636,7 +48636,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49058,7 +49058,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49068,7 +49068,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49078,7 +49078,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49088,7 +49088,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -49096,7 +49096,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -49104,7 +49104,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "{o:CalamityMod/TitanHeart} armor",
+       "conjunto": "Armadura de corazón de titán",
        "marcas": []
       },
       {
@@ -49112,7 +49112,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49122,7 +49122,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49132,7 +49132,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49524,7 +49524,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -49532,7 +49532,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -49540,7 +49540,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -49548,7 +49548,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49558,7 +49558,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49568,7 +49568,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -49578,7 +49578,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49588,7 +49588,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49598,7 +49598,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Crystal Assassin armor",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "Δ"
        ]
@@ -49998,7 +49998,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -50006,7 +50006,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -50014,7 +50014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Dédalo",
+       "conjunto": "Armadura de Dédalo",
        "marcas": []
       },
       {
@@ -50022,7 +50022,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -50032,7 +50032,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -50042,7 +50042,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Monk armor",
+       "conjunto": "Armadura de monje",
        "marcas": [
         "Δ"
        ]
@@ -50052,7 +50052,7 @@
        "origen": "",
        "nota": "Cuesta conseguirlo en esta etapa.",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": [
         "*"
        ]
@@ -50062,7 +50062,7 @@
        "origen": "",
        "nota": "Cuesta conseguirlo en esta etapa.",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": [
         "*"
        ]
@@ -50072,7 +50072,7 @@
        "origen": "",
        "nota": "Cuesta conseguirlo en esta etapa.",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": [
         "*"
        ]
@@ -50440,7 +50440,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": []
       },
       {
@@ -50448,7 +50448,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": []
       },
       {
@@ -50456,7 +50456,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Umbrófila",
+       "conjunto": "Armadura umbrófila",
        "marcas": []
       },
       {
@@ -50464,7 +50464,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50472,7 +50472,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50480,7 +50480,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50488,7 +50488,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50496,7 +50496,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -50868,7 +50868,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -50876,7 +50876,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -50884,7 +50884,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -50892,7 +50892,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -50902,7 +50902,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -50912,7 +50912,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -50922,7 +50922,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50930,7 +50930,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50938,7 +50938,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50946,7 +50946,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -50954,7 +50954,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -51386,7 +51386,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51394,7 +51394,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51402,7 +51402,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51410,7 +51410,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51420,7 +51420,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51430,7 +51430,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51440,7 +51440,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -51448,7 +51448,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -51456,7 +51456,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -51464,7 +51464,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -51472,7 +51472,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -51916,7 +51916,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51924,7 +51924,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51932,7 +51932,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Hidrotérmica",
+       "conjunto": "Armadura hidrotérmica",
        "marcas": []
       },
       {
@@ -51940,7 +51940,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51950,7 +51950,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51960,7 +51960,7 @@
        "origen": "",
        "nota": "Funciona como armadura de pícaro.",
        "rol": "",
-       "conjunto": "Shinobi Infiltrator armor",
+       "conjunto": "Armadura de infiltrador shinobi",
        "marcas": [
         "Δ"
        ]
@@ -51970,7 +51970,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -51978,7 +51978,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -51986,7 +51986,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -51994,7 +51994,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -52002,7 +52002,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -52010,7 +52010,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -52018,7 +52018,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       },
       {
@@ -52026,7 +52026,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Saqueador",
+       "conjunto": "Armadura de saqueador",
        "marcas": []
       }
      ],
@@ -52474,7 +52474,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -52482,7 +52482,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       },
       {
@@ -52490,7 +52490,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Astral",
+       "conjunto": "Armadura astral",
        "marcas": []
       }
      ],
@@ -52928,7 +52928,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -52936,7 +52936,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -52944,7 +52944,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       }
      ],
@@ -53340,7 +53340,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -53350,7 +53350,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -53360,7 +53360,7 @@
        "origen": "",
        "nota": "Se recomienda usarlo junto con {o:Terraria/HeartreachPotion} and {o:CalamityMod/PhotosynthesisPotion}.",
        "rol": "",
-       "conjunto": "Armadura Llamarada de Sangre",
+       "conjunto": "Armadura de Llamarada de Sangre",
        "marcas": [
         "Ω1"
        ]
@@ -53370,7 +53370,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -53378,7 +53378,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -53386,7 +53386,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Estragón",
+       "conjunto": "Armadura de Estragón",
        "marcas": []
       },
       {
@@ -53596,7 +53596,7 @@
       {
        "ref": "Terraria/HeartreachPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -53606,7 +53606,7 @@
       {
        "ref": "CalamityMod/PhotosynthesisPotion",
        "origen": "",
-       "nota": "Se recomienda usarlo junto con armadura Llamarada de Sangre.",
+       "nota": "Se recomienda usarlo junto con armadura de Llamarada de Sangre.",
        "rol": "buff defensivo",
        "conjunto": "",
        "marcas": [
@@ -53820,7 +53820,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -53828,7 +53828,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       },
       {
@@ -53836,7 +53836,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Asesino de Dioses",
+       "conjunto": "Armadura de Asesino de Dioses",
        "marcas": []
       }
      ],
@@ -54139,7 +54139,7 @@
     {
      "id": "picaro.post-yharon",
      "desde": "yharon",
-     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mechs y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras {n:CalamityMod/Yharon}, antes de Exo Mecas y Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -54206,7 +54206,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -54214,7 +54214,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -54222,7 +54222,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -54498,7 +54498,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mechs y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla Áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exo Mecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -54513,7 +54513,7 @@
     {
      "id": "picaro.post-calamitas",
      "desde": "exo",
-     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mechs",
+     "momento": "Tras Supreme Witch {n:CalamityMod/SupremeCalamitas}, para las Exo Mecas",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -54588,7 +54588,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -54596,7 +54596,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -54604,7 +54604,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       }
      ],
@@ -54896,7 +54896,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mechs (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
+     "nota": "Variante de la wiki si ya has vencido a {n:CalamityMod/SupremeCalamitas} y vas a por las Exo Mecas (lista de «Post-{n:CalamityMod/SupremeCalamitas}» más la común).",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -54911,7 +54911,7 @@
     {
      "id": "picaro.post-exo-mechs",
      "desde": "calamitas",
-     "momento": "Tras las Exo Mechs, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
+     "momento": "Tras las Exo Mecas, para Supreme Witch {n:CalamityMod/SupremeCalamitas}",
      "armas": [
       {
        "ref": "CalamityMod/DimensionTearingDisk",
@@ -55004,7 +55004,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55012,7 +55012,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55020,7 +55020,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55028,7 +55028,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -55036,7 +55036,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -55044,7 +55044,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -55328,7 +55328,7 @@
        "marcas": []
       }
      ],
-     "nota": "Variante de la wiki si ya has vencido a las Exo Mechs y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mechs» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
+     "nota": "Variante de la wiki si ya has vencido a las Exo Mecas y vas a por {n:CalamityMod/SupremeCalamitas} (lista de «Post-Exo Mecas» más la común). El {o:CalamityMod/ExoThrone} es muy recomendable.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -55343,7 +55343,7 @@
     {
      "id": "picaro.endgame",
      "desde": "shadowspec",
-     "momento": "Tras Exo Mechs y {n:CalamityMod/SupremeCalamitas} (endgame)",
+     "momento": "Tras Exo Mecas y {n:CalamityMod/SupremeCalamitas} (endgame)",
      "armas": [
       {
        "ref": "CalamityMod/Celestus",
@@ -55394,7 +55394,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55402,7 +55402,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55410,7 +55410,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Tesla Áurica",
+       "conjunto": "Armadura de Tesla Áurica",
        "marcas": []
       },
       {
@@ -55418,7 +55418,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -55426,7 +55426,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -55434,7 +55434,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Armadura Sombra Demoníaca",
+       "conjunto": "Armadura de Sombra Demoníaca",
        "marcas": []
       },
       {
@@ -55442,7 +55442,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -55450,7 +55450,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       },
       {
@@ -55458,7 +55458,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "Gem Tech armor",
+       "conjunto": "Armadura Tecnogema",
        "marcas": []
       }
      ],
@@ -55742,7 +55742,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exo Mechs y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exo Mecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura Sombra Demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -56108,7 +56108,7 @@
     ],
     "minimo": 40
    },
-   "resumen": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Scoria, recursos abisales y {o:CalamityMod/Terminus}. Cuanto más profundo, peor respiración, visión y defensa. La expedición temprana es una visita corta a los cofres accesibles, no una bajada hasta el fondo. {p:abyss1}",
+   "resumen": "**Cuándo:** primeros cofres tras {n:Terraria/SkeletronHead}; retornos tras {n:CalamityMod/Leviathan}, {n:Terraria/Golem}, {n:CalamityMod/Polterghast} y al final. **Para qué:** botín, Escoria, recursos abisales y {o:CalamityMod/Terminus}. Cuanto más profundo, peor respiración, visión y defensa. La expedición temprana es una visita corta a los cofres accesibles, no una bajada hasta el fondo. {p:abyss1}",
    "bloques": [],
    "fuentes": []
   },
@@ -56370,7 +56370,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "Revisa jefe de desbloqueo + potencia del pico. Aerialite necesita {o:Terraria/Hive}/{n:CalamityMod/PerforatorHive}; Astral necesita Deus; Cryonic necesita un pico adecuado."
+     "texto": "Revisa jefe de desbloqueo + potencia del pico. Aerialite necesita {o:Terraria/Hive}/{n:CalamityMod/PerforatorHive}; Astral necesita Deus; Criónico necesita un pico adecuado."
     }
    ],
    "paradas": [],
@@ -56528,7 +56528,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "Probablemente Chaos State provocó {n:CalamityMod/PrimordialWyrmHead}. Evita esos teletransportes en las expediciones tempranas."
+     "texto": "Probablemente Estado de caos provocó {n:CalamityMod/PrimordialWyrmHead}. Evita esos teletransportes en las expediciones tempranas."
     }
    ],
    "paradas": [],
@@ -56645,7 +56645,7 @@
   },
   {
    "id": "problema24",
-   "titulo": "Exo Mechs no dio {o:CalamityMod/PhotonRipper}",
+   "titulo": "Exo Mecas no dio {o:CalamityMod/PhotonRipper}",
    "bloques": [
     {
      "tipo": "parrafo",
@@ -57145,7 +57145,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "**Onyx Excavator.** Su laboratorio es secundario. Romper la máquina permite recuperar su llave de montura. No busques un sexto esquema aquí."
+     "texto": "**excavadora de ónice.** Su laboratorio es secundario. Romper la máquina permite recuperar su llave de montura. No busques un sexto esquema aquí."
     }
    ],
    "paradas": [],

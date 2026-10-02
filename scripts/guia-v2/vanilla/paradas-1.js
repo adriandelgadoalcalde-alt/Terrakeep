@@ -384,11 +384,11 @@ const paradas = [
     },
     tareas: [
       { condicion: ALGUNA(P('Deer Thing'), B('downedDeerclops')), texto: 'Fabrica el [[Deer Thing]].' },
-      { condicion: B('downedDeerclops'), texto: 'Derrota a Deerclops.' },
+      { condicion: B('downedDeerclops'), texto: 'Derrota al [[n:Deerclops]].' },
       { condicion: P('Bone Helm'), opcional: true, texto: 'En Experto, guarda el [[Bone Helm]] de su bolsa.' },
     ],
     combate: 'Lanza fragmentos de hielo por el suelo y oscurece la pantalla con sus gritos. No te quedes en el suelo frente a él y mantén la distancia.',
-    desbloquea: 'Armas y objetos de Deerclops; nada obligatorio para la ruta.',
+    desbloquea: 'Armas y objetos del [[n:Deerclops]]; nada obligatorio para la ruta.',
     listoCuando: 'Lo has vencido o lo aplazas (es opcional).',
     completadaCuando: B('downedDeerclops'),
     conserva: 'Nada imprescindible.',

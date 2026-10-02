@@ -1884,7 +1884,7 @@
     },
     {
      "id": "deerclops.2",
-     "texto": "Derrota a Deerclops.",
+     "texto": "Derrota al {n:Terraria/Deerclops}.",
      "condicion": {
       "tipo": "bandera",
       "bandera": "downedDeerclops"
@@ -1902,7 +1902,7 @@
     }
    ],
    "combate": "Lanza fragmentos de hielo por el suelo y oscurece la pantalla con sus gritos. No te quedes en el suelo frente a él y mantén la distancia.",
-   "desbloquea": "Armas y objetos de Deerclops; nada obligatorio para la ruta.",
+   "desbloquea": "Armas y objetos del {n:Terraria/Deerclops}; nada obligatorio para la ruta.",
    "listoCuando": "Lo has vencido o lo aplazas (es opcional).",
    "completadaCuando": {
     "tipo": "bandera",
@@ -6378,7 +6378,7 @@
     },
     {
      "id": "zenith.3",
-     "texto": "Consigue la {o:Terraria/InfluxWaver} (marcianos), la {o:Terraria/TheHorsemansBlade} (Pumpking) y la {o:Terraria/Seedler} (Plantera).",
+     "texto": "Consigue la {o:Terraria/InfluxWaver} (marcianos), la {o:Terraria/TheHorsemansBlade} ({n:Terraria/Pumpking}) y la {o:Terraria/Seedler} (Plantera).",
      "condicion": {
       "tipo": "todas",
       "condiciones": [
@@ -7188,16 +7188,16 @@
      "tipo": "flujo",
      "items": [
       "Derrota a Plantera",
-      "Consigue la Temple Key",
+      "Consigue la {o:Terraria/TempleKey}",
       "Abre la puerta",
       "Baja hasta el altar",
-      "Usa la Power Cell",
-      "Golem"
+      "Usa la {o:Terraria/LihzahrdPowerCell}",
+      "Invoca al {n:Terraria/Golem}"
      ]
     },
     {
      "tipo": "titulo",
-     "texto": "Solar Tablet Fragment y el Eclipse"
+     "texto": "El {o:Terraria/LunarTabletFragment} y el Eclipse"
     },
     {
      "tipo": "parrafo",
@@ -7534,7 +7534,7 @@
     },
     {
      "tipo": "titulo",
-     "texto": "El Witch Doctor"
+     "texto": "El {n:Terraria/WitchDoctor}"
     },
     {
      "tipo": "parrafo",
@@ -7783,8 +7783,8 @@
      "items": [
       "Mira por dónde avanza la zona",
       "Corta con un túnel de 3 o más casillas",
-      "Limpia el borde con Purification Powder",
-      "Con el Clentaminator, rocía Green Solution"
+      "Limpia el borde con {o:Terraria/PurificationPowder}",
+      "Con el {o:Terraria/Clentaminator}, rocía {o:Terraria/GreenSolution}"
      ]
     },
     {
@@ -7798,7 +7798,7 @@
     {
      "tipo": "aviso",
      "estilo": "nota",
-     "texto": "El Clentaminator también extiende zonas. Si rocías Blue Solution estás creando Lo Sagrado allí donde apuntas, aunque sea en mitad de tu mundo."
+     "texto": "El Clentaminator también extiende zonas. Si rocías {o:Terraria/BlueSolution} estás creando Lo Sagrado allí donde apuntas, aunque sea en mitad de tu mundo."
     },
     {
      "tipo": "fuentes",
@@ -8210,7 +8210,7 @@
     },
     {
      "tipo": "titulo",
-     "texto": "El Zoologist y el Bestiario"
+     "texto": "La {n:Terraria/BestiaryGirl} y el Bestiario"
     },
     {
      "tipo": "parrafo",
@@ -9141,7 +9141,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -9151,7 +9151,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -9161,7 +9161,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -9171,7 +9171,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -9181,7 +9181,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -9191,7 +9191,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -9285,7 +9285,7 @@
       {
        "ref": "Terraria/Starfury",
        "origen": "",
-       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los Antlion Egg, lo que la hace útil en el desierto subterráneo.",
+       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los {o:Terraria/AntlionEggs}, lo que la hace útil en el desierto subterráneo.",
        "rol": "arma (un solo objetivo)",
        "conjunto": "",
        "marcas": [
@@ -9421,7 +9421,7 @@
        "origen": "",
        "nota": "Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -9432,7 +9432,7 @@
        "origen": "",
        "nota": "Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -9443,7 +9443,7 @@
        "origen": "",
        "nota": "Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -9454,7 +9454,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "★",
         "◇"
@@ -9465,7 +9465,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "★",
         "◇"
@@ -9476,7 +9476,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "★",
         "◇"
@@ -9487,7 +9487,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -9497,7 +9497,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -9507,7 +9507,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -9527,7 +9527,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -9537,7 +9537,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -9547,7 +9547,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -9848,7 +9848,7 @@
       {
        "ref": "Terraria/Starfury",
        "origen": "",
-       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los Antlion Egg, lo que la hace útil en el desierto subterráneo.",
+       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los {o:Terraria/AntlionEggs}, lo que la hace útil en el desierto subterráneo.",
        "rol": "arma (un solo objetivo)",
        "conjunto": "",
        "marcas": []
@@ -9974,7 +9974,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "★"
        ]
@@ -9984,7 +9984,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "★"
        ]
@@ -9994,7 +9994,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "★"
        ]
@@ -10004,7 +10004,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10014,7 +10014,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10024,7 +10024,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10034,7 +10034,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10044,7 +10044,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10054,7 +10054,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10064,7 +10064,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -10074,7 +10074,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -10084,7 +10084,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -10094,7 +10094,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -10104,7 +10104,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -10114,7 +10114,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -10463,7 +10463,7 @@
       {
        "ref": "Terraria/Starfury",
        "origen": "",
-       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los Antlion Egg, lo que la hace útil en el desierto subterráneo.",
+       "nota": "Emite luz a través de los bloques, lo que sirve para explorar más rápido. Como arma, también puede desactivar peligros del entorno como los cactus rodantes o los {o:Terraria/AntlionEggs}, lo que la hace útil en el desierto subterráneo.",
        "rol": "arma (un solo objetivo)",
        "conjunto": "",
        "marcas": []
@@ -10561,7 +10561,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -10571,7 +10571,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -10581,7 +10581,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -10601,7 +10601,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10611,7 +10611,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10621,7 +10621,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -10631,7 +10631,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10641,7 +10641,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10651,7 +10651,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -10661,7 +10661,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -10671,7 +10671,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -10681,7 +10681,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -11224,9 +11224,9 @@
       {
        "ref": "Terraria/AdamantiteHelmet",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Helmet)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con el casco)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -11248,9 +11248,9 @@
       {
        "ref": "Terraria/TitaniumMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -11258,17 +11258,17 @@
       {
        "ref": "Terraria/AdamantiteLeggings",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Helmet)",
+       "nota": "Grupo en la wiki: Defensiva. (con el casco)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
        "ref": "Terraria/TitaniumBreastplate",
        "origen": "",
-       "nota": "(casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico. Grupo en la wiki: Defensiva.",
+       "nota": "(con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -11276,9 +11276,9 @@
       {
        "ref": "Terraria/TitaniumLeggings",
        "origen": "",
-       "nota": "(casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico. Grupo en la wiki: Defensiva.",
+       "nota": "(con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -11286,9 +11286,9 @@
       {
        "ref": "Terraria/AdamantiteBreastplate",
        "origen": "",
-       "nota": "(casco Helmet)",
+       "nota": "(con el casco)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -11316,7 +11316,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -11326,7 +11326,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -11336,7 +11336,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -11346,7 +11346,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -11356,7 +11356,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -11366,7 +11366,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -11890,9 +11890,9 @@
       {
        "ref": "Terraria/HallowedMask",
        "origen": "",
-       "nota": "Grupo en la wiki: General. Comparada con la {o:Terraria/ChlorophyteMask}, la {o:Terraria/HallowedMask} ofrece 4 puntos más de defensa y un 4% más de probabilidad de golpe crítico a costa de un 6% menos de daño. (casco Mask)",
+       "nota": "Grupo en la wiki: General. Comparada con la {o:Terraria/ChlorophyteMask}, la {o:Terraria/HallowedMask} ofrece 4 puntos más de defensa y un 4% más de probabilidad de golpe crítico a costa de un 6% menos de daño. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -11900,7 +11900,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -11914,9 +11914,9 @@
       {
        "ref": "Terraria/ChlorophyteMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Ofensiva. (casco Mask) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "Grupo en la wiki: Ofensiva. (con la máscara) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -11934,7 +11934,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -11942,7 +11942,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -11958,25 +11958,25 @@
       {
        "ref": "Terraria/HallowedPlateMail",
        "origen": "",
-       "nota": "(casco Mask)",
+       "nota": "(con la máscara)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedGreaves",
        "origen": "",
-       "nota": "(casco Mask)",
+       "nota": "(con la máscara)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/ChlorophytePlateMail",
        "origen": "",
-       "nota": "(casco Mask) Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "(con la máscara) Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -11984,9 +11984,9 @@
       {
        "ref": "Terraria/ChlorophyteGreaves",
        "origen": "",
-       "nota": "(casco Mask) Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "(con la máscara) Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -12026,7 +12026,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -12036,7 +12036,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -12046,7 +12046,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -12499,7 +12499,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Comparada con la {o:Terraria/ChlorophyteMask}, la {o:Terraria/HallowedMask} ofrece 4 puntos más de defensa y un 4% más de probabilidad de golpe crítico a costa de un 6% menos de daño.",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -12539,7 +12539,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -12547,7 +12547,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -12555,7 +12555,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de tortuga",
+       "conjunto": "Armadura de tortuga",
        "marcas": []
       },
       {
@@ -12563,7 +12563,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -12571,7 +12571,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -13168,9 +13168,9 @@
       {
        "ref": "Terraria/BeetleHelmet",
        "origen": "",
-       "nota": "Grupo en la wiki: General/defensiva. (casco Shell) Grupo en la wiki: Ofensiva. (casco Scale Mail)",
+       "nota": "Grupo en la wiki: General/defensiva. (con la coraza) Grupo en la wiki: Ofensiva. (casco Scale Mail)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -13178,9 +13178,9 @@
       {
        "ref": "Terraria/BeetleShell",
        "origen": "",
-       "nota": "Grupo en la wiki: General/defensiva. (casco Shell)",
+       "nota": "Grupo en la wiki: General/defensiva. (con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -13188,9 +13188,9 @@
       {
        "ref": "Terraria/BeetleLeggings",
        "origen": "",
-       "nota": "Grupo en la wiki: General/defensiva. (casco Shell) Grupo en la wiki: Ofensiva. (casco Scale Mail)",
+       "nota": "Grupo en la wiki: General/defensiva. (con la coraza) Grupo en la wiki: Ofensiva. (casco Scale Mail)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -13216,7 +13216,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. (casco Scale Mail)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": []
       },
       {
@@ -13836,7 +13836,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fulguración solar",
+       "conjunto": "Armadura de fulguración solar",
        "marcas": [
         "★"
        ]
@@ -13846,7 +13846,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fulguración solar",
+       "conjunto": "Armadura de fulguración solar",
        "marcas": [
         "★"
        ]
@@ -13856,7 +13856,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fulguración solar",
+       "conjunto": "Armadura de fulguración solar",
        "marcas": [
         "★"
        ]
@@ -14425,7 +14425,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -14435,7 +14435,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -14445,7 +14445,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -14455,7 +14455,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -14465,7 +14465,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -14475,7 +14475,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -14713,7 +14713,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -14721,7 +14721,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -14729,7 +14729,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -14737,7 +14737,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -14748,7 +14748,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -14759,7 +14759,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -14770,7 +14770,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -14780,7 +14780,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -14790,7 +14790,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -14800,7 +14800,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -14810,7 +14810,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -14820,7 +14820,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -14840,7 +14840,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -14850,7 +14850,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -14860,7 +14860,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -15257,7 +15257,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "★",
         "◇"
@@ -15268,7 +15268,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "★",
         "◇"
@@ -15279,7 +15279,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "★",
         "◇"
@@ -15290,7 +15290,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "★",
         "◇"
@@ -15301,7 +15301,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "★",
         "◇"
@@ -15312,7 +15312,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio. Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "★",
         "◇"
@@ -15323,7 +15323,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -15331,7 +15331,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -15339,7 +15339,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de fósil",
+       "conjunto": "Armadura de fósil",
        "marcas": []
       },
       {
@@ -15355,7 +15355,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -15365,7 +15365,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -15375,7 +15375,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -15385,7 +15385,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -15395,7 +15395,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -15405,7 +15405,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -15856,7 +15856,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de los muertos",
+       "conjunto": "Armadura de los muertos",
        "marcas": []
       },
       {
@@ -15864,7 +15864,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de los muertos",
+       "conjunto": "Armadura de los muertos",
        "marcas": []
       },
       {
@@ -15872,7 +15872,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de los muertos",
+       "conjunto": "Armadura de los muertos",
        "marcas": []
       },
       {
@@ -15890,7 +15890,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -15900,7 +15900,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -15910,7 +15910,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -15920,7 +15920,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -15930,7 +15930,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -15940,7 +15940,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -15950,7 +15950,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -15960,7 +15960,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -15970,7 +15970,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -15980,7 +15980,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -15990,7 +15990,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -16000,7 +16000,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -16461,9 +16461,9 @@
       {
        "ref": "Terraria/AdamantiteMask",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Mask)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -16471,7 +16471,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura helada",
+       "conjunto": "Armadura helada",
        "marcas": []
       },
       {
@@ -16487,7 +16487,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura helada",
+       "conjunto": "Armadura helada",
        "marcas": []
       },
       {
@@ -16495,23 +16495,23 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura helada",
+       "conjunto": "Armadura helada",
        "marcas": []
       },
       {
        "ref": "Terraria/AdamantiteBreastplate",
        "origen": "",
-       "nota": "(casco Mask)",
+       "nota": "(con la máscara)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
        "ref": "Terraria/AdamantiteLeggings",
        "origen": "",
-       "nota": "(casco Mask)",
+       "nota": "(con la máscara)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -16539,7 +16539,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -16549,7 +16549,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -16559,7 +16559,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -16567,9 +16567,9 @@
       {
        "ref": "Terraria/TitaniumMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -16577,9 +16577,9 @@
       {
        "ref": "Terraria/TitaniumBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -16587,9 +16587,9 @@
       {
        "ref": "Terraria/TitaniumLeggings",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -16599,7 +16599,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -16609,7 +16609,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -16619,7 +16619,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -17139,17 +17139,17 @@
       {
        "ref": "Terraria/ChlorophyteHelmet",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Helmet)",
+       "nota": "Grupo en la wiki: General. (con el casco)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": []
       },
       {
        "ref": "Terraria/ChlorophytePlateMail",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Helmet) Grupo en la wiki: Defensiva. (casco Mask) Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "Grupo en la wiki: General. (con el casco) Grupo en la wiki: Defensiva. (con la máscara) Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -17157,9 +17157,9 @@
       {
        "ref": "Terraria/ChlorophyteGreaves",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Helmet) Grupo en la wiki: Defensiva. (casco Mask) Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "Grupo en la wiki: General. (con el casco) Grupo en la wiki: Defensiva. (con la máscara) Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -17167,9 +17167,9 @@
       {
        "ref": "Terraria/ChlorophyteMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) Grupo en la wiki: Híbrido sin invocador.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -17201,25 +17201,25 @@
       {
        "ref": "Terraria/HallowedHelmet",
        "origen": "",
-       "nota": "(casco Helmet)",
+       "nota": "(con el casco)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedPlateMail",
        "origen": "",
-       "nota": "(casco Helmet)",
+       "nota": "(con el casco)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedGreaves",
        "origen": "",
-       "nota": "(casco Helmet)",
+       "nota": "(con el casco)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -17267,7 +17267,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -17277,7 +17277,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -17287,7 +17287,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -17797,7 +17797,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -17805,7 +17805,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -17813,7 +17813,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -17821,7 +17821,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -17829,7 +17829,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18474,7 +18474,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva. (para arcos, repetidores y el {o:Terraria/StakeLauncher})",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18482,7 +18482,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva. (para armas de fuego)",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18490,7 +18490,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva. (para armas especialistas)",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18548,7 +18548,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18556,7 +18556,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de piñonita",
+       "conjunto": "Armadura de piñonita",
        "marcas": []
       },
       {
@@ -18592,9 +18592,9 @@
       {
        "ref": "Terraria/BeetleHelmet",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -18602,9 +18602,9 @@
       {
        "ref": "Terraria/BeetleShell",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -18612,9 +18612,9 @@
       {
        "ref": "Terraria/BeetleLeggings",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -19351,7 +19351,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura del vórtice",
+       "conjunto": "Armadura del vórtice",
        "marcas": []
       },
       {
@@ -19359,7 +19359,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura del vórtice",
+       "conjunto": "Armadura del vórtice",
        "marcas": []
       },
       {
@@ -19367,7 +19367,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura del vórtice",
+       "conjunto": "Armadura del vórtice",
        "marcas": []
       },
       {
@@ -19984,7 +19984,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -19994,7 +19994,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -20004,7 +20004,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -20014,7 +20014,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -20024,7 +20024,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -20034,7 +20034,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -20307,7 +20307,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20315,7 +20315,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20323,7 +20323,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20347,7 +20347,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -20358,7 +20358,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -20369,7 +20369,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -20380,7 +20380,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -20390,7 +20390,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -20400,7 +20400,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -20410,7 +20410,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -20420,7 +20420,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -20430,7 +20430,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -20450,7 +20450,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -20460,7 +20460,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -20470,7 +20470,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -20905,7 +20905,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20913,7 +20913,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20921,7 +20921,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -20929,7 +20929,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun})",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -20937,7 +20937,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun})",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -20945,7 +20945,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun}) Grupo en la wiki: General/ofensiva.",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -20985,7 +20985,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -20995,7 +20995,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -21005,7 +21005,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -21015,7 +21015,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21025,7 +21025,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21035,7 +21035,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21045,7 +21045,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21055,7 +21055,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21065,7 +21065,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21075,7 +21075,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -21085,7 +21085,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -21095,7 +21095,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -21512,7 +21512,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -21520,7 +21520,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -21528,7 +21528,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva.",
        "rol": "",
-       "conjunto": "armadura para la selva",
+       "conjunto": "Armadura para la selva",
        "marcas": []
       },
       {
@@ -21536,7 +21536,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun})",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -21544,7 +21544,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun})",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -21552,7 +21552,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/defensiva. (spam de {o:Terraria/ZapinatorGray}/{o:Terraria/SpaceGun}) Grupo en la wiki: General/ofensiva.",
        "rol": "",
-       "conjunto": "armadura de meteorito",
+       "conjunto": "Armadura de meteorito",
        "marcas": []
       },
       {
@@ -21602,7 +21602,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -21612,7 +21612,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -21622,7 +21622,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -21632,7 +21632,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21642,7 +21642,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21652,7 +21652,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -21662,7 +21662,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21672,7 +21672,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21682,7 +21682,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -21692,7 +21692,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -21702,7 +21702,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -21712,7 +21712,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -22161,17 +22161,17 @@
       {
        "ref": "Terraria/AdamantiteHeadgear",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Headgear)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con el tocado)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
        "ref": "Terraria/AdamantiteBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. Grupo en la wiki: Defensiva. (casco Headgear)",
+       "nota": "Grupo en la wiki: General/ofensiva. Grupo en la wiki: Defensiva. (con el tocado)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -22185,9 +22185,9 @@
       {
        "ref": "Terraria/TitaniumMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -22195,9 +22195,9 @@
       {
        "ref": "Terraria/AdamantiteLeggings",
        "origen": "",
-       "nota": "(casco Headgear)",
+       "nota": "(con el tocado)",
        "rol": "",
-       "conjunto": "armadura de adamantita",
+       "conjunto": "Armadura de adamantita",
        "marcas": []
       },
       {
@@ -22225,7 +22225,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -22235,7 +22235,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -22245,7 +22245,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -22253,9 +22253,9 @@
       {
        "ref": "Terraria/TitaniumBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -22263,9 +22263,9 @@
       {
        "ref": "Terraria/TitaniumLeggings",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -22275,7 +22275,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -22285,7 +22285,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -22295,7 +22295,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -22783,17 +22783,17 @@
       {
        "ref": "Terraria/ChlorophyteHeadgear",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Headgear)",
+       "nota": "Grupo en la wiki: General. (con el tocado)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": []
       },
       {
        "ref": "Terraria/ChlorophytePlateMail",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Headgear) Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: General. (con el tocado) Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -22801,9 +22801,9 @@
       {
        "ref": "Terraria/ChlorophyteGreaves",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Headgear) Grupo en la wiki: Híbrido con invocador / General/pasiva. (casco Visor) Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: General. (con el tocado) Grupo en la wiki: Híbrido con invocador / General/pasiva. (con el visor) Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -22811,9 +22811,9 @@
       {
        "ref": "Terraria/HallowedHeadgear",
        "origen": "",
-       "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Defensiva. (casco Headgear)",
+       "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Defensiva. (con el tocado)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -22835,17 +22835,17 @@
       {
        "ref": "Terraria/HallowedPlateMail",
        "origen": "",
-       "nota": "(casco Headgear)",
+       "nota": "(con el tocado)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedGreaves",
        "origen": "",
-       "nota": "(casco Headgear)",
+       "nota": "(con el tocado)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -22899,9 +22899,9 @@
       {
        "ref": "Terraria/ChlorophyteMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -22911,7 +22911,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -22921,7 +22921,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -22931,7 +22931,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -23402,33 +23402,33 @@
       {
        "ref": "Terraria/SpectreMask",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Mask)",
+       "nota": "Grupo en la wiki: General. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
        "ref": "Terraria/SpectreRobe",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Mask) Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: General. (con la máscara) Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
        "ref": "Terraria/SpectrePants",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Mask) Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: General. (con la máscara) Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
        "ref": "Terraria/SpectreHood",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
@@ -23975,25 +23975,25 @@
       {
        "ref": "Terraria/SpectreMask",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Mask)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
        "ref": "Terraria/SpectreRobe",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Mask) Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con la máscara) Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
        "ref": "Terraria/SpectrePants",
        "origen": "",
-       "nota": "Grupo en la wiki: General/ofensiva. (casco Mask) Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: General/ofensiva. (con la máscara) Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
@@ -24007,9 +24007,9 @@
       {
        "ref": "Terraria/SpectreHood",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Hood)",
+       "nota": "Grupo en la wiki: Defensiva. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura espectral",
+       "conjunto": "Armadura espectral",
        "marcas": []
       },
       {
@@ -24045,9 +24045,9 @@
       {
        "ref": "Terraria/BeetleHelmet",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -24055,9 +24055,9 @@
       {
        "ref": "Terraria/BeetleShell",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -24065,9 +24065,9 @@
       {
        "ref": "Terraria/BeetleLeggings",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -24566,7 +24566,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva.",
        "rol": "",
-       "conjunto": "armadura de Artista Oscuro",
+       "conjunto": "Armadura de Artista Oscuro",
        "marcas": []
       },
       {
@@ -24574,7 +24574,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva.",
        "rol": "",
-       "conjunto": "armadura de Artista Oscuro",
+       "conjunto": "Armadura de Artista Oscuro",
        "marcas": []
       },
       {
@@ -24582,7 +24582,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Artista Oscuro",
+       "conjunto": "Armadura de Artista Oscuro",
        "marcas": []
       },
       {
@@ -24731,7 +24731,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de nebulosa",
+       "conjunto": "Armadura de nebulosa",
        "marcas": []
       },
       {
@@ -24739,7 +24739,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de nebulosa",
+       "conjunto": "Armadura de nebulosa",
        "marcas": []
       },
       {
@@ -24747,7 +24747,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de nebulosa",
+       "conjunto": "Armadura de nebulosa",
        "marcas": []
       },
       {
@@ -25266,7 +25266,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -25276,7 +25276,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -25286,7 +25286,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de cactus",
+       "conjunto": "Armadura de cactus",
        "marcas": [
         "◇"
        ]
@@ -25296,7 +25296,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -25306,7 +25306,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -25316,7 +25316,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de madera",
+       "conjunto": "Armadura de madera",
        "marcas": [
         "◇"
        ]
@@ -25462,7 +25462,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -25473,7 +25473,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -25484,7 +25484,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Si no usas el conjunto completo de platino para disfrutar de su bonificación de defensa extra, los {o:Terraria/JunglePants} dan técnicamente más defensa que las {o:Terraria/PlatinumGreaves}.",
        "rol": "",
-       "conjunto": "armadura de platino",
+       "conjunto": "Armadura de platino",
        "marcas": [
         "★",
         "◇"
@@ -25495,7 +25495,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -25505,7 +25505,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -25515,7 +25515,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -25525,7 +25525,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -25535,7 +25535,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -25545,7 +25545,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de oro",
+       "conjunto": "Armadura de oro",
        "marcas": [
         "◇"
        ]
@@ -25555,7 +25555,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -25565,7 +25565,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -25575,7 +25575,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Cañón de cristal.",
        "rol": "",
-       "conjunto": "armadura de calabaza",
+       "conjunto": "Armadura de calabaza",
        "marcas": [
         "◇"
        ]
@@ -25914,7 +25914,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -25922,7 +25922,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -25930,7 +25930,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -25938,7 +25938,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -25948,7 +25948,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -25958,7 +25958,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -25968,7 +25968,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -25978,7 +25978,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -25988,7 +25988,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -25998,7 +25998,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26008,7 +26008,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26018,7 +26018,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General. Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio. Los invocadores no deben usar este objeto porque mejora sobre todo la probabilidad de golpe crítico. Para una explicación, véase Golpe crítico § Notas.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26028,7 +26028,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26038,7 +26038,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26048,7 +26048,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26339,7 +26339,7 @@
       {
        "ref": "Terraria/VampireFrogStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Minion-mixing. (1x) Conviene siempre tener al menos una rana vampiro activa apuntando al ojo superior del {n:Terraria/WallofFlesh} para cualquier invocador que luche contra él. Grupo en la wiki: A tope / Con Spinal Tap. (1-2x)",
+       "nota": "Grupo en la wiki: Minion-mixing. (1x) Conviene siempre tener al menos una rana vampiro activa apuntando al ojo superior del {n:Terraria/WallofFlesh} para cualquier invocador que luche contra él. Grupo en la wiki: A tope / Con {o:Terraria/BoneWhip}. (1-2x)",
        "rol": "minion",
        "conjunto": "",
        "marcas": [
@@ -26365,7 +26365,7 @@
       {
        "ref": "Terraria/BoneWhip",
        "origen": "",
-       "nota": "Grupo en la wiki: Látigos primarios. El Spinal Tap se usa mejor con minion-mixing, donde su gran daño de etiqueta aprovecha los ataques frecuentes de los minions rápidos. Aun así, es siempre al menos algo aplicable en todos los equipos de daño de invocación de esta etapa.",
+       "nota": "Grupo en la wiki: Látigos primarios. El {o:Terraria/BoneWhip} se usa mejor con minion-mixing, donde su gran daño de etiqueta aprovecha los ataques frecuentes de los minions rápidos. Aun así, es siempre al menos algo aplicable en todos los equipos de daño de invocación de esta etapa.",
        "rol": "arma de invocación en mano",
        "conjunto": "",
        "marcas": []
@@ -26419,7 +26419,7 @@
        "origen": "",
        "nota": "Para minion-mixing Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": [
         "◇"
        ]
@@ -26429,7 +26429,7 @@
        "origen": "",
        "nota": "Para minion-mixing",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": []
       },
       {
@@ -26437,7 +26437,7 @@
        "origen": "",
        "nota": "Para minion-mixing",
        "rol": "",
-       "conjunto": "armadura de abeja",
+       "conjunto": "Armadura de abeja",
        "marcas": []
       },
       {
@@ -26445,7 +26445,7 @@
        "origen": "",
        "nota": "Para daño activo con látigo",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -26453,7 +26453,7 @@
        "origen": "",
        "nota": "Para daño activo con látigo",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -26461,7 +26461,7 @@
        "origen": "",
        "nota": "Para daño activo con látigo",
        "rol": "",
-       "conjunto": "armadura de obsidiana",
+       "conjunto": "Armadura de obsidiana",
        "marcas": []
       },
       {
@@ -26469,7 +26469,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -26479,7 +26479,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -26489,7 +26489,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura fundida",
+       "conjunto": "Armadura fundida",
        "marcas": [
         "◇"
        ]
@@ -26499,7 +26499,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -26509,7 +26509,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -26519,7 +26519,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Exclusivo de los mundos con El Carmesí, salvo que se cree un Carmesí artificial en modo difícil comprando semillas carmesí al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura carmesí",
+       "conjunto": "Armadura carmesí",
        "marcas": [
         "◇"
        ]
@@ -26529,7 +26529,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26539,7 +26539,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26549,7 +26549,7 @@
        "origen": "",
        "nota": "Exclusivo de los mundos con La Corrupción, salvo que se cree una Corrupción artificial en modo difícil comprando semillas corruptas al {n:Terraria/Dryad} estando en un Cementerio.",
        "rol": "",
-       "conjunto": "armadura de las sombras",
+       "conjunto": "Armadura de las sombras",
        "marcas": [
         "◇"
        ]
@@ -26559,7 +26559,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26569,7 +26569,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26579,7 +26579,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de gladiador",
+       "conjunto": "Armadura de gladiador",
        "marcas": [
         "◇"
        ]
@@ -26920,7 +26920,7 @@
       {
        "ref": "Terraria/Smolstar",
        "origen": "",
-       "nota": "Grupo en la wiki: Con Cool Whip. (a tope, la mayoría de huecos)",
+       "nota": "Grupo en la wiki: Con {o:Terraria/CoolWhip}. (a tope, la mayoría de huecos)",
        "rol": "minion",
        "conjunto": "",
        "marcas": [
@@ -26930,7 +26930,7 @@
       {
        "ref": "Terraria/SanguineStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Con Firecracker. (a tope)",
+       "nota": "Grupo en la wiki: Con {o:Terraria/FireWhip}. (a tope)",
        "rol": "minion",
        "conjunto": "",
        "marcas": [
@@ -26940,7 +26940,7 @@
       {
        "ref": "Terraria/SpiderStaff",
        "origen": "",
-       "nota": "Grupo en la wiki: Con Firecracker. (si procede, 3x) Grupo en la wiki: General. (2-3x) Si el jugador decide enfrentarse al {n:Terraria/BloodNautilus} o a la {n:Terraria/QueenSlimeBoss}, el {o:Terraria/SanguineStaff} y el {o:Terraria/Smolstar} suelen ser alternativas más fuertes en general. Aun así, las arañas pueden aportar en ciertos casos de combate de control de masas.",
+       "nota": "Grupo en la wiki: Con {o:Terraria/FireWhip}. (si procede, 3x) Grupo en la wiki: General. (2-3x) Si el jugador decide enfrentarse al {n:Terraria/BloodNautilus} o a la {n:Terraria/QueenSlimeBoss}, el {o:Terraria/SanguineStaff} y el {o:Terraria/Smolstar} suelen ser alternativas más fuertes en general. Aun así, las arañas pueden aportar en ciertos casos de combate de control de masas.",
        "rol": "minion",
        "conjunto": "",
        "marcas": [
@@ -27003,7 +27003,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva.",
        "rol": "",
-       "conjunto": "armadura de araña",
+       "conjunto": "Armadura de araña",
        "marcas": []
       },
       {
@@ -27011,7 +27011,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva.",
        "rol": "",
-       "conjunto": "armadura de araña",
+       "conjunto": "Armadura de araña",
        "marcas": []
       },
       {
@@ -27019,7 +27019,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Defensiva. Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de las {o:Terraria/MythrilGreaves}. Las {o:Terraria/OrichalcumLeggings} son una alternativa sólida para quien quiera un papel más activo en el daño, ya que cambian un hueco de minion extra y un 6% de daño de invocación por 3 puntos más de defensa y un 8% de mejora a todos los tipos de daño (además de un 11% más de velocidad de movimiento).",
        "rol": "",
-       "conjunto": "armadura de araña",
+       "conjunto": "Armadura de araña",
        "marcas": [
         "◇"
        ]
@@ -27027,9 +27027,9 @@
       {
        "ref": "Terraria/TitaniumMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. La Titanium Mask también aumenta la velocidad de látigo, ya que esta pieza da en total un 8% de velocidad de cuerpo a cuerpo. En mundos con solo adamantita, las builds defensivas de invocador se vuelven menos viables, ya que el {o:Terraria/AdamantiteHelmet} no da mejora de velocidad de látigo. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. La {o:Terraria/TitaniumMask} también aumenta la velocidad de látigo, ya que esta pieza da en total un 8% de velocidad de cuerpo a cuerpo. En mundos con solo adamantita, las builds defensivas de invocador se vuelven menos viables, ya que el {o:Terraria/AdamantiteHelmet} no da mejora de velocidad de látigo. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -27049,7 +27049,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -27059,7 +27059,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Esta armadura suele ser preferible a la armadura más defensiva que se muestra abajo, si el jugador puede permitirse esquivar más durante un tiempo y atacar desde lejos para regenerar vida. Con minions como el {o:Terraria/Smolstar}, la bonificación de conjunto de la armadura de paladio estará siempre activa. Consulta Armadura de paladio § Consejos para una explicación más detallada.",
        "rol": "",
-       "conjunto": "armadura de paladio",
+       "conjunto": "Armadura de paladio",
        "marcas": [
         "◇"
        ]
@@ -27067,9 +27067,9 @@
       {
        "ref": "Terraria/TitaniumBreastplate",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -27077,9 +27077,9 @@
       {
        "ref": "Terraria/TitaniumLeggings",
        "origen": "",
-       "nota": "Grupo en la wiki: Defensiva. (casco Mask) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
+       "nota": "Grupo en la wiki: Defensiva. (con la máscara) La armadura de adamantita, usando su casco ({o:Terraria/AdamantiteHelmet}), es una alternativa ligeramente menos defensiva y más ofensiva: ofrece 1 punto menos de defensa (y un 1% menos de velocidad de movimiento) a cambio de un 1% más de daño y un 1% más de probabilidad de golpe crítico.",
        "rol": "",
-       "conjunto": "armadura de titanio",
+       "conjunto": "Armadura de titanio",
        "marcas": [
         "◇"
        ]
@@ -27089,7 +27089,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -27099,7 +27099,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -27109,7 +27109,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -27575,33 +27575,33 @@
       {
        "ref": "Terraria/HallowedHood",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Hood)",
+       "nota": "Grupo en la wiki: General. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedPlateMail",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Hood)",
+       "nota": "Grupo en la wiki: General. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/HallowedGreaves",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Hood)",
+       "nota": "Grupo en la wiki: General. (con la capucha)",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
        "ref": "Terraria/ChlorophytePlateMail",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Visor) Grupo en la wiki: Híbrido con invocador / General/pasiva. Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: General. (con el visor) Grupo en la wiki: Híbrido con invocador / General/pasiva. Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -27609,9 +27609,9 @@
       {
        "ref": "Terraria/ChlorophyteGreaves",
        "origen": "",
-       "nota": "Grupo en la wiki: General. (casco Visor) Grupo en la wiki: Híbrido con invocador / General/pasiva. Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: General. (con el visor) Grupo en la wiki: Híbrido con invocador / General/pasiva. Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -27647,7 +27647,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Grupo en la wiki: Híbrido con invocador / Centrado en centinelas. Si usas una build de tanque",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": [
         "◇"
        ]
@@ -27657,7 +27657,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -27665,7 +27665,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -27691,9 +27691,9 @@
       {
        "ref": "Terraria/ChlorophyteMask",
        "origen": "",
-       "nota": "Grupo en la wiki: Híbrido sin invocador. (casco Mask)",
+       "nota": "Grupo en la wiki: Híbrido sin invocador. (con la máscara)",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": [
         "◇"
        ]
@@ -27703,7 +27703,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -27713,7 +27713,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -27723,7 +27723,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Híbrido sin invocador.",
        "rol": "",
-       "conjunto": "armadura de asesino de cristal",
+       "conjunto": "Armadura de asesino de cristal",
        "marcas": [
         "◇"
        ]
@@ -28165,7 +28165,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva.",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★"
        ]
@@ -28175,7 +28175,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva.",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★"
        ]
@@ -28185,7 +28185,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General/ofensiva. Grupo en la wiki: Defensiva. Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de las {o:Terraria/MythrilGreaves}. Las {o:Terraria/OrichalcumLeggings} son una alternativa sólida para quien quiera un papel más activo en el daño, ya que cambian un hueco de minion extra y un 6% de daño de invocación por 3 puntos más de defensa y un 8% de mejora a todos los tipos de daño (además de un 11% más de velocidad de movimiento).",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★",
         "◇"
@@ -28196,7 +28196,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Grupo en la wiki: Híbrido con invocador. Su aumento de regeneración de vida es útil incluso en equipos no híbridos de cuerpo a cuerpo e invocación. No da ninguna otra mejora aparte del aumento del máximo de centinelas, que sirve sea cual sea la clase.",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": [
         "★",
         "◇"
@@ -28207,7 +28207,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": [
         "★"
        ]
@@ -28217,7 +28217,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de escudero",
+       "conjunto": "Armadura de escudero",
        "marcas": []
       },
       {
@@ -28225,7 +28225,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -28233,7 +28233,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -28241,7 +28241,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura sagrada",
+       "conjunto": "Armadura sagrada",
        "marcas": []
       },
       {
@@ -28249,7 +28249,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": []
       },
       {
@@ -28257,7 +28257,7 @@
        "origen": "",
        "nota": "",
        "rol": "",
-       "conjunto": "armadura de clorofita",
+       "conjunto": "Armadura de clorofita",
        "marcas": []
       }
      ],
@@ -28796,7 +28796,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★"
        ]
@@ -28806,7 +28806,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★"
        ]
@@ -28816,7 +28816,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: General.",
        "rol": "",
-       "conjunto": "armadura tiki",
+       "conjunto": "Armadura tiki",
        "marcas": [
         "★"
        ]
@@ -28826,7 +28826,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva.",
        "rol": "",
-       "conjunto": "armadura tétrica",
+       "conjunto": "Armadura tétrica",
        "marcas": [
         "★"
        ]
@@ -28836,7 +28836,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador. Úsalo en lugar de la {o:Terraria/MonkShirt}, el {o:Terraria/ApprenticeAltShirt} o la {o:Terraria/SpectreRobe}. No lo uses en lugar del {o:Terraria/HuntressAltShirt}.",
        "rol": "",
-       "conjunto": "armadura tétrica",
+       "conjunto": "Armadura tétrica",
        "marcas": [
         "★",
         "◇"
@@ -28847,7 +28847,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Grupo en la wiki: Híbrido con invocador. Úsalo, o los {o:Terraria/TikiPants}, en lugar de los {o:Terraria/HuntressAltPants}. No lo uses en lugar de los {o:Terraria/ApprenticeAltPants} ni de las {o:Terraria/SquireAltPants}.",
        "rol": "",
-       "conjunto": "armadura tétrica",
+       "conjunto": "Armadura tétrica",
        "marcas": [
         "★",
         "◇"
@@ -28858,7 +28858,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★"
        ]
@@ -28868,7 +28868,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva. Los huecos de cabeza y piernas de la armadura de caballero de Valhalla pueden cambiarse por piezas que den capacidad de minions, conservando la gran regeneración de vida de la coraza.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★",
         "◇"
@@ -28879,7 +28879,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★"
        ]
@@ -28897,9 +28897,9 @@
       {
        "ref": "Terraria/BeetleHelmet",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -28907,9 +28907,9 @@
       {
        "ref": "Terraria/BeetleShell",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -28917,9 +28917,9 @@
       {
        "ref": "Terraria/BeetleLeggings",
        "origen": "",
-       "nota": "(casco Shell)",
+       "nota": "(con la coraza)",
        "rol": "",
-       "conjunto": "armadura de escarabajo",
+       "conjunto": "Armadura de escarabajo",
        "marcas": [
         "◇"
        ]
@@ -29548,7 +29548,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Si usas el {o:Terraria/FireWhip}, el {o:Terraria/StardustHelmet} debe cambiarse por una {o:Terraria/TikiMask}.",
        "rol": "",
-       "conjunto": "armadura de polvo estelar",
+       "conjunto": "Armadura de polvo estelar",
        "marcas": [
         "★"
        ]
@@ -29558,7 +29558,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Si usas el {o:Terraria/FireWhip}, el {o:Terraria/StardustHelmet} debe cambiarse por una {o:Terraria/TikiMask}. Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de polvo estelar",
+       "conjunto": "Armadura de polvo estelar",
        "marcas": [
         "★",
         "◇"
@@ -29569,7 +29569,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Ofensiva. Si usas el {o:Terraria/FireWhip}, el {o:Terraria/StardustHelmet} debe cambiarse por una {o:Terraria/TikiMask}. Grupo en la wiki: Híbrido con invocador.",
        "rol": "",
-       "conjunto": "armadura de polvo estelar",
+       "conjunto": "Armadura de polvo estelar",
        "marcas": [
         "★",
         "◇"
@@ -29580,7 +29580,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★"
        ]
@@ -29590,7 +29590,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★",
         "◇"
@@ -29601,7 +29601,7 @@
        "origen": "",
        "nota": "Grupo en la wiki: Defensiva.",
        "rol": "",
-       "conjunto": "armadura de Caballero del Valhalla",
+       "conjunto": "Armadura de Caballero del Valhalla",
        "marcas": [
         "★"
        ]
@@ -30901,7 +30901,7 @@
    "bloques": [
     {
      "tipo": "parrafo",
-     "texto": "El jefe {n:Terraria/DungeonGuardian} aparece de forma natural dentro de la Mazmorra **mientras no hayas derrotado a {n:Terraria/SkeletronHead}**. No está pensado para vencerlo: sal y vuelve cuando Skeletron haya caído. Si ya estás dentro, huye por donde entraste."
+     "texto": "El jefe {n:Terraria/DungeonGuardian} aparece de forma natural dentro de la Mazmorra **mientras no hayas derrotado a {n:Terraria/SkeletronHead}**. No está pensado para vencerlo: sal y vuelve cuando {n:Terraria/SkeletronHead} haya caído. Si ya estás dentro, huye por donde entraste."
     }
    ],
    "paradas": [
@@ -31188,7 +31188,7 @@
   },
   {
    "id": "problema29",
-   "titulo": "No consigo activar a Golem",
+   "titulo": "No consigo activar al Gólem",
    "bloques": [
     {
      "tipo": "parrafo",

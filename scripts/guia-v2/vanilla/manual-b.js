@@ -62,10 +62,10 @@ module.exports = { articulos: [
       ['[[Red Solution]] / [[Purple Solution]]', '[[Steampunker]]', 'Solo las vende en una Luna de Sangre o un Eclipse: la roja en mundo carmesí y la morada en mundo corrupto. Extienden la maldad. No las compres.']
     ] },
     { tipo: 'parrafo', texto: 'El [[Holy Water]] y el [[Unholy Water]] convierten bloques al salpicar, a Lo Sagrado y a la maldad respectivamente: no los lances donde no quieras ese bioma.' },
-    { tipo: 'flujo', items: ['Mira por dónde avanza la zona', 'Corta con un túnel de 3 o más casillas', 'Limpia el borde con Purification Powder', 'Con el Clentaminator, rocía Green Solution'] },
+    { tipo: 'flujo', items: ['Mira por dónde avanza la zona', 'Corta con un túnel de 3 o más casillas', 'Limpia el borde con [[Purification Powder]]', 'Con el [[Clentaminator]], rocía [[Green Solution]]'] },
     { tipo: 'titulo', texto: 'Almas de luz y de noche' },
     { tipo: 'parrafo', texto: 'En modo difícil, los enemigos que matas en el subsuelo y las cavernas de Lo Sagrado sueltan [[Soul of Light]]. Los que matas en la Corrupción o el Carmesí subterráneos sueltan [[Soul of Night]]. En ambos casos, con una probabilidad de 1 entre 5 por enemigo. Las necesitas para muchas armas, alas y piezas de la etapa, así que no limpies la zona del todo: déjate un rincón donde cultivarlas.' },
-    { tipo: 'aviso', estilo: 'nota', texto: 'El Clentaminator también extiende zonas. Si rocías Blue Solution estás creando Lo Sagrado allí donde apuntas, aunque sea en mitad de tu mundo.' },
+    { tipo: 'aviso', estilo: 'nota', texto: 'El Clentaminator también extiende zonas. Si rocías [[Blue Solution]] estás creando Lo Sagrado allí donde apuntas, aunque sea en mitad de tu mundo.' },
     { tipo: 'fuentes', fuentes: [{ wiki: 'terraria', pagina: 'The Corruption' }, { wiki: 'terraria', pagina: 'The Crimson' }, { wiki: 'terraria', pagina: 'Shadow Orb' }, { wiki: 'terraria', pagina: 'Biome spread' }, { wiki: 'terraria', pagina: 'Clentaminator' }] }
   ] },
 
@@ -166,7 +166,7 @@ module.exports = { articulos: [
     ] },
     { tipo: 'titulo', texto: 'Pilones' },
     { tipo: 'parrafo', texto: 'Un pilón te lleva de un pilón a otro, y cada bioma tiene el suyo. Para comprar uno, el vecino tiene que estar contento (su precio, al 90 % o menos), tienes que estar en el bioma que toca, con al menos 2 vecinos cerca, y fuera de la Corrupción y del Carmesí. Para usarlo hay que estar junto a otro pilón; el destino necesita al menos 2 vecinos cerca (menos el pilón universal) y estar en su bioma; no puede haber un jefe ni un evento activos; y los pilones del {z:templo} no funcionan hasta derrotar a [[Plantera]].' },
-    { tipo: 'titulo', texto: 'El Zoologist y el Bestiario' },
+    { tipo: 'titulo', texto: 'La [[n:Zoologist]] y el Bestiario' },
     { tipo: 'parrafo', texto: 'El Bestiario se rellena al ver, matar y sacar botín a los enemigos. Al llegar al 10 % se muda la [[Zoologist]]. Explorar zonas nuevas y matar de todo es la manera más rápida de llenarlo.' },
     { tipo: 'fuentes', fuentes: [{ wiki: 'terraria', pagina: 'Housing' }, { wiki: 'terraria', pagina: 'NPCs' }, { wiki: 'terraria', pagina: 'Happiness' }, { wiki: 'terraria', pagina: 'Pylons' }, { wiki: 'terraria', pagina: 'Bestiary' }] }
   ] },

@@ -165,8 +165,8 @@ module.exports = { articulos: [
   ] },
   { tipo: 'titulo', texto: 'El altar y el Gólem' },
   { tipo: 'parrafo', texto: 'En la cámara final está el [[Lihzahrd Altar]]. Para invocar al [[n:Golem]] necesitas una [[Lihzahrd Power Cell]] y haber derrotado a Plantera en modo difícil. Se gasta una célula por intento. Cada cofre lihzahrd contiene una, así que casi siempre hay de sobra.' },
-  { tipo: 'flujo', items: ['Derrota a Plantera', 'Consigue la Temple Key', 'Abre la puerta', 'Baja hasta el altar', 'Usa la Power Cell', 'Golem'] },
-  { tipo: 'titulo', texto: 'Solar Tablet Fragment y el Eclipse' },
+  { tipo: 'flujo', items: ['Derrota a Plantera', 'Consigue la [[Temple Key]]', 'Abre la puerta', 'Baja hasta el altar', 'Usa la [[Lihzahrd Power Cell]]', 'Invoca al [[n:Golem]]'] },
+  { tipo: 'titulo', texto: 'El [[Solar Tablet Fragment]] y el Eclipse' },
   { tipo: 'parrafo', texto: 'Los [[Solar Tablet Fragment]] se encuentran en los cofres del templo. Se combinan en una [[Solar Tablet]], que sirve para empezar un Eclipse a propósito. El Eclipse también puede ocurrir solo en modo difícil, tras un jefe mecánico, con una probabilidad de una entre veinte cada amanecer.' },
   { tipo: 'lista', items: [
     'Dura todo el día, y los enemigos que aparecen son muy agresivos.',
@@ -250,7 +250,7 @@ module.exports = { articulos: [
     { tipo: 'caja', titulo: 'Enemigos nuevos', bloques: [{ tipo: 'parrafo', texto: 'La [[n:Giant Tortoise]] y el [[n:Angry Trapper]] vuelven la jungla mucho más peligrosa. Lleva armadura del modo difícil.' }] }
   ] },
   { tipo: 'aviso', estilo: 'destacado', texto: 'Los bulbos solo valen para Plantera. El Templo, en cambio, necesita su [[Temple Key]]. Mira {z:templo} y {a:templo}.' },
-  { tipo: 'titulo', texto: 'El Witch Doctor' },
+  { tipo: 'titulo', texto: 'El [[n:Witch Doctor]]' },
   { tipo: 'parrafo', texto: 'Se muda cuando hay una casa libre y has derrotado a la Abeja reina. Vende, entre otras cosas, la [[Imbuing Station]]. Con el tiempo, y sobre todo tras Plantera, amplía mucho su tienda: las [[Leaf Wings]] solo salen en modo difícil, de noche y en la jungla.' },
   { tipo: 'fuentes', fuentes: [{ wiki: 'terraria', pagina: 'Jungle' }, { wiki: 'terraria', pagina: 'Underground Jungle' }, { wiki: 'terraria', pagina: 'Queen Bee' }, { wiki: 'terraria', pagina: 'Life Fruit' }, { wiki: 'terraria', pagina: "Plantera's Bulb" }, { wiki: 'terraria', pagina: 'Witch Doctor' }] }
 ] }

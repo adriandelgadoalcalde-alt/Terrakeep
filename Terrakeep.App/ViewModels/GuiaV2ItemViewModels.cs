@@ -263,9 +263,11 @@ public sealed class EtapaEscaleraViewModel
         ObjetoGuiaViewModel Vm(OpcionEquipo o) => new(guia, o.Ref, 1, o.Origen, o.Nota, string.Join(" ", o.Marcas));
         var grupos = new List<GrupoEquipoViewModel>();
         if (e.Armas.Count > 0) grupos.Add(new GrupoEquipoViewModel(guia.L("guia2_eq_armas"), e.Armas.Select(Vm).ToList()));
-        // Armadura agrupada por conjunto (docs/guia-v2-diseno.md §6): un grupo por conjunto real.
+        // Armadura agrupada por conjunto (docs/guia-v2-diseno.md §6): un grupo por conjunto real. El
+        // conjunto ya es el rotulo completo con su nombre oficial («Armadura de plata», F2b): repetir
+        // delante «Armadura ·» lo duplicaba.
         foreach (var conjunto in e.Armadura.GroupBy(a => a.Conjunto))
-            grupos.Add(new GrupoEquipoViewModel(string.IsNullOrEmpty(conjunto.Key) ? guia.L("guia2_eq_armadura") : guia.L("guia2_eq_armadura") + " · " + conjunto.Key,
+            grupos.Add(new GrupoEquipoViewModel(string.IsNullOrEmpty(conjunto.Key) ? guia.L("guia2_eq_armadura") : conjunto.Key,
                 conjunto.Select(Vm).ToList()));
         if (e.Accesorios.Count > 0) grupos.Add(new GrupoEquipoViewModel(guia.L("guia2_eq_accesorios"), e.Accesorios.Select(Vm).ToList()));
         if (e.Otros.Count > 0) grupos.Add(new GrupoEquipoViewModel(guia.L("guia2_eq_otros"), e.Otros.Select(Vm).ToList()));
