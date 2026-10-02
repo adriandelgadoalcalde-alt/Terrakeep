@@ -33,7 +33,7 @@ const { stages, chapters } = ctx.__r;
 
 // ---- 2. sustitucion de nombres
 const mapaGlosario = g => new Map(Object.entries(g).map(([k, v]) => {
-  const m = /^\{([oz]):([^}]+)\}$/.exec(v);
+  const m = /^\{([oz]):([^}|]+)\}$/.exec(v); // con texto propio ({z:x|y}) va como texto literal
   return [k.toLowerCase(), m ? { tipo: m[1], ref: m[2] } : { tipo: 'texto', texto: v }];
 }));
 const sust = N.crearSustituidor({
@@ -42,7 +42,15 @@ const sust = N.crearSustituidor({
   completa: N.cargarCompleta(),
   glosarioFinal: mapaGlosario(A.glosarioFinal),
 });
-const S = t => (t == null ? '' : sust.sustituir(String(t).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()));
+// Tras sustituir, si el original empezaba en mayuscula y el resultado no ("Molten o..." ->
+// "fundida o..."), se respeta la mayuscula inicial.
+const S = t => {
+  if (t == null) return '';
+  const limpio = String(t).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  let r = sust.sustituir(limpio);
+  if (/^\p{Lu}/u.test(limpio) && /^\p{Ll}/u.test(r)) r = r[0].toUpperCase() + r.slice(1);
+  return r;
+};
 
 // Reescrituras puntuales (texto pensado solo para cuerpo a cuerpo, o que ya no aplica a una guia
 // que lee tu partida real). [donde, de, a]: "donde" = "articulo:<id>" o "parada:<id>.<campo>".

@@ -69,7 +69,12 @@ const glosario = {
   'Sunken Sea': '{z:mar_hundido}', 'Sulphurous Sea': '{z:mar_sulfuroso}', 'Abyss': '{z:abismo}',
   'Brimstone Crag': '{z:penascos_azufre}', 'Brimstone Crags': '{z:penascos_azufre}',
   'Astral Infection': '{z:infeccion_astral}', 'Astral Beacon': '{o:CalamityMod/AstralBeaconItem}',
-  'Dungeon': '{z:mazmorra}', 'Underworld': '{z:inframundo}', 'Hallow': '{z:sagrado}', 'Space': '{z:cielo}',
+  // Con texto propio sin articulo: el nombre oficial ya lo lleva («La Mazmorra», «Lo Sagrado») y
+  // la frase del usuario pone el suyo ("delante de Dungeon", "en el Hallow subterráneo").
+  'Dungeon': '{z:mazmorra|mazmorra}', 'Underworld': '{z:inframundo|Inframundo}', 'Hallow': '{z:sagrado|Sagrado}', 'Space': '{z:cielo|cielo}',
+  // Opcion de configuracion: su etiqueta en CalamityModEsp (Configs...EarlyHardmodeProgressionRework.Label).
+  'Early Hardmode Progression Rework': '«Rework de Progresión del Hardmode Temprano»',
+  'Rework de Progresión del Hardmode Temprano': 'Rework de Progresión del Hardmode Temprano',
   'Arsenal Lab': 'laboratorio del Arsenal', 'Arsenal Labs': 'laboratorios del Arsenal',
   'Acid Rain': 'Lluvia Ácida', 'pre-Hardmode': 'prehardmode', 'Hardmode': 'modo difícil',
   'Expert': 'Experto', 'Treasure Bag': 'bolsa del tesoro', 'Treasure Bags': 'bolsas del tesoro',
@@ -81,6 +86,18 @@ const glosario = {
   // Tiles sin nombre oficial en nuestras fuentes (no son objetos): se protegen tal cual para que
   // no se conviertan en el objeto homonimo ("Heart" = el corazon de vida que se recoge).
   'Crimson Heart': 'Crimson Heart', 'Crimson Hearts': 'Crimson Hearts',
+  // Nombre antiguo del invocador de Yharon (hoy YharonEgg): no es el Huevo de dragon de Terraria.
+  'Dragon Egg': 'Dragon Egg',
+  // "Solar Flare" en la guia es la armadura lunar, no el enemigo homonimo (NPCID.SolarFlare).
+  'Solar Flare': 'armadura de fulguración solar',
+  // Exo Mechs es el grupo, no Ares; Apollo es su propio NPC (la ficha del usuario los junta).
+  'Exo Mechs': 'Exo Mechs', 'Apollo': '{n:CalamityMod/Apollo}', 'Artemis': '{n:CalamityMod/Artemis}',
+  'The Codebreaker': 'el {o:CalamityMod/CodebreakerBase}',
+  // Mecanicas de Revengeance: termino de CalamityModEsp (Configs: «Medidor de Ira», «Medidor de
+  // Adrenalina»), no la Pocion de furia homonima.
+  'Rage': 'Ira', 'Adrenaline': 'Adrenalina', 'Adrenaline Meter': 'medidor de Adrenalina',
+  // El texto español del usuario ya nombra estos biomas: se enlazan a su zona.
+  'mar sulfuroso': '{z:mar_sulfuroso}', 'mar hundido': '{z:mar_hundido}',
 };
 
 // Conjuntos de armadura de Calamity: nombre del conjunto tal como aparece en los nombres
@@ -220,7 +237,7 @@ const paradas = {
       3: { condicion: B('downedCrabulon'), texto: 'Deja suficiente anchura y varias alturas para pasar por encima de sus saltos, y derrótalo.' },
     },
     completadaCuando: B('downedCrabulon'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Furia (Rage).' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/MushroomPlasmaRoot}: consúmelo para ampliar la duración de la Ira.' }],
   },
   evil: {
     titulo: '{n:Terraria/EaterofWorldsHead} o {n:Terraria/BrainofCthulhu}', tipo: 'jefe', jefes: ['Terraria/EaterofWorldsHead', 'Terraria/BrainofCthulhu'],
@@ -367,6 +384,11 @@ const paradas = {
       4: { condicion: ALGUNA(EST('HasFoundJungleSchematic'), P('CalamityMod/LongRangedSensorArray')) },
     },
     completadaCuando: B('downedMechBossAny'),
+    // Cifras de la propia opcion de Calamity (CalamityModEsp, EarlyHardmodeProgressionRework.Tooltip).
+    avisos: [
+      { modos: ['clasico', 'viaje'], texto: 'Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 20 % menos de vida y daño, y el segundo un 10 % menos.' },
+      { modos: ['experto', 'maestro'], texto: 'Con el «Rework de Progresión del Hardmode Temprano» activado, el primer jefe mecánico que luches tiene un 10 % menos de vida y daño (en Clásico sería un 20 %), y el segundo un 5 % menos.' },
+    ],
   },
   aquatic: {
     titulo: '{n:CalamityMod/AquaticScourgeHead} y Lluvia Ácida (nivel 2)', tipo: 'jefe', jefes: ['CalamityMod/AquaticScourgeHead'],
@@ -508,7 +530,7 @@ const paradas = {
       4: { condicion: M },
     },
     completadaCuando: B('downedRavager'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Furia (Rage).' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/InfernalBlood}: amplía la duración de la Ira.' }],
   },
   hardextras: {
     titulo: '{n:Terraria/DukeFishron}, {n:Terraria/HallowBoss} y eventos', tipo: 'evento', opcional: true, jefes: ['Terraria/DukeFishron', 'Terraria/HallowBoss'],
@@ -520,7 +542,7 @@ const paradas = {
       2: { condicion: B('downedEmpressOfLight') },
       3: { condicion: P('Terraria/BrokenHeroSword') },
       4: { condicion: ALGUNA(B('downedMartians'), B('downedDD2EventAnyDifficulty')) },
-      5: { condicion: M, texto: 'Elige el arma de esta etapa de tu escalera; para cuerpo a cuerpo, el Arca de los Antiguos, la {o:Terraria/TerraBlade} y el {o:CalamityMod/FallenPaladinsHammer} son objetivos razonables. No necesitas todas.' },
+      5: { condicion: M, texto: 'Elige el arma de esta etapa de tu escalera; para cuerpo a cuerpo, el {o:CalamityMod/TrueArkoftheAncients}, la {o:Terraria/TerraBlade} y el {o:CalamityMod/FallenPaladinsHammer} son objetivos razonables. No necesitas todas.' },
     },
     completadaCuando: TODAS(B('downedFishron'), B('downedEmpressOfLight')),
   },
@@ -551,7 +573,7 @@ const paradas = {
     completadaCuando: B('downedAstrumDeus'),
   },
   moon: {
-    titulo: '{n:Terraria/MoonLordCore}', tipo: 'jefe', jefes: ['Terraria/MoonLordCore'],
+    titulo: '{n:Terraria/MoonLordHead}', tipo: 'jefe', jefes: ['Terraria/MoonLordCore'],
     ubicaciones: [Z('superficie')],
     preparate: 'La armadura de tu clase de esta etapa, el arma con fragmentos y equipo de movilidad fiable.',
     vida: { min: 550, max: 550 },
@@ -588,7 +610,7 @@ const paradas = {
       3: { condicion: M },
     },
     completadaCuando: B('downedDragonfolly'),
-    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Furia (Rage).' }],
+    avisos: [{ modos: ['revengeance', 'death'], texto: 'En Revengeance su bolsa da {o:CalamityMod/RedLightningContainer}: amplía la duración de la Ira.' }],
   },
   providence: {
     titulo: '{n:CalamityMod/Providence}', tipo: 'jefe', jefes: ['CalamityMod/Providence'],
@@ -625,7 +647,7 @@ const paradas = {
     tareas: {
       1: { condicion: ALGUNA(P('CalamityMod/NecroplasmicBeacon'), B('downedPolterghast')) },
       2: { condicion: M },
-      3: { condicion: B('downedPolterghast'), texto: 'Usa el Forsaken Archive del fondo de la {z:mazmorra} como base de arena, conserva el bioma y derrótalo.' },
+      3: { condicion: B('downedPolterghast'), texto: 'Usa el Forsaken Archive del fondo de {z:mazmorra|la mazmorra} como base de arena, conserva el bioma y derrótalo.' },
       4: { condicion: M, texto: 'Tras vencer, fabrica la armadura Bloodflare con el casco de tu clase y explora las nuevas recompensas abisales con el equipo apropiado.' },
     },
     completadaCuando: B('downedPolterghast'),
@@ -677,7 +699,7 @@ const paradas = {
     preparate: 'God Slayer con el casco de tu clase y el arma post-DoG de tu escalera.',
     vida: { min: 600, max: 600, trasMejora: true },
     tareas: {
-      1: { condicion: ALGUNA(P('CalamityMod/YharonEgg'), B('downedYharon')), texto: 'Fabrica el {o:CalamityMod/YharonEgg}. En vídeos antiguos lo verás como «Dragon Egg».' },
+      1: { condicion: ALGUNA(P('CalamityMod/YharonEgg'), B('downedYharon')), texto: 'Fabrica el {o:CalamityMod/YharonEgg}. En vídeos antiguos lo verás como Dragon Egg.' },
       2: { condicion: B('downedYharon'), texto: 'Invoca desde un punto marcado (los pilares de fuego delimitan el combate respecto a ese lugar) y derrótalo.' },
       3: { condicion: P('CalamityMod/AuricOre') },
       4: { condicion: TODAS(MEJ('dragonFruit'), P('CalamityMod/AuricQuantumCoolingCell')), texto: 'Consume la {o:CalamityMod/SacredStrawberry}, fabrica la armadura Auric Tesla de tu clase y completa la {o:CalamityMod/AuricQuantumCoolingCell}.' },
@@ -765,7 +787,7 @@ const avisosModo = [
   { id: 'clasico-bolsas', modos: ['clasico', 'viaje'], texto: 'Tu mundo está en Clásico: los jefes no dan bolsa del tesoro, así que los accesorios exclusivos de Experto (como el {o:Terraria/EoCShield} o el {o:Terraria/DemonHeart}) no aparecerán. Las tareas que los piden se pueden marcar a mano.' },
   { id: 'experto', modos: ['experto'], texto: 'Experto: la ruta de esta guía está pensada para esta dificultad. Revengeance es opcional y se activa con el selector de dificultad de Calamity, sin jefes activos.' },
   { id: 'maestro', modos: ['maestro'], texto: 'Maestro: los jefes pegan más y tienes un hueco de accesorio extra del {o:Terraria/DemonHeart}. Calamity activa Revengeance automáticamente en mundos de Maestro; revisa los avisos de Revengeance.' },
-  { id: 'rev', modos: ['revengeance'], texto: 'Revengeance: aparecen la Furia (Rage) y la Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles.' },
+  { id: 'rev', modos: ['revengeance'], texto: 'Revengeance: aparecen los medidores de Ira y Adrenalina, y ciertas bolsas del tesoro dan mejoras permanentes de esas barras. Los avisos de cada parada te dicen cuáles.' },
   { id: 'death', modos: ['death'], texto: 'Death: los jefes y enemigos cambian todavía más. Ve con margen de vida y defensa sobre las cifras de la guía y practica cada pelea antes de gastar invocadores caros.' },
 ];
 

@@ -61,7 +61,9 @@ function cargarCurada(rutaInventario) {
       if (!a) continue;
       // Una sola palabra: los nombres de conjunto de armadura ("Victide", "Molten") NO son la
       // pieza concreta a la que su ficha apunta; se traducen por el glosario de conjuntos.
-      if (!/\s/.test(a) && e.category === 'Armaduras') continue;
+      // Tampoco los alias de conjunto de varias palabras ("Solar Flare", "God Slayer"): solo el
+      // nombre completo de la pieza apunta a la pieza.
+      if (e.category === 'Armaduras' && a !== e.name) continue;
       // Una sola palabra en español ("Mecánica", "Gato") o generica en ingles ("Chest"): solo
       // casa con la misma mayuscula inicial (ver crearSustituidor), para no convertir la palabra
       // corriente "mecánica" en el NPC.
@@ -105,11 +107,13 @@ function patron(claves) {
 
 // Sustituye en un texto, sin tocar lo que ya esta dentro de un token {...}.
 function crearSustituidor({ curada, glosario, completa, glosarioFinal }) {
-  const capas = [
-    { mapa: curada, re: patron(curada.keys()) },
-    { mapa: glosario, re: patron(glosario.keys()) },
-    { mapa: completa, re: patron(completa.keys()) },
-  ];
+  // Una sola capa con TODOS los nombres para que gane siempre la coincidencia mas larga
+  // ("Glowing Mushrooms" antes que "Mushroom", "Hive Tumor" antes que "Hive"). A igualdad de
+  // clave: glosario (terminos decididos a mano) > lista curada del usuario > diccionario completo.
+  const unida = new Map(completa);
+  for (const [k, v] of curada) unida.set(k, v);
+  for (const [k, v] of glosario) unida.set(k, v);
+  const capas = [{ mapa: unida, re: patron(unida.keys()) }];
   // Ultima capa: nombres sueltos de conjunto ("Tarragon") que, puestos antes, romperian nombres
   // completos de objeto ("Mollusk Husk").
   if (glosarioFinal && glosarioFinal.size) capas.push({ mapa: glosarioFinal, re: patron(glosarioFinal.keys()) });
