@@ -253,10 +253,18 @@ internal static partial class Program
                 // esperado False, no hay ningun aviso de Calamity que mostrar).
                 vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
                 DoEvents();
-                vm.Guide.Refresh();
-                WaitForDispatcher(300); // mismo margen real que 02/03/04 - primera visita a la pestaña en la sesion
-                Console.WriteLine($"README_SHOTS: Guia -> Tramos.Count={vm.Guide.Tramos.Count}, MostrarAvisoCalamity={vm.Guide.MostrarAvisoCalamity}");
+                // Guia v2 (3.4.0, 02-oct-2026): la pestaña Guia es ya la guia grande nueva
+                // (GuiaV2View). 05-guia.png = Ruta abierta en la siguiente parada de 'Aventurero'
+                // (la que propone "Continuar"), evaluada contra el personaje y el mundo de prueba;
+                // 07-guia-mi-guia.png = "Mi guía" (siguiente parada, progreso y avisos del modo).
+                vm.GuiaV2.Refresh();
+                vm.GuiaV2.ContinuarRutaCommand.Execute(null);
+                WaitForDispatcher(400); // primera visita a la pestaña en la sesion + ubicacion en el mapa
+                Console.WriteLine($"README_SHOTS: Guia v2 -> guia={vm.GuiaV2.GuiaId}, paradas={vm.GuiaV2.Paradas.Count}, seleccionada={vm.GuiaV2.ParadaSeleccionada?.Id}");
                 Capturar("05-guia.png");
+                vm.GuiaV2.Seccion = SeccionGuiaV2.MiGuia;
+                WaitForDispatcher(300);
+                Capturar("07-guia-mi-guia.png");
             }
 
             // 04-about-settings-en.png: pestaña "Acerca de" en ingles (mismo criterio que la

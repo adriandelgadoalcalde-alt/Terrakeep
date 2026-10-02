@@ -19,11 +19,17 @@ instantáneo.
   cofres y el texto de letreros directamente sobre el mapa (con lectura del `.twld`, así los
   tiles añadidos por mods como Calamity muestran su nombre real en vez de "Tile #-1"), revisa
   puntos de reaparición, y edita la dificultad del mundo (Clásico/Experto/Maestro/Viaje).
-- **Guía de progresión** con cobertura absoluta: el camino vanilla completo más 25 tramos de
-  Calamity Mod, evaluados en vivo contra tu personaje y mundo reales ya cargados (banderas de
-  jefes, NPCs del pueblo, vida máxima, objetos, ganchos...). Nunca un falso "listo": cualquier
-  cosa que un editor de archivos estáticos no pueda comprobar de verdad se marca como tal, con el
-  motivo explicado.
+- **Guía grande paso a paso**, vanilla (49 paradas y 210 tareas) y Calamity Mod (47 paradas y
+  186 tareas), elegida sola según tu partida: cada parada con cómo empezar el encuentro,
+  *Prepárate*, *Haz esto, en este orden*, qué hacer durante el combate, lo que se desbloquea,
+  *Listo para seguir cuando…* y lo que no conviene vender; escalera de equipo por clase (cuerpo a
+  cuerpo, a distancia, magia, invocación y pícaro en Calamity) con el sprite de cada objeto; mapa
+  y biomas, manual, «Estoy perdido», «He encontrado algo raro» y buscador. Todo con los nombres
+  oficiales en español y comprobado contra tu personaje y tu mundo reales ya cargados (objetos,
+  jefes y eventos, NPC, mejoras permanentes, modo de juego); lo que un archivo no puede decir es
+  una casilla que marcas tú. Cada objeto que te falta tiene su ficha «cómo conseguirlo» (receta,
+  estación, botín, tienda) con atajo a la Librería, y la siguiente parada se marca en el mapa de
+  tu propio mundo en Exploración.
 - **Servidor propio**: hospeda tu propio servidor dedicado de Terraria o tModLoader (con
   selector de mods reales) directamente desde la app, sin salir de Terrakeep - estado en vivo,
   registro y uso de recursos.
@@ -38,7 +44,9 @@ instantáneo.
 
 ![Exploración del mundo](docs/screenshots/03-exploracion.png)
 
-![Guía de progresión](docs/screenshots/05-guia.png)
+![Guía: ruta paso a paso](docs/screenshots/05-guia.png)
+
+![Guía: mi guía](docs/screenshots/07-guia-mi-guia.png)
 
 ![Tu propio servidor](docs/screenshots/06-servidor.png)
 
