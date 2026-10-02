@@ -100,9 +100,15 @@
          que marcaba la partida como modificada sin motivo, Apariencia sin encoger al minimo, tarjetas
          del historial estiradas a la mas alta, e Inspector de cofres (prefijos/Guardar/slots/ancho).
          Ver changelog.json y bitacora.md. MINOR real (hay funciones nuevas, no solo arreglos). -->
-    <Version>3.3.0</Version>
-    <FileVersion>3.3.0.0</FileVersion>
-    <AssemblyVersion>3.3.0.0</AssemblyVersion>
+    <!-- 3.4.0 (2-oct-2026): Guia v2 - guia grande paso a paso vanilla (49 paradas, 210 tareas) y
+         Calamity (47 paradas, 186 tareas) con nombres oficiales es-ES, sprites, escalera de equipo
+         por clase, evaluacion automatica contra el personaje y el mundo reales, ficha "como
+         conseguirlo" con atajo a la Libreria y marcador de la siguiente parada en el mapa de
+         Exploracion; Inicio y el chip/banda del mapa leen la misma guia. Ver docs/guia-v2-diseno.md,
+         changelog.json y bitacora.md. MINOR real (funcion nueva grande). -->
+    <Version>3.4.0</Version>
+    <FileVersion>3.4.0.0</FileVersion>
+    <AssemblyVersion>3.4.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

@@ -1,5 +1,38 @@
 [
   {
+    "version": "3.4.0",
+    "date": "2 de octubre de 2026",
+    "date_en": "October 2, 2026",
+    "summary": "La Guía se rehace entera: una guía grande paso a paso para vanilla (49 paradas y 210 tareas) y para Calamity (47 paradas y 186 tareas), con nombres oficiales en español, sprites de cada objeto y jefe, escalera de equipo por clase y comprobación automática contra tu personaje y tu mundo reales. La siguiente parada se marca en el mapa de tu propio mundo en Exploración, e Inicio y el mapa siguen a esta misma guía. El texto de la guía está solo en español, y algunos nombres de Calamity siguen en inglés (vienen de la traducción comunitaria CalamityModEsp) mientras se prepara una traducción propia.",
+    "summary_en": "The Guide is rebuilt from scratch: a large step-by-step guide for vanilla (49 stops and 210 tasks) and for Calamity (47 stops and 186 tasks), with official names, sprites for every item and boss, a gear ladder per class and automatic checks against your real character and world. The next stop is marked on your own world's map in Exploration, and Home and the map now follow this same guide. The guide text is Spanish only, and some Calamity names are still in English (they come from the community CalamityModEsp translation) while our own translation is in the works.",
+    "added": [
+      "Guía nueva con ocho secciones: Mi guía (siguiente parada, progreso y avisos de tu modo de juego), Ruta paso a paso, Equipo, Mapa y biomas, Manual, Estoy perdido, He encontrado algo raro y Buscar.",
+      "Cada parada de la Ruta trae cómo empezar el encuentro, Prepárate (vida objetivo, objetos y equipo de tu clase), Haz esto en este orden (con casillas), qué hacer durante el combate o la exploración, lo que se desbloquea, Listo para seguir cuando… y lo que no conviene vender.",
+      "La guía de Calamity o la vanilla se elige sola según tu partida, y la clase se propone por tu mejor arma (cuerpo a cuerpo, a distancia, magia, invocación y, en Calamity, pícaro); puedes cambiarla y se recuerda.",
+      "Comprobación automática de objetos (inventario, equipo y huchas), jefes y eventos del mundo, NPC, mejoras permanentes (también las de Calamity) y modo de juego. Lo que no se puede comprobar es una casilla que marcas tú y se guarda por personaje, fuera de tu partida.",
+      "Ficha «cómo conseguirlo» de cada objeto: receta con ingredientes clicables y cuántos tienes, estación, botín, bolsa de jefe y tienda, y el botón «Coger en la Librería».",
+      "Marcador de la siguiente parada en el mapa de Exploración, sobre tu mundo real (como zona aproximada cuando no hay una posición exacta), y «Ver en el mapa» desde cada parada o bioma.",
+      "Inicio («Te toca») y el chip y la banda de capa del mapa usan la misma guía nueva.",
+      "Se leen del .wld doce datos más del mundo: lunas de calabaza y de escarcha, las tres oleadas del Ejército del Antiguo, los libros de combate y otras mejoras de mundo de un solo uso."
+    ],
+    "added_en": [
+      "New Guide with eight sections: My guide (next stop, progress and warnings for your game mode), Step-by-step route, Gear, Map and biomes, Manual, I'm lost, I found something odd and Search.",
+      "Each route stop includes how to start the encounter, Get ready (target health, items and gear for your class), Do this, in this order (with checkboxes), what to do during the fight or exploration, what gets unlocked, Ready to move on when… and what not to sell.",
+      "The Calamity or vanilla guide is picked automatically from your save, and your class is suggested from your best weapon (melee, ranged, magic, summoner and, in Calamity, rogue); you can change it and it's remembered.",
+      "Automatic checks for items (inventory, equipment and piggy banks), world bosses and events, NPCs, permanent upgrades (Calamity's too) and game mode. Anything that can't be checked is a box you tick yourself, saved per character, outside your save file.",
+      "\"How to get it\" card for every item: recipe with clickable ingredients and how many you have, crafting station, drops, boss bag and shop, plus a \"Get it in the Library\" button.",
+      "Next-stop marker on the Exploration map, on your real world (as an approximate area when there is no exact position), and \"Show on map\" from every stop or biome.",
+      "Home (\"Up next\") and the map's layer chip and band now use the same new guide.",
+      "Twelve more world facts are read from the .wld: pumpkin and frost moons, the three Old One's Army tiers, the combat books and other one-time world upgrades."
+    ],
+    "fixed": [
+      "«Ver en el mapa» centraba el destino detrás del panel lateral flotante de Exploración; ahora lo centra en la parte del mapa que se ve."
+    ],
+    "fixed_en": [
+      "\"Show on map\" centered the target behind Exploration's floating side panel; it now centers it in the visible part of the map."
+    ]
+  },
+  {
     "version": "3.3.0",
     "date": "29 de septiembre de 2026",
     "date_en": "September 29, 2026",
