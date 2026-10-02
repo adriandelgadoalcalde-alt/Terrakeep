@@ -1266,8 +1266,10 @@ public partial class MainViewModel : ObservableObject
     // tModLoader desde la misma app) - ver Terrakeep.App/ViewModels/HostingViewModel.cs.
     public GuideViewModel Guide { get; }
     // Guia v2 (F2, 02-oct-2026): la guia grande (vanilla/Calamity) que muestra la pestaña Guia - ver
-    // GuiaV2ViewModel. La v1 (Guide) se mantiene como motor de la tarjeta "Te toca" de Inicio y de
-    // las bandas de profundidad del mapa, que siguen sobre su arbol de tramos.
+    // GuiaV2ViewModel. Desde F2b (02-oct-2026) es la UNICA guia que ve el usuario: la tarjeta "Te
+    // toca" de Inicio y el chip/bandas del mapa tambien la leen. La v1 (Guide) ya no tiene ninguna
+    // pantalla; se conserva solo porque sus pruebas de motor (tramos, entrenador de jefe) siguen
+    // cubriendo GuideEvaluator, que la v2 reutiliza como proveedor de estado.
     public GuiaV2ViewModel GuiaV2 { get; }
     public HostingViewModel Hosting { get; }
     public LibraryViewModel Library { get; }
@@ -1379,6 +1381,10 @@ public partial class MainViewModel : ObservableObject
         // vuelven a llamar a Refresh() mas abajo en este mismo constructor.
         Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData, () => Exploration.CurrentWorldPath);
         GuiaV2 = new GuiaV2ViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData, () => Exploration.CurrentWorldPath);
+        // F2b (una sola guia en toda la app): la tarjeta "Te toca" y el KPI de Inicio preguntan a la
+        // guia v2 (misma evaluacion que la pestaña Guia) y se recalculan cada vez que esta se evalua.
+        Home.CalcularSiguienteParada = GuiaV2.SiguienteParadaPara;
+        GuiaV2.Evaluada += Home.RecalcularObjetivoGuia;
         // "Ver en el mapa" desde la guia: Exploracion centrada en la casilla (mismo camino real que
         // "ver spawn en el mapa", NavigateToTile con auto-zoom).
         GuiaV2.VerEnMapaSolicitado += (x, y) =>

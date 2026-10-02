@@ -212,4 +212,71 @@ public sealed class GuiaV2ViewModelTests : IDisposable
         Assert.True(superficie.Ubicacion!.Aproximada);
         Assert.True(vm.MarcadorVisible);
     }
+
+    // F2b (02-oct-2026, una sola guia en toda la app): el chip y la banda de capa del mapa salen del
+    // MISMO marcador de la guia v2 (antes, de la Zona del paso de la guia v1: podian decir
+    // "Subterráneo" junto al marcador del Rey slime).
+    [Fact]
+    public async Task ChipYCapaDelMapa_SalenDelMarcadorDeLaSiguienteParada()
+    {
+        var mundo = Mundo();
+        var vm = Vm(Personaje(100), mundo);
+        await vm.MarcadorTarea;
+        Assert.True(vm.MarcadorVisible);
+        Assert.NotNull(vm.Siguiente);
+        Assert.Equal(GuiaV2ViewModel.CapaDe(vm.MarcadorY, mundo.Header), vm.MarcadorCapa);
+        Assert.Contains(vm.Siguiente!.TituloPlano, vm.ChipMapaTexto);
+        Assert.Contains(vm.MarcadorTitulo, vm.ChipMapaTexto);
+        Assert.Contains(LocalizationService.Instance["guia2_capa_" + vm.MarcadorCapa], vm.ChipMapaTexto);
+
+        // Umbrales: los de las bandas del mapa (GroundLevel 100, RockLevel 200, infierno desde TilesHigh-192).
+        Assert.Equal("superficie", GuiaV2ViewModel.CapaDe(50, mundo.Header));
+        Assert.Equal("subterraneo", GuiaV2ViewModel.CapaDe(150, mundo.Header));
+        Assert.Equal("infierno", GuiaV2ViewModel.CapaDe(299, mundo.Header));
+
+        // Sin marcador no hay chip ni banda.
+        var sinMundo = Vm(Personaje(100), null);
+        await sinMundo.MarcadorTarea;
+        Assert.False(sinMundo.MarcadorVisible);
+        Assert.Null(sinMundo.MarcadorCapa);
+        Assert.Equal("", sinMundo.ChipMapaTexto);
+    }
+
+    // F2b: la tarjeta "Te toca" de Inicio pregunta por un personaje que puede NO estar cargado. Su
+    // respuesta tiene que ser la misma parada que enseña la pestaña Guia en cuanto se carga.
+    [Fact]
+    public void SiguienteParadaPara_OtroPersonaje_EsLaMismaQueLaPestañaAlCargarlo()
+    {
+        var mundo = Mundo(ojoDerrotado: true);
+        var items = new GameItem[50];
+        for (int i = 0; i < items.Length; i++) items[i] = GameItem.Empty;
+        items[0] = new GameItem { Id = 4, Count = 1 };
+        var plr = new PlrCharacter { Version = 279, Name = "OtroVm", PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true), HealthMax = 220 };
+        var otro = new LoadedCharacter(Path.Combine(Path.GetTempPath(), "OtroVm-" + Guid.NewGuid().ToString("N")[..6] + ".plr"), null, "", plr, null,
+            new Dictionary<string, GameItem[]> { ["inventory"] = items });
+
+        LoadedCharacter? cargado = Personaje(100);
+        var vm = new GuiaV2ViewModel(Servicio, () => cargado, () => mundo, () => false, () => null) { CarpetaProgreso = _carpeta };
+        int evaluaciones = 0;
+        vm.Evaluada += () => evaluaciones++;
+        vm.Refresh();
+        Assert.Equal(1, evaluaciones);
+        string antes = vm.Siguiente!.Id;
+
+        var propuesta = vm.SiguienteParadaPara(otro);
+        Assert.NotNull(propuesta);
+        Assert.Equal(antes, vm.Siguiente!.Id); // preguntar por otro personaje no toca la pestaña
+
+        cargado = otro;
+        vm.Refresh();
+        Assert.Equal(vm.GuiaId, propuesta!.GuiaId);
+        Assert.Equal(vm.Siguiente!.Numero, propuesta.Numero);
+        Assert.Equal(vm.Siguiente.TituloPlano, propuesta.Titulo);
+        Assert.Equal(vm.Siguiente.CapituloTitulo, propuesta.Capitulo);
+        Assert.Equal(vm.ParadasTotal, propuesta.Total);
+
+        // Y para el personaje ya cargado devuelve justo la de la pestaña.
+        var mismo = vm.SiguienteParadaPara(otro);
+        Assert.Equal(vm.Siguiente.TituloPlano, mismo!.Titulo);
+    }
 }

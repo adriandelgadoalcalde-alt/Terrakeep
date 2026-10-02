@@ -564,9 +564,10 @@ public partial class ExplorationViewModel : ObservableObject
     // detector, una pieza de datos nueva, no solo mas codigo reutilizando lo ya real) - quedan
     // fuera de esta ronda, documentadas aqui para la siguiente.
     //
-    // Cada banda es null sin mundo cargado (Visibility del marcador/banda en el XAML depende
-    // ademas de que Guide.ObjetivoPaso.Zona coincida con la banda exacta - no se muestran las 4 a
-    // la vez, solo la de la Zona real del paso pendiente actual).
+    // Cada banda es null sin mundo cargado (Visibility de la banda en el XAML depende ademas de
+    // que GuiaV2.MarcadorCapa coincida con la banda exacta - no se muestran las 4 a la vez, solo
+    // la capa real donde cae el marcador de la guia v2; F2b, 02-oct-2026: antes era la Zona del
+    // paso de la guia v1, que podia no coincidir con el marcador).
     public double? GuideBandSuperficieTop => _world == null ? null : 0.0;
     public double? GuideBandSuperficieHeight => _world == null ? null : _world.Header.GroundLevel;
     public double? GuideBandSubterraneoTop => _world == null ? null : _world.Header.GroundLevel;

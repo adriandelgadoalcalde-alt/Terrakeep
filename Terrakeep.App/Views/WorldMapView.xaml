@@ -388,42 +388,10 @@
                                                 </TextBlock>
                                             </Canvas>
 
-                                            <!-- Idea 7 (catalogo de funciones, "Capa Guia sobre el mapa" - bitacora.md
-                                                 20-sep-2026): SOLO cuando el paso PENDIENTE actual de la Guia (Guide.
-                                                 ObjetivoPaso) apunta a la Zona "Mazmorra" - mismo punto real que el
-                                                 marcador de mazmorra de arriba, icono/color propios para distinguir
-                                                 "aqui esta tu proximo objetivo" de "aqui esta la mazmorra" a secas. -->
-                                            <Canvas Width="0" Height="0" RenderTransformOrigin="0,0"
-                                                  Canvas.Left="{Binding Exploration.WorldDungeonX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldDungeonY, Converter={x:Static conv:TileCenterConverter.Instance}}"
-                                                  ToolTip="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Cursor="Hand"
-                                                  Panel.ZIndex="3">
-                                                <Canvas.Style>
-                                                    <Style TargetType="Canvas">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                        <Style.Triggers>
-                                                            <MultiDataTrigger>
-                                                                <MultiDataTrigger.Conditions>
-                                                                    <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                                    <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Mazmorra" />
-                                                                </MultiDataTrigger.Conditions>
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </MultiDataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Canvas.Style>
-                                                <Canvas.RenderTransform>
-                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
-                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </Canvas.RenderTransform>
-                                                <TextBlock Text="&#8853;" FontSize="20" Foreground="{StaticResource AccentBrush}"
-                                                           Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
-                                                           Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}">
-                                                    <TextBlock.Effect>
-                                                        <DropShadowEffect ShadowDepth="0" BlurRadius="4" Color="Black" Opacity="0.95" />
-                                                    </TextBlock.Effect>
-                                                </TextBlock>
-                                            </Canvas>
-
+                                            <!-- F2b (02-oct-2026): aqui vivia el marcador "objetivo en la Mazmorra" de la guia
+                                                 v1 (Idea 7). Lo sustituye el alfiler de la siguiente parada de la guia v2 de
+                                                 abajo, que ya se situa en la Mazmorra cuando la parada esta alli: dos marcadores
+                                                 de dos guias distintas podian contradecirse. -->
                                             <!-- Guia v2 (F2, 02-oct-2026): marcador de la SIGUIENTE PARADA de la guia
                                                  nueva sobre el mundo real cargado (GuiaV2ViewModel.Marcador*, resuelto con
                                                  GuiaV2Ubicaciones sobre las casillas reales del .wld/.twld). Si la ubicacion
@@ -502,7 +470,7 @@
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie" />
+                                                                <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="superficie" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </MultiDataTrigger>
@@ -521,7 +489,7 @@
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo" />
+                                                                <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="subterraneo" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </MultiDataTrigger>
@@ -540,7 +508,7 @@
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas" />
+                                                                <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="cavernas" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </MultiDataTrigger>
@@ -559,7 +527,7 @@
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
                                                                 <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno" />
+                                                                <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="infierno" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </MultiDataTrigger>
@@ -754,7 +722,7 @@
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie" />
+                                                        <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="superficie" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
                                                     <Setter Property="BorderBrush" Value="{StaticResource MasterGoldBrush}" />
@@ -762,7 +730,7 @@
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo" />
+                                                        <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="subterraneo" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
                                                     <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
@@ -770,7 +738,7 @@
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas" />
+                                                        <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="cavernas" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
                                                     <Setter Property="BorderBrush" Value="{StaticResource DebuffBrush}" />
@@ -778,7 +746,7 @@
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
                                                         <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
-                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno" />
+                                                        <Condition Binding="{Binding GuiaV2.MarcadorCapa}" Value="infierno" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
                                                     <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
@@ -796,7 +764,7 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie">
+                                                        <DataTrigger Binding="{Binding GuiaV2.MarcadorCapa}" Value="superficie">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -808,7 +776,7 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo">
+                                                        <DataTrigger Binding="{Binding GuiaV2.MarcadorCapa}" Value="subterraneo">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -820,7 +788,7 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas">
+                                                        <DataTrigger Binding="{Binding GuiaV2.MarcadorCapa}" Value="cavernas">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -832,82 +800,20 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno">
+                                                        <DataTrigger Binding="{Binding GuiaV2.MarcadorCapa}" Value="infierno">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Ellipse.Style>
                                         </Ellipse>
-                                        <!-- 4 TextBlock mutuamente excluyentes con DataTrigger (mismo criterio ya
-                                             establecido en toda esta pantalla para "muestra esto solo si la Zona
-                                             es X" - ver las 4 Rectangle de arriba) - cada uno ya trae su texto
-                                             final formateado ("Guía: <Zona>"), sin resolver nada en C#. Foreground
-                                             TextPrimaryBrush (25-sep-2026, rediseno de badges) en vez de White fijo:
-                                             el fondo del chip ahora es neutro (BgElevatedBrush), no una capsula de
-                                             color solido que garantizara contraste con blanco puro. -->
-                                        <!-- Bug real encontrado verificando con captura (GUIACHIP_SOLO, 21-sep-2026):
-                                             Visibility="Collapsed" puesto como atributo LOCAL del TextBlock (en vez
-                                             de dentro del propio Style, como valor por defecto) gana SIEMPRE sobre
-                                             el Setter del DataTrigger - un valor local nunca lo pisa un trigger de
-                                             Style, es una regla fija de WPF. El chip pintaba el fondo (el Border
-                                             de fuera SI usa el patron correcto) pero el texto se quedaba
-                                             invisible siempre, pasara lo que pasara la Zona real. Arreglo real:
-                                             Visibility="Collapsed" como Setter DENTRO del Style (igual que ya
-                                             hacen el propio Border y las 4 Rectangle de las bandas), nunca como
-                                             atributo local del elemento. -->
-                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   Text="{Binding Loc[guide_zone_chip_superficie], Mode=OneWay}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   Text="{Binding Loc[guide_zone_chip_subterraneo], Mode=OneWay}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   Text="{Binding Loc[guide_zone_chip_cavernas], Mode=OneWay}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   Text="{Binding Loc[guide_zone_chip_infierno], Mode=OneWay}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                        <!-- F2b (02-oct-2026): un solo texto, el de la guia v2 - QUE señala el marcador
+                                             (siguiente parada, o la parada/zona que se ha pedido ver) y en QUE capa real
+                                             cae (GuiaV2.ChipMapaTexto). Antes eran 4 TextBlock "Guía: <Zona>" de la guia
+                                             v1, que podian decir "Subterráneo" junto al marcador del Rey slime. MaxWidth +
+                                             recorte: un titulo largo no tapa el mapa; el texto entero va en el ToolTip. -->
+                                        <TextBlock x:Name="GuiaChipMapaTexto" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding GuiaV2.ChipMapaTexto, Mode=OneWay}" MaxWidth="460" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
