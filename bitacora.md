@@ -34212,3 +34212,31 @@ detalle técnico: `docs/guia-v2-diseno.md` §13.
   GUIAV2_SOLO, PILDORAS_SOLO, RESTO_RESPONSIVE_SOLO y LAYOUT_REPOSO_SOLO sobre el HEAD final). Después Task
   Context (798ecebe a DONE, evidencia fresca de 6b59710e y 0529c3e2) y, con la decisión del coordinador,
   push + release v3.4.0.
+
+## 2-oct-2026 (noche) - T6 de CalamityKeep-Traduccion-ES: nombres de Calamity desde la traducción de la familia
+
+Hecho por el agente T5/T6 de la traducción, **con F4 en pausa**: 4 commits encima de los 7 de F4 que siguen
+**sin push** (no se empuja nada: el push y la release 3.4.0 son decisión del coordinador tras la verificación
+de F4). Solo datos y scripts de la Guía y el catálogo; nada de UI.
+
+- `430b5bff` scripts/guia-v2: `fuentes.js` lee `Downloads\Keep\CalamityKeep-Traduccion-ES\CalamityKeepTraduccionES\
+  Localization\es-ES\*.hjson` (antes CalamityModEsp); resuelve `{$...}` como tModLoader y los `DisplayName =>`
+  heredados del código (AstralachneaWall, PhantomSpiritL/M/S, PlagueChargerLarge). `conjuntos.js` con los
+  nombres de las piezas de la traducción y `verificarConjuntosCalamity()` al construir. `anotaciones-calamity.js`
+  con el glosario: Rabia (no Ira), barra de Adrenalina, Lluvia ácida, Exomecas, mecanismos rastreadores,
+  excavador de ónice, «Rediseño del inicio del modo Difícil», matadioses, sangrellama, tarragon, victide...
+- `88c2c73a` Datos regenerados: **0 «sin traducción»** (antes 186 objetos y 21 NPC). Vanilla sin cambios.
+- `bb921f3f` docs/guia-v2-diseno.md al día.
+- `b1447a79` `scripts/sincronizar-nombres-calamity-es.js`: `displayName_es` de `Assets/calamity/catalog.json`
+  (2 397 cambiados, había entradas con null) y `buffs.json` (232) desde la misma traducción.
+- Pruebas: Terrakeep.Core.Tests 839/839; Terrakeep.App.ViewModels.Tests 841/841 (en una primera pasada falló
+  `ResearchOlaTresTests.RD_...` por el debounce con la máquina cargada; aislado 2/2 verde y la suite completa
+  repetida, 841/841).
+- **PARA F4 antes de publicar 3.4.0:** (1) el instalador de las 21:24 NO lleva estos datos: hay que regenerarlo;
+  (2) `Terrakeep.App/Assets/changelog.json` (3.4.0, ES y EN) dice que «algunos nombres de Calamity siguen en
+  inglés (vienen de CalamityModEsp) mientras se prepara una traducción propia»: ya es falso, cambiar a que los
+  nombres de Calamity salen de la traducción propia de la familia; (3) TerrakeepMod recoge la Guía nueva con
+  `scripts\actualizar-core.ps1` en su próxima versión (su Librería ya usa los nombres vivos del juego, no un
+  catálogo estático).
+- Pendiente, fuera de este encargo: `set_bonus_es.json` (traducción a mano de 6-sep) y
+  `calamity_buff_descriptions.json` (solo inglés) podrían generarse también desde la traducción.
