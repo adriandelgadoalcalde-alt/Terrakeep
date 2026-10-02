@@ -981,5 +981,8 @@
   "backup_change_items_down": "-{0} objeto(s)",
   "backup_change_deaths": "+{0} muerte(s)",
   "backup_change_difficulty": "Dificultad: {0} → {1}",
-  "backup_change_playtime": "+{0} jugado(s) desde entonces"
+  "backup_change_playtime": "+{0} jugado(s) desde entonces",
+  "guide_motive_v2_unsupported": "Esta comprobación es de la guía nueva y esta versión de la app todavía no sabe hacerla; no cuenta ni a favor ni en contra.",
+  "guide_motive_unresolved_ref": "Este objeto o NPC no existe en el contenido cargado ahora (otra versión de Calamity, o un NPC de mod que el editor no puede leer del mundo); la guía no lo da por hecho.",
+  "guide_motive_unknown_key": "La guía no sabe leer este dato de la partida."
 }

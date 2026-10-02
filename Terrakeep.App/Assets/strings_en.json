@@ -981,5 +981,8 @@
   "backup_change_items_down": "-{0} item(s)",
   "backup_change_deaths": "+{0} death(s)",
   "backup_change_difficulty": "Difficulty: {0} → {1}",
-  "backup_change_playtime": "+{0} played since then"
+  "backup_change_playtime": "+{0} played since then",
+  "guide_motive_v2_unsupported": "This check belongs to the new guide and this app version can't perform it yet; it counts neither for nor against.",
+  "guide_motive_unresolved_ref": "This item or NPC isn't in the currently loaded content (another Calamity version, or a mod NPC the editor can't read from the world); the guide won't assume it.",
+  "guide_motive_unknown_key": "The guide can't read this piece of game data."
 }
