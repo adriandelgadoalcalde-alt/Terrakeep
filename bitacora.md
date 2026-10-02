@@ -34171,3 +34171,26 @@ detalle técnico: `docs/guia-v2-diseno.md` §13.
   BADGES_ESTADO_SOLO, HOMECARDS_SOLO y KPI3_SOLO; además GUIAV2_SOLO y RESTO_RESPONSIVE_SOLO en verde. Los
   únicos FALLO de la salida son los tres `A9-13-IDIOMA` del arranque, que ya fallaban en F2 (no relacionados).
 - Hashes de las 23 partidas reales idénticos antes y después.
+
+## 2-oct-2026 (noche) - Guía v2, Fase F4: verificación independiente, 3.4.0 preparada (publicación en espera)
+
+- **Verificación independiente** en tres rondas (revisor-visual + verificador-qa nuevos cada vez): build 0
+  errores, `Core.Tests` 839/839, `ViewModels.Tests` 838/838, GUIAV2_SOLO, RESTO_RESPONSIVE_SOLO, LAYOUT_REPOSO_SOLO
+  (539 medidas), IDEA7, GUIACHIP, BADGES_ESTADO y HOMECARDS sin fallos propios. Detalle por criterio en el Task
+  Context (requirement 798ecebe).
+- **Escalera de equipo con el ID de cada objeto** bajo su nombre ("ID 65" / "CalamityMod/Nombre"), como pide la
+  guía HTML del usuario ("sprite e ID de cada objeto"). Commit 652b2f1d.
+- **3.4.0:** versión en csproj/FileVersion/AssemblyVersion/.iss, changelog ES/EN, README con la Guía nueva y
+  capturas `README_SHOTS=1` rehechas (05-guia = Ruta, 07-guia-mi-guia nueva; personaje "Aventurero" y mundo
+  TerrakeepPrueba de prueba). Instalador probado en silencio encima de la copia instalada (FileVersion 3.4.0.0,
+  unins000.exe presente). Release y push EN ESPERA por decisión del coordinador (diseño de los "badges" de la
+  Guía pendiente de aclarar con el usuario).
+- **Falló dos veces, apuntado aquí (regla):** `FALLO: A9-13-IDIOMA` en el preludio de todos los modos _SOLO. No es
+  de la Guía. Dos hipótesis probadas y descartadas: (1) espera de realización tras pasar a Inicio (hasta 5 s y
+  `UpdateLayout`): HomeView está en el árbol, pero 0 TextBlock con el texto; (2) forzar
+  `Settings.HasSeenHomeIntro=false` antes de buscar: tampoco. Lo único observado que lo cambia: con el
+  settings.json real copiado con `HasSeenHomeIntro=false` (tras abrir 3.4.0 en esta máquina) sale
+  `encontrado=True`. Cambios del canario revertidos; queda para investigar aparte.
+- **Aislamiento:** una pasada de GUIAV2_SOLO (20:45-20:49) marcó `AISLAMIENTO-ESTADO`: session/settings/window.json
+  reales escritos a las 20:48-20:49 por OTRO proceso (alguien abrió y cerró Terrakeep 3.4.0 instalado en ese
+  intervalo; ningún Terrakeep abierto al comprobarlo). No es una fuga del arnés.
