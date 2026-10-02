@@ -93,6 +93,83 @@ public class GuiaV2ContenidoTests(ITestOutputHelper salida)
         Assert.NotNull(ev.EtapaActual(ClaseGuia.Picaro, resumen));
     }
 
+    // Guia v2 (F1, 02-oct-2026): la guia VANILLA tiene que tener una profundidad EQUIVALENTE a la
+    // Calamity, no un recorte (encargo literal: "tiene que ser así tanto versión vanilla como
+    // calamity"). Mismos umbrales de ruta que la Calamity (unas 45 paradas, 180 tareas, 11 entradas
+    // de navegacion, 16.000 palabras SIN contar las escaleras) y fichas/zonas/escaleras completas.
+    [Fact]
+    public void LaGuiaVanillaEstaIncrustada()
+    {
+        Assert.Contains("vanilla", GuiaV2Cargador.GuiasDisponibles());
+    }
+
+    [Fact]
+    public void Vanilla_ProfundidadEquivalenteALaCalamity()
+    {
+        var doc = GuiaV2Cargador.CargarGuiaIncrustada("vanilla");
+        var c = GuiaV2Cifras.Calcular(doc, Refs.Value);
+        var sinEscaleras = GuiaV2Cargador.CargarGuiaIncrustada("vanilla");
+        sinEscaleras.Escaleras.Clear();
+        int palabrasSinEscaleras = GuiaV2Cifras.Calcular(sinEscaleras, Refs.Value).Palabras;
+        salida.WriteLine($"capitulos de ruta {c.Capitulos}, articulos {c.Articulos}, paradas {c.Paradas}, tareas {c.Tareas} " +
+            $"(evaluables {c.TareasEvaluables} = {c.PorcentajeEvaluable:F1} %, manuales {c.TareasManuales}), palabras {c.Palabras} " +
+            $"(sin escaleras {palabrasSinEscaleras}), zonas {c.Zonas}, etapas de escalera {c.EtapasEscalera}, problemas {c.Problemas}, hallazgos {c.Hallazgos}");
+        Assert.True(c.Paradas >= 45, "paradas " + c.Paradas);
+        Assert.True(c.Tareas >= 180, "tareas " + c.Tareas);
+        Assert.True(c.Articulos + 1 >= 11, "capitulos " + (c.Articulos + 1));
+        Assert.True(palabrasSinEscaleras >= 16000, "palabras sin escaleras " + palabrasSinEscaleras);
+        Assert.True(c.Problemas >= 40, "fichas de estoy perdido " + c.Problemas);
+        Assert.True(c.Hallazgos >= 12, "fichas de he encontrado algo raro " + c.Hallazgos);
+        Assert.True(c.Zonas >= 20, "zonas " + c.Zonas);
+        // Al menos tan evaluable como la Calamity (64,5 %): lo que se puede comprobar se comprueba.
+        Assert.True(c.PorcentajeEvaluable >= 80, $"evaluables {c.PorcentajeEvaluable:F1} %");
+        // Las cuatro clases vanilla, sin picaro, con escalera desde el principio hasta el final.
+        Assert.Equal(["cuerpo_a_cuerpo", "distancia", "magia", "invocacion"], doc.Clases);
+        Assert.Equal(["cuerpo_a_cuerpo", "distancia", "magia", "invocacion"], doc.Escaleras.Select(e => e.Clase));
+        Assert.All(doc.Escaleras, e => Assert.True(e.Etapas.Count >= 10, e.Clase + " " + e.Etapas.Count));
+        Assert.All(doc.Paradas, p => Assert.NotEmpty(p.Ubicaciones));
+        // Toda zona se puede situar en el mundo real (firma, punto o capa).
+        Assert.All(doc.Zonas, z => Assert.True(z.Firma.Tiles.Count > 0 || z.Punto != null || z.Capa != "cualquiera", z.Id));
+        // Avisos por modo para Clasico, Experto y Maestro.
+        foreach (var modo in new[] { "clasico", "experto", "maestro" })
+            Assert.Contains(doc.AvisosModo, a => a.Modos.Contains(modo));
+    }
+
+    [Fact]
+    public void Vanilla_NoCitaNadaDeCalamity()
+    {
+        // Una partida vanilla no tiene ningun objeto, NPC ni tile de Calamity.
+        var json = System.Text.Json.JsonSerializer.Serialize(GuiaV2Cargador.CargarGuiaIncrustada("vanilla"));
+        Assert.DoesNotContain("CalamityMod/", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Vanilla_CadaObjetoNecesarioTieneComoConseguirlo()
+    {
+        // "cada objeto requerido con su forma de conseguirlo": o la tabla de referencias trae una
+        // obtencion VANILLA del codigo real, o el motivo de la parada lo explica (cofres, mineria...).
+        var doc = GuiaV2Cargador.CargarGuiaIncrustada("vanilla");
+        var r = Refs.Value;
+        var sinComo = doc.Paradas.SelectMany(p => p.Necesitas.Select(n => (p.Id, n)))
+            .Where(x => !r.Objetos[x.n.Ref].ObtencionPara("vanilla").Any() && x.n.Motivo.Length < 12 && x.n.Motivo != "Invocador.")
+            .Select(x => x.Id + ": " + x.n.Ref).ToList();
+        foreach (var s in sinComo) salida.WriteLine(s);
+        Assert.Empty(sinComo);
+    }
+
+    [Fact]
+    public void Vanilla_EvaluaContraUnaPartidaVacia_SinExcepcionesYSinNadaHechoDeMas()
+    {
+        var doc = GuiaV2Cargador.CargarGuiaIncrustada("vanilla");
+        var ev = new GuiaV2Evaluador(doc, new ResolutorRefsGuia(Refs.Value));
+        var resumen = ev.Evaluar(new EstadoVacio(), new GuiaV2ProgresoManual { Guia = "vanilla" }, ClaseGuia.Invocacion);
+        Assert.Equal(doc.Paradas.Count, resumen.Paradas.Count);
+        Assert.Equal("inicio", resumen.Siguiente!.Parada.Id);
+        Assert.Equal(0, resumen.ParadasCompletadas);
+        Assert.Equal(0, resumen.TareasHechas);
+        Assert.NotNull(ev.EtapaActual(ClaseGuia.Invocacion, resumen));
+    }
+
     public static TheoryData<string> Guias()
     {
         var d = new TheoryData<string>();

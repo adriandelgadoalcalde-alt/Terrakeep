@@ -433,6 +433,21 @@ public class GuiaV2Tests
     }
 
     [Fact]
+    public void ObtencionPara_Vanilla_OcultaLoQueAnadeCalamity()
+    {
+        var o = new RefObjeto
+        {
+            Obtencion =
+            [
+                new Obtencion { Tipo = "receta", FuenteCodigo = "CalamityMod.Systems/RecipeSystem.cs:903" },
+                new Obtencion { Tipo = "botin", FuenteCodigo = "Terraria/GameContent/ItemDropRules/ItemDropDatabase.cs:207" },
+            ],
+        };
+        Assert.Equal(["botin"], o.ObtencionPara("vanilla").Select(x => x.Tipo));
+        Assert.Equal(2, o.ObtencionPara("calamity").Count());
+    }
+
+    [Fact]
     public void Ubicacion_Eter_LadoOpuestoALaMazmorraYAproximado()
     {
         // Guia v2 (F1): WorldGen.cs, paso "Shimmer": lado opuesto a la Mazmorra, 11 % exterior.

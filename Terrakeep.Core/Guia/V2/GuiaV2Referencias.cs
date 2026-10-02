@@ -42,6 +42,14 @@ public sealed class RefObjeto : RefNombre
     [JsonPropertyName("id")] public int? Id { get; set; }
     [JsonPropertyName("categoria")] public string Categoria { get; set; } = "";
     [JsonPropertyName("obtencion")] public List<Obtencion> Obtencion { get; set; } = [];
+
+    /// <summary>Guia v2 (F1): formas de conseguirlo validas para una guia. La tabla es comun a
+    /// vanilla y Calamity y lleva tambien las recetas/botin que AÑADE Calamity (p. ej. la
+    /// Lagrima sangrienta con Orbes de sangre): en la guia "vanilla" (partida sin mods) no
+    /// existen y se ocultan. Las UIs deben pintar la ficha de obtencion con esto, no con
+    /// <see cref="Obtencion"/> a secas.</summary>
+    public IEnumerable<Obtencion> ObtencionPara(string ambitoGuia) =>
+        ambitoGuia == "vanilla" ? Obtencion.Where(o => !o.EsDeCalamity) : Obtencion;
 }
 
 public sealed class RefNpc : RefNombre
@@ -65,6 +73,10 @@ public sealed class Obtencion
     [JsonPropertyName("condicion")] public string Condicion { get; set; } = "";
     /// <summary>archivo:linea del codigo decompilado del que sale el dato.</summary>
     [JsonPropertyName("fuente")] public string FuenteCodigo { get; set; } = "";
+
+    /// <summary>true si el dato sale del codigo de Calamity (su ruta empieza por el espacio de
+    /// nombres "CalamityMod."; las de Terraria por "Terraria/").</summary>
+    [JsonIgnore] public bool EsDeCalamity => FuenteCodigo.StartsWith("CalamityMod", StringComparison.Ordinal);
 }
 
 public sealed class Ingrediente
