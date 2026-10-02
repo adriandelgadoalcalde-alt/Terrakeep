@@ -116,9 +116,11 @@ const glosario = {
 
 // Conjuntos de armadura de Calamity: nombre del conjunto tal como aparece en los nombres de sus
 // piezas en CalamityKeep-Traduccion-ES (p.ej. GodSlayerHeadMelee = «Gran yelmo cornudo matadioses»,
-// AuricTeslaHeadMelee = «Yelmo real de Tesla áurica»). Forma suelta, en minuscula a mitad de frase.
+// AuricTeslaHeadMelee = «Yelmo real de Tesla áurica»). Forma suelta = el conjunto citado por su nombre: Matadioses,
+// Tarragon y Sangrellama con mayúscula (convención conjunto_nombre_propio del glosario de la traducción); los
+// adjetivos (hidrotermal, sulfurosa...) en minúscula.
 const CONJUNTOS = {
-  'God Slayer': 'matadioses', 'Auric Tesla': 'Tesla áurica', 'Tarragon': 'tarragon', 'Bloodflare': 'sangrellama',
+  'God Slayer': 'Matadioses', 'Auric Tesla': 'Tesla áurica', 'Tarragon': 'Tarragon', 'Bloodflare': 'Sangrellama',
   'Victide': 'victide', 'Statigel': 'statigel', 'Daedalus': 'Dédalo', 'Hydrothermic': 'hidrotermal', 'Demonshade': 'sombra demoníaca',
   'Sulphurous': 'sulfurosa', 'Reaver': 'saqueador', 'Mollusk': 'molusco', 'Astral': 'astral', 'Omega Blue': 'azul omega',
   'Prismatic': 'prismática', 'Empyrean': 'empírea', 'Umbraphile': 'umbrófila', 'Plague Reaper': 'segador de la Plaga',
@@ -161,6 +163,11 @@ for (const [en, es] of Object.entries(CONJUNTOS)) {
 for (const k of Object.keys(CONJUNTOS_ARMADURA)) {
   glosario[k + ' armor'] = armaduraEnTexto(k);
   glosario[k + ' armour'] = armaduraEnTexto(k);
+}
+// El texto español del usuario dice a veces «armadura Tarragon»: con prenda delante va la forma de pieza
+// («armadura de tarragon»), no el nombre propio suelto (convención conjunto_nombre_propio).
+for (const k of Object.keys(CONJUNTOS)) {
+  if (CONJUNTOS_ARMADURA[k]) { glosario['armadura ' + k] = armaduraEnTexto(k); glosario['armadura de ' + k] = armaduraEnTexto(k); glosario[armaduraEnTexto(k)] = armaduraEnTexto(k); }
 }
 
 // Clases: el texto melee original de "Preparate" se conserva como matiz de cuerpo a cuerpo.

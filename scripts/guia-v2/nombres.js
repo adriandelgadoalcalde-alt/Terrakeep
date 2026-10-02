@@ -126,6 +126,9 @@ function crearSustituidor({ curada, glosario, completa, glosarioFinal }) {
         const v = capa.mapa.get(m.toLowerCase().replace(/’/g, "'"));
         if (!v) return m;
         if (v.exacto && v.exacto[0] !== m[0]) return m; // palabra suelta: misma mayuscula inicial
+        // Capa final (nombres sueltos de conjunto, siempre con mayuscula en ingles): una palabra en minuscula ya
+        // es texto español sustituido antes («armadura de tarragon»), no se vuelve a tocar.
+        if (nivel > 0 && m[0] === m[0].toLowerCase()) return m;
         const clave = nivel + '|' + m;
         usados.set(clave, (usados.get(clave) || 0) + 1);
         if (v.tipo === 'texto') return v.texto;

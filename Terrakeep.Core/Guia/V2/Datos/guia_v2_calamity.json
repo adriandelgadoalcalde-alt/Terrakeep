@@ -2187,7 +2187,7 @@
     },
     {
      "id": "mech2.4",
-     "texto": "Valora la armadura Dédalo con el casco de tu clase y el arma de esta etapa de tu escalera (para cuerpo a cuerpo, la {o:CalamityMod/FlarefrostBlade} dispara proyectiles teledirigidos).",
+     "texto": "Valora la armadura de Dédalo con el casco de tu clase y el arma de esta etapa de tu escalera (para cuerpo a cuerpo, la {o:CalamityMod/FlarefrostBlade} dispara proyectiles teledirigidos).",
      "manual": true
     }
    ],
@@ -3910,7 +3910,7 @@
     },
     {
      "id": "providence.3",
-     "texto": "Tras ganar, busca uelibloom en el barro con un pico adecuado y fabrica la armadura tarragon con el casco de tu clase.",
+     "texto": "Tras ganar, busca uelibloom en el barro con un pico adecuado y fabrica la armadura de tarragon con el casco de tu clase.",
      "condicion": {
       "tipo": "objeto_poseido",
       "ref": "CalamityMod/UelibloomOre",
@@ -3941,8 +3941,8 @@
     }
    ],
    "combate": "Sus fases de capullo requieren leer huecos entre estrellas o lanzas. No huyas indefinidamente: alejarte del área segura te castiga. La pelea nocturna es un desafío adicional.",
-   "desbloquea": "Uelibloom, {o:CalamityMod/DivineGeode}, tarragon y {o:CalamityMod/MarkofProvidence}.",
-   "listoCuando": "575 de vida, tarragon melee, esquema Ice descifrado y la Mark conservada.",
+   "desbloquea": "Uelibloom, {o:CalamityMod/DivineGeode}, Tarragon y {o:CalamityMod/MarkofProvidence}.",
+   "listoCuando": "575 de vida, Tarragon melee, esquema Ice descifrado y la Mark conservada.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedProvidence"
@@ -4196,12 +4196,12 @@
     },
     {
      "id": "polter.4",
-     "texto": "Tras vencer, fabrica la armadura sangrellama con el casco de tu clase y explora las nuevas recompensas abisales con el equipo apropiado.",
+     "texto": "Tras vencer, fabrica la armadura de sangrellama con el casco de tu clase y explora las nuevas recompensas abisales con el equipo apropiado.",
      "manual": true
     }
    ],
    "combate": "El combate tiene formas y un clon. Mantén un recorrido claro y no te encierres entre cuerpos. Si aparece antes de tiempo mientras farmeas, vuelve cuando estés preparado.",
-   "desbloquea": "{o:CalamityMod/RuinousSoul}, sangrellama, nuevas armas abisales y Lluvia ácida III.",
+   "desbloquea": "{o:CalamityMod/RuinousSoul}, Sangrellama, nuevas armas abisales y Lluvia ácida III.",
    "listoCuando": "Sangrellama con casco melee preparada; arma de esta etapa, como {o:CalamityMod/TerrorBlade} si la obtienes.",
    "completadaCuando": {
     "tipo": "bandera",
@@ -4423,7 +4423,7 @@
    ],
    "combate": "Concentra daño en cabeza o cola: el cuerpo tiene una enorme reducción de daño. Cuando se formen paredes de láser, busca el hueco y corrige con movimientos pequeños. Evita la cabeza y no confundas sus transiciones con la victoria.",
    "desbloquea": "Cosmilite, {o:CalamityMod/CosmicAnvilItem}, {o:CalamityMod/Murasama} utilizable y eventos reforzados.",
-   "listoCuando": "{o:CalamityMod/CosmicAnvilItem} instalado. Todavía falta farmear los eventos para matadioses y accesorios nuevos.",
+   "listoCuando": "{o:CalamityMod/CosmicAnvilItem} instalado. Todavía falta farmear los eventos para Matadioses y accesorios nuevos.",
    "completadaCuando": {
     "tipo": "bandera",
     "bandera": "downedDoG"
@@ -4474,9 +4474,9 @@
     }
    ],
    "invocacion": null,
-   "preparate": "Sangrellama camino de matadioses con el casco de tu clase.",
+   "preparate": "Sangrellama camino de Matadioses con el casco de tu clase.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Sangrellama → matadioses melee; {o:CalamityMod/Murasama} es potente pero exige cercanía."
+    "cuerpo_a_cuerpo": "Sangrellama → Matadioses melee; {o:CalamityMod/Murasama} es potente pero exige cercanía."
    },
    "necesitas": [],
    "tareas": [
@@ -4638,7 +4638,7 @@
     },
     {
      "id": "yharon.4",
-     "texto": "Consume la {o:CalamityMod/SacredStrawberry}, fabrica la armadura Tesla áurica de tu clase y completa la {o:CalamityMod/AuricQuantumCoolingCell}.",
+     "texto": "Consume la {o:CalamityMod/SacredStrawberry}, fabrica la armadura de Tesla áurica de tu clase y completa la {o:CalamityMod/AuricQuantumCoolingCell}.",
      "condicion": {
       "tipo": "todas",
       "condiciones": [
@@ -4656,7 +4656,7 @@
     },
     {
      "id": "yharon.5",
-     "texto": "Para Tesla áurica conserva tarragon, sangrellama y matadioses de tu clase: cada casco Auric exige los de su clase.",
+     "texto": "Para Tesla áurica conserva Tarragon, Sangrellama y Matadioses de tu clase: cada casco Auric exige los de su clase.",
      "manual": true
     }
    ],
@@ -5987,7 +5987,7 @@
       [
        "Después de {n:CalamityMod/Polterghast}",
        "**{o:CalamityMod/TerrorBlade}** si cae del jefe; {o:CalamityMod/Terratomere} sigue siendo una opción.",
-       "Prepara sangrellama y el dash para {n:CalamityMod/DevourerofGodsHead}."
+       "Prepara Sangrellama y el dash para {n:CalamityMod/DevourerofGodsHead}."
       ],
       [
        "Después de {n:CalamityMod/DevourerofGodsHead}",
@@ -6649,7 +6649,7 @@
     },
     {
      "tipo": "parrafo",
-     "texto": "Abre los controles de Calamity y revisa las habilidades de tu set cada vez que cambies de armadura. matadioses tiene una herramienta de desplazamiento que exige familiarizarte con su dirección y recuperación; Auric hereda mecánicas de sus armaduras componentes. Practica en la base cómo se activa y cuánto debes esperar antes de contar con ella de nuevo."
+     "texto": "Abre los controles de Calamity y revisa las habilidades de tu set cada vez que cambies de armadura. Matadioses tiene una herramienta de desplazamiento que exige familiarizarte con su dirección y recuperación; Auric hereda mecánicas de sus armaduras componentes. Practica en la base cómo se activa y cuánto debes esperar antes de contar con ella de nuevo."
     },
     {
      "tipo": "parrafo",
@@ -7533,7 +7533,7 @@
       [
        "{o:CalamityMod/NightmareFuel} / {o:CalamityMod/EndothermicEnergy} / {o:CalamityMod/DarksunFragment}",
        "Luna calabaza / Luna Gélida / Eclipse después de {n:CalamityMod/DevourerofGodsHead}",
-       "{o:CalamityMod/AscendantSpiritEssence}, matadioses y armas."
+       "{o:CalamityMod/AscendantSpiritEssence}, Matadioses y armas."
       ],
       [
        "{o:CalamityMod/AuricOre} / {o:CalamityMod/YharonSoulFragment}",
@@ -15184,7 +15184,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura de tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -15620,7 +15620,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura de sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -16419,7 +16419,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura de Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -17615,7 +17615,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura de sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -24812,7 +24812,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura de tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -25313,7 +25313,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura de sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -26169,7 +26169,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura de Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -27485,7 +27485,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura de sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -34350,7 +34350,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura de tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -34814,7 +34814,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura de sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -35598,7 +35598,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura de Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -36848,7 +36848,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura de sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -43753,7 +43753,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura de tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -44254,7 +44254,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura de sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -45048,7 +45048,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura de Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -46314,7 +46314,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura de sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -53212,7 +53212,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
+     "nota": "{n:CalamityMod/Providence} da {o:CalamityMod/DivineGeode} y {o:CalamityMod/UelibloomOre} (armadura de tarragon y armas más fuertes) y la {o:CalamityMod/TaintedCloudberry} para la vida; {n:CalamityMod/RavagerBody} y el {z:penascos_azufre} sueltan {o:CalamityMod/Bloodstone}. La {o:CalamityMod/MarkofProvidence} abre tres jefes nuevos con equipo para {n:CalamityMod/Polterghast}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -53720,7 +53720,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
+     "nota": "{n:CalamityMod/Polterghast} da {o:CalamityMod/RuinousSoul} (armadura de sangrellama) y el {o:CalamityMod/PhantomHeart}; desbloquea la tercera fase de la Lluvia Ácida y {n:CalamityMod/OldDuke}, y las capas profundas del {z:abismo} con el {o:CalamityMod/BobbitHook}. Para {n:CalamityMod/DevourerofGodsHead} se recomienda la montura {o:Terraria/WitchBroom} o {o:CalamityMod/Brimrose}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -54498,7 +54498,7 @@
        "marcas": []
       }
      ],
-     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
+     "nota": "{n:CalamityMod/Yharon} hace que genere {o:CalamityMod/AuricOre} bajo tierra; con las {o:CalamityMod/YharonSoulFragment} sale la armadura de Tesla áurica y armas Auric. Crea la {o:CalamityMod/SacredStrawberry}. El orden entre Exomecas y Supreme Witch lo eliges tú; vence primero la que se te dé mejor para usar su botín en la otra. El {o:CalamityMod/ExoThrone} es muy recomendable contra {n:CalamityMod/SupremeCalamitas}.",
      "fuentes": [
       {
        "wiki": "calamity",
@@ -55742,7 +55742,7 @@
        "marcas": []
       }
      ],
-     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
+     "nota": "Con Exomecas y {n:CalamityMod/SupremeCalamitas} vencidos, combina {o:CalamityMod/ExoPrism}, {o:CalamityMod/AshesofAnnihilation} y {o:CalamityMod/AuricBar} en {o:CalamityMod/ShadowspecBar} para la armadura de sombra demoníaca y los objetos de desarrollador; después, Boss Rush y {n:CalamityMod/PrimordialWyrmHead}.",
      "fuentes": [
       {
        "wiki": "calamity",
