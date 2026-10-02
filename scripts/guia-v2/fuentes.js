@@ -11,11 +11,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const DECOMP = 'C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled';
+// Rutas relativas a la carpeta del usuario (o por variable de entorno), nunca escritas a mano.
+const os = require('os');
+const KEEP = process.env.KEEP_DIR || path.join(os.homedir(), 'Downloads', 'Keep');
+const DECOMP = process.env.TK_DECOMPILADO || path.join(KEEP, 'tModLoader-Decompiled');
 const TML = path.join(DECOMP, 'tModLoader');
 const CAL = path.join(DECOMP, 'CalamityMod-2.2.4');
-const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Keep\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
-const WORKSHOP = 'C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1281930';
+const TMOD_EXTRACT = path.join(KEEP, 'Terrasavr-Win', 'Terrasavr-Calamity-Beta', 'resources', 'app', 'tmod-extract.js');
+const WORKSHOP = process.env.TK_WORKSHOP || path.join('C:\\', 'Program Files (x86)', 'Steam', 'steamapps', 'workshop', 'content', '1281930');
 const TMOD_CALAMITY = path.join(WORKSHOP, '2824688072', '2026.6', 'CalamityMod.tmod');
 const TMOD_CALAMITY_ESP = path.join(WORKSHOP, '2829795471', '2026.6', 'CalamityModEsp.tmod');
 

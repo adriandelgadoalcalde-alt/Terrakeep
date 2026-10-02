@@ -11,8 +11,8 @@
  *   y lo vuelca en un JSON indexado por objeto (ver formato en la salida).
  *
  * DE DÓNDE LEE (solo lectura)
- *   Calamity : C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\CalamityMod-2.2.4\
- *   Vanilla  : C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\tModLoader\
+ *   Calamity : <carpeta del usuario>DownloadsKeep	ModLoader-DecompiledCalamityMod-2.2.4\
+ *   Vanilla  : <carpeta del usuario>DownloadsKeep	ModLoader-Decompiled	ModLoader\
  *              (Terraria\ID\ItemID.cs, NPCID.cs, TileID.cs, Recipe.cs, ModLoader\NPCShopDatabase.cs,
  *               GameContent\ItemDropRules\ItemDropDatabase.cs)
  *
@@ -49,9 +49,9 @@ const path = require('path');
 const ARGS = process.argv.slice(2);
 function arg(nombre, def) { const i = ARGS.indexOf('--' + nombre); return i >= 0 && ARGS[i + 1] ? ARGS[i + 1] : def; }
 const VERBOSE = ARGS.includes('--verbose');
-const RAIZ_CAL = arg('calamity', 'C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\CalamityMod-2.2.4');
-const RAIZ_VAN = arg('vanilla', 'C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\tModLoader');
-const SALIDA = arg('salida', 'C:\\Users\\adrian\\AppData\\Local\\Temp\\claude\\C--Users-adrian-Downloads-Keep-Terrasavr-Win-Terrasavr-Calamity-Beta-resources-app\\d38ffe35-118f-4719-b326-0ca425888fe7\\scratchpad\\f0\\obtencion.json');
+const RAIZ_CAL = arg('calamity', require('path').join(require('os').homedir(), 'Downloads', 'Keep', 'tModLoader-Decompiled', 'CalamityMod-2.2.4'));
+const RAIZ_VAN = arg('vanilla', require('path').join(require('os').homedir(), 'Downloads', 'Keep', 'tModLoader-Decompiled', 'tModLoader'));
+const SALIDA = arg('salida', require('path').join(require('os').tmpdir(), 'guia-v2-obtencion.json'));
 
 // ---------------------------------------------------------------------------
 // Resultado global

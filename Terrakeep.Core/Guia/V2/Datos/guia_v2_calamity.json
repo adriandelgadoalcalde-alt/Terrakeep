@@ -10,7 +10,7 @@
   "fechaInvestigacion": "2026-10-01",
   "nota": "Contenido base: guía del usuario (investigación cerrada el 1-oct-2026, referencia Calamity 2.2.4). Escaleras por clase: calamitymod.wiki.gg Guide:Class setups (consultada el 2-oct-2026, la wiki declara 2.1.2; cada objeto verificado en el decompilado 2.2.4). Recetas, botín y tiendas: código decompilado de Calamity 2.2.4 y tModLoader 1.4.4.9."
  },
- "creditos": "Basada en la guía «Terraria + Calamity · Manual de campo» de Adrián, ampliada para todas las clases y modos y conectada a tu partida real.",
+ "creditos": "Basada en la guía «Terraria + Calamity · Manual de campo» (Guia-Calamity), ampliada para todas las clases y modos y conectada a tu partida real.",
  "clases": [
   "cuerpo_a_cuerpo",
   "distancia",

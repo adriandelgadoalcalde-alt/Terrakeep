@@ -23,7 +23,7 @@ const A = require('./anotaciones-calamity.js');
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
-const GUIA = arg('--guia', 'C:\\Users\\adrian\\Downloads\\Guia-Calamity');
+const GUIA = arg('--guia', path.join(require('os').homedir(), 'Downloads', 'Guia-Calamity'));
 const SALIDA = arg('--salida', path.join(__dirname, '..', '..', 'Terrakeep.Core', 'Guia', 'V2', 'Datos', 'guia_v2_calamity.json'));
 
 // ---- 1. contenido del usuario (mismo orden de carga que su Guia-Calamity.html)
@@ -273,7 +273,7 @@ const doc = {
     terraria: '1.4.4.9 (tModLoader)', calamity: '2.2.4', fechaInvestigacion: '2026-10-01',
     nota: 'Contenido base: guía del usuario (investigación cerrada el 1-oct-2026, referencia Calamity 2.2.4). Escaleras por clase: calamitymod.wiki.gg Guide:Class setups (consultada el 2-oct-2026, la wiki declara 2.1.2; cada objeto verificado en el decompilado 2.2.4). Recetas, botín y tiendas: código decompilado de Calamity 2.2.4 y tModLoader 1.4.4.9.',
   },
-  creditos: 'Basada en la guía «Terraria + Calamity · Manual de campo» de Adrián, ampliada para todas las clases y modos y conectada a tu partida real.',
+  creditos: 'Basada en la guía «Terraria + Calamity · Manual de campo» (Guia-Calamity), ampliada para todas las clases y modos y conectada a tu partida real.',
   clases: ['cuerpo_a_cuerpo', 'distancia', 'magia', 'invocacion', 'picaro'],
   capitulos: A.capitulos.map(c => ({ ...c, resumen: S(c.resumen) })),
   paradas,
