@@ -40,8 +40,11 @@ public sealed partial class ObjetoGuiaViewModel : ObservableObject
     public string MarcasAyuda => _guia.ExplicarMarcas(Marcas);
     public string Nombre => _guia.NombreObjeto(Ref);
     public string? Icono => _guia.IconoObjeto(Ref);
+    /// <summary>Solo el ID numerico ("ID 65") de los objetos de Terraria; nada para los de Calamity
+    /// (su id aqui es sintetico y el nombre interno "CalamityMod/Clase" es un dato de desarrollador).
+    /// Parche 3.4.1.</summary>
     public string RefCorta => Ref.StartsWith("Terraria/", StringComparison.Ordinal) && GuiaV2Recursos.Referencias.Objetos.TryGetValue(Ref, out var o) && o.Id is int id
-        ? "ID " + id : Ref;
+        ? "ID " + id : "";
 
     /// <summary>Unidades reales en todo el personaje (null = sin personaje cargado o referencia
     /// que esta build no conoce: "no se sabe", nunca "no lo tienes").</summary>
@@ -407,10 +410,14 @@ public sealed partial class FichaObjetoViewModel : ObservableObject
     public ObjetoGuiaViewModel Objeto { get; }
     public string Nombre => Objeto.Nombre;
     public string? Icono => Objeto.Icono;
-    public string NombreOtroIdioma => _guia.NombreOtroIdioma(Objeto.Ref);
-    public bool TieneNombreOtroIdioma => !string.IsNullOrEmpty(NombreOtroIdioma) && NombreOtroIdioma != Nombre;
-    public string Identificador => Objeto.RefCorta;
-    public string FuenteNombre => GuiaV2Recursos.Referencias.Objetos.TryGetValue(Objeto.Ref, out var o) ? o.FuenteEs : "";
+    /// <summary>Chip de la cabecera de la ficha: "ID 4144" en vanilla, "Calamity" en un objeto del mod.</summary>
+    public string Identificador => Objeto.RefCorta.Length > 0 ? Objeto.RefCorta
+        : Objeto.Ref.StartsWith("CalamityMod/", StringComparison.Ordinal) ? "Calamity" : "";
+    public bool TieneIdentificador => Identificador.Length > 0;
+    /// <summary>Aviso honesto solo cuando el nombre no tiene traduccion oficial; la procedencia tecnica
+    /// de la traduccion ("CalamityKeep-Traduccion-ES 0.1.0 (es-ES)") ya no se enseña.</summary>
+    public string FuenteNombre => GuiaV2Recursos.Referencias.Objetos.TryGetValue(Objeto.Ref, out var o) && o.FuenteEs == "sin traduccion"
+        ? LocalizationService.Instance["guia2_sin_traduccion"] : "";
     public IReadOnlyList<ObtencionV2ViewModel> Obtenciones { get; }
     public bool TieneObtenciones => Obtenciones.Count > 0;
     public bool SeConsigueEnElMundo => Obtenciones.Count == 0;

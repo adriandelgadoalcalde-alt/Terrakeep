@@ -187,12 +187,24 @@ function gruposReales() {
   return r;
 }
 const GRUPOS = gruposReales();
+// El juego forma el nombre de un grupo como "Cualquiera" + nombre del objeto ("Cualquiera Bloque de
+// arena"): es el texto literal de es-ES pero no es español natural. La Guia lo escribe como una frase
+// ("Cualquier bloque de arena"); la version inglesa ("Any Sand Block") ya es natural y no se toca.
+function grupoEsNatural(es) {
+  if (!es) return es;
+  const m = /^Cualquiera (.+)$/.exec(es);
+  if (!m) return es.replace(/ o ([A-ZÁÉÍÓÚ])/g, (a, c) => ' o ' + c.toLowerCase()); // "Llama maldita o Icor" -> "... o icor"
+  const resto = m[1].charAt(0).toLowerCase() + m[1].slice(1);
+  // Nombres en plural ("Grebas sagradas"): "Cualquier grebas" no es gramatical.
+  if (/^grebas( |$)/i.test(resto)) return 'Cualquiera de las ' + resto;
+  return 'Cualquier ' + resto;
+}
 function nombreGrupo(g) {
   const k = g.replace(/^RecipeSystem\./, '');
   const f = GRUPOS[k];
   const es = f && f('es'), en = f && f('en');
   if (!es) { problemas.push('grupo de receta sin nombre: ' + g); return { es: en || g, en: en || g, fuenteEs: 'sin traduccion' }; }
-  return { es, en, fuenteEs: k in GRUPOS ? 'nombre real de RecipeGroup (Lang/Language) en es-ES' : 'sin traduccion' };
+  return { es: grupoEsNatural(es), en, fuenteEs: k in GRUPOS ? 'nombre real de RecipeGroup (Lang/Language) en es-ES' : 'sin traduccion' };
 }
 
 // ---------------------------------------------------------------- 4. obtencion (profundidad 2)
@@ -231,6 +243,13 @@ for (const r of [...npcs].sort()) { const d = refNpc(r); if (d) tabla.npcs[r] = 
 for (const e of [...estaciones].sort()) tabla.estaciones[e] = nombreEstacion(e);
 for (const g of [...grupos].sort()) tabla.grupos[g] = nombreGrupo(g);
 fase++;
+
+// Parche 3.4.1: el en-US de Calamity define el nombre de algunos objetos como una referencia a otra clave
+// ("{$NPCs.BloodwormNormal.DisplayName}") que este script no resuelve en ingles: nunca debe llegar tal cual
+// a la tabla (el jugador la veria en la ficha). Se sustituye por el nombre ingles real de la clave citada.
+const EN_RESUELTO = { 'CalamityMod/BloodwormItem': 'Bloodworm' };
+for (const [r, en] of Object.entries(EN_RESUELTO)) if (tabla.objetos[r] && tabla.objetos[r].en.includes('{$')) tabla.objetos[r].en = en;
+for (const [r, o] of Object.entries(tabla.objetos)) if (o.en.includes('{$') || o.es.includes('{$')) problemas.push('nombre con clave sin resolver: ' + r);
 
 tabla.fuentes = {
   ids: 'ItemID.cs / NPCID.cs / TileID.cs del tModLoader 1.4.4.9 decompilado',

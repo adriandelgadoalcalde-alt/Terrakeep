@@ -610,7 +610,7 @@ const paradas = {
       4: { condicion: M },
     },
     completadaCuando: B('downedMoonlord'),
-    avisos: [{ modos: ['maestro'], texto: 'En Maestro la {o:CalamityMod/CelestialOnion} funciona como un {o:Terraria/DemonHeart} extra (CelestialOnion.cs), así que la guía no puede distinguirla: marca la tarea a mano.' }],
+    avisos: [{ modos: ['maestro'], texto: 'En Maestro la {o:CalamityMod/CelestialOnion} funciona como un {o:Terraria/DemonHeart} extra, así que la guía no puede distinguirla: marca la tarea a mano.' }],
   },
   guardians: {
     titulo: '{n:CalamityMod/ProfanedGuardianCommander}', tipo: 'jefe', jefes: ['CalamityMod/ProfanedGuardianCommander'],

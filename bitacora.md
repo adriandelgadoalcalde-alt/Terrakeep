@@ -34269,3 +34269,25 @@ de F4). Solo datos y scripts de la Guía y el catálogo; nada de UI.
   GUIAV2_SOLO 0, PILDORAS_SOLO 0 badges-píldora, RESTO_RESPONSIVE_SOLO 0, LAYOUT_REPOSO_SOLO 539/0, instalador
   `TerrakeepSetup-3.4.0.exe` SHA256 `555cca7af5fd6a42e867ce349faa8a830660322bd7991c5e14369dacb8770c4b` instalado en
   silencio (3.4.0.0, desinstalador presente). Revisor: PASS.
+
+## 3-oct-2026 - Parche 3.4.1: la Guía deja de enseñar restos técnicos
+
+- **Qué se vio** (capturas de la release 3.4.0/0.8.0): nombre interno `CalamityMod/BurntSienna` bajo los sprites de la
+  escalera, línea «dato del código del juego: …DesertMedallion.cs:56», cabecera con nombre inglés e interno,
+  «40 × Cualquiera Bloque de arena» y condiciones escritas como código.
+- **Arreglos:** `GuiaV2ItemViewModels.cs` (`RefCorta`/`Identificador`/`FuenteNombre`: solo «ID n» en vanilla, «Calamity» en la
+  cabecera, nada en la escalera), `GuiaV2View.xaml` (fuera `FuenteCodigo` y el nombre en otro idioma),
+  `GuiaV2ViewModel.cs` (condiciones vía la nueva `Core/Guia/V2/GuiaV2Condiciones.cs`, compartida con TerrakeepMod: traduce
+  o, si no reconoce la condición, la omite; nunca enseña código). Grupos de receta como frase en
+  `guia_v2_referencias.json` + `scripts/guia-v2/generar-referencias.js` (`grupoEsNatural`). El juego concatena
+  «Cualquiera» + nombre en es-ES (comprobado en `Terraria.Localization.Content.es-ES.Legacy.json`, `LegacyMisc[37]`): es
+  literal pero no es español natural, por eso la Guía lo reescribe. Hallazgos del propio canario: nombre inglés
+  `{$NPCs.BloodwormNormal.DisplayName}` sin resolver, aviso de Maestro con `CelestialOnion.cs` y «pescando con Bloodworm».
+- **Obstáculo:** el texto «pescando con Bloodworm» viene de la guía HTML de origen, no de `scripts/guia-v2`: se corrigió en el
+  JSON de datos; si se regenera la guía Calamity desde la fuente, hay que reaplicarlo.
+- **Canarios nuevos:** `Core.Tests/Guia/GuiaV2TextoVisibleTests.cs` (texto visible de las dos guías, nombres de la tabla,
+  todas las condiciones, grupos) y `App.ViewModels.Tests/GuiaV2TextoVisibleVmTests.cs` (todas las fichas y la escalera
+  en ambas guías + la vista no enlaza datos de desarrollador).
+- **Pruebas:** Core 856/856, ViewModels 848 (un fallo intermitente de `HomeRefreshAsyncTests` bajo carga que pasa solo
+  dos veces seguidas), GUIAV2_SOLO 0 fallos, capturas 45/45 con contenido. Hashes de partidas reales de Terraria antes/después
+  idénticos. Instalador `TerrakeepSetup-3.4.1.exe` instalado en silencio (3.4.1.0, desinstalador presente).

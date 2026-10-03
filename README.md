@@ -48,6 +48,10 @@ instantáneo.
 
 ![Guía: mi guía](docs/screenshots/07-guia-mi-guia.png)
 
+![Guía: ficha «cómo conseguirlo» de un objeto](docs/screenshots/08-guia-ficha.png)
+
+![Guía: escalera de equipo por clase](docs/screenshots/09-guia-equipo.png)
+
 ![Tu propio servidor](docs/screenshots/06-servidor.png)
 
 ![Interfaz en inglés](docs/screenshots/04-about-settings-en.png)

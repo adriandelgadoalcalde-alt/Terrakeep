@@ -3602,7 +3602,7 @@
      "modos": [
       "maestro"
      ],
-     "texto": "En Maestro la {o:CalamityMod/CelestialOnion} funciona como un {o:Terraria/DemonHeart} extra (CelestialOnion.cs), así que la guía no puede distinguirla: marca la tarea a mano."
+     "texto": "En Maestro la {o:CalamityMod/CelestialOnion} funciona como un {o:Terraria/DemonHeart} extra, así que la guía no puede distinguirla: marca la tarea a mano."
     }
    ],
    "fuentes": [
@@ -4302,7 +4302,7 @@
     },
     {
      "id": "oldduke.2",
-     "texto": "{n:CalamityMod/OldDuke} aparece al terminar ese nivel; también se puede invocar pescando con Bloodworm.",
+     "texto": "{n:CalamityMod/OldDuke} aparece al terminar ese nivel; también se puede invocar pescando con {o:CalamityMod/BloodwormItem}.",
      "condicion": {
       "tipo": "bandera",
       "bandera": "downedBoomerDuke"

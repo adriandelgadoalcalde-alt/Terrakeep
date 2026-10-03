@@ -125,9 +125,9 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Nombre}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="190" />
                         <!-- Sprite + ID de cada objeto, como la escalera de la guia HTML del usuario
-                             ("ID 65" vanilla, "CalamityMod/Nombre" Calamity). F4, 2-oct-2026. -->
+                             ("ID 65" en vanilla; nada en Calamity: nunca el nombre interno). F4, 2-oct-2026; parche 3.4.1. -->
                         <TextBlock Text="{Binding RefCorta}" FontFamily="Consolas" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap" MaxWidth="190" />
+                                   TextWrapping="Wrap" MaxWidth="190" Visibility="{Binding RefCorta, Converter={StaticResource EmptyToCollapsed}}" />
                         <TextBlock Text="{Binding Marcas}" FontSize="10" Foreground="{StaticResource MasterGoldBrush}" ToolTip="{Binding MarcasAyuda}" Background="Transparent"
                                    Visibility="{Binding Marcas, Converter={StaticResource EmptyToCollapsed}}" />
                     </StackPanel>
@@ -1199,9 +1199,9 @@
                                        Visibility="{Binding Icono, Converter={StaticResource NullToVis}}" />
                             </Grid>
                             <TextBlock Text="{Binding Nombre}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                            <TextBlock Text="{Binding NombreOtroIdioma}" Style="{StaticResource CaptionText}" Visibility="{Binding TieneNombreOtroIdioma, Converter={StaticResource GuiaBoolToVis}}" />
                             <WrapPanel Margin="0,8,0,0">
-                                <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}">
+                                <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}"
+                                        Visibility="{Binding TieneIdentificador, Converter={StaticResource GuiaBoolToVis}}">
                                     <TextBlock Text="{Binding Identificador}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </Border>
                                 <Border Style="{StaticResource SemanticStateChip}" Margin="0,0,6,6" BorderBrush="{StaticResource BorderBrush0}">
@@ -1232,7 +1232,6 @@
                                                 <ctl:TextoGuia Marcado="{Binding Marcado}" Style="{StaticResource GuiaCuerpo}" TamanoIcono="22" />
                                                 <TextBlock Text="{Binding Detalle}" FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"
                                                            Visibility="{Binding TieneDetalle, Converter={StaticResource GuiaBoolToVis}}" />
-                                                <TextBlock Text="{Binding FuenteCodigo}" FontFamily="Consolas" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -1241,7 +1240,8 @@
                             <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="10" Padding="14,10" Visibility="{Binding SeConsigueEnElMundo, Converter={StaticResource GuiaBoolToVis}}">
                                 <TextBlock Text="{Binding [guia2_ficha_en_el_mundo], Source={StaticResource L}}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
                             </Border>
-                            <TextBlock Text="{Binding FuenteNombre}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" Opacity="0.8" />
+                            <TextBlock Text="{Binding FuenteNombre}" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" Opacity="0.8"
+                                       Visibility="{Binding FuenteNombre, Converter={StaticResource EmptyToCollapsed}}" />
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>

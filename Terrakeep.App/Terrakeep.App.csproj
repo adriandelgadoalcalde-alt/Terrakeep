@@ -106,9 +106,13 @@
          conseguirlo" con atajo a la Libreria y marcador de la siguiente parada en el mapa de
          Exploracion; Inicio y el chip/banda del mapa leen la misma guia. Ver docs/guia-v2-diseno.md,
          changelog.json y bitacora.md. MINOR real (funcion nueva grande). -->
-    <Version>3.4.0</Version>
-    <FileVersion>3.4.0.0</FileVersion>
-    <AssemblyVersion>3.4.0.0</AssemblyVersion>
+    <!-- 3.4.1 (3-oct-2026): parche de pulido de la Guia v2 tras revisar las capturas de la release: la
+         ficha de objeto y la escalera de equipo ya no enseñan datos tecnicos (nombres internos de
+         Calamity, ruta del codigo, nombre ingles junto al español, condiciones como codigo) y los grupos
+         de receta se leen como frase ("Cualquier bloque de arena"). Solo arreglos: PATCH. -->
+    <Version>3.4.1</Version>
+    <FileVersion>3.4.1.0</FileVersion>
+    <AssemblyVersion>3.4.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

@@ -1,5 +1,26 @@
 [
   {
+    "version": "3.4.1",
+    "date": "3 de octubre de 2026",
+    "date_en": "October 3, 2026",
+    "summary": "Pulido de la Guía: la ficha de cada objeto y la escalera de equipo ya no enseñan datos técnicos. Desaparecen los nombres internos de Calamity bajo los sprites, la ruta del código, el nombre en inglés junto al español y las condiciones escritas como código; los grupos de receta se leen como una frase normal («Cualquier bloque de arena»).",
+    "summary_en": "Guide polish: the item card and the gear ladder no longer show technical data. Calamity's internal names under the sprites, the code path, the English name next to the Spanish one and conditions written as code are gone; recipe groups now read as a normal sentence (\"Any sand block\").",
+    "fixed": [
+      "La escalera de equipo enseñaba bajo los objetos de Calamity su nombre interno («CalamityMod/BurntSienna»). Ahora solo sale el ID numérico en vanilla («ID 5098») y nada en Calamity.",
+      "La ficha de un objeto ya no muestra la línea de desarrollador con el archivo del código del juego («…DesertMedallion.cs:56»), ni el nombre en inglés junto al español, ni la procedencia técnica de la traducción. En la cabecera queda «Calamity» o «ID n».",
+      "Los grupos de receta se escribían tal como los concatena el juego («40 × Cualquiera Bloque de arena»). Ahora son una frase correcta: «Cualquier bloque de arena», «Cualquier madera», «Cualquier lingote de hierro»…",
+      "Las condiciones de recetas, botín y tiendas salían como código («DropHelper.PostDoG()», «Condition.InGraveyard»). Ahora se traducen («tras derrotar al Devorador de dioses», «en un cementerio») y, si no tienen una forma legible, no se enseñan.",
+      "Un objeto de Calamity (Gusano de sangre) enseñaba en inglés una clave sin resolver, y un aviso de Maestro citaba un archivo del código. Corregidos; las pruebas ahora comprueban todo el texto visible de la Guía y de las fichas para que no vuelva a pasar."
+    ],
+    "fixed_en": [
+      "The gear ladder showed Calamity items' internal name under the sprite (\"CalamityMod/BurntSienna\"). Now it only shows the numeric ID for vanilla (\"ID 5098\") and nothing for Calamity.",
+      "An item's card no longer shows the developer line with the game-code file (\"…DesertMedallion.cs:56\"), the English name next to the Spanish one, or the technical origin of the translation. The header keeps \"Calamity\" or \"ID n\".",
+      "Recipe groups were written the way the game concatenates them (\"40 × Cualquiera Bloque de arena\"). They are now proper phrases: \"Cualquier bloque de arena\", \"Cualquier madera\", \"Cualquier lingote de hierro\"…",
+      "Recipe, drop and shop conditions were shown as code (\"DropHelper.PostDoG()\", \"Condition.InGraveyard\"). They are now translated (\"after defeating the Devourer of Gods\", \"in a Graveyard\") and, when there is no readable form, they are hidden.",
+      "A Calamity item (Bloodworm) showed an unresolved key in English, and a Master-mode warning quoted a code file. Fixed; the tests now check all visible Guide and item-card text so this cannot come back."
+    ]
+  },
+  {
     "version": "3.4.0",
     "date": "2 de octubre de 2026",
     "date_en": "October 2, 2026",
