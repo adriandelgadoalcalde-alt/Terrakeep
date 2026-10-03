@@ -110,9 +110,14 @@
          ficha de objeto y la escalera de equipo ya no enseñan datos tecnicos (nombres internos de
          Calamity, ruta del codigo, nombre ingles junto al español, condiciones como codigo) y los grupos
          de receta se leen como frase ("Cualquier bloque de arena"). Solo arreglos: PATCH. -->
-    <Version>3.4.1</Version>
-    <FileVersion>3.4.1.0</FileVersion>
-    <AssemblyVersion>3.4.1.0</AssemblyVersion>
+    <!-- 3.4.2 (3-oct-2026): parche: los textos de la Guia v2 sin palabras inglesas sueltas (Planetoids,
+         melee, dash, buff...), la app deja de gastar CPU con el raton quieto sobre una tarjeta (el hover
+         de las tarjetas movia su propia zona de acierto y provocaba 8 pasadas de layout por segundo) y
+         Builds enseña los prefijos con su nombre oficial en español (Legendario, no Legendary). Solo
+         arreglos: PATCH. -->
+    <Version>3.4.2</Version>
+    <FileVersion>3.4.2.0</FileVersion>
+    <AssemblyVersion>3.4.2.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

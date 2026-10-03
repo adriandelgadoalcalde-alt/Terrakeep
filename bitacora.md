@@ -34371,3 +34371,21 @@ tarjetas) y NO están en ninguna release (3.4.1 es la última publicada). Saldr�
 - **Segunda ronda completa sobre `14890b07`:** GUIAV2_SOLO 0 (44 capturas), PILDORAS_SOLO 0 píldoras (80), RESTO 0 (49), EQUIP 0 (23), INVALM 0
   (38), LIBRARY 0 (140), PERSONAJE 0 (49), HOMEHOVER/AR14/ARLAY_CANARIO/NAV123 0 fallos, LAYOUT_REPOSO_SOLO 544 medidas / 0 fallos /
   0 inconclusas / 0 NOT_OBSERVED con el cursor en (1678,865); Core 867/867; ViewModels 848/848.
+
+## 3-oct-2026 - Parche 3.4.2 publicado (Guía sin inglés suelto, tarjetas sin bucle de layout, prefijos de Builds en español)
+
+- **Builds, prefijos en inglés: era REAL.** `BuildsViewModel.ResolveItem` pasaba a la vista el campo crudo `prefix` de
+  `builds.json` (nombre interno inglés: `Legendary`, `Godly`, `Mythical`, `Unreal`, `Agile`, `Demonic`, `Ruthless`) en los dos
+  idiomas, y los prefijos propios de Calamity de las builds de Pícaro (`prefixId` 10002/10020) no se resolvían y no salían. Arreglo
+  (`bd9abad5`): `BuildItemRowViewModel` recibe el nombre es/en del catálogo oficial (`VanillaPrefixCatalog.ByInternal` y
+  `RoguePrefixCatalog.ById`) y lo elige al leer según el idioma, con refresco en caliente. Revisadas el resto de pestañas: Objetos,
+  Inspector de cofres y Comparar ya usaban `RefreshPrefixDisplay`/`ResolvePrefixName` con el catálogo y el idioma; Exploración «Cofre a
+  cofre» cogía siempre el español (ahora `LocalizedContent.Pick`).
+- **Pruebas:** `BuildsPrefijoIdiomaTests` (3; rojo sin el arreglo: 2 fallan; verde con él) y canario por render
+  `BUILDS_PREFIJOS_SOLO=1` (recorre el árbol visual de Builds vanilla y Calamity con la app en español: 17 prefijos en español vistos,
+  0 en inglés, y exige haber observado alguno; capturas abiertas: «Legendario», «Piadoso», «Irreal», «Mítico», «Ágil», «Demoníaco»).
+- **Verificación (HEAD de código `bd9abad5`, turno de pantalla con `PANTALLA.lock`):** build 0/0, Core 867/867, ViewModels 851/851,
+  GUIAV2_SOLO 0 fallos (44 capturas con contenido), LAYOUT_REPOSO_SOLO 544 medidas / 0 fallos / 0 inconclusas / 0 NOT_OBSERVED con el cursor en (1678,865).
+  Hashes de 118 archivos de partidas reales (Players/Worlds de tModLoader y Terraria) idénticos antes y después.
+- **Paquete:** `TerrakeepSetup-3.4.2.exe`, 56.832.731 bytes, SHA256 `f4be42bff8e8a66d617d9258ba5133fde70b132189929bf2575bb68312df0a14`,
+  instalado en silencio encima del instalado (3.4.2.0, desinstalador presente, 0 `.pdb`, exe idéntico al publish). Terrakeep no estaba abierto.

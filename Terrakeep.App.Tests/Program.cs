@@ -3398,6 +3398,61 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BUILDS_PREFIJOS_SOLO=1 (3-oct-2026, parche 3.4.2): un revisor vio en una captura de Builds
+        // prefijos en ingles ("Legendary", "Godly"...) con la app en español - la vista pasaba el
+        // campo crudo "prefix" de builds.json. Canario por render real: con la app en español, recorre
+        // el arbol visual de Builds (vanilla y Calamity) buscando TextBlocks con un nombre interno
+        // ingles de prefijo (FALLO) y exige que aparezca "Legendario"; deja una captura con la fila
+        // de un prefijo a la vista (builds-prefijos-es.png, junto al exe del arnes).
+        if (Environment.GetEnvironmentVariable("BUILDS_PREFIJOS_SOLO") == "1")
+        {
+            string idiomaPrevio = Terrakeep.App.Services.LocalizationService.Instance.Language;
+            try
+            {
+                Terrakeep.App.Services.LocalizationService.Instance.SetLanguage(Terrakeep.App.Services.LocalizationService.Spanish);
+                FijarTamaño(window, 1600, 900);
+                DoEvents();
+                vm.SelectedTabIndex = 2; // Builds
+                DoEvents();
+                string[] ingles = ["Legendary", "Godly", "Mythical", "Unreal", "Agile", "Demonic", "Ruthless"];
+                int fallos = 0, vistos = 0;
+                var tcBuilds = Descendientes<System.Windows.Controls.TabControl>(window).FirstOrDefault(t => t.IsVisible && t.Items.Count == 2);
+                for (int pestana = 0; pestana < 2 && tcBuilds != null; pestana++)
+                {
+                    tcBuilds.SelectedIndex = pestana;
+                    DoEvents(); DoEvents();
+                    var textos = Descendientes<TextBlock>(window).Where(t => !string.IsNullOrEmpty(t.Text)).ToList();
+                    foreach (var t in textos.Where(t => ingles.Contains(t.Text)))
+                    {
+                        fallos++;
+                        Console.WriteLine($"FALLO: BUILDS_PREFIJOS_SOLO - prefijo en ingles visible en la pestaña {pestana}: '{t.Text}'");
+                    }
+                    var primero = textos.FirstOrDefault(t => t.Text == "Legendario" || t.Text == "Impecable");
+                    vistos += textos.Count(t => t.Text == "Legendario" || t.Text == "Impecable" || t.Text == "Piadoso");
+                    if (primero != null)
+                    {
+                        primero.BringIntoView();
+                        DoEvents(); DoEvents();
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(window);
+                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string ruta = Path.Combine(AppContext.BaseDirectory, pestana == 0 ? "builds-prefijos-es.png" : "builds-prefijos-calamity-es.png");
+                        using (var fs = File.Create(ruta)) enc.Save(fs);
+                        Console.WriteLine($"BUILDS_PREFIJOS_SOLO: captura -> {ruta}");
+                    }
+                    Console.WriteLine($"BUILDS_PREFIJOS_SOLO: pestaña {pestana}: {textos.Count} textos, prefijo en español visible={(primero != null ? primero.Text : "NINGUNO")}");
+                }
+                if (vistos == 0) Console.WriteLine("FALLO: BUILDS_PREFIJOS_SOLO - NOT_OBSERVED: no se vio ningun prefijo en español (el canario no observo nada)");
+                Console.WriteLine($"BUILDS_PREFIJOS_SOLO: {vistos} prefijos en español vistos, {fallos} en ingles");
+            }
+            catch (Exception ex) { Console.WriteLine("BUILDS_PREFIJOS_SOLO-EXCEPTION: " + ex); }
+            finally { Terrakeep.App.Services.LocalizationService.Instance.SetLanguage(idiomaPrevio); }
+            Console.WriteLine("DONE (BUILDS_PREFIJOS_SOLO)");
+            Environment.Exit(0);
+        }
+
         // BUILDS_CENTER_SOLO=1 (21-sep-2026, 2 bugs visuales reales mas reportados por el usuario
         // con captura, misma pestaña Builds ya tocada hoy): 1) al filtrar a una sola clase (ej.
         // solo "Magia") la columna resultante quedaba pegada a la izquierda con todo el resto del

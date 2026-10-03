@@ -1,5 +1,24 @@
 [
   {
+    "version": "3.4.2",
+    "date": "3 de octubre de 2026",
+    "date_en": "October 3, 2026",
+    "summary": "Parche: los textos de la Guía ya están 100 % en español, la app ya no consume CPU con el ratón quieto sobre una tarjeta y Builds enseña los prefijos en español.",
+    "summary_en": "Patch: the Guide texts are now 100% in Spanish, the app no longer uses CPU when the mouse rests on a card, and Builds shows prefixes in Spanish.",
+    "fixed": [
+      "Textos de la Guía 100 % en español: desaparecen las palabras inglesas sueltas dentro de las frases («Planetoids», «melee», «dash», «buff», «build», «Aerialite», «Vernal Pass»…) y las concordancias quedan bien («otra arma cuerpo a cuerpo», «la Tesla áurica»).",
+      "La app ya no consume CPU con el ratón quieto sobre una tarjeta: con el cursor en el borde inferior de una tarjeta de Personaje u Objetos, la tarjeta se levantaba, se movía de debajo del cursor, bajaba y volvía a empezar, y esto repetía ocho veces por segundo sin parar.",
+      "En Builds, los prefijos de las piezas salían en inglés («Legendary», «Godly»…) aunque la app estuviera en español. Ahora salen con su nombre oficial («Legendario», «Piadoso»…) y cambian con el idioma; los prefijos propios de Calamity de las builds de Pícaro también aparecen.",
+      "En Exploración, los prefijos de los objetos de «Cofre a cofre» siguen ahora el idioma elegido en la app."
+    ],
+    "fixed_en": [
+      "Guide texts 100% in Spanish: stray English words inside the sentences (\"Planetoids\", \"melee\", \"dash\", \"buff\", \"build\", \"Aerialite\", \"Vernal Pass\"...) are gone and the grammar agrees properly.",
+      "The app no longer uses CPU when the mouse rests on a card: with the cursor on the bottom edge of a Character or Items card, the card lifted, moved out from under the cursor, dropped back and started over, eight times per second non-stop.",
+      "In Builds, item prefixes showed in English (\"Legendary\", \"Godly\"...) even with the app in Spanish. They now show their official name (\"Legendario\", \"Piadoso\"...) and follow the app language; Calamity's own prefixes on the Rogue builds also appear now.",
+      "In Exploration, the prefixes of items in \"Chest by chest\" now follow the language chosen in the app."
+    ]
+  },
+  {
     "version": "3.4.1",
     "date": "3 de octubre de 2026",
     "date_en": "October 3, 2026",
