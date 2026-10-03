@@ -34251,3 +34251,21 @@ de F4). Solo datos y scripts de la Guía y el catálogo; nada de UI.
   re-sustituye palabras en minúscula. Datos de la Guía regenerados (0 sin traducción).
 - **Para F4:** estos dos commits van DESPUÉS de d6580c38/a52ffeb1: si el instalador 3.4.0 se generó antes, no los
   lleva (cambian `guia_v2_calamity.json`). Sin push por mi parte.
+
+## 3-oct-2026 - F4 cerrada: rondas 4 y 5 de verificación independiente, 3.4.0 publicada
+
+- Changelog 3.4.0 corregido (d6580c38): los nombres de Calamity salen de la traducción propia de la familia
+  (T6), ya no "en curso" ni de CalamityModEsp. Capturas del README rehechas y abiertas (a52ffeb1).
+- **Arreglo de la ronda 4** (40cdfe43): los títulos de Estoy perdido / Algo raro enseñaban marcado crudo
+  ("{z:mazmorra|mazmorra}"); `FichaV2ViewModel.Titulo` pasa por `Plano`, con prueba roja/verde.
+- **LAYOUT_REPOSO_SOLO "BUCLE" en Personaje/Objetos (ronda 4, 2 de 2):** NO era un bucle de la app. El cursor
+  REAL del usuario estaba quieto encima de la ventana del arnés, sobre un botón de la Librería
+  (`DirectlyOver=Border#Bd < Button`, temporizador `InputManager.ValidateInputDevices` de 125 ms = 8 pasadas/s),
+  solo en los tamaños de ventana que tapaban ese punto (1519/1520/1651/1919). Con el usuario ausente y el
+  cursor apartado a (2555,1435): 539 medidas, 0 fallos (f4-layout2), y otra vez 0 en la ronda 5. Hueco del
+  oráculo: hoy solo descarta el ratón real cuando SE MUEVE o activa el hover de una tarjeta; un cursor QUIETO
+  encima de un botón también es entrada real. Pendiente: tratar ese caso como INCONCLUSIVE o apartar el cursor.
+- **Ronda 5** (verificador y revisor nuevos, HEAD 40cdfe43): build 0/0, Core 839/839, ViewModels 843/843,
+  GUIAV2_SOLO 0, PILDORAS_SOLO 0 badges-píldora, RESTO_RESPONSIVE_SOLO 0, LAYOUT_REPOSO_SOLO 539/0, instalador
+  `TerrakeepSetup-3.4.0.exe` SHA256 `555cca7af5fd6a42e867ce349faa8a830660322bd7991c5e14369dacb8770c4b` instalado en
+  silencio (3.4.0.0, desinstalador presente). Revisor: PASS.
