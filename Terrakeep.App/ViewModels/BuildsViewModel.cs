@@ -167,6 +167,26 @@ public sealed partial class BuildsViewModel : ObservableObject
             }
         }
 
-        return new BuildItemRowViewModel(itemRef, itemRef.Prefix, iconPath, isCalamity, stats, itemId);
+        var (prefixEs, prefixEn) = ResolvePrefix(itemRef, service);
+        return new BuildItemRowViewModel(itemRef, prefixEs, prefixEn, iconPath, isCalamity, stats, itemId);
+    }
+
+    // Nombre del prefijo en los dos idiomas desde los catalogos oficiales (vanilla por nombre
+    // interno, Calamity/Picaro por id sintetico). Si no se resuelve, se muestra el interno tal cual
+    // antes que perder el dato.
+    public static (string? Es, string? En) ResolvePrefix(BuildItemRef itemRef, CharacterFileService service)
+    {
+        if (itemRef.PrefixId is int synthetic)
+        {
+            var rogue = service.RoguePrefixCatalog.ById(synthetic);
+            if (rogue != null) return (rogue.Es, rogue.En);
+        }
+        if (!string.IsNullOrWhiteSpace(itemRef.Prefix))
+        {
+            var vanilla = service.VanillaPrefixCatalog.ByInternal(itemRef.Prefix);
+            if (vanilla != null) return (vanilla.Es, vanilla.En);
+            return (itemRef.Prefix, itemRef.Prefix);
+        }
+        return (null, null);
     }
 }

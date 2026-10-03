@@ -19,10 +19,11 @@ public sealed partial class BuildItemRowViewModel : ObservableObject
     // Ronda de idioma del 6-sep-2026: `statsTooltip` era un string YA redactado (en español a
     // fuego) y se quedaba congelado en ese idioma - ahora entran los DATOS (ItemStatsInfo) y la
     // frase se redacta al leerla, ver ItemStatsInfo.cs.
-    public BuildItemRowViewModel(BuildItemRef source, string? prefixText, string? iconPath, bool isCalamity, ItemStatsInfo? stats, int itemId)
+    public BuildItemRowViewModel(BuildItemRef source, string? prefixEs, string? prefixEn, string? iconPath, bool isCalamity, ItemStatsInfo? stats, int itemId)
     {
         _source = source;
-        PrefixText = prefixText;
+        _prefixEs = prefixEs;
+        _prefixEn = prefixEn;
         IconPath = iconPath;
         IsCalamity = isCalamity;
         _stats = stats;
@@ -34,7 +35,19 @@ public sealed partial class BuildItemRowViewModel : ObservableObject
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
     public string DisplayName => _source.NameFor(Services.LocalizationService.Instance.Language);
-    public string? PrefixText { get; }
+    // Parche 3.4.2: el prefijo salia con el nombre interno en ingles ("Legendary") en los dos
+    // idiomas, porque se pasaba el campo crudo de builds.json. Ahora entran el nombre es-ES y el
+    // en-US del catalogo oficial y se elige al leer, asi que cambia con el idioma de la app.
+    private readonly string? _prefixEs;
+    private readonly string? _prefixEn;
+    public string? PrefixText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_prefixEs) && string.IsNullOrWhiteSpace(_prefixEn)) return null;
+            return LocalizedContent.Pick(_prefixEs, _prefixEn, Services.LocalizationService.Instance.Language);
+        }
+    }
     public string? IconPath { get; }
     public bool IsCalamity { get; }
 
@@ -44,6 +57,7 @@ public sealed partial class BuildItemRowViewModel : ObservableObject
     private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e)
     {
         OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(PrefixText));
         OnPropertyChanged(nameof(StatsTooltip));
     }
     // Id real vanilla o sintetico de Calamity - 0 si el pid del build no se resolvio (mismo

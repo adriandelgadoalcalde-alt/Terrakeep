@@ -1450,7 +1450,9 @@ public partial class ExplorationViewModel : ObservableObject
             // objetos reales).
             var items = chest.Items.Where(it => it.NetId != 0).Select(it =>
             {
-                string? prefixName = it.Prefix != 0 ? _prefixNames.ById(it.Prefix)?.Es ?? _prefixNames.ById(it.Prefix)?.En : null;
+                // Segun el idioma de la app (antes salia siempre en español, tambien con la app en ingles).
+                var prefixEntry = it.Prefix != 0 ? _prefixNames.ById(it.Prefix) : null;
+                string? prefixName = prefixEntry == null ? null : LocalizedContent.Pick(prefixEntry.Es, prefixEntry.En);
                 return new ChestContentItemViewModel(it.NetId, _itemNames.GetName(it.NetId), it.Stack, prefixName, VanillaIconResolver.GetIconPath(it.NetId));
             }).ToList();
             ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items, index, tile.Type < 0));
