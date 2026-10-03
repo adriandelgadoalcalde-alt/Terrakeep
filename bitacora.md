@@ -34395,3 +34395,16 @@ tarjetas) y NO están en ninguna release (3.4.1 es la última publicada). Saldr�
   EQUIP 0, INVALM 0, LIBRARY 0, RESTO 0, PILDORAS_SOLO 0 badges-píldora (76 capturas con contenido), HOMEHOVER 0, AR14 0, ARLAY_CANARIO 0, NAV123 0,
   GUIAV2_SOLO 0, LAYOUT_REPOSO_SOLO 544 medidas / 0 fallos / 0 inconclusas / 0 NOT_OBSERVED, BUILDS_PREFIJOS_SOLO 17 prefijos en español / 0 en inglés.
   Hashes de 118 partidas reales idénticos antes y después.
+
+---
+
+## 3-oct-2026 - Prueba de "funciona en cualquier PC": versión 3.4.3
+
+**Causa**: el exe publicado llevaba incrustadas rutas `C:\Users\<usuario>\...` procedentes de
+`ServidorKeep.Core` (referencia de proyecto cruzada), concretamente `LocalizadorAppsHermanas` (ruta de
+desarrollo). Inofensivo en otro PC pero filtraba el nombre de usuario. Corregido en ServidorKeep 1.5.2
+(`KEEP_RAIZ` + clave de desinstalación de Inno). Reempaquetado Terrakeep 3.4.3; búsqueda binaria
+UTF-8/UTF-16 en el exe: 0 hits. Comprobado: autocontenido (no necesita .NET/VC++), instalación por usuario
+sin administrador, sin dependencia de WebView2.
+**Lección**: no instalar el Setup en una carpeta de prueba del PC real (mismo AppId = pisa la clave de
+desinstalación y los accesos directos reales). Usar Windows Sandbox.

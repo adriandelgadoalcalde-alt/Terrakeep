@@ -1,5 +1,18 @@
 [
   {
+    "version": "3.4.3",
+    "date": "3 de octubre de 2026",
+    "date_en": "October 3, 2026",
+    "summary": "Parche de limpieza: la aplicación ya no lleva incrustadas rutas del equipo del autor.",
+    "summary_en": "Cleanup patch: the application no longer embeds paths from the author's PC.",
+    "fixed": [
+      "El programa publicado ya no contiene rutas absolutas del PC de desarrollo (nombre de usuario y carpetas de trabajo). No cambiaba nada visible, pero no tenían que viajar en el ejecutable."
+    ],
+    "fixed_en": [
+      "The published program no longer contains absolute paths from the development PC (user name and work folders). Nothing visible changes, but they should not ship inside the executable."
+    ]
+  },
+  {
     "version": "3.4.2",
     "date": "3 de octubre de 2026",
     "date_en": "October 3, 2026",

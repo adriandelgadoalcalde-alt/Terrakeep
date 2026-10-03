@@ -115,9 +115,12 @@
          de las tarjetas movia su propia zona de acierto y provocaba 8 pasadas de layout por segundo) y
          Builds enseña los prefijos con su nombre oficial en español (Legendario, no Legendary). Solo
          arreglos: PATCH. -->
-    <Version>3.4.2</Version>
-    <FileVersion>3.4.2.0</FileVersion>
-    <AssemblyVersion>3.4.2.0</AssemblyVersion>
+    <!-- 3.4.3 (3-oct-2026): parche de la prueba de "funciona en cualquier PC": el binario ya no lleva
+         incrustadas rutas absolutas del equipo de desarrollo (venian de ServidorKeep.Core, que se
+         enlaza aqui). Solo arreglos: PATCH. -->
+    <Version>3.4.3</Version>
+    <FileVersion>3.4.3.0</FileVersion>
+    <AssemblyVersion>3.4.3.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
