@@ -34291,3 +34291,64 @@ de F4). Solo datos y scripts de la Guía y el catálogo; nada de UI.
 - **Pruebas:** Core 856/856, ViewModels 848 (un fallo intermitente de `HomeRefreshAsyncTests` bajo carga que pasa solo
   dos veces seguidas), GUIAV2_SOLO 0 fallos, capturas 45/45 con contenido. Hashes de partidas reales de Terraria antes/después
   idénticos. Instalador `TerrakeepSetup-3.4.1.exe` instalado en silencio (3.4.1.0, desinstalador presente).
+
+## 3-oct-2026 - Cierre: inglés suelto en la Guía, y la causa REAL del LAYOUT_REPOSO de Personaje/Objetos
+
+**PENDIENTE DE PUBLICAR:** los dos arreglos de abajo cambian lo que ve el usuario (texto de la Guía y temblor de las
+tarjetas) y NO están en ninguna release (3.4.1 es la última publicada). Saldrán en la próxima versión (3.4.2 / TerrakeepMod
+0.8.2); a petición expresa no se ha publicado nada en este cierre. Commits: `4f1ce28b` (Guía) y `f44185cc` (tarjetas).
+
+### 1. Inglés suelto dentro de los textos en español de la Guía
+- **Qué se vio:** la escalera de Calamity decía «con una Poción de gravedad, busca islas flotantes y Planetoids». Un
+  escaneo de los textos visibles de las dos guías (palabras que están en el inglés de Terraria/Calamity y no en su es-ES,
+  más los nombres ingleses de la tabla de referencias) encontró bastante más: `melee`, `dash`, `buff`, `build`, `parry`,
+  `aggro`, `minion`, `Aerialite`, `Cosmilite`, `Auric`, `Vernal Pass`, `Forsaken Archive`, `Evil Island`, `Skyware`,
+  `Acid Venom`, `Biome Key`, `pre-Plantera`, `Help`/`Enchanting`/`Evoke`, `Probes`, `ticks`...
+- **Causa:** los textos vienen de cuatro sitios (la guía HTML del usuario, las anotaciones, las escaleras de la wiki y la
+  vanilla escrita a mano) y `nombres.js` solo sustituye NOMBRES de objeto/NPC; la jerga y lo que no es un objeto
+  (`Planetoid` está a propósito en su lista negra) se quedaba en inglés.
+- **Arreglo en la fuente:** `scripts/guia-v2/terminos-es.js`, última pasada sobre los campos visibles de las dos guías
+  (`construir-guia-calamity.js` y `construir-guia-vanilla.js`), con el glosario de CalamityKeep-Traduccion-ES y el es-ES
+  oficial (embestida, parada, provocación, súbdito, sigilo, pícaro, Muerte, Maestro, Irradiación, Paso Vernal, Poderío
+  celestial, Réplica de la podredumbre, Éter/fulgor, Ayuda, icor, Ácido ponzoñoso...). Respeta lo que NO se traduce por
+  glosario (Boss Rush, Revengeance, Boss Checklist, Recipe Browser, Magic Storage) y las menciones entre «..» (nombres
+  antiguos como «Dragon Egg»). El parche manual del JSON de «pescando con Bloodworm» pasa a regla de la fuente.
+  Datos regenerados (`guia_v2_calamity/vanilla/referencias.json`, 0 sin traducción).
+- **Canario:** `GuiaV2TextoVisibleTests.TextoVisibleDeLaGuia_NoTienePalabrasInglesas` (las dos guías) con dos redes: una
+  lista fija de palabras y frases inglesas y TODOS los nombres ingleses de la tabla de referencias (objetos, NPC,
+  estaciones) cuyo nombre español difiere; más `RedDePalabrasInglesas_DetectaLoQueDebeYSoloEso` con ejemplos reales
+  (incluido el de la escalera). Rojo con los datos de 3.4.1 (745 coincidencias en la vanilla y 1.998 en la de Calamity), verde con los nuevos (867/867).
+- **Obstáculo:** el módulo del repo se edita con herramientas que mangan las barras invertidas de las expresiones regulares
+  si se hace por `python - <<EOF`; se editó con el editor de archivos.
+
+### 2. LAYOUT_REPOSO_SOLO «BUCLE» en Personaje/Objetos: NO era el ratón, era un bucle real de la app
+- **Lo que se había dicho (rondas 4 y 5):** «el cursor REAL del usuario quieto sobre un botón da 8 pasadas/s, no es un
+  bucle de la app». Era la mitad de la verdad: el cursor era la CONDICIÓN, el bucle era nuestro.
+- **Reproducción determinista:** cursor colocado en (1678,865) ANTES de abrir el arnés (el PC llevaba 4 h sin entrada):
+  Personaje/Objetos da 8-9 pasadas/s y 250-750 ms de CPU por segundo en 1519/1520/1651/1919 de ancho (los que ponen una
+  tarjeta de la Librería bajo ese punto); en otras pestañas, 0. Con el cursor movido DESPUÉS de abrir la ventana (SetCursorPos),
+  no se reproduce: 0-1 pasadas.
+- **Causa:** `NavCardButton` (tarjetas de carpeta raíz de la Librería), el botón base con `Tag="Accent"` y la tarjeta de personaje
+  de Inicio se levantan 2-3 px al pasar el ratón con un `RenderTransform`, y el RenderTransform también mueve la zona de
+  acierto. Con el cursor QUIETO en la franja de 3 px de su borde inferior: sube la tarjeta -> el cursor queda fuera
+  (`IsMouseOver=false`) -> baja -> el cursor vuelve a estar dentro -> sube... sin fin. Temblor visible, una pasada de
+  maquetación por cada tick de 125 ms de `InputManager.ValidateInputDevices` (= 8/s) y hasta 750 ms de CPU por segundo. Esa franja
+  la ocupaba justo el cursor del usuario. Se puede dar con el ratón parado en cualquier sitio donde la vista aparece debajo
+  (p. ej. al abrir un personaje desde Inicio con el ratón quieto).
+- **Arreglo:** Border exterior transparente que no se mueve y conserva la zona de acierto (`Theme.xaml` NavCardButton y botón
+  base: `HitArea`; `HomeView.xaml`: `ZonaTarjeta`, cuyo hover se lee del exterior por `DataTrigger`).
+- **Canario (no pierde capacidad de detectar):** `MedirBordeDeTarjetas` en `LAYOUT_REPOSO_SOLO` (y `LAYOUT_REPOSO_BORDE_SOLO=1`
+  para iterar): el propio canario coloca el cursor en esa franja del borde inferior (solo con el PC >= 120 s sin entrada,
+  sin clics ni teclas, y lo restaura; si no, `NOT_OBSERVED`, nunca un verde) y exige `IsMouseOver` estable (<= 2 cambios
+  en 1 s) y <= 2 pasadas/s. **Rojo/verde:** sin el arreglo IsMouseOver cambia 8-9 veces por segundo y hay 9-10 pasadas/s
+  (3 FALLO); con el arreglo 0 cambios y 1 pasada. **Guarda de `7d801dfe` revertida en local:** el canario sigue dando
+  `FALLO: LAYOUT_REPOSO_SOLO-BLOQUEO` (estado del volcado, cursor aparcado fuera); se restauró el fichero.
+
+### Pruebas (HEAD de código `f44185cc`, usuario ausente 4 h, turno de pantalla con `PANTALLA.lock`)
+- Build 0/0, Core.Tests 867/867, ViewModels.Tests 848/848.
+- Arnés de ventana real: GUIAV2_SOLO 0 fallos (44 capturas con contenido), PILDORAS_SOLO 0 badges-píldora (80 capturas),
+  RESTO_RESPONSIVE_SOLO 0 (49), EQUIP_RESPONSIVE_SOLO 0 (23), INVALM_RESPONSIVE_SOLO 0 (38), LIBRARY_RESPONSIVE_SOLO 0 (140; tarda
+  9 min y la ventana figura «no responde» porque el arnés bombea con `DoEvents`, no es un cuelgue), PERSONAJE_RESPONSIVE_SOLO 0 (49),
+  LAYOUT_REPOSO_SOLO **544 medidas, 0 fallos**, 0 inconclusas, 0 NOT_OBSERVED, con el cursor otra vez en (1678,865): Personaje/Objetos
+  0 pasadas/s en los 8 tamaños.
+- Partidas reales de Terraria: hashes de 118 archivos antes y después idénticos (ver informe).
