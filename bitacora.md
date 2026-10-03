@@ -34344,11 +34344,30 @@ tarjetas) y NO están en ninguna release (3.4.1 es la última publicada). Saldr�
   (3 FALLO); con el arreglo 0 cambios y 1 pasada. **Guarda de `7d801dfe` revertida en local:** el canario sigue dando
   `FALLO: LAYOUT_REPOSO_SOLO-BLOQUEO` (estado del volcado, cursor aparcado fuera); se restauró el fichero.
 
-### Pruebas (HEAD de código `f44185cc`, usuario ausente 4 h, turno de pantalla con `PANTALLA.lock`)
+### Pruebas (HEAD de código `14890b07`, usuario ausente 4 h, turno de pantalla con `PANTALLA.lock`)
 - Build 0/0, Core.Tests 867/867, ViewModels.Tests 848/848.
 - Arnés de ventana real: GUIAV2_SOLO 0 fallos (44 capturas con contenido), PILDORAS_SOLO 0 badges-píldora (80 capturas),
   RESTO_RESPONSIVE_SOLO 0 (49), EQUIP_RESPONSIVE_SOLO 0 (23), INVALM_RESPONSIVE_SOLO 0 (38), LIBRARY_RESPONSIVE_SOLO 0 (140; tarda
   9 min y la ventana figura «no responde» porque el arnés bombea con `DoEvents`, no es un cuelgue), PERSONAJE_RESPONSIVE_SOLO 0 (49),
   LAYOUT_REPOSO_SOLO **544 medidas, 0 fallos**, 0 inconclusas, 0 NOT_OBSERVED, con el cursor otra vez en (1678,865): Personaje/Objetos
   0 pasadas/s en los 8 tamaños.
-- Partidas reales de Terraria: hashes de 118 archivos antes y después idénticos (ver informe).
+- Partidas reales de Terraria: hashes SHA256 de 118 archivos (Players y Worlds de tModLoader y de Terraria) antes y después
+  idénticos, tras las dos rondas de suites.
+
+### Verificación independiente y retoque (mismo día)
+- **verificador-qa (agente nuevo, Sonnet) sobre `48b77408`:** build 0 errores, Core 867/867, ViewModels 848/848 (sin fallo
+  intermitente), mod 146/146, 12 logs del arnés en 0 fallos, hashes idénticos, canario de texto 28/28 (la parte roja la hice yo con los datos
+  de 3.4.1: 745 + 1.998 coincidencias). Hallazgos reales, ya corregidos en `14890b07` (5 reglas más en `terminos-es.js`, solo cambia
+  `guia_v2_calamity.json`): «u otra cuerpo a cuerpo» (sin «arma»), «de clase cuerpo a cuerpo», «ataques a distancia cuerpo a cuerpo»,
+  «Otra gran opción cuerpo a cuerpo Shadowspec» y «Para Tesla áurica» sin artículo. Decisión: «Piggy» -> «Cerdito» se queda
+  (es el nombre de la traducción de la familia, `PiggyItem`). Cinco advertencias CS0649 de `WldWriterWriteWorldTests` que dijo ver en el
+  build ya existían (el archivo no cambia en este cierre; mi build dio 0 advertencias con la caché incremental).
+- **revisor-visual (agente nuevo, Sonnet) sobre las capturas frescas:** PASS con limitaciones (muestra corta en `responsive-faseD`:
+  3 de 8; el hover de 2-3 px y el estado «personaje cargado» no se ven en capturas estáticas, solo los cubre el canario nuevo). Sin
+  cambios visuales en tarjetas ni botones, sin inglés suelto ni frases mal formadas en la Guía. Observaciones sin tocar: las fichas
+  «Estoy perdido» / «Algo raro» enseñan etiquetas de enlace a la wiki en inglés (`Guide:Walkthrough`, `Shadow Orb`, `Crimson Heart`: son
+  títulos de página de terraria.wiki.gg, a propósito no se traducen); y en una captura de Builds salen prefijos en inglés
+  (`Legendary`, `Godly`...) - pendiente de comprobar si esa captura es del arnés en inglés o un hueco real, fuera de la Guía.
+- **Segunda ronda completa sobre `14890b07`:** GUIAV2_SOLO 0 (44 capturas), PILDORAS_SOLO 0 píldoras (80), RESTO 0 (49), EQUIP 0 (23), INVALM 0
+  (38), LIBRARY 0 (140), PERSONAJE 0 (49), HOMEHOVER/AR14/ARLAY_CANARIO/NAV123 0 fallos, LAYOUT_REPOSO_SOLO 544 medidas / 0 fallos /
+  0 inconclusas / 0 NOT_OBSERVED con el cursor en (1678,865); Core 867/867; ViewModels 848/848.
