@@ -1397,7 +1397,7 @@
    },
    "preparate": "Fundida o Aerospec, un arma que cubra distancia (o esbirros que persigan), botas y embestida.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Fundida o Aerospec; {o:Terraria/NightsEdge} u otra cuerpo a cuerpo que cubra distancia; botas y embestida."
+    "cuerpo_a_cuerpo": "Fundida o Aerospec; {o:Terraria/NightsEdge} u otra arma cuerpo a cuerpo que cubra distancia; botas y embestida."
    },
    "necesitas": [
     {
@@ -1724,7 +1724,7 @@
    "invocacion": null,
    "preparate": "Paladio o cobalto, un arma a distancia de tu clase y alas.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Paladio/cobalto cuerpo a cuerpo; arma a distancia de clase cuerpo a cuerpo y alas."
+    "cuerpo_a_cuerpo": "Paladio/cobalto cuerpo a cuerpo; arma a distancia de la clase cuerpo a cuerpo y alas."
    },
    "necesitas": [],
    "tareas": [
@@ -1804,7 +1804,7 @@
    },
    "preparate": "Paladio o cobalto y tu mejor arma de alcance de modo difícil temprano.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Paladio/cobalto; {o:Terraria/ShadowFlameKnife}, {o:Terraria/ChainGuillotines} u otra cuerpo a cuerpo con alcance."
+    "cuerpo_a_cuerpo": "Paladio/cobalto; {o:Terraria/ShadowFlameKnife}, {o:Terraria/ChainGuillotines} u otra arma cuerpo a cuerpo con alcance."
    },
    "necesitas": [
     {
@@ -3078,7 +3078,7 @@
    },
    "preparate": "La armadura de tu clase de esta etapa y ataques a distancia para golpear sus partes sin acercarte demasiado.",
    "preparatePorClase": {
-    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal cuerpo a cuerpo; ataques a distancia cuerpo a cuerpo para golpear partes sin acercarte demasiado."
+    "cuerpo_a_cuerpo": "Escarabajo/hidrotermal cuerpo a cuerpo; ataques a distancia de armas cuerpo a cuerpo para golpear partes sin acercarte demasiado."
    },
    "necesitas": [
     {
@@ -4656,7 +4656,7 @@
     },
     {
      "id": "yharon.5",
-     "texto": "Para Tesla áurica conserva Tarragon, Sangrellama y Matadioses de tu clase: cada casco áurico exige los de su clase.",
+     "texto": "Para la Tesla áurica conserva Tarragon, Sangrellama y Matadioses de tu clase: cada casco áurico exige los de su clase.",
      "manual": true
     }
    ],
@@ -6530,7 +6530,7 @@
       ],
       [
        "{o:CalamityMod/Earth}",
-       "Otra gran opción cuerpo a cuerpo Shadowspec.",
+       "Otra gran opción cuerpo a cuerpo: Shadowspec.",
        "Ambos finales y armas componentes."
       ],
       [
