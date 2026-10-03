@@ -127,6 +127,135 @@ public class GuiaV2TextoVisibleTests(ITestOutputHelper salida)
         Assert.True(fallos.Count == 0, $"{fallos.Count} restos tecnicos visibles en la guia '{id}' (primeros en la salida de la prueba).");
     }
 
+    // ---- 1b. palabras inglesas sueltas dentro de un texto en español ---------------------------
+    // Hallazgo del 3-oct-2026: la escalera de Calamity decia «busca islas flotantes y Planetoids»
+    // (y la guia arrastraba melee, dash, buff, build, Aerialite, Vernal Pass...). Dos redes:
+    //   A) lista fija de palabras y frases inglesas de Terraria y Calamity que tienen traduccion oficial
+    //      o de CalamityKeep-Traduccion-ES (glosario) - la lista sale de lo que el escaneo encontro;
+    //   B) todos los nombres INGLESES de la tabla de referencias (objetos, NPC, estaciones) de 2+ palabras
+    //      (o de 7+ letras) cuyo nombre español es distinto: si aparecen tal cual en un texto, es un nombre
+    //      oficial que debia salir en español.
+    // Quedan fuera, a proposito: lo que va entre «comillas angulares» (mencion deliberada del nombre antiguo),
+    // las direcciones web, y los nombres que NO se traducen por glosario (Boss Rush, Revengeance, mods ajenos).
+
+    private static readonly string[] PalabrasInglesas =
+    [
+        "melee", "ranged", "rogue", "stealth", "minion", "minions", "summon", "summoner", "dash", "dashes", "parry",
+        "cooldown", "aggro", "buff", "buffs", "debuff", "debuffs", "build", "builds", "boomerang", "boomerangs",
+        "hardcore", "planetoid", "planetoids", "aerialite", "cosmilite", "auric", "skyware", "shimmer", "aether",
+        "vanilla", "spam", "tier", "ticks", "pets", "dyes", "mounts", "lore", "shrine", "shrines", "enrage",
+        "irradiated", "death", "master", "expert", "hardmode", "campfire", "bullet hell", "damage reduction",
+        "defense damage", "crafting station", "non-consumable", "schematic", "decrypt", "evil island",
+        "forsaken archive", "vernal pass", "abandoned shed", "acid venom", "biome key", "solar eclipse",
+        "gravitation potion", "queen bee", "moon lord", "wall of flesh", "eye of cthulhu", "eater of worlds",
+        "brain of cthulhu", "king slime", "queen slime", "duke fishron", "lunatic cultist", "empress of light",
+        "ichor", "probes", "bloodworms", "counterweights", "instead of", "help", "enchanting", "evoke",
+    ];
+
+    /// <summary>Frases que contienen una palabra inglesa de la lista pero NO son un resto: se quitan antes de buscar.</summary>
+    private static readonly string[] FrasesPermitidas =
+    [
+        "Boss Rush", "Boss Checklist", "Recipe Browser", "Magic Storage", "Get fixed boi", "Guide:Class setups",
+    ];
+
+    private static readonly Regex Direcciones = new(@"https?://\S+|\b\S+\.wiki\.gg\S*", RegexOptions.Compiled);
+    private static readonly Regex Menciones = new("«[^»]*»", RegexOptions.Compiled);
+
+    /// <summary>El texto tal como lo lee un jugador, sin menciones entre «..», direcciones ni frases permitidas.</summary>
+    internal static string TextoSinMenciones(string plano)
+    {
+        string t = Menciones.Replace(plano, " ");
+        t = Direcciones.Replace(t, " ");
+        foreach (var f in FrasesPermitidas) t = t.Replace(f, " ", StringComparison.Ordinal);
+        return t;
+    }
+
+    private static Regex PatronDePalabras(IEnumerable<string> frases)
+    {
+        var alt = string.Join("|", frases.OrderByDescending(f => f.Length).Select(Regex.Escape));
+        return new Regex(@"(?<![\p{L}\p{N}_])(" + alt + @")(?![\p{L}\p{N}_])", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    }
+
+    private static readonly Lazy<Regex> RedLista = new(() => PatronDePalabras(PalabrasInglesas));
+
+    // Nombres ingleses de la tabla que no deben verse en un texto en español. Se excluyen los que son
+    // palabras de otro idioma legitimas en el texto (el propio nombre del mod, de la wiki, etc.).
+    private static readonly HashSet<string> NombresInglesesAjenos = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Calamity", "Terraria", "Boss Rush", "Revengeance",
+    };
+
+    private static readonly Lazy<Regex> RedNombres = new(() =>
+    {
+        var r = Refs.Value;
+        var nombres = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Anade(string? en, string? es)
+        {
+            if (string.IsNullOrWhiteSpace(en) || string.IsNullOrWhiteSpace(es)) return;
+            if (string.Equals(en, es, StringComparison.OrdinalIgnoreCase)) return;
+            bool varias = en.Contains(' ');
+            if (!varias && en.Length < 7) return;
+            if (NombresInglesesAjenos.Contains(en)) return;
+            // Nombre ingles que ademas es una palabra o frase española valida (p. ej. "Terminus"): no se persigue.
+            if (es.Contains(en, StringComparison.OrdinalIgnoreCase)) return;
+            nombres.Add(en);
+        }
+        foreach (var kv in r.Objetos) Anade(kv.Value.En, kv.Value.Es);
+        foreach (var kv in r.Npcs) Anade(kv.Value.En, kv.Value.Es);
+        foreach (var kv in r.Estaciones) Anade(kv.Value.En, kv.Value.Es);
+        return PatronDePalabras(nombres);
+    });
+
+    private static List<(string Ruta, string Plano)> TextosPlanos(string id)
+    {
+        var doc = GuiaV2Cargador.CargarGuiaIncrustada(id);
+        var refs = Refs.Value;
+        var textos = new List<(string, string)>();
+        Recoger(doc, "", textos, new HashSet<object>(ReferenceEqualityComparer.Instance));
+        string? Zona(string z) => doc.Zonas.FirstOrDefault(x => x.Id == z)?.Nombre;
+        string? Parada(string p) => doc.Paradas.FirstOrDefault(x => x.Id == p)?.Titulo;
+        string? Articulo(string a) => doc.Articulos.FirstOrDefault(x => x.Id == a)?.Titulo;
+        var salida = new List<(string, string)>();
+        foreach (var (ruta, texto) in textos)
+        {
+            string plano = GuiaV2Texto.Plano(texto, refs, Zona, Parada, Articulo);
+            plano = GuiaV2Texto.Plano(plano, refs, Zona, Parada, Articulo);
+            salida.Add((ruta, plano));
+        }
+        return salida;
+    }
+
+    [Theory]
+    [MemberData(nameof(Guias))]
+    public void TextoVisibleDeLaGuia_NoTienePalabrasInglesas(string id)
+    {
+        var fallos = new List<string>();
+        foreach (var (ruta, plano) in TextosPlanos(id))
+        {
+            string t = TextoSinMenciones(plano);
+            foreach (Match m in RedLista.Value.Matches(t)) fallos.Add($"{id}{ruta}: palabra inglesa «{m.Value}» en «{Recorte(t, m.Index)}»");
+            foreach (Match m in RedNombres.Value.Matches(t)) fallos.Add($"{id}{ruta}: nombre inglés de la tabla «{m.Value}» en «{Recorte(t, m.Index)}»");
+        }
+        foreach (var f in fallos.Take(60)) salida.WriteLine(f);
+        Assert.True(fallos.Count == 0, $"{fallos.Count} palabras o nombres ingleses visibles dentro del texto en español de la guía '{id}' (primeros en la salida de la prueba).");
+    }
+
+    [Theory]
+    [InlineData("busca islas flotantes y Planetoids.", true)]
+    [InlineData("con una Gravitation Potion, busca islas flotantes", true)]
+    [InlineData("Arma melee con alcance", true)]
+    [InlineData("practica el dash con doble pulsación lateral", true)]
+    [InlineData("Daño de pícaro con sigilo", false)]
+    [InlineData("planetoides", false)]
+    [InlineData("Boss Rush y Revengeance", false)]
+    [InlineData("«Dragon Egg» es el nombre antiguo", false)]
+    [InlineData("la guía de https://terraria.wiki.gg/wiki/Fishing y Boss Checklist", false)]
+    public void RedDePalabrasInglesas_DetectaLoQueDebeYSoloEso(string texto, bool debeDetectar)
+    {
+        bool detecta = RedLista.Value.IsMatch(TextoSinMenciones(texto)) || RedNombres.Value.IsMatch(TextoSinMenciones(texto));
+        Assert.Equal(debeDetectar, detecta);
+    }
+
     // ---- 2. nombres de la tabla de referencias -------------------------------------------------
 
     [Fact]

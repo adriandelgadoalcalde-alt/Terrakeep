@@ -19,6 +19,7 @@ const path = require('path');
 const F = require('./fuentes.js');
 const R = require('./vanilla/resolver-nombres.js');
 const AY = require('./vanilla/ayudas.js');
+const TE = require('./terminos-es.js');
 const A = require('./anotaciones-vanilla.js');
 const { rotuloConjunto } = require('./conjuntos.js');
 
@@ -282,7 +283,7 @@ const todos = unicos([...errores, ...AY.errores]);
 if (todos.length) { console.error(todos.length + ' ERRORES:\n  ' + todos.join('\n  ')); process.exit(1); }
 
 fs.mkdirSync(path.dirname(SALIDA), { recursive: true });
-fs.writeFileSync(SALIDA, JSON.stringify(doc, null, 1) + '\n');
+fs.writeFileSync(SALIDA, JSON.stringify(TE.traducirDocumento(doc), null, 1) + '\n');
 
 // ---- 7. informe
 const tareas = paradas.flatMap(p => p.tareas);

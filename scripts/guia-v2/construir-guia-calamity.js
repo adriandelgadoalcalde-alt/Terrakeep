@@ -19,6 +19,7 @@ const vm = require('vm');
 const { htmlABloques } = require('./html-a-bloques.js');
 const N = require('./nombres.js');
 const F = require('./fuentes.js');
+const TE = require('./terminos-es.js');
 const A = require('./anotaciones-calamity.js');
 const { rotuloConjunto, verificarConjuntosCalamity } = require('./conjuntos.js');
 
@@ -336,7 +337,7 @@ const doc = {
 };
 
 fs.mkdirSync(path.dirname(SALIDA), { recursive: true });
-fs.writeFileSync(SALIDA, JSON.stringify(doc, null, 1) + '\n');
+fs.writeFileSync(SALIDA, JSON.stringify(TE.traducirDocumento(doc), null, 1) + '\n');
 
 // ---- 8. informe
 const restoIngles = new Map();
