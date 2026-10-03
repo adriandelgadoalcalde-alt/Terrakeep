@@ -34389,3 +34389,9 @@ tarjetas) y NO están en ninguna release (3.4.1 es la última publicada). Saldr�
   Hashes de 118 archivos de partidas reales (Players/Worlds de tModLoader y Terraria) idénticos antes y después.
 - **Paquete:** `TerrakeepSetup-3.4.2.exe`, 56.832.731 bytes, SHA256 `f4be42bff8e8a66d617d9258ba5133fde70b132189929bf2575bb68312df0a14`,
   instalado en silencio encima del instalado (3.4.2.0, desinstalador presente, 0 `.pdb`, exe idéntico al publish). Terrakeep no estaba abierto.
+
+### 3-oct-2026 - Ronda de renovación de evidencia tras publicar 3.4.2 (HEAD `8003c247`)
+- Con el usuario ausente (inactivo >6 h, monitor apagado, `PANTALLA.lock`), el arnés de ventana real sobre el HEAD publicado: PERSONAJE 0 fallos,
+  EQUIP 0, INVALM 0, LIBRARY 0, RESTO 0, PILDORAS_SOLO 0 badges-píldora (76 capturas con contenido), HOMEHOVER 0, AR14 0, ARLAY_CANARIO 0, NAV123 0,
+  GUIAV2_SOLO 0, LAYOUT_REPOSO_SOLO 544 medidas / 0 fallos / 0 inconclusas / 0 NOT_OBSERVED, BUILDS_PREFIJOS_SOLO 17 prefijos en español / 0 en inglés.
+  Hashes de 118 partidas reales idénticos antes y después.
