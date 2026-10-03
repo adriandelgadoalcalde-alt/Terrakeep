@@ -36,6 +36,7 @@
 // LAYOUT_REPOSO_INYECTAR_RATON=1: demuestra el filtro moviendo el cursor sobre el mapa en la primera
 // medida de Cofres-CofreACofre (solo con el PC >= 120 s sin uso; sin clics ni teclas; se restaura).
 //
+// LAYOUT_REPOSO_BORDE_SOLO=1: solo el escenario "cursor quieto en el borde inferior de una tarjeta" (ver MedirBordeDeTarjetas).
 // LAYOUT_REPOSO_RAPIDO=1: solo el estado del volcado + su matriz de offsets, para iterar.
 // LAYOUT_REPOSO_SIN_UIA=1: sin el cliente UIA externo.
 using System;
@@ -273,7 +274,7 @@ internal static partial class Program
         // Movimientos REALES del raton sobre la ventana del arnes (posicion distinta a la anterior). Los
         // MouseMove sinteticos que WPF lanza tras una pasada de layout con el cursor quieto repiten la
         // misma posicion y NO cuentan: un bucle de layout sin entrada nunca suma aqui.
-        int movimientosRaton = 0, inconclusas = 0;
+        int movimientosRaton = 0, inconclusas = 0, noObservadas = 0;
         Point? ultimaPosRaton = null;
         System.Windows.Input.MouseEventHandler contadorRaton = (_, e) =>
         {
@@ -410,6 +411,78 @@ internal static partial class Program
             }
             if (pasadas > UMBRAL_PASADAS_REPOSO)
                 Fallo("BUCLE", $"{cab}: {pasadas} pasadas de layout en 1 s de reposo (umbral {UMBRAL_PASADAS_REPOSO}) - la maquetacion no se estabiliza");
+        }
+
+        // ---------------------------------------------------------------------------------------
+        // CURSOR QUIETO EN EL BORDE INFERIOR DE UNA TARJETA QUE SE LEVANTA AL PASAR EL RATON (3-oct-2026).
+        // Hallazgo del requirement 0529c3e2 ("LAYOUT_REPOSO_SOLO 8 pasadas/s en Personaje/Objetos") que se
+        // descarto como "el cursor real del usuario": SI era un bucle real de la app. NavCardButton y la tarjeta
+        // de personaje de Inicio se levantan 3px con un RenderTransform, y el RenderTransform tambien mueve la
+        // zona de acierto: con el cursor QUIETO en la franja de 3px del borde inferior, al subir la tarjeta el
+        // cursor quedaba fuera (IsMouseOver=false), bajaba, volvia a quedar dentro, subia... sin fin (temblor,
+        // 8 pasadas/s = el temporizador de 125 ms de InputManager, 250-700 ms de CPU por segundo). Reproducido
+        // con el cursor colocado ANTES de abrir el arnes en (1678,865). Arreglo: zona de acierto exterior
+        // transparente que no se mueve (Theme.xaml NavCardButton y boton base; HomeView ZonaTarjeta).
+        // Aqui el propio canario coloca el cursor en esa franja (solo con el PC >= 120 s sin entrada, sin clics
+        // ni teclas, y lo restaura) y exige: IsMouseOver del boton/zona estable (<= 2 cambios en 1 s) y, en los
+        // botones, <= UMBRAL pasadas/s (la tarjeta de Inicio tiene su animacion de andar legitima al estar
+        // en hover: alli solo se mide la estabilidad del hover). Sin PC inactivo: NOT_OBSERVED, nunca un verde.
+        void MedirBordeDeTarjetas()
+        {
+            var lii = new UltimaEntradaReposo { cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<UltimaEntradaReposo>() };
+            long inactivoMs = GetLastInputInfoReposo(ref lii) ? Environment.TickCount - (int)lii.dwTime : 0;
+            if (inactivoMs < 120_000)
+            {
+                noObservadas++;
+                Console.WriteLine($"LAYOUT-REPOSO BORDE-TARJETA: NOT_OBSERVED - el PC lleva solo {inactivoMs / 1000} s sin entrada (minimo 120): no se mueve el cursor del usuario");
+                return;
+            }
+            var cambios = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.IsMouseOverProperty, typeof(UIElement));
+            GetCursorPosReposo(out var original);
+            void Escenario(string nombre, FrameworkElement zona, FrameworkElement observado, bool contarPasadas)
+            {
+                int flips = 0;
+                EventHandler h = (_, _) => flips++;
+                var pt = zona.PointToScreen(new Point(zona.ActualWidth * 0.5, zona.ActualHeight - 1.5)); // dentro de la franja de 3px
+                foreach (var c in vm.Home.Characters) c.SetHovering(false);
+                SetCursorPosReposo(-1, -1); EsperarConLatido(300); // el cursor fuera: estado de reposo previo
+                SetCursorPosReposo((int)Math.Round(pt.X), (int)Math.Round(pt.Y));
+                EsperarConLatido(150);
+                string sobre = DescribirElementoReposo(System.Windows.Input.Mouse.DirectlyOver as DependencyObject);
+                cambios.AddValueChanged(observado, h);
+                try
+                {
+                    var (p0, _, cpuMs) = VentanaDeMedida(false);
+                    medidas++;
+                    Console.WriteLine($"LAYOUT-REPOSO BORDE-TARJETA {nombre}: cursor quieto en el borde inferior ({sobre}) pasadas/s={p0} cambiosIsMouseOver={flips} cpu={cpuMs:0}ms/s");
+                    if (flips > 2) Fallo("BORDE-TARJETA", $"{nombre}: IsMouseOver cambio {flips} veces en 1 s con el cursor QUIETO en el borde inferior (la tarjeta levantada se escapa del cursor y vuelve: temblor)");
+                    else if (contarPasadas && p0 > UMBRAL_PASADAS_REPOSO) Fallo("BORDE-TARJETA", $"{nombre}: {p0} pasadas de layout en 1 s con el cursor quieto en el borde inferior (umbral {UMBRAL_PASADAS_REPOSO})");
+                }
+                finally { cambios.RemoveValueChanged(observado, h); }
+            }
+            try
+            {
+                // 1) Tarjetas de carpeta raiz de la Libreria de Personaje/Objetos (NavCardButton).
+                FijarTamaño(window, 1651, 1204);
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; EsperarConLatido(600);
+                var estilo = window.FindResource("NavCardButton");
+                var botones = Descendientes<Button>(window).Where(b => b.IsVisible && ReferenceEquals(b.Style, estilo) && b.ActualHeight > 20).Take(3).ToList();
+                if (botones.Count == 0) Fallo("BORDE-TARJETA", "no hay ninguna tarjeta NavCardButton visible en Personaje/Objetos - ¿cambio la estructura?");
+                int n = 0;
+                foreach (var b in botones) Escenario($"Libreria/Objetos tarjeta {++n}", b, b, contarPasadas: true);
+                // 2) Tarjeta de personaje de Inicio (CharacterCardTemplate, ZonaTarjeta).
+                vm.SelectedTabIndex = 0; EsperarConLatido(600);
+                var zonas = Descendientes<Border>(window).Where(b => b.Name == "ZonaTarjeta" && b.IsVisible && b.ActualHeight > 20).Take(2).ToList();
+                if (zonas.Count == 0) Console.WriteLine("LAYOUT-REPOSO BORDE-TARJETA: AVISO - Inicio sin tarjetas de personaje (copias de prueba ausentes), se omite ese escenario");
+                n = 0;
+                foreach (var z in zonas) Escenario($"Inicio tarjeta de personaje {++n}", z, z, contarPasadas: false);
+            }
+            finally
+            {
+                SetCursorPosReposo(original.X, original.Y);
+                foreach (var c in vm.Home.Characters) c.SetHovering(false);
+                EsperarConLatido(300);
+            }
         }
 
         (ListBox lista, ScrollViewer sv, IScrollInfo? rueda)? ListaInternaVisible()
@@ -557,6 +630,15 @@ internal static partial class Program
                 else Fallo("ESTADO-VOLCADO", "no se encontro la lista interna de Cofres/Por tipo o la barra lateral - ¿cambio la estructura?");
             }
 
+            MedirBordeDeTarjetas();
+            vm.SelectedTabIndex = 0;
+            if (Environment.GetEnvironmentVariable("LAYOUT_REPOSO_BORDE_SOLO") == "1")
+            {
+                // Solo el escenario del borde de tarjeta (iterar rapido / demostrar rojo-verde).
+                Console.WriteLine($"LAYOUT_REPOSO_SOLO: BORDE_SOLO {medidas} medida(s), {fallos} fallo(s), {noObservadas} NOT_OBSERVED");
+                return fallos;
+            }
+
             // 1) Matriz completa en el tamaño del volcado, sin y con cliente UIA externo.
             MedirExploracion("1651x1204 sinUIA", completo: true);
             vm.SelectedTabIndex = 0;
@@ -628,7 +710,7 @@ internal static partial class Program
             window.PreviewMouseMove -= contadorRaton;
             if (sidebarScroll != null) sidebarScroll.ScrollChanged -= contadorScroll;
         }
-        Console.WriteLine($"LAYOUT_REPOSO_SOLO: {medidas} medida(s), {fallos} fallo(s), {inconclusas} inconclusa(s) por movimiento real del raton");
+        Console.WriteLine($"LAYOUT_REPOSO_SOLO: {medidas} medida(s), {fallos} fallo(s), {inconclusas} inconclusa(s) por movimiento real del raton, {noObservadas} escenario(s) NOT_OBSERVED (PC en uso)");
         if (inconclusas > 0 && fallos == 0)
             Console.WriteLine($"LAYOUT_REPOSO_SOLO: INCONCLUSIVE - {inconclusas} medida(s) sin ninguna ventana de reposo real (raton moviendose); NO cuenta como verde, repetir con el raton quieto");
         return fallos;

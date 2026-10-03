@@ -85,12 +85,19 @@
                  quedaria sin espacio legible. 312 = mismo padding(24)+gap(12) de siempre + preview
                  nuevo(~120) + columna de texto (~156, ligeramente MAS ancha que antes, nunca
                  menos). -->
-            <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
-                    Width="312" Margin="0,0,14,14" Cursor="Hand"
-                    Effect="{StaticResource CardShadow}"
-                    Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}"
+            <!-- ZONA DE ACIERTO ESTABLE (3-oct-2026, mismo bug que NavCardButton en Theme.xaml): la tarjeta SUBE
+                 3px al pasar el raton con un RenderTransform, que tambien mueve su zona de acierto. Con el cursor
+                 quieto en la franja de 3px de su borde inferior el hover se encendia y se apagaba sin fin (temblor
+                 visible, 8 pasadas de maquetacion por segundo y el temporizador de andar de la mascota arrancando
+                 y parando). El Border exterior transparente NO se mueve: lleva el tamaño, el margen y los
+                 MouseEnter/MouseLeave, y el hover de la tarjeta se lee de EL (no de la tarjeta levantada). -->
+            <Border x:Name="ZonaTarjeta" Background="Transparent" Width="312" Margin="0,0,14,14" Cursor="Hand"
                     MouseEnter="OnCharacterCardMouseEnter" MouseLeave="OnCharacterCardMouseLeave"
                     Unloaded="OnCharacterCardUnloaded">
+            <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                    Cursor="Hand"
+                    Effect="{StaticResource CardShadow}"
+                    Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}">
                 <!-- Hover ("que ande solo al pasar el raton" - bitacora.md 21-sep-2026, ver el
                      comentario real de CharacterListEntryViewModel.SetHovering): MouseEnter/
                      MouseLeave sobre la TARJETA ENTERA (no solo el doll), igual que Terraria
@@ -144,7 +151,7 @@
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
                         <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType={x:Type Border}}}" Value="True">
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
                                 <Setter Property="Effect" Value="{StaticResource CardShadowHover}" />
                                 <!-- Sin Storyboard.TargetName a proposito - MC4011 real ya
@@ -155,21 +162,21 @@
                                      elemento con el propio Style (este Border) - la ruta con tipo
                                      calificado llega hasta el TranslateTransform inline de
                                      RenderTransform sin necesidad de nombrarlo. -->
-                                <Trigger.EnterActions>
+                                <DataTrigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-3" Duration="0:0:0.15" />
                                         </Storyboard>
                                     </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.15" />
                                         </Storyboard>
                                     </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
                             <!-- I-a: "No se distingue que personaje esta cargado - las tarjetas se
                                  ven identicas al volver a Inicio". -->
                             <DataTrigger Binding="{Binding IsCurrent}" Value="True">
@@ -287,6 +294,7 @@
                         <TextBlock Text="{Binding LastModifiedText}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
                     </StackPanel>
                 </Grid>
+            </Border>
             </Border>
         </DataTemplate>
     </UserControl.Resources>

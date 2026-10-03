@@ -333,6 +333,8 @@
                          (esquinas redondeadas normales, NO pildora completa) - lo que hacia
                          "moderno" a Auto-equipar frente a los botones planos era el degradado/
                          elevacion/animacion (Tag), nunca la forma. -->
+                    <!-- Zona de acierto estable (ver NavCardButton): el levantado de 2px de Tag="Accent"/... no mueve la zona de acierto. -->
+                    <Border x:Name="HitArea" Background="Transparent">
                     <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}">
                         <Border.Background>
                             <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgElevatedColor}" />
@@ -341,6 +343,7 @@
                             <TranslateTransform x:Name="BdLift" Y="0" />
                         </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -1422,6 +1425,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!-- ZONA DE ACIERTO ESTABLE (3-oct-2026, "LAYOUT_REPOSO Personaje/Objetos 8 pasadas/s"):
+                         la tarjeta SUBE 3px al pasar el raton con un RenderTransform, y el RenderTransform
+                         tambien mueve la zona de acierto. Con el cursor QUIETO en la franja de 3px de su borde
+                         inferior, al subir la tarjeta el cursor queda FUERA (IsMouseOver=false), la tarjeta
+                         baja, el cursor vuelve a estar DENTRO, sube... sin fin: un temblor visible y 8 pasadas
+                         de maquetacion por segundo (el temporizador de 125 ms de InputManager) con 250-700 ms de
+                         CPU por segundo mientras el raton no se mueva. El Border exterior transparente NO se
+                         mueve y mantiene la zona de acierto original: IsMouseOver del boton ya no depende de
+                         donde este la tarjeta levantada. -->
+                    <Border x:Name="HitArea" Background="Transparent">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12"
                             BorderThickness="1" Padding="18" Effect="{StaticResource CardShadow}">
                         <Border.BorderBrush>
@@ -1431,6 +1444,7 @@
                             <TranslateTransform x:Name="BdLift" Y="0" />
                         </Border.RenderTransform>
                         <ContentPresenter />
+                    </Border>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
